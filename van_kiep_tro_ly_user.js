@@ -6718,7 +6718,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.3 · Chế Độ Stealth (Không Bị Phát Hiện)', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.4 · Dò Đồ Quý & Auto-Update Tampermonkey', d: '05/11/2026', now: true, pts: [
+                '<b>Tab Dò Đồ Quý (Nghịch Thiên Radar):</b> Thêm tab Dò Đồ Quý trong nhóm Tra Cứu, cho phép săn lùng toàn bộ các vật phẩm phẩm cấp cao nhất game: Nghịch Thiên (Phẩm 8 / Dị Bảo) và Thần Phẩm (Phẩm 7).',
+                '<b>Radar Bản Đồ Thời Gian Thực:</b> Tự động quét các ô cơ duyên (<code>run.nodes</code>) trên bản đồ thế giới, phát hiện ngay các sự kiện Dị Bảo đang xuất hiện, quái/boss rơi đồ quý, hạn năm còn lại, mức độ nguy hiểm và nút [🚀 Bay Đến Ngay] để dịch chuyển tức thì.',
+                '<b>Bộ Lọc & Tra Cứu Đồ Quý Đa Năng:</b> Lọc theo phẩm cấp (Nghịch Thiên 8, Thần Phẩm 7, Tiên Phẩm 6, Tất cả), lọc theo trạng thái (Đang trên map, Đủ điều kiện săn, Đang hồi chiêu 120 năm, Chưa đủ điều kiện, Đã sở hữu), lọc theo loại và tìm kiếm tự do theo từ khóa.',
+                '<b>Phân Tích Bài Kiểm Định Chỉ Số:</b> Tự động so sánh chỉ số nhân vật hiện tại với yêu cầu của Dị Bảo (Thần thức, Ngộ tính, Đạo tâm), báo xanh Đạt hoặc báo đỏ Thiếu bao nhiêu điểm để người chơi chuẩn bị.',
+                '<b>Hỗ trợ Tự Động Cập Nhật Tampermonkey (<code>@updateURL</code> / <code>@downloadURL</code>):</b> Gắn link GitHub raw chính thức để Tampermonkey tự động phát hiện bản mới và cập nhật khi tác giả push lên GitHub.'
+            ] },
+            { t: 'Phiên Bản 7.0.3 · Chế Độ Stealth (Không Bị Phát Hiện)', d: '05/11/2026', now: false, pts: [
                 '<b>Chế độ Stealth Standalone (Undetected):</b> Không tự động đăng ký vào <code>window.tuTienMods</code> khi chạy qua Tampermonkey. Game hoàn toàn không phát hiện sự tồn tại của Tool.',
                 '<b>Không để lại dấu vết:</b> Không hiện mác Userscript trong menu Cấu hình → Mods, không báo thông báo “Kiếp này bắt đầu dùng mod…”, không đóng dấu mod vào file save.',
                 '<b>Không khóa Tỉ thí / Thiên Đạo:</b> Loại bỏ hoàn toàn nguy cơ engine game nhận diện nhầm Tool là mod can thiệp đổi luật gây khóa tính năng Tỉ thí.',
