@@ -13,9 +13,21 @@ Script hỗ trợ và tự động hóa cho webgame **Vạn Kiếp Tu Tiên** (`
   * `balance.md`: Danh mục hằng số cân bằng trong game.
   * `huong-dan.md`: Hướng dẫn cơ bản đóng gói và tạo mod.
 
-## 🚀 Bắt đầu nhanh
+## 🚀 Cài Đặt & Tự Động Cập Nhật (Tampermonkey)
 
-* Cài đặt Userscript vào Tampermonkey từ file `van_kiep_tro_ly_user.js`.
-* Khi vào game, bấm nút nổi Trợ Lý hoặc vào **Cấu hình → Mods** để mở giao diện.
+### Cách 1: Cài trực tiếp từ GitHub để tự động update
+1. Mở link cài đặt trực tiếp trên trình duyệt (đã cài sẵn tiện ích Tampermonkey):
+   👉 **[Cài đặt Vạn Kiếp Trợ Lý (Bản mới nhất)](https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js)**
+2. Tampermonkey sẽ tự động mở màn hình xác nhận, bấm **Install (Cài đặt)** hoặc **Update (Cập nhật)**.
+3. **Cơ chế tự động update:** Mỗi khi tác giả commit và push bản mới lên GitHub (có tăng `@version`), Tampermonkey sẽ tự động phát hiện và cập nhật bản mới nhất cho bạn (hoặc bạn có thể bấm *Check for updates* trong Tampermonkey bất cứ lúc nào).
+
+### Cách 2: Cài thủ công từ file mã nguồn
+* Sao chép toàn bộ nội dung file [`van_kiep_tro_ly_user.js`](van_kiep_tro_ly_user.js) và dán vào script mới trong Tampermonkey.
+
+---
+
+## 🎮 Hướng Dẫn Sử Dụng
+* Khi vào web game, bấm nút nổi Trợ Lý ở góc màn hình để mở giao diện.
+* Truy cập tab **Tra Cứu → Dò Đồ Quý** để kích hoạt Radar quét đồ Nghịch Thiên (Cấp 8) & Thần Phẩm (Cấp 7) trên bản đồ.
 * Chi tiết phát triển xem file [`DEVELOPMENT_INSTRUCTIONS.md`](DEVELOPMENT_INSTRUCTIONS.md).
 

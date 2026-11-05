@@ -191,6 +191,26 @@ Người dùng có thể không muốn dùng Tampermonkey mà muốn cài file `
 2. Nén **toàn bộ nội dung thư mục** thành file `.zip`.
 3. Trong game: Vào **Cấu hình → Mods → Cài mod**, chọn file zip, bật mod và F5 tải lại trang.
 
+### 4.5. Chức năng Dò Đồ Quý (`tabDoDo`) - Radar & Săn vật phẩm Nghịch Thiên (Cấp 8) & Thần Phẩm (Cấp 7)
+Tính năng mới được bổ sung từ bản 7.0.4 để phục vụ nhu cầu săn lùng đồ cấp cao tối thượng:
+* **Hệ thống phẩm cấp trong game:**
+  * Cấp 1-6: Phàm, Hoàng, Huyền, Địa, Thiên, Tiên.
+  * Cấp 7: **Thần Phẩm** (màu vàng hổ phách).
+  * Cấp 8: **Nghịch Thiên / Dị Bảo** (màu đỏ ánh hồng, biểu tượng vương miện 👑). Đây là phẩm cấp tối thượng, không bị trần pháp lực kẹp theo cảnh giới mà nhân thẳng theo cảnh giới hiện tại.
+* **Cơ chế Dị Bảo (21 món):**
+  * 19 món từ **Sự Kiện Thế Giới (`DIBAO.ev`)**: Có điều kiện cảnh giới (`gate`), bài kiểm định chỉ số (`chk`: Thần thức, Ngộ tính, Đạo tâm), quái hộ vệ (`bv`) và thời gian hồi chiêu (`hc`: thường là 120 năm).
+  * 2 món từ **Boss Hóa Thần (`DIBAO.boss`)**: *Nghịch Lân Thuẫn* và *Thiên Diễn Đan* chỉ rơi khi đánh bại Boss Hóa Thần.
+  * 12 món có đặc tính **«Theo Hồn Qua Kiếp» (`bd: 'Có'`)**: Vĩnh viễn bám theo linh hồn sang các kiếp sau sau khi đã nhận lần đầu.
+* **Radar Quét Bản Đồ Thời Gian Thực (Live World Radar):**
+  * Hàm `tabDoDo` quét trực tiếp danh sách node đang hoạt động trong kiếp chơi (`run.nodes`).
+  * Phát hiện ngay lập tức các node sự kiện Dị Bảo đang mở, các boss và sự kiện có rơi đồ Thần Phẩm/Nghịch Thiên.
+  * Tính toán chính xác khoảng cách năm đi đường `travelYears`, thời hạn còn lại `hetHanNam - nam`, mức nguy hiểm `danger(c, slot)`.
+  * Nút bấm **`[🚀 Bay Đến Ngay]`** kích hoạt lệnh di chuyển `ddDoTravel(slot)` / `G().travelTo(slot)` để người chơi bay thẳng tới vị trí cơ duyên.
+* **Bộ lọc và Danh mục đa năng:**
+  * Lọc theo phẩm: Nghịch Thiên (P8), Thần Phẩm (P7), Tiên Phẩm (P6), Tất cả.
+  * Lọc theo trạng thái: Đang trên Map, Đủ điều kiện, Đang hồi chiêu, Chưa đủ điều kiện, Đã sở hữu, Chưa có.
+  * Lọc theo loại vật phẩm và tìm kiếm tự do theo từ khóa.
+
 ---
 
 ## 5. QUY TRÌNH ĐỒNG BỘ KHI GAME CẬP NHẬT (KHI THƯ MỤC `vi_du/` ĐƯỢC TẢI MỚI)
@@ -218,9 +238,16 @@ Mỗi khi web game ra bản cập nhật mới, người dùng sẽ tải gói t
 ### Bước 4: Kiểm tra hằng số cân bằng trong `vi_du/balance.md`
 * Nếu game cập nhật cơ chế tính sát thương, tỷ lệ rơi đồ, hoặc số lượt săn yêu (`HUNTS_PER_SLOT`, `HUNT_RECOVERY_YEARS`), đối chiếu với các thuộc tính getter động trong hàm `buildCore` (dòng ~656 - 694) để đảm bảo Tool không bị lệch số liệu với game.
 
-### Bước 5: Cập nhật phiên bản Tool
-* Tăng phiên bản `TOOL_VER` và `@version` trong header `van_kiep_tro_ly_user.js`.
-* Thêm một mục ghi chú vào mảng `LOG` trong module `NhatKy` (dòng ~6158).
+### Bước 5: Cập nhật phiên bản Tool & Phát hành (Tự động Update trên Tampermonkey)
+* **Tăng phiên bản:** Nâng `@version` trong UserScript header và `TOOL_VER` trong mã nguồn `van_kiep_tro_ly_user.js` (ví dụ từ `7.0.4` lên `7.0.5`).
+* **Thêm nhật ký:** Thêm mục ghi chú vào mảng `LOG` trong module `NhatKy`.
+* **Cơ chế Auto-Update của Tampermonkey:**
+  * Header của `van_kiep_tro_ly_user.js` đã được gắn:
+    ```javascript
+    // @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
+    // @downloadURL  https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
+    ```
+  * Khi bạn chạy lệnh `git push origin main`, GitHub sẽ cập nhật file raw. Tampermonkey trên trình duyệt của người dùng sẽ định kỳ kiểm tra `@updateURL`, so sánh nếu thấy `@version` trên GitHub cao hơn bản đang cài thì sẽ tự động tải bản mới nhất về và cập nhật không cần người dùng phải copy-paste lại mã nguồn!
 
 ---
 
