@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.2
+// @version      7.1.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.2';
+  var TOOL_VER = '7.1.3';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6943,10 +6943,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const relatedRoots = new Set(baseRoots);
     const bridges = [];
 
-    // Tìm cầu nối tương sinh trực tiếp: ví dụ Kim và Mộc -> Kim sinh Thủy, Thủy sinh Mộc => cầu nối Thủy!
+    // Chỉ tìm cầu nối tương sinh khi 2 hệ cách nhau đúng 1 bước trung gian: A -> Bridge -> B
+    // Ví dụ: Kim và Mộc -> Kim sinh Thủy, Thủy sinh Mộc => Cầu nối Thủy!
+    // Còn nếu 2 hệ đã kề nhau trực tiếp (ví dụ Thổ -> Kim) thì TUYỆT ĐỐI KHÔNG thêm hệ thứ 3 vì chúng đã tương sinh trực tiếp!
     for (const a of baseRoots) {
       const c = SINH[a];
-      if (c) {
+      if (c && !baseRoots.includes(c)) {
         const b = SINH[c];
         if (baseRoots.includes(b)) {
           relatedRoots.add(c);
@@ -6955,20 +6957,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       }
     }
 
-    if (baseRoots.length === 1) {
-      // Đơn linh căn: lấy hệ nó sinh ra và hệ sinh ra nó
-      const a = baseRoots[0];
-      if (SINH[a]) relatedRoots.add(SINH[a]);
-      const sinhA = Object.keys(SINH).find((k) => SINH[k] === a);
-      if (sinhA) relatedRoots.add(sinhA);
-    } else if (bridges.length === 0) {
-      // Nếu không có cầu nối 1 bước: bổ sung các hệ sinh ra từ các hệ gốc
-      for (const a of baseRoots) {
-        if (SINH[a]) relatedRoots.add(SINH[a]);
-      }
-    }
-
-    // Các dị linh căn tương ứng
+    // Các dị linh căn tương ứng với các hệ hợp lệ
     const allElements = new Set(relatedRoots);
     for (const [sub, root] of Object.entries(GOC)) {
       if (relatedRoots.has(root)) allElements.add(sub);
@@ -7275,18 +7264,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       const totalChieuUy = Math.round((R.chieu || []).reduce((a, x) => a + (x.uyLuc || x.uy || 0), 0));
       const thongCount = R.manh.filter((m) => m && m.thong).length;
 
-      // Đếm số ô cần tẩy tủy theo từng hệ
+      // Đếm số ô cần tẩy tủy theo từng hệ (không đếm trùng ô)
       const g = K.luoiKinhMach(c, res.nvFinal);
       const tayTuyCounts = {};
       let totalTayTuy = 0;
+      const seenCells = new Set();
       res.manh.forEach((m) => {
         const it = c.items.get(m.item);
         if (!it) return;
         const he = (Array.isArray(it.he) ? it.he[0] : it.he) || 'vo_sac';
         const cells = K.oCuaManh(g, m, it) || [];
-        cells.forEach(() => {
-          tayTuyCounts[he] = (tayTuyCounts[he] || 0) + 1;
-          totalTayTuy++;
+        cells.forEach((cellIdx) => {
+          if (!seenCells.has(cellIdx)) {
+            seenCells.add(cellIdx);
+            tayTuyCounts[he] = (tayTuyCounts[he] || 0) + 1;
+            totalTayTuy++;
+          }
         });
       });
 
@@ -7367,7 +7360,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           </div>
 
           <div style="margin:14px 0 6px">
-            <b>Sơ Đồ Kinh Mạch Tối Ưu (44 Ô Chuẩn):</b>
+            <b>Sơ Đồ Kinh Mạch Tối Ưu:</b>
             <div class="vk-mu" style="font-size:12px;margin-bottom:6px">Các ô màu đã được giả định tẩy tủy tương thích 100% với từng món đặt lên.</div>
             <div id="bis-canvas-box" style="overflow-x:auto;text-align:center;background:var(--bg3);padding:10px;border-radius:6px;border:1px solid var(--line)"></div>
           </div>
@@ -7426,9 +7419,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           <div>
             <label style="display:block;font-size:12px;margin-bottom:4px">Cảnh giới đích:</label>
             <select class="vk-sel" id="bis-sel-cg" style="width:100%" ${S.bisRunning ? 'disabled' : ''}>
-              <option value="5" ${S.bisRealm === 5 ? 'selected' : ''}>Hóa Thần (44 ô · Đỉnh Phong)</option>
-              <option value="4" ${S.bisRealm === 4 ? 'selected' : ''}>Nguyên Anh (36 ô · Thượng Thừa)</option>
-              <option value="3" ${S.bisRealm === 3 ? 'selected' : ''}>Kim Đan (28 ô · Trung Kỳ)</option>
+              <option value="5" ${S.bisRealm === 5 ? 'selected' : ''}>Hóa Thần (Đỉnh Phong)</option>
+              <option value="4" ${S.bisRealm === 4 ? 'selected' : ''}>Nguyên Anh (Thượng Thừa)</option>
+              <option value="3" ${S.bisRealm === 3 ? 'selected' : ''}>Kim Đan (Trung Kỳ)</option>
             </select>
           </div>
           <div>
@@ -7722,7 +7715,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.2 · Khắc Phục Hiển Thị Sơ Đồ Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.3 · Chuẩn Hóa Chuỗi Tương Sinh Theo Linh Căn & Khắc Phục Lệch Hệ', d: '06/11/2026', now: true, pts: [
+                '<b>Sửa triệt để lỗi thêm hệ lệch (Thổ - Kim không bị gợi ý Thủy):</b> Khi các hệ trong Linh Căn đã kề nhau trực tiếp trong chuỗi tương sinh (như Thổ sinh Kim, Kim sinh Thủy...), hệ thống cố định chỉ chọn các vật phẩm đúng hệ của bạn (+ Vô Sắc), tuyệt đối không suy diễn thêm hệ thứ ba (tránh xung khắc như Thổ khắc Thủy).',
+                '<b>Chỉ sinh cầu nối khi thật sự có khoảng trống:</b> Chỉ kích hoạt hệ cầu nối khi 2 hệ cách nhau đúng 1 bước trung gian (ví dụ Kim và Mộc cần Thủy làm cầu nối <code>Kim ➔ Thủy ➔ Mộc</code>).',
+                '<b>Đếm chính xác số ô kinh mạch theo khuôn Thể Chất:</b> Khử trùng lặp ô khi tính kế hoạch tẩy tủy, hiển thị chuẩn xác số ô thực tế cần chuyển màu theo khuôn Thể Chất của từng nhân vật.'
+            ] },
+            { t: 'Phiên Bản 7.1.2 · Khắc Phục Hiển Thị Sơ Đồ Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: false, pts: [
                 '<b>Khắc phục lỗi hiển thị sơ đồ lưới (setting maxWidth):</b> Điều chỉnh cơ chế kết xuất sơ đồ kinh mạch (<code>drawGrid</code>) sang định dạng HTML hình ảnh chuẩn của Tool, khắc phục hoàn toàn lỗi không thể vẽ lưới.',
                 '<b>Hiển thị trực quan kinh mạch & bảng chú giải:</b> Kết xuất sắc nét toàn bộ các ô kinh mạch, màu hệ linh căn chuẩn tẩy tủy, huyệt vị, đan điền, đường kinh lộ sáng và bảng ghi chú màu sắc từng mảnh ghép.'
             ] },
