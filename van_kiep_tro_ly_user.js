@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.1
+// @version      7.1.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.1';
+  var TOOL_VER = '7.1.2';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7454,12 +7454,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       const box = body.querySelector('#bis-canvas-box');
       if (box) {
         try {
-          const cv = drawGrid(res.nvFinal, res.manh);
-          cv.style.maxWidth = '100%';
-          cv.style.height = 'auto';
-          cv.style.borderRadius = '4px';
-          cv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-          box.appendChild(cv);
+          box.innerHTML = drawGrid(res.nvFinal, res.manh);
         } catch (e) {
           console.error(e);
           box.innerHTML = `<span class="vk-bad">Không thể vẽ lưới: ${esc(e.message)}</span>`;
@@ -7727,7 +7722,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.1 · Khắc Phục Lỗi Tính Toán Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.2 · Khắc Phục Hiển Thị Sơ Đồ Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: true, pts: [
+                '<b>Khắc phục lỗi hiển thị sơ đồ lưới (setting maxWidth):</b> Điều chỉnh cơ chế kết xuất sơ đồ kinh mạch (<code>drawGrid</code>) sang định dạng HTML hình ảnh chuẩn của Tool, khắc phục hoàn toàn lỗi không thể vẽ lưới.',
+                '<b>Hiển thị trực quan kinh mạch & bảng chú giải:</b> Kết xuất sắc nét toàn bộ các ô kinh mạch, màu hệ linh căn chuẩn tẩy tủy, huyệt vị, đan điền, đường kinh lộ sáng và bảng ghi chú màu sắc từng mảnh ghép.'
+            ] },
+            { t: 'Phiên Bản 7.1.1 · Khắc Phục Lỗi Tính Toán Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: false, pts: [
                 '<b>Khắc phục lỗi manh.map is not a function:</b> Chuẩn hóa đa định dạng đầu vào cho hàm lượng giá kinh mạch giả định (<code>makeBisEval</code>), tiếp nhận linh hoạt cả đối tượng kết quả tối ưu <code>{ manh: [...] }</code>, mảng candidate và mảng mảnh ghép thô.',
                 '<b>Đồng bộ cấu hình mảnh ghép tối ưu:</b> Trích xuất chính xác danh sách mảnh sau bước tinh chỉnh leo đồi cuối cùng (Hill Climbing Polish) để kết xuất mượt mà lên Sơ đồ ma trận kinh mạch canvas và bảng Cẩm nang săn đồ.'
             ] },
