@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.6 - Dò Đồ Quý & Stealth)
+// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.7 - Dò Đồ Quý & Stealth)
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.0.6
+// @version      7.0.7
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.6
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.7
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.0.6';
+  var TOOL_VER = '7.0.7';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -65,6 +65,8 @@ var MOD_CSS_EXTRA = `
 .do-radar-card { border:2px solid var(--acc2) !important; background:radial-gradient(120% 60% at 50% 0%, rgba(230,195,106,0.14), transparent 75%), var(--bg2) !important; box-shadow:0 0 20px rgba(230,195,106,0.2) !important; margin-bottom:12px; }
 .do-radar-pulse { animation: doPulse 2s infinite ease-in-out; }
 @keyframes doPulse { 0% { opacity:1; } 50% { opacity:0.65; } 100% { opacity:1; } }
+#vkx-dibao-alert { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483003; background:rgba(15,12,26,0.96); border:2px solid #ff3366; box-shadow:0 0 25px rgba(255,51,102,0.5), 0 8px 30px rgba(0,0,0,0.85); border-radius:14px; padding:10px 16px; color:#fff; display:flex; align-items:center; gap:12px; max-width:min(94vw,560px); width:max-content; box-sizing:border-box; animation:doAlertUp 0.35s cubic-bezier(0.16,1,0.3,1); font-family:inherit; }
+@keyframes doAlertUp { from { opacity:0; transform:translate(-50%,30px) scale(0.95); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
 `;
     var THEME_CSS = "/* ═════════ THEME (biến màu) ═════════ */\n#vkx-win, #vkx-fab, #vkx-toast {\n  --bg:#0b1210; --bg2:#111b18; --bg3:#16231f; --line:#233832; --txt:#e7f1ec; --mut:#8aa397;\n  --acc:#3ddc97; --acc2:#e6c36a; --ink:#05140d; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24;\n  --glow:rgba(61,220,151,.22); --shade:rgba(0,0,0,.55); --hi:rgba(61,220,151,.10);\n}\n#vkx-win[data-vkx-theme=\"tuTieu\"], #vkx-fab[data-vkx-theme=\"tuTieu\"], #vkx-toast[data-vkx-theme=\"tuTieu\"] {\n  --bg:#0f0c1a; --bg2:#161226; --bg3:#1d1832; --line:#2e2650; --txt:#ece8fa; --mut:#9a92bd;\n  --acc:#a78bfa; --acc2:#f0abfc; --ink:#14092a; --ok:#86efac; --bad:#fb7185; --warn:#fcd34d;\n  --glow:rgba(167,139,250,.25); --hi:rgba(167,139,250,.12);\n}\n#vkx-win[data-vkx-theme=\"giayCo\"], #vkx-fab[data-vkx-theme=\"giayCo\"], #vkx-toast[data-vkx-theme=\"giayCo\"] {\n  --bg:#f3ebdc; --bg2:#fbf6ea; --bg3:#fffdf7; --line:#dccdab; --txt:#2a1d14; --mut:#6f5c49;\n  --acc:#8c2f24; --acc2:#a9741a; --ink:#ffffff; --ok:#1a7f37; --bad:#b3261e; --warn:#9a6700;\n  --glow:rgba(140,47,36,.18); --shade:rgba(60,40,20,.28); --hi:rgba(140,47,36,.07);\n}\n\n/* ═════════ NÚT MỞ (FAB) ═════════ */\n#vkx-fab {\n  position:fixed; right:14px; bottom:190px; z-index:2147483001; width:50px; height:50px;\n  border-radius:16px; border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);\n  background:linear-gradient(145deg,var(--bg3),var(--bg)); color:var(--acc);\n  font:400 24px/1 system-ui,\"Segoe UI Symbol\",sans-serif; cursor:pointer;\n  box-shadow:0 6px 22px var(--shade),0 0 0 4px var(--glow); display:none;\n  transition:transform .15s ease, box-shadow .2s ease;\n}\n#vkx-fab:hover { transform:translateY(-2px) scale(1.04); }\n#vkx-fab:active { transform:scale(.95); }\n@media (min-width:721px){ #vkx-fab { bottom:24px; right:24px; } }\n\n/* ═════════ CỬA SỔ ═════════ */\n#vkx-win {\n  position:fixed; top:16px; right:16px; width:440px; max-width:calc(100vw - 16px);\n  max-height:min(88vh,800px); height:min(88vh,800px); z-index:2147483000;\n  display:none; flex-direction:column; overflow:hidden;\n  background:var(--bg); color:var(--txt); border-radius:18px;\n  border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));\n  box-shadow:0 24px 60px var(--shade),0 0 0 1px var(--glow),0 0 34px var(--glow);\n  font:14px/1.45 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;\n  -webkit-font-smoothing:antialiased;\n}\n#vkx-win *, #vkx-win *::before, #vkx-win *::after { box-sizing:border-box; }\n#vkx-win.open { display:flex; }\n@media (max-width:720px){\n  #vkx-win { inset:0; top:0; right:0; width:100%; max-width:none; height:100%; max-height:none; border-radius:0; border:0;\n    padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0); }\n}\n\n/* header */\n.vkx-hd { display:flex; align-items:center; gap:10px; padding:12px 12px 10px 14px; cursor:grab; user-select:none; -webkit-user-select:none;\n  background:linear-gradient(180deg,var(--hi),transparent); touch-action:none; }\n.vkx-hd:active { cursor:grabbing; }\n@media (max-width:720px){ .vkx-hd { cursor:default; touch-action:auto; } }\n.vkx-logo { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; flex:0 0 34px;\n  background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 55%,var(--acc2)));\n  color:var(--ink); font:400 22px/1 system-ui,\"Segoe UI Symbol\",sans-serif; box-shadow:0 4px 14px var(--glow); }\n.vkx-ttl { flex:1; min-width:0; line-height:1.15; }\n.vkx-ttl b { display:block; font-size:15px; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }\n.vkx-ttl span { font-size:11px; color:var(--mut); }\n.vkx-ib { width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--bg2); color:var(--txt);\n  font-size:15px; cursor:pointer; display:grid; place-items:center; transition:background .15s,border-color .15s; }\n.vkx-ib:hover { border-color:var(--acc); background:var(--bg3); }\n.vkx-ib.x:hover { border-color:var(--bad); color:var(--bad); }\n\n/* segmented */\n.vkx-seg { display:flex; gap:4px; margin:2px 12px 10px; padding:4px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; }\n.vkx-seg button { flex:1; border:0; background:none; color:var(--mut); font:600 14px/1 inherit; padding:10px 8px; border-radius:10px; cursor:pointer; transition:all .15s; }\n.vkx-seg button.on { background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 60%,var(--acc2))); color:var(--ink); box-shadow:0 3px 12px var(--glow); }\n\n/* sections */\n.vkx-sec { display:none; flex:1; min-height:0; flex-direction:column; }\n.vkx-sec.on { display:flex; }\n.vkx-scroll { flex:1; min-height:0; overflow-y:auto; padding:2px 12px 28px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }\n.vkx-scroll::-webkit-scrollbar { width:7px; } .vkx-scroll::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }\n\n/* tab con của Trợ lý */\n.vkx-tabbar { display:flex; align-items:center; gap:6px; padding:0 12px 8px; }\n#vkx-tabs { flex:1; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px 0; }\n#vkx-tabs::-webkit-scrollbar { display:none; }\n#vkx-tabs button { flex:0 0 auto; border:1px solid var(--line); background:var(--bg2); color:var(--mut); font:600 13px/1 inherit; padding:8px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; transition:all .15s; }\n#vkx-tabs button:hover { color:var(--txt); border-color:var(--acc); }\n#vkx-tabs button.on { background:var(--acc); border-color:var(--acc); color:var(--ink); }\n#vk-rf { flex:0 0 auto; }\n\n/* toast */\n#vkx-toast { position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px); z-index:2147483002; max-width:min(92vw,520px);\n  background:var(--bg2); color:var(--txt); padding:11px 16px; border-radius:12px; border:1px solid var(--line); border-left:4px solid var(--acc);\n  font:600 13px/1.4 system-ui,-apple-system,\"Segoe UI\",sans-serif; box-shadow:0 10px 30px var(--shade); opacity:0; pointer-events:none; transition:opacity .22s,transform .22s; }\n#vkx-toast.on { opacity:1; transform:translate(-50%,0); }\n\n/* ═════════ PHẦN TỬ DÙNG CHUNG ═════════ */\n#vkx-win button { font-family:inherit; }\n#vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select, #vkx-win textarea {\n  font-family:inherit; font-size:14px; color:var(--txt); background:var(--bg3); border:1px solid var(--line); border-radius:9px;\n  padding:8px 10px; outline:none; min-width:0; max-width:100%; transition:border-color .15s, box-shadow .15s; color-scheme:dark; }\n#vkx-win[data-vkx-theme=\"giayCo\"] input, #vkx-win[data-vkx-theme=\"giayCo\"] select { color-scheme:light; }\n#vkx-win input:focus, #vkx-win select:focus { border-color:var(--acc); box-shadow:0 0 0 3px var(--glow); }\n#vkx-win input[type=checkbox] { width:16px; height:16px; accent-color:var(--acc); vertical-align:-3px; }\n@media (max-width:720px){ #vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select { font-size:16px; }\n     }\n\n/* ═════════ PANEL MOD (vm-*) ═════════ */\n\n.vm-hint { font-size:11.5px; color:var(--mut); text-align:center; margin:6px 0; }\n\n \n\n\n\n\n/* ═════════ TRỢ LÝ (vk-*) ═════════ */\n.vk-card { background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:12px 13px; margin:0 0 10px; }\n.vk-card h3 { margin:0 0 8px; font-size:15px; color:var(--acc); letter-spacing:.2px; }\n.vk-row { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }\n.vk-row:last-child { border-bottom:0; }\n.vk-row > b { text-align:right; }\n.vk-mu { color:var(--mut); }\n.vk-ok { color:var(--ok); font-weight:600; } .vk-bad { color:var(--bad); font-weight:600; }\n.vk-btn { display:inline-block; border:0; cursor:pointer; font-weight:700; font-size:14px; padding:10px 15px; margin:4px 6px 4px 0; border-radius:10px;\n  color:var(--ink); background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 65%,var(--acc2))); transition:transform .1s,filter .15s; }\n.vk-btn:hover { filter:brightness(1.08); } .vk-btn:active { transform:scale(.97); }\n.vk-btn.sec { background:var(--bg3); color:var(--txt); border:1px solid var(--line); }\n.vk-btn:disabled { opacity:.45; cursor:not-allowed; }\n.vk-img { width:100%; max-width:480px; display:block; margin:8px auto; border-radius:10px; border:1px solid var(--line); }\n.vk-note { font-size:12px; color:var(--mut); text-align:center; margin-bottom:6px; }\n.vk-lg { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:14px; }\n.vk-sw { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; color:#fff; font-weight:700; font-size:13px; flex:0 0 26px; text-shadow:0 1px 2px #0008; }\ntable.vk-t { width:100%; border-collapse:collapse; font-size:13.5px; color:var(--txt); }\ntable.vk-t th, table.vk-t td { padding:7px 5px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }\ntable.vk-t th { color:var(--acc); font-weight:700; font-size:12.5px; }\ntable.vk-t tr:last-child td { border-bottom:0; }\n.vk-bar { height:9px; background:var(--bg3); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:8px 0; }\n.vk-bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); transition:width .15s; }\n.vk-sel { font-size:14px; padding:8px 10px; max-width:100%; }\n.vk-err { background:color-mix(in srgb,var(--bad) 12%,var(--bg2)); border:1px solid color-mix(in srgb,var(--bad) 45%,var(--line)); color:var(--txt); border-radius:12px; padding:11px 13px; }\n#vkx-win details > summary { cursor:pointer; }\n#vkx-win details.vk-card > summary { font-size:14px; }\n#vkx-win summary { color:var(--txt); }\n#vkx-win ul { color:var(--txt); }\n#vkx-win a { color:var(--acc); }\n#vkx-win hr { border:0; border-top:1px solid var(--line); }\n";
 
@@ -1408,7 +1410,158 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return { flags, history, relics, nodes };
   }
 
-// Complete tabDoDo implementation
+  // Dò tọa độ slot của một địa danh trên thế giới
+  function findDiaSlot(c, diaName) {
+    if (!c || !c.world || !diaName) return null;
+    const f = fold(diaName);
+    try {
+      for (const s of c.world.slots || []) {
+        if (!s) continue;
+        let ten = '';
+        if (s.dia_danh) {
+          const dd = c.world.diaDanh(s.dia_danh);
+          if (dd && dd.ten) ten = dd.ten;
+        }
+        if (!ten && typeof c.world.info === 'function') {
+          const i = c.world.info(s.id);
+          if (i && i.ten) ten = i.ten;
+        }
+        if (ten && (fold(ten) === f || fold(ten).includes(f) || f.includes(fold(ten)))) {
+          return s.id;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // ── Global Live Alert: Banner thông báo nổi trên màn hình khi Dị Bảo nở trên map ──
+  var lastDismissedDiBao = null;
+  function removeDiBaoAlert() {
+    const alertEl = document.getElementById('vkx-dibao-alert');
+    if (alertEl && alertEl.parentNode) alertEl.parentNode.removeChild(alertEl);
+  }
+
+  function showDiBaoAlert(t) {
+    let alertEl = document.getElementById('vkx-dibao-alert');
+    if (!alertEl) {
+      alertEl = document.createElement('div');
+      alertEl.id = 'vkx-dibao-alert';
+      document.body.appendChild(alertEl);
+    }
+    const safeY = isFinite(t.y) ? (t.y < 0.05 ? 'ngay đây' : num(t.y) + ' năm') : 'không rõ';
+    alertEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <span class="do-radar-pulse" style="width:12px;height:12px;border-radius:50%;background:#ff3366;box-shadow:0 0 0 0 rgba(255,51,102,0.7);animation:doPulse 1.8s infinite;flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:bold;font-size:13px;color:#ff3366;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>🔔 PHÁT HIỆN SỰ KIỆN DỊ BẢO!</span>
+            <span style="color:#fff">${esc(t.title)}</span>
+          </div>
+          <div style="font-size:11.5px;color:#bbb;margin-top:2px">
+            📍 <b>${esc(t.pName)}</b> (Slot ${t.slot}) · Hạn còn: <b style="color:#f59e0b">${t.remYears != null ? t.remYears + ' năm' : 'Vô hạn'}</b> · Đường đi: <b>${safeY}</b>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <button class="vk-btn do-btn-travel" data-slot="${t.slot}" style="background:#ff3366;color:#fff;font-weight:bold;padding:5px 12px;font-size:12px;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 0 10px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+        <button id="vkx-dibao-close" style="background:rgba(255,255,255,0.1);border:none;color:#ddd;font-size:16px;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+      </div>
+    `;
+
+    const btn = alertEl.querySelector('.do-btn-travel');
+    if (btn) {
+      btn.onclick = () => {
+        const res = ddDoTravel(t.slot);
+        if (!res.ok) alert('⚠️ ' + res.msg);
+        else {
+          alert('🚀 ' + res.msg);
+          removeDiBaoAlert();
+          if (typeof render === 'function') render();
+        }
+      };
+    }
+
+    const closeBtn = alertEl.querySelector('#vkx-dibao-close');
+    if (closeBtn) {
+      closeBtn.onclick = () => {
+        lastDismissedDiBao = t.encId + '_' + t.slot;
+        removeDiBaoAlert();
+      };
+    }
+  }
+
+  function checkDiBaoAlert() {
+    try {
+      const g = G();
+      if (!g || !g.state || !g.state.run) return;
+      const run = g.state.run, nv = run.nhanVat, nam = typeof run.nam === 'number' ? run.nam : null;
+      if (!run.nodes) {
+        removeDiBaoAlert();
+        return;
+      }
+      const sc = scanDiBao([run, g.state.meta]);
+      const isOwned = (id) => {
+        if (!id) return false;
+        if (sc.relics.has(id)) return true;
+        if (sc.flags.has(id.replace(/^item\./, ''))) return true;
+        if (nv.tuiDo && nv.tuiDo[id] > 0) return true;
+        if (nv.kinhMach && nv.kinhMach.manh && nv.kinhMach.manh.some((m) => m.item === id)) return true;
+        if (nv.trangBi && Object.values(nv.trangBi).includes(id)) return true;
+        return false;
+      };
+
+      let activeTarget = null;
+      let c = null; try { c = ctx(); } catch (e) {}
+      const K = S.core;
+
+      for (const [slotStr, n] of Object.entries(run.nodes)) {
+        if (!n || !n.encounter) continue;
+        if (n.hetHanNam !== undefined && nam != null && n.hetHanNam <= nam) continue;
+        const slot = n.slot != null ? n.slot : +slotStr;
+        const encId = n.encounter;
+
+        const ev = DIBAO.ev.find((x) => x.id === encId);
+        if (ev && !isOwned(ev.relic)) {
+          let y = Infinity;
+          if (c && K && K.travelYears) {
+            try { y = K.travelYears(c, slot); } catch (e) {}
+          }
+          const remYears = n.hetHanNam !== undefined && nam != null ? Math.max(0, Math.floor(n.hetHanNam - nam)) : null;
+          const pName = c ? placeName(c, slot) : 'Slot ' + slot;
+          const relInfo = DIBAO.rel[ev.relic] || {};
+          activeTarget = {
+            encId,
+            slot,
+            pName,
+            y,
+            remYears,
+            title: `«${ev.ten}» (${relInfo.ten || ev.relic})`,
+          };
+          break;
+        }
+      }
+
+      if (!activeTarget) {
+        removeDiBaoAlert();
+        return;
+      }
+
+      if (lastDismissedDiBao === activeTarget.encId + '_' + activeTarget.slot) return;
+      showDiBaoAlert(activeTarget);
+    } catch (e) {}
+  }
+
+  // Khởi động watcher tự động kiểm tra sự kiện Dị Bảo trên map
+  try {
+    setInterval(checkDiBaoAlert, 3000);
+    if (typeof TT !== 'undefined' && TT && typeof TT.on === 'function') {
+      TT.on('timePass', checkDiBaoAlert);
+      TT.on('travel', checkDiBaoAlert);
+      TT.on('worldEvent', checkDiBaoAlert);
+    }
+    setTimeout(checkDiBaoAlert, 2000);
+  } catch (e) {}
+
   // ── Tab Dò Đồ Quý (Săn tìm Nghịch Thiên - Phẩm 8, Thần Phẩm - Phẩm 7 & Đồ Quý trên bản đồ) ──
   function tabDoDo() {
     const g = G(), st = g ? g.state : null;
@@ -1831,11 +1984,35 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               try { y = K.travelYears(c, r.node.slot); } catch (err) {}
             }
             travelBox = `
-              <div style="margin-top:8px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between">
-                <span style="font-size:12px">📍 ${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)} · Đi: <b>${safeYrs(y)}</b></span>
-                <button class="vk-btn do-btn-travel" data-slot="${r.node.slot}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến</button>
+              <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+                <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + ' năm' : 'Vô hạn'}</b> · Đi: <b>${safeYrs(y)}</b></span>
+                <button class="vk-btn do-btn-travel" data-slot="${r.node.slot}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
               </div>
             `;
+          } else if (!r.done && e && e.dia) {
+            const diaSlot = findDiaSlot(c, e.dia);
+            if (diaSlot != null) {
+              let y = Infinity;
+              if (c && K && K.travelYears) {
+                try { y = K.travelYears(c, diaSlot); } catch (err) {}
+              }
+              const isHere = run.viTri === diaSlot;
+              if (isHere) {
+                travelBox = `
+                  <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
+                    <b>📍 Đang đứng đón đầu tại ${esc(e.dia)} (Slot ${diaSlot}) ✓</b>
+                    <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
+                  </div>
+                `;
+              } else {
+                travelBox = `
+                  <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+                    <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${diaSlot}) · Cách: <b>${safeYrs(y)}</b></span>
+                    <button class="vk-btn do-btn-travel" data-slot="${diaSlot}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+                  </div>
+                `;
+              }
+            }
           }
 
           return `
@@ -6737,7 +6914,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.6 · Làm Rõ Thử Thách Kép Dò Đồ Quý', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.7 · Banner Báo Dị Bảo Tức Thì & Đón Đầu Địa Danh', d: '05/11/2026', now: true, pts: [
+                '<b>Banner Thông Báo Nổi Tức Thì (Global Floating Alert):</b> Tự động quét và phát hiện ngay lập tức khi có sự kiện Dị Bảo vừa xuất hiện trên bản đồ thế giới. Hiển thị thanh thông báo nổi kèm nút [🚀 Bay Đến Ngay] trực tiếp trên màn hình game mà không cần phải mở cửa sổ Trợ Lý!',
+                '<b>Nút [📍 Đi Đến Đón Đầu] Địa Danh:</b> Với các sự kiện sắp diễn ra hoặc đang hồi chiêu, Tool tự động dò tọa độ địa danh cố định (Kiếm Trạch, Tiên Vân Điện, U Hồn Điện...) và cung cấp nút di chuyển để người chơi đến chờ sẵn, gia tăng tối đa tỉ lệ kích hoạt sự kiện.',
+                '<b>Tự động cập nhật theo thời gian game:</b> Lắng nghe sự kiện chuyển năm (timePass), di chuyển (travel) và thế cục (worldEvent) của game để đồng bộ hóa radar theo thời gian thực.'
+            ] },
+            { t: 'Phiên Bản 7.0.6 · Làm Rõ Thử Thách Kép Dò Đồ Quý', d: '05/11/2026', now: false, pts: [
                 '<b>Làm rõ nhãn Thử Thách Kép:</b> Đổi câu thông báo thành "Thử thách Kép (Vừa kiểm định chỉ số + Vừa đánh quái hộ vệ)" để người chơi hiểu ngay sự kiện đòi hỏi cả 2 bước.',
                 '<b>Hiển thị trực quan chỉ số còn thiếu:</b> Nêu rõ số điểm còn thiếu để người chơi dễ dàng cắn đan dược hoặc trang bị pháp bảo bổ khuyết.'
             ] },

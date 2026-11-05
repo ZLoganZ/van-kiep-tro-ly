@@ -201,11 +201,13 @@ Tính năng mới được bổ sung từ bản 7.0.4 để phục vụ nhu cầ
   * 19 món từ **Sự Kiện Thế Giới (`DIBAO.ev`)**: Có điều kiện cảnh giới (`gate`), bài kiểm định chỉ số (`chk`: Thần thức, Ngộ tính, Đạo tâm), quái hộ vệ (`bv`) và thời gian hồi chiêu (`hc`: thường là 120 năm).
   * 2 món từ **Boss Hóa Thần (`DIBAO.boss`)**: *Nghịch Lân Thuẫn* và *Thiên Diễn Đan* chỉ rơi khi đánh bại Boss Hóa Thần.
   * 12 món có đặc tính **«Theo Hồn Qua Kiếp» (`bd: 'Có'`)**: Vĩnh viễn bám theo linh hồn sang các kiếp sau sau khi đã nhận lần đầu.
-* **Radar Quét Bản Đồ Thời Gian Thực (Live World Radar):**
+* **Radar Quét Bản Đồ Thời Gian Thực & Banner Thông Báo Tức Thì:**
   * Hàm `tabDoDo` quét trực tiếp danh sách node đang hoạt động trong kiếp chơi (`run.nodes`).
   * Phát hiện ngay lập tức các node sự kiện Dị Bảo đang mở, các boss và sự kiện có rơi đồ Thần Phẩm/Nghịch Thiên.
   * Tính toán chính xác khoảng cách năm đi đường `travelYears`, thời hạn còn lại `hetHanNam - nam`, mức nguy hiểm `danger(c, slot)`.
   * Nút bấm **`[🚀 Bay Đến Ngay]`** kích hoạt lệnh di chuyển `ddDoTravel(slot)` / `G().travelTo(slot)` để người chơi bay thẳng tới vị trí cơ duyên.
+  * **Global Floating Alert Banner (`#vkx-dibao-alert` - Bản 7.0.7):** Tự động phát hiện khi có Dị Bảo vừa xuất hiện trong lượt đi và hiển thị thanh banner nổi ở đáy màn hình game kèm nút `[🚀 Bay Đến Ngay]` mà không cần mở cửa sổ Trợ Lý.
+  * **Tính năng Đón Đầu Sự Kiện (`findDiaSlot` - Bản 7.0.7):** Đối với các sự kiện đang chuẩn bị diễn ra hoặc đang hồi chiêu, Tool dò tọa độ địa danh cố định (`e.dia`: Kiếm Trạch, Tiên Vân Điện, U Hồn Điện...) và hiển thị nút **`[📍 Đi Đến Đón Đầu]`** để người chơi bay tới đứng chờ sẵn, tăng tỉ lệ Đạo Diễn bốc trúng sự kiện.
 * **Bộ lọc và Danh mục đa năng:**
   * Lọc theo phẩm: Nghịch Thiên (P8), Thần Phẩm (P7), Tiên Phẩm (P6), Tất cả.
   * Lọc theo trạng thái: Đang trên Map, Đủ điều kiện, Đang hồi chiêu, Chưa đủ điều kiện, Đã sở hữu, Chưa có.
