@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.5
+// @version      7.1.6
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.6
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.5';
+  var TOOL_VER = '7.1.6';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -251,7 +251,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         win.innerHTML =
             '<div class="vkx-hd" id="vkx-hd">' +
             '<div class="vkx-logo">☯</div>' +
-            '<div class="vkx-ttl"><b>Vạn Kiếp Tu Tiên Tool</b><span>LoganZ · Kỹ Sư · Bản Mod · Trợ Lý</span><em class="vkx-ver">v7.0.0</em></div>' +
+            '<div class="vkx-ttl"><b>Vạn Kiếp Tu Tiên Tool</b><span>LoganZ · Kỹ Sư · Bản Mod · Trợ Lý</span><em class="vkx-ver">v' + TOOL_VER + '</em></div>' +
             '<button class="vkx-ib" id="vkx-theme" title="Đổi giao diện">🎨</button>' +
             '<button class="vkx-ib" id="vkx-zoom" title="Cỡ giao diện (Tự động · 85% … 150%)">🔍</button>' +
             '<button class="vkx-ib x" id="vkx-close" title="Thu gọn">✕</button>' +
@@ -7722,7 +7722,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.5 · Khóa Chặt Hệ Vật Phẩm Chuẩn Linh Căn (Loại Bỏ Đồ Lạc Hệ)', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.6 · Đồng Bộ Số Phiên Bản Trên Thanh Tiêu Đề', d: '06/11/2026', now: true, pts: [
+                '<b>Khắc phục số phiên bản hiển thị sai trên tiêu đề:</b> Chuyển đổi nhãn phiên bản tĩnh (<code>v7.0.0</code>) trên thanh tiêu đề chính thành biến động <code>v\' + TOOL_VER + \'</code>, đảm bảo tiêu đề cửa sổ luôn luôn hiển thị chuẩn xác số phiên bản hiện hành của Tool.'
+            ] },
+            { t: 'Phiên Bản 7.1.5 · Khóa Chặt Hệ Vật Phẩm Chuẩn Linh Căn (Loại Bỏ Đồ Lạc Hệ)', d: '06/11/2026', now: false, pts: [
                 '<b>Lọc nghiêm ngặt theo hệ chính của vật phẩm:</b> Mọi công pháp và pháp khí được đề xuất bắt buộc phải có hệ chính trùng khớp với hệ Linh Căn cho phép của nhân vật hoặc Vô Sắc; loại bỏ triệt để các món lạc hệ (như đồ Thủy, Lôi, Ám khi nhân vật là Thổ - Kim).',
                 '<b>Cách ly túi đồ thực tế khỏi bộ giải giả định:</b> Không tự động nạp các món đồ đang có trong túi thực tế vào kho tính toán giả định nếu chúng không thuộc pool trang bị chuẩn theo hệ của kiếp này.'
             ] },
