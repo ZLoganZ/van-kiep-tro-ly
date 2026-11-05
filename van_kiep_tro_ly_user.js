@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.4
+// @version      7.1.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.4';
+  var TOOL_VER = '7.1.5';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6990,8 +6990,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
       const heRaw = it.he || ['vo_sac'];
       const heArr = Array.isArray(heRaw) ? heRaw : [heRaw];
-      const matchHe = heArr.some((h) => setHe.has(String(h).toLowerCase()) || String(h).toLowerCase() === 'vo' || String(h).toLowerCase() === 'vo_sac');
-      if (!matchHe) continue;
+      const primaryHe = String(heArr[0] || 'vo_sac').toLowerCase();
+      // Hệ chính của món đồ BẮT BUỘC phải thuộc tập hợp hệ cho phép (hoặc vô sắc)
+      if (!setHe.has(primaryHe) && primaryHe !== 'vo' && primaryHe !== 'vo_sac') continue;
 
       let score = pham * 30 + (it.canh_gioi ?? 0) * 15;
       if (it.chieu && it.chieu.length) {
@@ -7028,11 +7029,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     nvMock.tuiDo = {};
     for (const it of pool) {
       nvMock.tuiDo[it.id] = 1;
-    }
-    if (nvReal.tuiDo) {
-      for (const [k, v] of Object.entries(nvReal.tuiDo)) {
-        if (v > 0) nvMock.tuiDo[k] = (nvMock.tuiDo[k] || 0) + v;
-      }
     }
 
     const g = K.luoiKinhMach(c, nvMock);
@@ -7726,7 +7722,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.4 · Chuẩn Hóa Nhãn Vô Sắc & Tối Ưu Hiển Thị Linh Căn', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.5 · Khóa Chặt Hệ Vật Phẩm Chuẩn Linh Căn (Loại Bỏ Đồ Lạc Hệ)', d: '06/11/2026', now: true, pts: [
+                '<b>Lọc nghiêm ngặt theo hệ chính của vật phẩm:</b> Mọi công pháp và pháp khí được đề xuất bắt buộc phải có hệ chính trùng khớp với hệ Linh Căn cho phép của nhân vật hoặc Vô Sắc; loại bỏ triệt để các món lạc hệ (như đồ Thủy, Lôi, Ám khi nhân vật là Thổ - Kim).',
+                '<b>Cách ly túi đồ thực tế khỏi bộ giải giả định:</b> Không tự động nạp các món đồ đang có trong túi thực tế vào kho tính toán giả định nếu chúng không thuộc pool trang bị chuẩn theo hệ của kiếp này.'
+            ] },
+            { t: 'Phiên Bản 7.1.4 · Chuẩn Hóa Nhãn Vô Sắc & Tối Ưu Hiển Thị Linh Căn', d: '06/11/2026', now: false, pts: [
                 '<b>Loại bỏ nhãn mã hóa thừa "vo":</b> Chuẩn hóa định danh nội bộ <code>vo</code> thành <code>vo_sac</code> (Vô Sắc), loại bỏ nhãn "vo" dư thừa gây thắc mắc trên giao diện.',
                 '<b>Hiển thị rõ ràng chuỗi tương sinh:</b> Nhận diện chính xác Song Linh Căn kề nhau và báo rõ <code>Đã tương sinh trực tiếp (Thổ ➔ Kim) — Không cần cầu nối ✓</code>.',
                 '<b>Việt hóa phẩm chất Linh Căn:</b> Hiển thị chuẩn xác tên gọi phẩm linh căn (Song Linh Căn, Đơn Linh Căn, Thiên Linh Căn...) thay vì mã rút gọn tiếng Anh.'
