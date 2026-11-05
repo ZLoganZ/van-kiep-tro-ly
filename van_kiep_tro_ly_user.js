@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.3
+// @version      7.1.4
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.4
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.3';
+  var TOOL_VER = '7.1.4';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6963,7 +6963,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       if (relatedRoots.has(root)) allElements.add(sub);
     }
     allElements.add('vo_sac');
-    allElements.add('vo');
 
     return {
       lcPham: (lc && lc.pham) || 'vo',
@@ -7235,9 +7234,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (S.bisRealm === undefined) S.bisRealm = 5;
     if (!S.bisMode) S.bisMode = 'danh';
 
-    const bridgeHtml = deduced.bridges.length
-      ? deduced.bridges.map((b) => `<b>${heTen(b.from)}</b> ➔ <span class="vk-ok" style="font-weight:bold;text-decoration:underline">${heTen(b.bridge)}</span> ➔ <b>${heTen(b.to)}</b>`).join(' &bull; ')
-      : '<span class="vk-mu">Không cần cầu nối (Đơn/Tam/Hỗn Độn)</span>';
+    const SINH = { kim: 'thuy', thuy: 'moc', moc: 'hoa', hoa: 'tho', tho: 'kim' };
+    let bridgeHtml = '';
+    if (deduced.bridges.length) {
+      bridgeHtml = deduced.bridges.map((b) => `<b>${heTen(b.from)}</b> ➔ <span class="vk-ok" style="font-weight:bold;text-decoration:underline">${heTen(b.bridge)}</span> ➔ <b>${heTen(b.to)}</b>`).join(' &bull; ');
+    } else if (deduced.baseRoots.length === 2) {
+      const a = deduced.baseRoots[0], b = deduced.baseRoots[1];
+      const dir = SINH[a] === b ? `${heTen(a)} ➔ ${heTen(b)}` : SINH[b] === a ? `${heTen(b)} ➔ ${heTen(a)}` : '';
+      bridgeHtml = dir
+        ? `<span class="vk-ok" style="font-weight:bold">Đã tương sinh trực tiếp (${dir}) — Không cần cầu nối ✓</span>`
+        : '<span class="vk-mu">Không cần cầu nối</span>';
+    } else if (deduced.baseRoots.length === 1) {
+      bridgeHtml = '<span class="vk-mu">Đơn Linh Căn thuần túy</span>';
+    } else {
+      bridgeHtml = '<span class="vk-mu">Đã đầy đủ chuỗi hệ (Tam Linh Căn / Ngũ Hành)</span>';
+    }
 
     const allHeHtml = deduced.allElements.map((h) => `<span class="vk-pill" style="margin:2px;background:var(--bg3);border:1px solid var(--line)">${heTen(h)}</span>`).join('');
 
@@ -7404,7 +7415,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           <div style="margin-bottom:6px">
             <span>Linh Căn Hiện Tại: </span>
             <b class="vk-ok" style="font-size:14px">${deduced.baseHe.map(heTen).join(' - ') || 'Phàm Căn'}</b>
-            <span class="vk-mu">(${deduced.lcPham || 'Thường'})</span>
+            <span class="vk-mu">(${({ don: 'Đơn Linh Căn', song: 'Song Linh Căn', tam: 'Tam Linh Căn', tu: 'Tứ Linh Căn', hon_don: 'Hỗn Độn', thien: 'Thiên Linh Căn', bien_di: 'Dị Linh Căn' })[deduced.lcPham] || deduced.lcPham || 'Thường'})</span>
           </div>
           <div style="font-size:12.5px;margin-bottom:6px">
             <span>Cầu Nối Tương Sinh: </span>${bridgeHtml}
@@ -7715,7 +7726,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.3 · Chuẩn Hóa Chuỗi Tương Sinh Theo Linh Căn & Khắc Phục Lệch Hệ', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.4 · Chuẩn Hóa Nhãn Vô Sắc & Tối Ưu Hiển Thị Linh Căn', d: '06/11/2026', now: true, pts: [
+                '<b>Loại bỏ nhãn mã hóa thừa "vo":</b> Chuẩn hóa định danh nội bộ <code>vo</code> thành <code>vo_sac</code> (Vô Sắc), loại bỏ nhãn "vo" dư thừa gây thắc mắc trên giao diện.',
+                '<b>Hiển thị rõ ràng chuỗi tương sinh:</b> Nhận diện chính xác Song Linh Căn kề nhau và báo rõ <code>Đã tương sinh trực tiếp (Thổ ➔ Kim) — Không cần cầu nối ✓</code>.',
+                '<b>Việt hóa phẩm chất Linh Căn:</b> Hiển thị chuẩn xác tên gọi phẩm linh căn (Song Linh Căn, Đơn Linh Căn, Thiên Linh Căn...) thay vì mã rút gọn tiếng Anh.'
+            ] },
+            { t: 'Phiên Bản 7.1.3 · Chuẩn Hóa Chuỗi Tương Sinh Theo Linh Căn & Khắc Phục Lệch Hệ', d: '06/11/2026', now: false, pts: [
                 '<b>Sửa triệt để lỗi thêm hệ lệch (Thổ - Kim không bị gợi ý Thủy):</b> Khi các hệ trong Linh Căn đã kề nhau trực tiếp trong chuỗi tương sinh (như Thổ sinh Kim, Kim sinh Thủy...), hệ thống cố định chỉ chọn các vật phẩm đúng hệ của bạn (+ Vô Sắc), tuyệt đối không suy diễn thêm hệ thứ ba (tránh xung khắc như Thổ khắc Thủy).',
                 '<b>Chỉ sinh cầu nối khi thật sự có khoảng trống:</b> Chỉ kích hoạt hệ cầu nối khi 2 hệ cách nhau đúng 1 bước trung gian (ví dụ Kim và Mộc cần Thủy làm cầu nối <code>Kim ➔ Thủy ➔ Mộc</code>).',
                 '<b>Đếm chính xác số ô kinh mạch theo khuôn Thể Chất:</b> Khử trùng lặp ô khi tính kế hoạch tẩy tủy, hiển thị chuẩn xác số ô thực tế cần chuyển màu theo khuôn Thể Chất của từng nhân vật.'
