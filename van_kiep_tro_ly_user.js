@@ -1,27 +1,26 @@
 // ==UserScript==
-// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.2)
+// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.3 - Stealth)
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.0.2
-// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Ngự Linh, Luân Hồi, Tự Động (đã sửa lỗi Hướng Build & Đánh Thử, thêm Tránh Đánh Hạc khi Auto Săn Yêu).
+// @version      7.0.3
+// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản Mod 7.0.0
- * Toàn bộ phép tính gọi lõi game qua window.tuTien.core (tên hàm gốc, không dò regex). */
-((typeof unsafeWindow !== 'undefined' ? unsafeWindow : window).tuTienMods ??= []).push({
-  id: 'van_kiep_tro_ly',
-  name: 'Vạn Kiếp Tu Tiên Tool · Trợ Lý',
-  version: '7.0.0',
-  author: 'LoganZ · Kỹ Sư',
-  apiVersion: 1,
-  ready(tt, mod) {
-    (function (TT, MOD) {
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.3
+ * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
+ * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
+ * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
+(function () {
+  'use strict';
   var gWin = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+
+  function runTroLy(TT, MOD) {
+    (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.0.0';
+  var TOOL_VER = '7.0.3';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6155,7 +6154,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.0 · Bản Mod', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.3 · Chế Độ Stealth (Không Bị Phát Hiện)', d: '05/11/2026', now: true, pts: [
+                '<b>Chế độ Stealth Standalone (Undetected):</b> Không tự động đăng ký vào <code>window.tuTienMods</code> khi chạy qua Tampermonkey. Game hoàn toàn không phát hiện sự tồn tại của Tool.',
+                '<b>Không để lại dấu vết:</b> Không hiện mác Userscript trong menu Cấu hình → Mods, không báo thông báo “Kiếp này bắt đầu dùng mod…”, không đóng dấu mod vào file save.',
+                '<b>Không khóa Tỉ thí / Thiên Đạo:</b> Loại bỏ hoàn toàn nguy cơ engine game nhận diện nhầm Tool là mod can thiệp đổi luật gây khóa tính năng Tỉ thí.',
+                '<b>Lắng nghe sự kiện <code>tutien:ready</code>:</b> Nạp lõi <code>tuTien.core</code> ngay khi game sẵn sàng, giữ nguyên nút mở tròn ☯ và toàn bộ tính năng Trợ Lý.'
+            ] },
+            { t: 'Phiên Bản 7.0.0 · Bản Mod', d: '05/11/2026', now: false, pts: [
                 '<b>Chuyển thành mod của game (.zip):</b> cài ở Cấu hình → Mods → Cài mod, bật rồi tải lại trang. Không cần Tampermonkey hay dấu trang nữa.',
                 '<b>Nối thẳng vào lõi game (<code>tuTien.core</code>):</b> bỏ hẳn việc tải <code>index-[hash].js</code>, hơn 70 mẫu dò regex, vá khởi động và bản sao thứ hai của game. Mỗi hàm lấy theo tên gốc trong mã nguồn nên không còn vỡ khi game đổi tên rút gọn sau mỗi lần cập nhật (lỗi “chưa nhận ra tên cấp bậc tông môn” là do vậy).',
                 '<b>Tính trên ctx chính thức:</b> mọi phép tính dùng <code>game.readCtx()</code> (bản sao chỉ đọc của kiếp đang chơi). Hằng số bản mệnh, tỉ lệ rơi hiếm, số lần săn cạn, ngưỡng chặn giữa đường đọc sống từ <code>core[\'balance/…\']</code>.',
@@ -6412,15 +6417,66 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (UI.isOpen() && UI._section === 'tl') Assist.render();
 
 
-    /* Khung “Trợ Lý” trong nút nổi Mod của game: bấm để mở cửa sổ Tool. */
-    try {
-      MOD.ui.addPanel({ id: 'tro_ly', title: 'Vạn Kiếp Tu Tiên Tool · Trợ Lý', mount: function (el) {
-        el.innerHTML = '<p class="hud-phu">Trợ Lý tính toán theo dữ liệu game: kinh mạch, đột phá, kiếm lời, tra cứu, Ngự Linh, Luân Hồi…</p><button class="nut-chinh" type="button">Mở Trợ Lý</button>';
-        el.querySelector('button').onclick = function () { try { UI.open(); } catch (e) { console.error(e); } };
-      } });
-    } catch (e) { console.error('[tro_ly] addPanel', e); }
+    /* Khung “Trợ Lý” trong nút nổi Mod của game: chỉ đăng ký nếu có đối tượng MOD (chạy dạng mod zip) */
+    if (MOD && MOD.ui && typeof MOD.ui.addPanel === 'function') {
+      try {
+        MOD.ui.addPanel({ id: 'tro_ly', title: 'Vạn Kiếp Tu Tiên Tool · Trợ Lý', mount: function (el) {
+          el.innerHTML = '<p class="hud-phu">Trợ Lý tính toán theo dữ liệu game: kinh mạch, đột phá, kiếm lời, tra cứu, Ngự Linh, Luân Hồi…</p><button class="nut-chinh" type="button">Mở Trợ Lý</button>';
+          el.querySelector('button').onclick = function () { try { UI.open(); } catch (e) { console.error(e); } };
+        } });
+      } catch (e) { console.error('[tro_ly] addPanel', e); }
+    }
 
     NhatKy.init();
-    })(tt, mod);
-  },
-});
+    })(TT, MOD);
+  }
+
+  // Khởi động Trợ Lý ở chế độ Stealth (Không đăng ký vào window.tuTienMods)
+  var hasStarted = false;
+  function startAssist(tt) {
+    if (hasStarted) return;
+    if (!tt || !tt.game || tt.phase !== 'ready') return;
+    hasStarted = true;
+    runTroLy(tt, null);
+  }
+
+  function waitForGameReady() {
+    // 1. Nếu game đã ready sẵn
+    if (gWin.__tuTienReady || (gWin.tuTien && gWin.tuTien.phase === 'ready' && gWin.tuTien.game)) {
+      startAssist(gWin.tuTien);
+      return;
+    }
+
+    // 2. Lắng nghe event tutien:ready chính thức do game phát ra khi nạp xong
+    var onReady = function (e) {
+      gWin.removeEventListener('tutien:ready', onReady);
+      clearInterval(timer);
+      startAssist((e && e.detail) || gWin.tuTien);
+    };
+    gWin.addEventListener('tutien:ready', onReady);
+
+    // 3. Polling an toàn phòng trường hợp event bị trôi trước khi listener gắn xong
+    var timer = setInterval(function () {
+      if (gWin.__tuTienReady || (gWin.tuTien && gWin.tuTien.phase === 'ready' && gWin.tuTien.game)) {
+        clearInterval(timer);
+        gWin.removeEventListener('tutien:ready', onReady);
+        startAssist(gWin.tuTien);
+      }
+    }, 100);
+  }
+
+  // Nếu người dùng cố ý cấu hình chạy dưới dạng Mod Package (hoặc mod zip)
+  if (gWin.__VKX_AS_MOD_PACKAGE__) {
+    (gWin.tuTienMods ??= []).push({
+      id: 'van_kiep_tro_ly',
+      name: 'Vạn Kiếp Tu Tiên Tool · Trợ Lý',
+      version: '7.0.3',
+      author: 'LoganZ · Kỹ Sư',
+      apiVersion: 1,
+      ready: function (tt, mod) { runTroLy(tt, mod); }
+    });
+  } else {
+    // Mặc định: Chế độ Stealth Standalone (Undetected) cho Tampermonkey
+    waitForGameReady();
+  }
+})();

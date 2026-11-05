@@ -7,10 +7,14 @@ Tài liệu này tổng hợp toàn bộ kiến trúc, nguyên tắc thiết k�
 
 ## 1. TỔNG QUAN HỆ THỐNG & NGUYÊN TẮC CỐT LÕI
 
-### 1.1. Cổng giao tiếp API của Game (`window.tuTien`)
+### 1.1. Cổng giao tiếp API của Game (`window.tuTien`) & Cơ chế Stealth (Không Bị Phát Hiện)
 Kể từ bản game có Mod API (`apiVersion: 1`, cập nhật tháng 11/2026), game mở cổng kết nối chính thức qua `window.tuTien` (hoặc mảng chờ `window.tuTienMods`).
 * **Không quét regex / không tải bản sao / không vá bundle:** Tuyệt đối không quay lại cách làm cũ (bản 6.x) là fetch `index-[hash].js`, regex tìm hàm bị nén rồi import blob. Mọi hàm logic game đã được mở chính thức qua `tuTien.core`.
-* **Hai pha vòng đời của Mod:**
+* **Cơ chế Stealth Mode (Chống phát hiện mod khi chạy Tampermonkey):**
+  * Nếu Userscript đẩy cấu hình mod vào `window.tuTienMods`, engine game sẽ nhận diện có mod nạp từ `"user"` (Userscript), hiển thị trong menu *Cấu hình → Mods*, gắn mác dùng mod vào save game (`run.mods`), báo toast "Kiếp này bắt đầu dùng mod...", và có nguy cơ khóa tính năng Tỉ thí lôi đài.
+  * **Giải pháp Stealth Standalone (Bản 7.0.3):** Khi chạy qua Tampermonkey, script **KHÔNG đẩy vào `window.tuTienMods`**. Thay vào đó, script lắng nghe sự kiện `tutien:ready` (hoặc kiểm tra `window.__tuTienReady` / `window.tuTien.phase === 'ready'`). Khi game sẵn sàng, Trợ Lý trực tiếp sử dụng `window.tuTien` để kết nối lõi `core` và `game`.
+  * Kết quả: Tool hoạt động 100% đầy đủ chức năng nhưng **hoàn toàn vô hình đối với engine mod của game** (menu Mods trống, save không bị gắn cờ, không khóa Tỉ thí).
+* **Hai pha vòng đời của Mod (khi chạy dạng mod zip chính thức):**
   * **`boot(tt, mod)`**: Chạy trước khi nạp dữ liệu kiếp chơi. Chỉ dùng khi cần đổi công thức (`mod.modify`), sửa hằng cân bằng (`mod.setBalance`), thêm hiệu ứng/điều kiện (`mod.addEffect`, `mod.addCondition`), sửa nội dung gốc (`mod.patchContent`), đăng ký hành động mod (`mod.addAction`).
   * **`ready(tt, mod)`**: Chạy khi game đã nạp xong toàn bộ (UI, state, core, content đều sẵn sàng). Trợ Lý khởi chạy toàn bộ giao diện và logic tại pha này.
 
