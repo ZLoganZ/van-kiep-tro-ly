@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.0
+// @version      7.1.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.0';
+  var TOOL_VER = '7.1.1';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7069,7 +7069,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const cache = new Map();
     const g = K.luoiKinhMach(c, nv0);
 
-    return (manh) => {
+    return (input) => {
+      const rawList = Array.isArray(input) ? input : (input && Array.isArray(input.manh) ? input.manh : []);
+      const manh = rawList.map((p) => {
+        if (!p) return null;
+        if (p.m) return p;
+        const it = c.items.get(p.item);
+        const cells = K.oCuaManh(g, p, it) || [];
+        return { m: p, cells, key: p.item + ':' + p.x + ',' + p.y + ',' + p.xoay };
+      }).filter(Boolean);
+
       const key = manh.map((p) => p.m.item + '@' + p.m.x + ',' + p.m.y + ',' + p.m.xoay).sort().join('|');
       if (cache.has(key)) return cache.get(key);
 
@@ -7210,13 +7219,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const polished = await polish(mockNv, mode, annealed, (pct) => onProg(80 + pct * 18, 'Đang hoàn thiện các ô kề cạnh...'), customEval);
     onProg(100, 'Hoàn thành!');
 
-    const evalFinal = customEval(polished);
+    const finalManh = (polished && Array.isArray(polished.manh) && polished.manh.length)
+      ? polished.manh
+      : (annealed && Array.isArray(annealed.manh) && annealed.manh.length)
+        ? annealed.manh
+        : [];
+
+    const evalFinal = customEval(finalManh);
     return {
       deduced,
       pool,
       mockNv,
       evalFinal,
-      manh: polished,
+      manh: finalManh,
       nvFinal: evalFinal.nvFinal || mockNv
     };
   }
@@ -7712,7 +7727,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.0 · Biệt Đội Late Game & Cẩm Nang Săn Đồ Tối Thượng', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.1 · Khắc Phục Lỗi Tính Toán Ma Trận Kinh Mạch Late Game', d: '06/11/2026', now: true, pts: [
+                '<b>Khắc phục lỗi manh.map is not a function:</b> Chuẩn hóa đa định dạng đầu vào cho hàm lượng giá kinh mạch giả định (<code>makeBisEval</code>), tiếp nhận linh hoạt cả đối tượng kết quả tối ưu <code>{ manh: [...] }</code>, mảng candidate và mảng mảnh ghép thô.',
+                '<b>Đồng bộ cấu hình mảnh ghép tối ưu:</b> Trích xuất chính xác danh sách mảnh sau bước tinh chỉnh leo đồi cuối cùng (Hill Climbing Polish) để kết xuất mượt mà lên Sơ đồ ma trận kinh mạch canvas và bảng Cẩm nang săn đồ.'
+            ] },
+            { t: 'Phiên Bản 7.1.0 · Biệt Đội Late Game & Cẩm Nang Săn Đồ Tối Thượng', d: '06/11/2026', now: false, pts: [
                 '<b>Biệt Đội Late Game · Kinh Mạch Tối Thượng (Tab Mới trong Nhóm Tự Động):</b> Dành riêng cho người chơi late game (Hóa Thần 44 ô, Nguyên Anh 36 ô, Kim Đan 28 ô) muốn tìm cấu hình trang bị Best-in-Slot (BIS) hoàn hảo nhất.',
                 '<b>Phân Tích Linh Căn & Tương Sinh Tự Động:</b> Tự động đọc Linh Căn kiếp này, tự suy diễn chuỗi Ngũ Hành Tương Sinh & hệ cầu nối trực tiếp (ví dụ Song Linh Căn Kim - Mộc ➔ tự động suy diễn chuỗi liên hoàn Kim ➔ Thủy ➔ Mộc, kèm toàn bộ hệ biến dị Băng, Lôi, Phong, Ám và Vô Sắc).',
                 '<b>Giả Định Full Lượt Tẩy Tủy Toàn Bộ Ô:</b> Giả định người chơi đã thông toàn bộ lưới kinh mạch và có đủ Tẩy Tủy Đan / Cải Mệnh Đan để tẩy màu mọi ô dưới từng mảnh ghép trùng khít 100% với hệ của món đồ đó, triệt tiêu hoàn toàn điểm nghịch hệ (diemNghich = 0, ô hợp hệ = 1.0).',
