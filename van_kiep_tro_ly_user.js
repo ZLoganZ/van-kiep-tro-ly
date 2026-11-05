@@ -5,8 +5,8 @@
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
-// @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
-// @downloadURL  https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
+// @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
+// @downloadURL  https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
 // @homepageURL  https://github.com/ZLoganZ/van-kiep-tro-ly
 // @supportURL   https://github.com/ZLoganZ/van-kiep-tro-ly/issues
 // @grant        none
