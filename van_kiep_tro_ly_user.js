@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.0.8
+// @version      7.0.9
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.8
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.9
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.0.8';
+  var TOOL_VER = '7.0.9';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -1410,11 +1410,120 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return { flags, history, relics, nodes };
   }
 
+  // Lấy tên địa danh của một slot (hoisted an toàn cho toàn bộ module)
+  function placeName(c, slot) {
+    if (slot == null) return '';
+    try {
+      const W = (c && c.world) || (G().env && G().env.world);
+      if (W) {
+        if (typeof W.info === 'function') {
+          const inf = W.info(slot);
+          if (inf) {
+            if (inf.ten) return inf.ten;
+            if (inf.diaDanh && inf.diaDanh.ten) return inf.diaDanh.ten;
+          }
+        }
+        if (typeof W.diaDanh === 'function') {
+          const s = W.slot ? W.slot(slot) : (W.slots ? W.slots.find((x) => x && String(x.id) === String(slot)) : null);
+          if (s && s.dia_danh) {
+            const dd = W.diaDanh(s.dia_danh);
+            if (dd && dd.ten) return dd.ten;
+          }
+        }
+      }
+    } catch (e) {}
+    return 'Slot ' + slot;
+  }
+
+  // Dò xem người chơi có đang đứng đón đầu tại đúng địa danh (hoặc slot tương đương) không
+  function checkIsHere(c, run, eDia, diaSlot) {
+    if (!run) return false;
+    const curSlot = run.viTri != null ? String(run.viTri) : '';
+    const curONoi = run.oNoi != null ? String(run.oNoi) : '';
+    if (diaSlot != null) {
+      const sDia = String(diaSlot);
+      if (curSlot === sDia || curONoi === sDia) return true;
+    }
+    if (!eDia) return false;
+    const targetFold = fold(eDia).trim();
+    if (!targetFold) return false;
+
+    // 1. Kiểm tra qua chỉ mục ddBuild
+    try {
+      const X = ddBuild(c || ctxLite());
+      if (X && X.byId) {
+        if (curSlot && X.byId.has(curSlot)) {
+          const item = X.byId.get(curSlot);
+          if (item && item.name) {
+            const fNm = fold(item.name).trim();
+            if (fNm === targetFold || fNm.includes(targetFold) || targetFold.includes(fNm)) return true;
+          }
+        }
+        if (curONoi && X.byId.has(curONoi)) {
+          const item = X.byId.get(curONoi);
+          if (item && item.name) {
+            const fNm = fold(item.name).trim();
+            if (fNm === targetFold || fNm.includes(targetFold) || targetFold.includes(fNm)) return true;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 2. Kiểm tra qua World.info & World.diaDanh
+    try {
+      const W = (c && c.world) || (G().env && G().env.world);
+      if (W) {
+        const slotsToCheck = [curSlot, curONoi].filter(Boolean);
+        for (const sId of slotsToCheck) {
+          if (typeof W.info === 'function') {
+            const inf = W.info(sId);
+            if (inf) {
+              if (inf.ten) {
+                const fTen = fold(inf.ten).trim();
+                if (fTen === targetFold || fTen.includes(targetFold) || targetFold.includes(fTen)) return true;
+              }
+              if (inf.diaDanh && inf.diaDanh.ten) {
+                const fDd = fold(inf.diaDanh.ten).trim();
+                if (fDd === targetFold || fDd.includes(targetFold) || targetFold.includes(fDd)) return true;
+              }
+            }
+          }
+          const s = W.slot ? W.slot(sId) : (W.slots ? W.slots.find((x) => x && String(x.id) === String(sId)) : null);
+          if (s && s.dia_danh && typeof W.diaDanh === 'function') {
+            const dd = W.diaDanh(s.dia_danh);
+            if (dd && dd.ten) {
+              const fDd = fold(dd.ten).trim();
+              if (fDd === targetFold || fDd.includes(targetFold) || targetFold.includes(fDd)) return true;
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Kiểm tra qua placeName
+    try {
+      if (curSlot) {
+        const pn = fold(placeName(c, curSlot)).trim();
+        if (pn && (pn === targetFold || pn.includes(targetFold) || targetFold.includes(pn))) return true;
+      }
+    } catch (e) {}
+
+    return false;
+  }
+
   // Dò tọa độ slot của một địa danh trên thế giới
   function findDiaSlot(c, diaName) {
     if (!diaName) return null;
     const f = fold(diaName).trim();
     if (!f) return null;
+
+    // 0. Nếu người chơi đang đứng ngay tại địa danh này thì ưu tiên lấy luôn slot hiện tại!
+    try {
+      const g = G(), run = (c && c.run) || (g && g.state && g.state.run);
+      if (run && checkIsHere(c, run, diaName, null)) {
+        return String(run.viTri != null ? run.viTri : (run.oNoi != null ? run.oNoi : ''));
+      }
+    } catch (e) {}
 
     // 1. Thử qua danh sách đã index sẵn của ddBuild
     try {
@@ -1577,15 +1686,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     } catch (e) {}
   }
 
-  // Khởi động watcher tự động kiểm tra sự kiện Dị Bảo trên map
-  try {
-    setInterval(checkDiBaoAlert, 3000);
-    if (typeof TT !== 'undefined' && TT && typeof TT.on === 'function') {
-      TT.on('timePass', checkDiBaoAlert);
-      TT.on('travel', checkDiBaoAlert);
-      TT.on('worldEvent', checkDiBaoAlert);
+  // Khởi động watcher tự động kiểm tra sự kiện Dị Bảo và cập nhật tab Dò Đồ theo thời gian thực
+  var lastRenderedViTri = null;
+  function onWorldOrPlayerStateChange() {
+    checkDiBaoAlert();
+    if (S.tab === 'do') {
+      try {
+        const curViTri = G().state && G().state.run ? String(G().state.run.viTri) : null;
+        if (curViTri !== lastRenderedViTri) {
+          lastRenderedViTri = curViTri;
+          tabDoDo();
+        }
+      } catch (e) {}
     }
-    setTimeout(checkDiBaoAlert, 2000);
+  }
+
+  try {
+    setInterval(onWorldOrPlayerStateChange, 2500);
+    if (typeof TT !== 'undefined' && TT && typeof TT.on === 'function') {
+      TT.on('timePass', onWorldOrPlayerStateChange);
+      TT.on('travel', onWorldOrPlayerStateChange);
+      TT.on('worldEvent', onWorldOrPlayerStateChange);
+      TT.on('encounterEnd', onWorldOrPlayerStateChange);
+    }
+    setTimeout(checkDiBaoAlert, 1500);
   } catch (e) {}
 
   // ── Tab Dò Đồ Quý (Săn tìm Nghịch Thiên - Phẩm 8, Thần Phẩm - Phẩm 7 & Đồ Quý trên bản đồ) ──
@@ -1596,6 +1720,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       return;
     }
     const run = st.run, nv = run.nhanVat, nam = typeof run.nam === 'number' ? run.nam : null;
+    lastRenderedViTri = run.viTri != null ? String(run.viTri) : null;
     const sc = scanDiBao([run, st.meta]);
     const Cc = C();
     let c = null; try { c = ctx(); } catch (e) {}
@@ -2017,27 +2142,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             `;
           } else if (!r.done && e && e.dia) {
             const diaSlot = findDiaSlot(c, e.dia);
-            if (diaSlot != null) {
+            const isHere = checkIsHere(c, run, e.dia, diaSlot);
+            if (isHere) {
+              const currentSlotDisplay = diaSlot || run.viTri || run.oNoi || '';
+              travelBox = `
+                <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
+                  <b>📍 Đang đứng đón đầu tại ${esc(e.dia)}${currentSlotDisplay ? ' (Slot ' + esc(currentSlotDisplay) + ')' : ''} ✓</b>
+                  <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
+                </div>
+              `;
+            } else if (diaSlot != null) {
               let y = Infinity;
               if (c && K && K.travelYears) {
                 try { y = K.travelYears(c, diaSlot); } catch (err) {}
               }
-              const isHere = String(run.viTri) === String(diaSlot);
-              if (isHere) {
-                travelBox = `
-                  <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
-                    <b>📍 Đang đứng đón đầu tại ${esc(e.dia)} (Slot ${diaSlot}) ✓</b>
-                    <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
-                  </div>
-                `;
-              } else {
-                travelBox = `
-                  <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
-                    <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${diaSlot}) · Cách: <b>${safeYrs(y)}</b></span>
-                    <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
-                  </div>
-                `;
-              }
+              travelBox = `
+                <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+                  <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${esc(diaSlot)}) · Cách: <b>${safeYrs(y)}</b></span>
+                  <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+                </div>
+              `;
             }
           }
 
@@ -2185,6 +2309,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               btn.textContent = oldTxt;
             } else {
               try { UI.notify('🚀 ' + res.msg); } catch (e) {}
+              if (S.core && S.core.sync) try { S.core.sync(); } catch (e) {}
+              lastRenderedViTri = String(slot);
               tabDoDo();
             }
           } catch (err) {
@@ -3007,7 +3133,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   // ═════════════════════════ BẢN 2.0: các tính năng mới ═════════════════════════
   const has = (...ks) => ks.every((k) => typeof S.core[k] === 'function');
   const needMsg = (what) => `<div class="vk-mu">Phần "${what}" chưa dùng được với bản game này. Bấm "Tự kiểm tra" ở tab Tổng quan rồi chụp màn hình gửi Claude.</div>`;
-  const placeName = (c, slot) => { try { return c.world.info(slot).ten || slot; } catch { return slot; } };
+  // placeName đã được hoisted an toàn ở trên cho toàn bộ file
   const danger = (c, slot) => { try { return S.core.mucHiem(S.core.doChenh(c, c.run, slot)); } catch { return null; } };
   const dangerTag = (d) => !d ? '' : `<span class="${d.id === 'hiem' || d.id === 'tu_dia' ? 'vk-bad' : d.id === 'ngang_suc' ? '' : 'vk-ok'}">${esc(d.ten)}</span>`;
   const yrs = (y) => (y < 0.05 ? 'ngay đây' : num(y) + ' năm');
@@ -4294,7 +4420,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (it.loai === 'dung_cu') return it.dung_cu === 'luyen_dan' ? 'Đan lô' : it.dung_cu === 'luyen_bao' ? 'Đỉnh' : it.dung_cu === 'tran_phap' ? 'Trận bút' : 'Phù bút';
     if (it.loai === 'di_hoa') return 'Dị hỏa';
     if (it.loai === 'phu_luc') return 'Phù lục';
-    if (it.loai === 'don_phuong') return 'Đơn phương (công thức)';
+    if (it.loai === 'don_phuong') return 'Bí Phương / Đơn Phương (công thức)';
     if (it.loai === 'linh_duoc') return 'Linh dược';
     if (it.loai === 'yeu_tai') return 'Yêu tài';
     if (it.loai === 'nguyen_lieu') return 'Nguyên liệu';
@@ -4302,11 +4428,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (it.loai === 'lenh_bai') return 'Lệnh bài';
     return 'Khác';
   }
-  const CAT_ORDER = ['Tâm pháp (tu luyện, bị động)', 'Đấu pháp (công pháp có chiêu)', 'Pháp khí chiến đấu', 'Pháp bảo bị động (giáp, ngọc…)', 'Đan tăng tỉ lệ đột phá', 'Đan tăng tu luyện / tu vi', 'Đan phá bình cảnh', 'Đan tăng thọ', 'Đan chữa thương', 'Đan giảm tâm ma', 'Đan nâng phẩm đạo cơ', 'Đan tăng chỉ số', 'Đan kinh mạch (khai thông, đổi màu)', 'Đan dùng trong trận', 'Đan khác', 'Đi lại (phương tiện)', 'Túi trữ vật', 'Đan lô', 'Đỉnh', 'Phù bút', 'Dị hỏa', 'Phù lục', 'Đơn phương (công thức)', 'Linh dược', 'Yêu tài', 'Nguyên liệu', 'Đặc sản vùng', 'Lệnh bài', 'Khác'];
+  const CAT_ORDER = ['Tâm pháp (tu luyện, bị động)', 'Đấu pháp (công pháp có chiêu)', 'Pháp khí chiến đấu', 'Pháp bảo bị động (giáp, ngọc…)', 'Đan tăng tỉ lệ đột phá', 'Đan tăng tu luyện / tu vi', 'Đan phá bình cảnh', 'Đan tăng thọ', 'Đan chữa thương', 'Đan giảm tâm ma', 'Đan nâng phẩm đạo cơ', 'Đan tăng chỉ số', 'Đan kinh mạch (khai thông, đổi màu)', 'Đan dùng trong trận', 'Đan khác', 'Đi lại (phương tiện)', 'Túi trữ vật', 'Đan lô', 'Đỉnh', 'Phù bút', 'Dị hỏa', 'Phù lục', 'Bí Phương / Đơn Phương (công thức)', 'Linh dược', 'Yêu tài', 'Nguyên liệu', 'Đặc sản vùng', 'Lệnh bài', 'Khác'];
   // ═════════════════════════ WIKI NGỰ LINH (dữ liệu đọc trực tiếp từ game, có bản dự phòng nhúng sẵn) ═════════════════════════
   const NLW_SCH = [['thu', 'Thú', '🐺'], ['linh_thu', 'Linh Thú', '🦌'], ['khoi_loi', 'Khôi Lỗi', '🤖'], ['trung', 'Cổ Trùng', '🐛'], ['thi', 'Thi Khôi', '🧟'], ['hon', 'Quỷ Hồn', '👻']];
   const NLW_TEN = Object.fromEntries(NLW_SCH.map((x) => [x[0], x[1]]));
-  const NLW_GRP = [['all', 'Tất Cả'], ['trung', 'Trứng Linh Thú'], ['do_pho', 'Đồ Phổ Khôi Lỗi'], ['lieu', 'Liệu Nuôi & Luyện'], ['cong_phap', 'Công Pháp'], ['phap_khi', 'Pháp Khí'], ['phu', 'Phù & Trận Văn'], ['don_phuong', 'Đan Phương'], ['phu_lieu', 'Liệu Phụ Nghi Thức']];
+  const NLW_GRP = [['all', 'Tất Cả'], ['trung', 'Trứng Linh Thú'], ['do_pho', 'Đồ Phổ Khôi Lỗi'], ['lieu', 'Liệu Nuôi & Luyện'], ['cong_phap', 'Công Pháp'], ['phap_khi', 'Pháp Khí'], ['phu', 'Phù & Trận Văn'], ['don_phuong', 'Bí Phương (Đơn Phương)'], ['phu_lieu', 'Liệu Phụ Nghi Thức']];
   const NLW_NOI = { hoang_da: 'Hoang Dã', thon: 'Thôn', tran: 'Trấn', thanh: 'Thành', kinh_do: 'Kinh Đô', thanh_tri: 'Thành Trì', tong_mon: 'Tông Môn', di_tich: 'Di Tích', bi_canh: 'Bí Cảnh' };
   const NLW_DH = { son_mach: 'Núi', rung_ram: 'Rừng Rậm', yeu_vuc: 'Yêu Vực', di_tich: 'Di Tích', ho_nuoc: 'Đầm Hồ', hoang_nguyen: 'Đồng Hoang', hoang_mac: 'Hoang Mạc' };
   const tcWord = (s) => String(s || '').replace(/(^|[\s(\-\/])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
@@ -5189,7 +5315,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     'item.han_thiet': 'Sắt lạnh mang hệ Kim, khai thác được ở núi non. Nguyên liệu phẩm 2, giá gốc 30 Linh Thạch.'
   };
   const tcMoTa = (o) => (o && (o.mo_ta || DESC_BO_SUNG[o.id])) || '';
-  const TC_LOAI = { dan_duoc: 'Đan Dược', phu_luc: 'Phù Lục', cong_phap: 'Công Pháp', phap_khi: 'Pháp Khí', linh_duoc: 'Linh Dược', nguyen_lieu: 'Nguyên Liệu', yeu_tai: 'Yêu Tài', don_phuong: 'Đơn Phương', tru_vat: 'Trữ Vật', dung_cu: 'Dụng Cụ', phuong_tien: 'Phương Tiện', di_hoa: 'Dị Hỏa', dac_san: 'Hàng Buôn', lenh_bai: 'Lệnh Bài', tran_van: 'Trận Văn', trung_thu: 'Trứng Thú', tran_ban: 'Trận Bàn', khac: 'Khác' };
+  const TC_LOAI = { dan_duoc: 'Đan Dược', phu_luc: 'Phù Lục', cong_phap: 'Công Pháp', phap_khi: 'Pháp Khí', linh_duoc: 'Linh Dược', nguyen_lieu: 'Nguyên Liệu', yeu_tai: 'Yêu Tài', don_phuong: 'Bí Phương (Đơn Phương)', tru_vat: 'Trữ Vật', dung_cu: 'Dụng Cụ', phuong_tien: 'Phương Tiện', di_hoa: 'Dị Hỏa', dac_san: 'Hàng Buôn', lenh_bai: 'Lệnh Bài', tran_van: 'Trận Văn', trung_thu: 'Trứng Thú', tran_ban: 'Trận Bàn', khac: 'Khác' };
   const TC_MUC = { thuong: 'Thường', tinh_anh: 'Tinh Anh', boss: 'Đầu Lĩnh', lau_la: 'Lâu La' };
   const TC_QCOL = ['#9ca3af', '#9ca3af', '#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'];
   const TC_MCOL = { thuong: '#9ca3af', tinh_anh: '#3b82f6', boss: '#ef4444', lau_la: '#9ca3af' };
@@ -5327,6 +5453,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (own) rows.push(tcRow('Đang Có Trong Túi', `<span class="vk-ok">${own}</span>`));
     if (typeof it.khuon === 'string' && Cc.enemies.has(it.khuon)) rows.push(tcRow('Nở Ra', tcLk('q', it.khuon, tcMonName(it.khuon))));
     out.push(rows.join(''));
+    if (typeof TT !== 'undefined' && TT.yaml) {
+      out.push(`<div style="margin:6px 0 2px"><button class="vk-btn sec tc-btn-copy-yaml" data-id="${esc(it.id)}" style="padding:3px 9px;font-size:11.5px;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--bg3);color:var(--acc)">📋 Copy YAML Gốc</button></div>`);
+    }
     if (tcMoTa(it)) out.push(`<div style="margin:6px 0;font-size:13px;line-height:1.5">${esc(tcMoTa(it))}</div>`);
     let full = ''; try { full = itemFull(it); } catch (e) { full = ''; }
     out.push(tcSec('Công Dụng', full ? `<div>${full}</div>` : ''));
@@ -5390,6 +5519,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (st.length) rows.push(tcRow('Chỉ Số', esc(st.join(' · '))));
     if (e.dac_tinh && e.dac_tinh.length) rows.push(tcRow('Đặc Tính', esc(e.dac_tinh.map((d) => TC_TRAIT[d] || tcWord(String(d).replace(/_/g, ' '))).join(', '))));
     out.push(rows.join(''));
+    if (typeof TT !== 'undefined' && TT.yaml) {
+      out.push(`<div style="margin:6px 0 2px"><button class="vk-btn sec tc-btn-copy-yaml" data-id="${esc(e.id)}" style="padding:3px 9px;font-size:11.5px;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--bg3);color:var(--acc)">📋 Copy YAML Gốc</button></div>`);
+    }
     if (tcMoTa(e)) out.push(`<div style="margin:6px 0;font-size:13px;line-height:1.5">${esc(tcMoTa(e))}</div>`);
     const ch = (e.chieu || []).map((id) => Cc.chieuDich.get(id)).filter(Boolean);
     if (ch.length) out.push(tcSec('Chiêu Thức (' + ch.length + ')', tcPills(ch.map((c) => `${esc(tcWord(c.ten))} <span class="vk-mu">${esc(TC_DANG[c.dang] || '')}${c.he ? ' · ' + esc(heTen(c.he)) : ''}${c.uy ? ' · Uy ' + num(c.uy, 1) : ''}${c.controlChance ? ' · Khống Chế ' + pct(c.controlChance) : ''}${(c.effects || []).length ? ' · ' + esc([...new Set(c.effects.map((f) => TC_HIEU[f.kind] || tcWord(f.kind)))].join('/')) : ''}</span>`))));
@@ -5519,7 +5651,38 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     let tmr; $('tc-q').oninput = () => { clearTimeout(tmr); tmr = setTimeout(() => { f.focus = null; f.n = 40; draw(); }, 200); };
     body.querySelectorAll('#tc-desc, #tc-own').forEach((el) => { el.onchange = () => { f.focus = null; f.n = 40; draw(); }; });
     body.querySelectorAll('.tc-row select').forEach((el) => { el.onchange = () => { f.focus = null; f.n = 40; draw(); }; });
-    body.onclick = (ev) => { const a = ev.target.closest && ev.target.closest('.tc-lk'); if (a) { ev.preventDefault(); tcGo(a.dataset.k, a.dataset.id); } };
+    body.onclick = (ev) => {
+      const a = ev.target.closest && ev.target.closest('.tc-lk');
+      if (a) { ev.preventDefault(); tcGo(a.dataset.k, a.dataset.id); return; }
+      const yb = ev.target.closest && ev.target.closest('.tc-btn-copy-yaml');
+      if (yb) {
+        ev.preventDefault();
+        const id = yb.dataset.id;
+        if (id && typeof TT !== 'undefined' && TT.yaml) {
+          try {
+            if (typeof TT.yaml.copy === 'function') {
+              TT.yaml.copy(id);
+              try { UI.notify('📋 Đã copy YAML của ' + id); } catch (e) {}
+              const prev = yb.textContent;
+              yb.textContent = '✓ Đã Copy YAML';
+              setTimeout(() => { yb.textContent = prev; }, 1500);
+              return;
+            }
+            const str = typeof TT.yaml === 'function' ? TT.yaml(id) : '';
+            if (str && navigator.clipboard) {
+              navigator.clipboard.writeText(str).then(() => {
+                try { UI.notify('📋 Đã copy YAML của ' + id); } catch (e) {}
+                const prev = yb.textContent;
+                yb.textContent = '✓ Đã Copy YAML';
+                setTimeout(() => { yb.textContent = prev; }, 1500);
+              });
+            }
+          } catch (err) {
+            console.error('Copy YAML error', err);
+          }
+        }
+      }
+    };
     draw();
   }
   function tabVatPham() { tabTraCuu('v'); }
@@ -6891,6 +7054,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const gifts = (n) => { try { const gl = n.giftLike; if (Array.isArray(gl) && gl.length && gl.every((x) => typeof x === 'string')) return gl.map((id) => { const it = C().items.get(id); return it ? it.ten : id; }).join(', '); } catch (e) { /* bỏ qua */ } return ''; };
     const rowHtml = (x) => { const n = x.n, gf = gifts(n), pl = place(n); return `<div style="padding:7px 0;border-bottom:1px dashed var(--line)"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(n.ten)}${n.song === false ? ' <span class="vk-bad">(Đã Mất)</span>' : ''}</b><span class="vk-mu">${esc(NM_TEN[n.danhPhan] || n.danhPhan || '')}</span></div><div class="vk-mu" style="font-size:12px">${esc(x.d && x.d.goi || '')} · ${esc(realmLabel(n.canhGioi, n.tieuCanhGioi))} · ${Math.max(0, Math.floor(run.nam - n.namSinh))} tuổi · Hảo cảm <b>${num(Number(n.haoCam) || 0, 0)}</b>${pl ? ' · ' + esc(pl) : ''}</div>${gf ? `<div class="vk-mu" style="font-size:12px"><b>Thích:</b> ${esc(gf)}</div>` : ''}</div>`; };
     body.innerHTML = lhCard('Nhân Mạch', `<div class="vk-row"><span>Đã Gặp</span><b>${all.length} người (${all.filter((x) => x.n.song !== false).length} còn sống)</b></div>` + keys.map((k) => `<div class="vk-row"><span>${esc(NM_TEN[k] || k)}</span><b>${cnt[k]}</b></div>`).join('') +
+      lhNote('💡 <b>Lưu ý Tặng Quà:</b> Tặng đan dược tăng tu vi hoặc thọ nguyên cho NPC chịu hiệu ứng dược kháng (hệ số 0.75): mỗi viên cùng loại tặng kế tiếp chỉ nhận 75% công hiệu.') +
       `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px"><span>Lọc Theo Quan Hệ</span><select class="vk-sel" id="nm-r" style="width:170px"><option value="all">Tất Cả</option>${keys.map((k) => `<option value="${esc(k)}" ${f.r === k ? 'selected' : ''}>${esc(NM_TEN[k] || k)}</option>`).join('')}</select></label><label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px"><span>Tìm Tên</span><input class="vk-sel" id="nm-q" type="text" value="${esc(f.q)}" style="width:170px"></label>`) +
       lhCard('Danh Sách', (ls.slice(0, 200).map(rowHtml).join('') || lhNote('Chưa có ai khớp.')) + (ls.length > 200 ? lhNote('Chỉ hiện 200 người đầu, hãy lọc thêm.') : ''));
     body.querySelector('#nm-r').onchange = (e) => { f.r = e.target.value; tabNhanMach(); };
@@ -6961,7 +7125,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.8 · Khắc Phục Nút Đi Đến Đón Đầu & Bay Đến', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.9 · Nhận Diện Đón Đầu Đa Vị Trí & Tích Hợp YAML Gốc', d: '06/11/2026', now: true, pts: [
+                '<b>Nhận diện đón đầu thông minh (Đa Slot / Cùng Địa Danh):</b> Khắc phục triệt để tình trạng người chơi đã di chuyển đến đúng địa danh (như Kiếm Trạch, Hồn Tháp...) nhưng giao diện vẫn hiện nút di chuyển do sai lệch chỉ số ô phụ. Hệ thống nay kiểm tra toàn diện cả <code>viTri</code>, <code>oNoi</code>, thông tin vùng đất <code>W.info</code> và định danh địa danh <code>W.diaDanh</code> để xác nhận tức thì trạng thái <code>[📍 Đang đứng đón đầu tại ... (Slot ...) ✓]</code>.',
+                '<b>Tự động làm mới theo thời gian thực (Real-time Sync):</b> Tự động lắng nghe mọi sự kiện di chuyển và chuyển nhịp trong game (<code>travel</code>, <code>timePass</code>, <code>worldEvent</code>, <code>encounterEnd</code>) để lập tức làm mới trạng thái radar Dò Đồ Quý mà không cần phải chuyển tab thủ công.',
+                '<b>Tích hợp Copy YAML Gốc (tuTien.yaml):</b> Bổ sung nút <code>[📋 Copy YAML Gốc]</code> tại từng thẻ tra cứu Vật Phẩm và Quái Vật, cho phép sao chép nhanh định dạng YAML chuẩn từ game để phục vụ viết Mod hoặc tra cứu chi tiết.',
+                '<b>Cập nhật thuật ngữ Bí Phương & Ghi chú Nhân Mạch:</b> Đổi định danh Đơn Phương thành <i>Bí Phương (Đơn Phương)</i> chuẩn theo phiên bản mới của game; thêm lưu ý về hiệu ứng dược kháng khi tặng đan dược tăng tu vi / thọ nguyên cho NPC (hệ số 0.75).'
+            ] },
+            { t: 'Phiên Bản 7.0.8 · Khắc Phục Nút Đi Đến Đón Đầu & Bay Đến', d: '05/11/2026', now: false, pts: [
                 '<b>Khắc phục nút [📍 Đi Đến Đón Đầu] & [🚀 Bay Đến Ngay]:</b> Sửa triệt để lỗi nút bấm không phản hồi do sai định dạng kiểu dữ liệu slot (chuỗi vs số) và xung đột modal xác nhận của trình duyệt.',
                 '<b>Chuyển động tức thì & Phản hồi trực quan:</b> Bấm [📍 Đi Đến Đón Đầu] hoặc [🚀 Bay Đến Ngay] sẽ thực hiện di chuyển ngay lập tức, nút tự động đổi sang trạng thái [⏳ Đang đi...] và hiển thị thông báo toast nổi mượt mà.',
                 '<b>Tối ưu hóa thuật toán định vị địa danh:</b> Dò tìm chuẩn xác slot thông qua chỉ mục <code>ddBuild</code> và toàn bộ hệ thống slot thế giới của game, hỗ trợ cả khớp chính xác và khớp gần đúng.'

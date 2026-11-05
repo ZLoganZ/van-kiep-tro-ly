@@ -18,6 +18,7 @@ subscribe
 on
 ui
 assets
+yaml
 
 ## ModHandle
 id
@@ -32,6 +33,8 @@ modify
 setBalance
 addContent
 patchContent
+addTranslation
+addUiStrings
 ui
 
 ## ModUi
@@ -2484,6 +2487,9 @@ content/load.buildContent
 content/load.buildContentFromDocs
 content/load.contentKindOf
 content/load.entryId
+content/translate.UI_FILE
+content/translate.splitUiFiles
+content/translate.translateDocs
 content/types/combat.ENEMY_KINDS
 content/types/encounter.FACTION_EVENT_GROUP
 content/types/encounter.UTILITY_GROUPS
@@ -2998,10 +3004,12 @@ familiar/growth.healTimeMult
 familiar/growth.injuryHealYears
 familiar/growth.isBottleneck
 familiar/growth.stageThreshold
+familiar/index.EQUIP_BLOCK_NO_METHOD
 familiar/index.FAMILIAR_BANNED_TRAITS
 familiar/index.FAMILIAR_ONLY_TRAITS
 familiar/index.FAMILIAR_SCHOOL_BY_KIND
 familiar/index.FAMILIAR_TEMPERS
+familiar/index.MERGE_FULL
 familiar/index.PASSIVES
 familiar/index.PASSIVE_IDS
 familiar/index.PET_MOOD_LINES
@@ -3144,6 +3152,7 @@ familiar/index.treatFamiliar
 familiar/index.unequipFamiliar
 familiar/index.upgradeFamiliarCapacity
 familiar/index.winBond
+familiar/passive.MERGE_FULL
 familiar/passive.PASSIVES
 familiar/passive.PASSIVE_IDS
 familiar/passive.RARE_PASSIVE_IDS
@@ -3196,6 +3205,7 @@ familiar/ritual.ritualYears
 familiar/ritual.ritualsOf
 familiar/ritual.startRitual
 familiar/ritual.topAptitudeChance
+familiar/slots.EQUIP_BLOCK_NO_METHOD
 familiar/slots.budgetUsage
 familiar/slots.canEquip
 familiar/slots.deployedFamiliars
@@ -3346,6 +3356,7 @@ index.ENEMY_KINDS
 index.ENEMY_TARGET_KINDS
 index.ENEMY_TRAITS
 index.EPS
+index.EQUIP_BLOCK_NO_METHOD
 index.EVIL_CORE_DISCIPLE_FEMALE_TITLE
 index.EVIL_FORMATION_KINDS
 index.EVIL_SCHOOLS
@@ -3487,6 +3498,7 @@ index.MAX_PLACE_NODES
 index.MAX_REFORGE_PILLS
 index.MEMBER_PC_WEIGHTS
 index.MENIAL_RATIO
+index.MERGE_FULL
 index.MERIDIAN_LOADOUT_SLOTS
 index.MINOR_REALM_STEP
 index.MIN_RETREAT_YEARS
@@ -3750,6 +3762,7 @@ index.TUYEN_THUYEN
 index.TU_VI_MOI_NAM
 index.TY_LE_BAN
 index.TY_LE_THUONG
+index.UI_FILE
 index.UNIQUE_KINDS
 index.UTILITY_GROUPS
 index.WILD_TERRAIN
@@ -5131,6 +5144,7 @@ index.spiritQi
 index.spiritQiSource
 index.spiritRegenMult
 index.splashTargets
+index.splitUiFiles
 index.spotsFake
 index.spotsHidden
 index.spotsTreasure
@@ -5327,6 +5341,7 @@ index.tranKinhNghiem
 index.tranPham
 index.trangThaiNoi
 index.trangThaiSom
+index.translateDocs
 index.trappedSide
 index.travelProfile
 index.travelRange

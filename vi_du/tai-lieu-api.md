@@ -30,6 +30,7 @@ Thiết kế đầy đủ (cả phần chưa làm): gdd 60.
 | `mod.patchContent` | sửa vài trường của mục đã có, pha `boot` ([dưới](#sửa-dữ-liệu-gốc)) |
 | `mod.addTranslation`, `mod.addUiStrings` | bản dịch nội dung / chữ giao diện cho một ngôn ngữ, pha `boot` ([dưới](#bản-dịch-mod-ngôn-ngữ)) |
 | `tuTien.assets.set` | ảnh cho vật / địch / tranh / chiêu / chân dung ([dưới](#ảnh)) |
+| `tuTien.yaml` | lấy YAML của mục gốc làm mẫu, gõ trong console ([dưới](#lấy-mẫu-nội-dung-gốc)) |
 
 Gói nhiều file (`mod.yaml`, `content/*.yaml`, `img/`, không cần JS): xem [Gói mod](#gói-mod). Cài, bật / tắt, thứ tự, tùy chọn: **Cấu hình → Mods** trong game.
 
@@ -180,6 +181,20 @@ Danh sách mọi khóa kèm giá trị hiện tại và ghi chú: [balance.md](b
 - Cờ, biến mod đặt nên mang `<mod_id>_`.
 - Nội dung lỗi (sai luật id, validator báo lỗi) thì **bỏ cả phần nội dung của mod**, mod vẫn chạy phần khác; lỗi ghi vào nhật ký mod và console. Kết quả kiểm lưu theo bộ mod + bản game, lần sau không kiểm lại.
 - Save ghi bộ mod có nội dung (`run.mods`). Mở save mà mod đã gỡ / tắt / nội dung hỏng: game hỏi trước khi vào; vào tiếp thì chụp save cũ rồi bỏ vật, sự kiện, người… của mod khỏi kiếp. Mod đổi bản cũng dọn id bản mới không còn. Tiến trình xuyên kiếp (Bảo lục, mở khóa…) giữ nguyên.
+
+## Lấy mẫu nội dung gốc
+
+Mỗi loại mục (vật, địch, chiêu, sự kiện, đơn phương, NPC…) một dạng; cách nhanh nhất là chép mục gốc gần giống rồi sửa. Gõ trong console (F12) khi game đã vào:
+
+| Lệnh | Trả |
+|---|---|
+| `tuTien.yaml(id)` | YAML của mục (mảng một phần tử, dán thẳng vào file `content/`), dòng đầu `# file: …` là file gốc. Mục bị mod sửa thì là bản sau gộp, có dòng `# đã sửa bởi mod`; `tuTien.yaml(id, { original: true })` cho bản gốc. Sai id thì in id gần đúng |
+| `tuTien.yaml.copy(id)` | chép vào clipboard. Gõ trong console trình duyệt hay chặn: dùng `copy(tuTien.yaml(id))` của DevTools |
+| `tuTien.yaml.find(chữ, tiền tố?)` | `{ id, ten, file }[]` khớp id hoặc tên, có dấu hay không dấu; tiền tố lọc loại (`'item.'`, `'ev.'`), tối đa 50 |
+| `tuTien.yaml.list(tiền tố)` | mọi id của một loại |
+| `tuTien.yaml.save(tiền tố)` | tải về `<loại>.yaml` chứa mọi mục của loại đó, chia theo file gốc |
+
+Tiền tố id theo loại: `item.` vật phẩm, `enemy.` địch, `chieu.` chiêu của địch, `ev.` sự kiện, `chain.` chuỗi sự kiện, `dp.` đơn phương luyện chế, `npc.` khuôn nhân vật, `noi.` loại nơi chốn, `loot.` bảng rơi, `origin.` xuất thân, `the_chat.` thể chất, `thanh_tuu.` thành tựu, `mo_khoa.` mở khóa Bến Vong Xuyên. Comment trong YAML gốc không còn; nhớ đổi `id` sang id của mod.
 
 ## Sửa dữ liệu gốc
 

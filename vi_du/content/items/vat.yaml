@@ -1,4 +1,5 @@
 # Vật của mod: thư mục theo app/content/README.md. Icon ở img/vat/vi_du_thanh_truc_kiem.webp (tên theo phần sau "item.").
+# Muốn mẫu loại mục khác (sự kiện, đơn phương, NPC…): vào game, F12 → Console, gõ copy(tuTien.yaml('item.thiet_kiem')) hoặc tuTien.yaml.find('tên'), xem README.md.
 - id: item.vi_du_thanh_truc_kiem
   ten: Thanh Trúc Kiếm
   loai: phap_khi

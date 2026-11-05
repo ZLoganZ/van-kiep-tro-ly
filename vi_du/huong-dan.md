@@ -47,7 +47,16 @@ Thêm icon `img/vat/hoa_son_kiem_go.webp` (tên file là phần sau `item.`; web
 
 Luật id: id mới phải là `<tiền tố>.<id_mod>_<tên>`. Sai là cả phần nội dung của mod bị bỏ.
 
-Cách viết từng loại mục (địch, sự kiện, cửa hàng…): xem YAML gốc trong `app/content/` và app/content/README.md. Cách dễ nhất là chép một mục gốc gần giống rồi sửa.
+Cách viết từng loại mục (địch, sự kiện, cửa hàng…): **chép một mục gốc gần giống rồi sửa**. Lấy mẫu ngay trong game: mở console (F12 → Console) rồi gõ
+
+```js
+tuTien.yaml.find('kiếm')              // tìm id theo tên, có dấu hay không đều được; thêm 'ev.' để lọc sự kiện…
+tuTien.yaml('item.thiet_kiem')        // xem YAML của mục, dòng đầu ghi file gốc
+copy(tuTien.yaml('item.thiet_kiem'))  // chép vào clipboard, dán vào content/ của mod
+tuTien.yaml.save('ev.')               // tải về mọi sự kiện thành một file để đọc
+```
+
+Dán xong nhớ **đổi `id`** sang id của mod (`item.hoa_son_…`). Chi tiết ở `tai-lieu-api.md` mục "Lấy mẫu nội dung gốc".
 
 ## 4. Bài 2: chỉnh số có sẵn
 

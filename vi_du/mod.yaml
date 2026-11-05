@@ -1,6 +1,7 @@
 # Gói mod mẫu. Mới làm mod: đọc huong-dan.md và README.md cạnh file này trước.
 # Sửa thử rồi nén cả thư mục thành .zip, cài ở Cấu hình → Mods. Đổi `id` bên dưới (và id trong main.js, phải trùng) thành tên mod của bạn.
 # Id mới của mod phải là <tiền tố>.<id mod>_<tên>: item.vi_du_…, enemy.vi_du_…, ev.vi_du_…
+# Cần mẫu một loại mục: vào game, F12 → Console, gõ tuTien.yaml.find('tên') rồi copy(tuTien.yaml('<id>')) (README.md mục "Lấy mẫu từ game").
 id: vi_du
 name: Mod Mẫu
 version: 1.0.0

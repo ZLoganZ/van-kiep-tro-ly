@@ -58,7 +58,7 @@ declare module "core/content/types/crafting" {
     import type { ItemKind } from "core/content/types/item";
     /** Bốn nghề luyện chế (gdd 17 §2, trận pháp gdd 20 §5.5). */
     export type Nghe = 'luyen_dan' | 'che_phu' | 'luyen_bao' | 'tran_phap';
-    /** Phụ liệu của đơn phương: người chơi chọn món cụ thể khớp loại / hệ / phẩm tối thiểu (gdd 17 §4.1). */
+    /** Phụ liệu của bí phương: người chơi chọn món cụ thể khớp loại / hệ / phẩm tối thiểu (gdd 17 §4.1). */
     export interface PhuLieuDef {
         loai: ItemKind;
         he?: He[];
@@ -66,7 +66,7 @@ declare module "core/content/types/crafting" {
         pham?: number;
         so: number;
     }
-    /** Đơn phương (gdd 17 §4.1), file `content/recipes/<nghe>.yaml`, id `dp.<x>`. Hiệu quả nằm ở vật ra, không ở đây. */
+    /** Bí phương (gdd 17 §4.1), file `content/recipes/<nghe>.yaml`, id `dp.<x>`. Hiệu quả nằm ở vật ra, không ở đây. */
     export interface DonPhuongDef {
         id: string;
         nghe: Nghe;
@@ -2385,7 +2385,7 @@ declare module "core/balance/sect" {
     };
     /** Kiếm Tông: món có tag kiếm đổi bằng hệ số giá này. Giảm: rẻ hơn. */
     export let SWORD_REDEEM_DISCOUNT: number;
-    /** Đan Hà: đan dược / đơn phương luyện đan đổi bằng hệ số giá này. */
+    /** Đan Hà: đan dược / bí phương luyện đan đổi bằng hệ số giá này. */
     export let PILL_REDEEM_DISCOUNT: number;
     /** Giá đổi tối thiểu một món (cống hiến). */
     export let MIN_REDEEM_PRICE: number;
@@ -2448,7 +2448,7 @@ declare module "core/balance/sect" {
         kindRedeem: number;
         /** `kiem`: món tag `kiem` (thay luật chung). */
         swordRedeem: number;
-        /** `dan`: đan dược / đơn phương luyện đan (thay luật chung). */
+        /** `dan`: đan dược / bí phương luyện đan (thay luật chung). */
         pillRedeem: number;
         /** `ma`, `thi`: thắng yêu thú / tu sĩ cộng chừng này cống hiến (nhân hệ số cống hiến). */
         winMerit: number;
@@ -2776,6 +2776,8 @@ declare module "core/balance/social" {
     export let GIFT_HAPPY: number;
     /** Số món pháp khí / công pháp tối đa một người nhận quà mang theo đánh (gdd 10 §10.9.1); quá số này giữ món phẩm cao nhất. */
     export let NPC_GEAR_MAX: number;
+    /** Dược kháng tu vi của người nhận quà: mỗi viên đan tu vi đã uống (cùng món), viên sau công hiệu nhân chừng này (thọ nguyên dùng `LIFESPAN_DRUG_RETENTION`). */
+    export const NPC_CULTIVATION_DRUG_RETENTION = 0.75;
     /** Setter cho `withBalance` (override.ts): ESM không cho gán hằng từ ngoài. Thêm hằng số vô hướng mới thì thêm một dòng ở đây (test override.test.ts bắt thiếu). */
     export const socialBalanceSetters: {
         GIFT_VERY_HAPPY: (v: number) => void;
@@ -3976,6 +3978,8 @@ declare module "core/character/npc_items" {
         /** Câu xem trước (hộp tặng: sau chữ "Người ấy sẽ: "). */
         preview: string;
         parts: ItemPart[];
+        /** Tặng nhiều viên một lúc có ý nghĩa (đan thọ nguyên / tu vi dùng dần có dược kháng, phù và đan bỏ túi cộng dồn); món khác chỉ tặng một. */
+        stackable: boolean;
     }
     /** Món có thể mang theo: công pháp / pháp khí như pool của tu sĩ (trừ Nghịch Thiên, trấn phái, theo kiếp). Có `realm` thì thêm điều kiện đủ cảnh giới để dùng trong trận. */
     export function carriableGear(item: ItemDef, realm?: number): boolean;
@@ -3987,7 +3991,7 @@ declare module "core/character/npc_items" {
      */
     export function npcItemUse(ctx: ItemCtx, _id: string, n: NpcState, item: ItemDef): ItemUse;
     /** NPC nhận món `item` và dùng / mang theo / cất túi. Trả nhánh đã đi và các dòng nhật ký kể việc đó (người gọi tự ghi). */
-    export function npcReceiveItem(ctx: Ctx, id: string, item: ItemDef): {
+    export function npcReceiveItem(ctx: Ctx, id: string, item: ItemDef, qty?: number): {
         branch: ItemBranch;
         lines: string[];
     };
@@ -4380,6 +4384,8 @@ declare module "core/character/natal" {
     /** Số món còn nuốt được trong năm lịch hiện tại. */
     export const devourLeft: (nv: NhanVat) => number;
     export function devourBlock(nv: NhanVat): string | null;
+    /** Văn đã đầy cấp (level tính từ 0): không nâng thêm được. */
+    export function isRuneMaxed(level: number): boolean;
     /** Nuốt món `itemGrade` để ngộ văn mới (cấp 1). Trả lý do lỗi hoặc null khi đã áp (đã tính vào hạn mức năm). */
     export function applyDevourLearn(nv: NhanVat, runeId: string, itemGrade: number): string | null;
     /** Nuốt món `itemGrade` để nâng văn đã ngộ (hoặc văn bẩm sinh): cộng điểm, tự lên cấp. */
@@ -4388,7 +4394,7 @@ declare module "core/character/natal" {
      * Rút `NATAL_RUNE_CANDIDATES` văn ứng viên từ `pool` (văn món gợi ra). `pick` trả số [0, 1) từ RNG theo khóa (gdd 24).
      * Nếu kho đã có văn cùng nhóm với văn nào trong `pool` mà ba ứng viên không có văn đã ngộ nào, đổi ứng viên cuối thành một văn đã ngộ đó.
      */
-    export function rollRuneCandidates(pool: string[], known: string[], defs: Record<string, RuneDef>, pick: () => number): string[];
+    export function rollRuneCandidates(pool: string[], known: string[], defs: Record<string, RuneDef>, pick: () => number, maxed?: string[]): string[];
 }
 declare module "core/character/natalOutput" {
     import type { Content, ItemDef } from "core/content/types/index";
@@ -6382,7 +6388,7 @@ declare module "core/encounter/itemQuery" {
 }
 declare module "core/encounter/shop/market" {
     import type { ChoiceDef, Content, EncounterDef, ItemDef, ShelfDef } from "core/content/types/index";
-    import type { Ctx } from "core/kernel/context";
+    import { type Ctx } from "core/kernel/context";
     import type { ActiveEncounter } from "core/kernel/state";
     import { SHELF_SIZE_BY_PLACE } from "core/balance/economy";
     export { SHELF_SIZE_BY_PLACE };
@@ -6466,6 +6472,11 @@ declare module "core/encounter/shop/market" {
      * 5% vật Nghịch Thiên chưa có. Không có món hợp thì undefined.
      */
     export function hiddenTreasureReward(ctx: Ctx, def: EncounterDef, slotId: string): ItemDef | undefined;
+    /**
+     * Id vật các tiệm trong danh sách có thể bày (kệ hôm nay + món `mua` cố định), để giao diện tải sẵn icon trước khi người chơi mở tiệm.
+     * Chỉ đọc, không đụng rng; món cố định có thể đang hết hàng nhưng tải thừa vài icon không sao.
+     */
+    export function shopItemsAt(ctx: Ctx, encounterIds: string[], slotId: string): string[];
 }
 declare module "core/encounter/encounter" {
     import { type ChoiceRisk } from "core/encounter/choice_risk";
@@ -8102,7 +8113,7 @@ declare module "core/balance/crafting" {
         pb: [number, number, number];
         hongNang: number;
     }>;
-    /** Đơn phương kén hỏa: đúng lửa +5, ngược lửa −5. Tăng: chọn sai lửa phạt nặng, chọn đúng thưởng nhiều. */
+    /** Bí phương kén hỏa: đúng lửa +5, ngược lửa −5. Tăng: chọn sai lửa phạt nặng, chọn đúng thưởng nhiều. */
     export let DIEM_KEN_HOA: number;
     /** Một hơi (phù) / Huyết luyện (bảo) thiêu đốt chừng này năm thọ nguyên mỗi mẻ để bỏ phần hỏng nặng (§5.2). Tăng: Liều tốn thọ hơn. */
     export let NAM_THIEU_DOT: number;
@@ -8132,7 +8143,7 @@ declare module "core/balance/crafting" {
     export let DIEM_DONG_PHU: number;
     /** Điểm riêng của luyện bảo ở hoang dã có lửa đất (hoang mạc / yêu vực). Tăng: tìm lửa đất đáng hơn. */
     export let DIEM_LUA_DAT_LUYEN_BAO: number;
-    /** Nghe giảng lại khi hết đơn phương để học: cộng chừng này kinh nghiệm nghề. Tăng: nghe giảng lên bậc nhanh hơn. */
+    /** Nghe giảng lại khi hết bí phương để học: cộng chừng này kinh nghiệm nghề. Tăng: nghe giảng lên bậc nhanh hơn. */
     export let KINH_NGHIEM_NGHE_GIANG: number;
     /** Hỏng nặng từ phẩm này trở lên thì thương thế nặng hơn. Giảm: món thấp phẩm cũng dễ bị thương nặng. */
     export let PHAM_HONG_NANG_NANG: number;
@@ -8366,7 +8377,7 @@ declare module "core/progress/luyen_che" {
     export const doKhoPham: (pham: number) => number;
     export function chiSoNghe(ctx: Ctx, nghe: Nghe): number;
     /**
-     * Các nguồn điểm của một mẻ. `pham`: phẩm mẻ; `lo`: phẩm lò. Phần phụ liệu / dẫn dược chỉ khi có đơn phương.
+     * Các nguồn điểm của một mẻ. `pham`: phẩm mẻ; `lo`: phẩm lò. Phần phụ liệu / dẫn dược chỉ khi có bí phương.
      * Bảng cố định dòng: dòng không góp điểm vẫn có (gt 0) để HUD không nhảy khi đổi lựa chọn.
      */
     export function nguonDiemGoc(ctx: Ctx, nghe: Nghe, pham: number, hoa: HoaHau, noi: NoiLuyen, lo: number | undefined, heRa?: He): NguonDiem[];
@@ -8425,11 +8436,11 @@ declare module "core/progress/luyen_che" {
     };
     /** Chạy mẻ ảo: trôi thời gian, cộng kinh nghiệm, hỏng nặng thì bỏng. Không trừ liệu, không ra vật. */
     export function luyenThu(ctx: Ctx, o: LuyenThu): KetQuaMe;
-    /** Đơn phương truyền được: chưa thuộc, học được, không phải đơn cổ; `pham` = phẩm tối đa của vật ra. */
+    /** Bí phương truyền được: chưa thuộc, học được, không phải đơn cổ; `pham` = phẩm tối đa của vật ra. */
     export function donPhuongTruyenDuoc(ctx: Ctx, nghe: Nghe, pham?: number): DonPhuongDef[];
     /** Trả lựa chọn ngay, `null` (thôi), hoặc 'manual' (chờ màn luyện chế). */
     export type LuyenCheHandler = (ctx: Ctx, noi: NoiLuyen) => LuaChonLuyen | null | 'manual';
-    /** Bot / test: đơn phương đầu tiên luyện được, phụ liệu đầu tiên hợp, lửa văn, một mẻ. */
+    /** Bot / test: bí phương đầu tiên luyện được, phụ liệu đầu tiên hợp, lửa văn, một mẻ. */
     export const tuLuyen: LuyenCheHandler;
     export function setLuyenCheHandler(fn: LuyenCheHandler): void;
     /** Tiền thuê lò mỗi mẻ theo phẩm lò: một phần giá giữa khung của phẩm đó. */
@@ -11412,7 +11423,7 @@ declare module "core/content/types/item" {
         tran_phap?: FormationItemDef;
         /** Trấn phái công pháp của đại tông có phái này (gdd 14 §5.2): chỉ ở Tàng Kinh Các tông đó, không vào kho thường. */
         tran_phai?: string;
-        /** Vật loại `don_phuong` (gdd 17 §4.2): dùng thì học đơn phương này. */
+        /** Vật loại `don_phuong` (gdd 17 §4.2): dùng thì học bí phương này. */
         day?: string;
         /** Dụng cụ luyện chế (đan lô, phù bút, đỉnh; gdd 17 §8): nghề dùng được. Phẩm dụng cụ = pham_cap. */
         dung_cu?: Nghe;
@@ -11912,7 +11923,7 @@ declare module "core/content/types/encounter" {
         he?: He[];
         /** Chỉ rút mục có một trong các tag này (item.tag). Không ghi thì loại tà công (tag nghich). */
         tag?: string[];
-        /** item: chỉ rút vật luyện ra được từ một đơn phương (gdd 17), ví dụ đan trong lò (loại quả, trà). */
+        /** item: chỉ rút vật luyện ra được từ một bí phương (gdd 17), ví dụ đan trong lò (loại quả, trà). */
         tu_don_phuong?: boolean;
     }
     export type EncounterKind = 'su_kien' | 'chien_dau' | 'tu_luyen' | 'cua_hang' | 'bi_canh' | 'dot_pha' | 'tong_mon' | 'linh_mach';
@@ -12714,7 +12725,7 @@ declare module "core/kernel/state" {
             bac: number;
             kinhNghiem: number;
         }>>;
-        /** Đơn phương đã học (id `dp.`). */
+        /** Bí phương đã học (id `dp.`). */
         donPhuong?: string[];
         /** Con ngự linh (gdd 45 §1.3), mỗi con một bản riêng; con không đeo nằm ở túi con (chính danh sách này, không chiếm ô túi). Save cũ thiếu = chưa có. */
         familiars?: Familiar[];
@@ -13990,6 +14001,11 @@ declare module "core/kernel/context" {
         npcNews?: Map<string, NpcNewsEntry>;
         /** Hàm đọc cho HUD (`Game.read`, bản sao nông): không được sửa trạng thái, nên không tính bù đời NPC (gdd 43 §12.3). */
         readOnly?: boolean;
+        /**
+         * Bộ nhớ của một lượt `Game.read`: state chắc chắn không đổi suốt lượt (khác `readCtx` của mod, bản sao mod sửa được),
+         * nên nhớ được kết quả tra lặp (nội tại vật, nước đang đứng…). Dùng qua `readMemo`. Ngoài Game.read thì không có.
+         */
+        readCache?: Map<string, unknown>;
         /** Sự kiện cho mod gom trong hành động này (gdd 60 §5, `emitModEvent`); `Game.act` phát sau khi ghi. */
         modEvents?: import("core/kernel/modHooks").ModEventRecord[];
         /** Khuôn địch đang áp đồ rơi (đặt cùng `dropRank`), cho modifier `dropChance` của mod. */
@@ -14008,6 +14024,11 @@ declare module "core/kernel/context" {
     /** Lỗi do người chơi bấm sai (chưa đủ tay nghề…): hành động hoàn tác, Game hiện popup thay vì dải lỗi đỏ. */
     export class LoiNguoiChoi extends Error {
     }
+    /**
+     * Kết quả `compute()` nhớ theo `key` suốt một lượt `Game.read` (`ctx.readCache`); ngữ cảnh khác (hành động, mod) thì tính
+     * thẳng. Chỉ dùng cho giá trị thuần theo state, vd giá cả túi ở cửa hàng mỗi giá lại tra nội tại vật cả túi.
+     */
+    export function readMemo<T>(ctx: Ctx, key: string, compute: () => T): T;
     /** Ghi nhật ký và bật popup thông báo: việc ngoài encounter mà người chơi bấm vào thì phải thấy kết quả ngay. */
     export function baoNguoiChoi(ctx: Ctx, text: string, details?: LogDetails): void;
     /** Ghi nhật ký; đang trong một lựa chọn thì cũng hiện trong khung trò chuyện, `kind` quyết định cách hiện. */
@@ -14089,6 +14110,7 @@ declare module "core/character/npc_interact" {
         gain: number;
         level: GiftLevel;
         use: string;
+        stackable: boolean;
     }
     export interface GiftView {
         npc: string;
@@ -14098,7 +14120,7 @@ declare module "core/character/npc_interact" {
     /** Hộp tặng quà đang mở (encounter chờ `npc_tang`): tên người nhận và các món tặng được kèm nhãn hảo cảm dự kiến. */
     export function giftView(ctx: Ctx): GiftView | undefined;
     /** Tặng một món cho người đó: mất món, cộng hảo cảm, người nhận đáp một câu theo mức. Trả lý do lỗi hoặc undefined. */
-    export function giveGift(ctx: Ctx, id: string, itemId: string): string | undefined;
+    export function giveGift(ctx: Ctx, id: string, itemId: string, qty?: number): string | undefined;
     /** Dòng "Ưa: đan dược" ở bảng Nhân mạch: bạn / đạo lữ luôn thấy, người khác khi đã tặng trúng một lần. */
     export function giftLikeLabel(ctx: Pick<Ctx, 'run'>, id: string, n: NpcState, laBan: boolean): string | undefined;
 }
@@ -14369,6 +14391,12 @@ declare module "core/progress/grade" {
             pham: PhamChatDotPha;
             xs: number;
         }[];
+        /** Các nguồn cộng bậc trên gốc Trung, theo thứ tự cộng; `nen` = Trung + tổng, chưa kẹp (có thể vượt Hoàn Mỹ). */
+        nguon: {
+            ten: string;
+            bac: number;
+        }[];
+        nen: number;
     }
     /** Lý do không trùng kết được (undefined nếu được). Điều kiện `co_the_trung_ket` dùng cùng hàm. */
     export function reforgeBlockReason(ctx: Ctx): string | undefined;
@@ -14376,6 +14404,11 @@ declare module "core/progress/grade" {
     export function reforgePills(ctx: Ctx): string[];
     /** Bậc phẩm trước phần ngẫu nhiên: Trung + linh căn + đan + 1 (đã biết chỗ hỏng lần trước), chưa kẹp. */
     export function reforgeBaseGrade(ctx: Ctx, choice: ReforgeChoice): number;
+    /** Từng nguồn cộng bậc trên gốc Trung (để màn trùng kết liệt kê); `bac` có thể 0 hoặc âm (linh căn kém). */
+    export function reforgeSources(ctx: Ctx, choice: ReforgeChoice): {
+        ten: string;
+        bac: number;
+    }[];
     /** Phân bố phẩm sau trùng kết: base ±1 may rủi 20% / 20%, rồi tẩu hỏa `fire` dồn hết về Hạ (khớp `reforge`). */
     export function reforgeDistribution(base: number, fire: number): {
         pham: PhamChatDotPha;
@@ -14426,7 +14459,7 @@ declare module "core/world/lookup" {
     /** Các nguồn của một vật, tối đa `LOOKUP_MAX_LINES` dòng: mọc ở, rơi từ, bày bán, luyện ra. Không nguồn nào thì một dòng "cơ duyên". */
     export function itemSources(ctx: Ctx, itemId: string): LookupLine[];
     /**
-     * Công dụng của một vật đang có (hỏi theo đồ): dùng làm liệu đơn phương nào, thức ăn cho con ngự linh, liệu tiến hóa / nghi thức, dùng thẳng trong túi.
+     * Công dụng của một vật đang có (hỏi theo đồ): dùng làm liệu bí phương nào, thức ăn cho con ngự linh, liệu tiến hóa / nghi thức, dùng thẳng trong túi.
      * Đọc từ dữ liệu thật, không chỉ nơi nào; không có công dụng nào thì nói thẳng chỉ để bán. Tối đa `LOOKUP_MAX_LINES + 1` dòng.
      */
     export function itemUses(ctx: Ctx, itemId: string): LookupLine[];
@@ -15328,6 +15361,8 @@ declare module "core/world/bounty" {
     import type { BountyOffer, BountyTaken } from "core/kernel/state";
     /** Nhận cùng lúc tối đa. */
     export const SO_VIEC_NHAN: number;
+    /** Cảnh giới của một việc đang treo / đã nhận (để HUD hiện); tính từ biến việc nên save cũ cũng có. */
+    export function bountyRealm(env: Pick<Ctx, 'content' | 'world'>, run: Ctx['run'], v: BountyOffer): number;
     /** Loại bảng: cáo thị thôn trấn, hay điện nhiệm vụ của sư môn (gdd 21 §2.3). */
     export type LoaiBang = 'thanh_tran' | 'tong_mon';
     /** Bảng ở nơi này (cáo thị thôn trấn hoặc điện nhiệm vụ), làm mới nếu đã qua một năm thật. */
@@ -15402,7 +15437,7 @@ declare module "core/content/itemSources" {
     export type SourceKind = 'enemy' | 'enemy_rare' | 'beast_clan' | 'enemy_family' | 'loot' | 'loot_rare' | 'encounter' | 'encounter_rare' | 'shelf' | 'recipe' | 'sect_treasury' | 'forage' | 'special';
     export interface ItemSource {
         kind: SourceKind;
-        /** id nơi ra: khuôn địch, sự kiện, đơn phương… */
+        /** id nơi ra: khuôn địch, sự kiện, bí phương… */
         from: string;
         /** Cảnh giới thấp nhất mà nguồn này ra được. */
         minCg: number;
@@ -15983,11 +16018,11 @@ declare module "core/content/validate/beastClan" {
 }
 declare module "core/content/validate/crafting" {
     import type { ValidateContext } from "core/content/validate/context";
-    /** Luyện chế (gdd 17 §4): vật dạy đơn phương, dụng cụ. Trả về các đơn phương đã có vật dạy. */
+    /** Luyện chế (gdd 17 §4): vật dạy bí phương, dụng cụ. Trả về các bí phương đã có vật dạy. */
     export function validateCraftItems(ctx: ValidateContext): Set<string>;
-    /** Đơn phương (gdd 17 §4.1). */
+    /** Bí phương (gdd 17 §4.1). */
     export function validateRecipes(ctx: ValidateContext, coVatDay: Set<string>): void;
-    /** Mỗi linh dược / yêu tài có chỗ trong lò (gdd 17 §4.1, 16 §10): chủ liệu của một đơn phương, hoặc khớp một ô phụ liệu. */
+    /** Mỗi linh dược / yêu tài có chỗ trong lò (gdd 17 §4.1, 16 §10): chủ liệu của một bí phương, hoặc khớp một ô phụ liệu. */
     export function validateIngredientCoverage(ctx: ValidateContext): void;
 }
 declare module "core/content/validate/npc" {
@@ -16103,7 +16138,7 @@ declare module "core/mod/prune" {
     import type { Content } from "core/content/types/index";
     import type { RunState } from "core/kernel/state";
     export interface PruneReport {
-        /** Số chỗ trỏ tới id lạ đã bỏ (món trong túi / kho, mảnh trên lưới, đơn phương…). */
+        /** Số chỗ trỏ tới id lạ đã bỏ (món trong túi / kho, mảnh trên lưới, bí phương…). */
         refs: number;
         nodes: number;
         npcs: number;
@@ -16273,11 +16308,11 @@ declare module "core/dev/dev_character" {
     /** Đặt thương thế: 0 lành … 3 trọng thương. */
     export function setInjury(ctx: Ctx, level: number): void;
     /**
-     * Đặt nghề luyện chế: `rank` −1 = bỏ nghề (quên cả đơn phương của nghề), 0 Đồ … 4 Thánh. Kinh nghiệm (tính riêng bậc này, gdd 17 §15.5)
+     * Đặt nghề luyện chế: `rank` −1 = bỏ nghề (quên cả bí phương của nghề), 0 Đồ … 4 Thánh. Kinh nghiệm (tính riêng bậc này, gdd 17 §15.5)
      * không truyền thì lấy 0; muốn thử khảo hạch bậc kế thì đặt đủ ngưỡng bậc kế.
      */
     export function setProfession(ctx: Ctx, nghe: Nghe, rank: number, exp?: number): void;
-    /** Học mọi đơn phương của nghề (vào nghề nếu chưa); trả số đơn phương mới học. */
+    /** Học mọi bí phương của nghề (vào nghề nếu chưa); trả số bí phương mới học. */
     export function learnAllRecipes(ctx: Ctx, nghe: Nghe): number;
     /** Bái nhập tông ở `slot` với bậc `rank` (0 Tạp dịch … 4 Trưởng lão), như vào tông thật (rời tông cũ, cống hiến về 0). */
     export function joinSect(ctx: Ctx, slot: string, rank: number): void;
@@ -17756,6 +17791,8 @@ declare module "game/Game" {
         leaveAuction(): void;
         encounterView(): EncounterView | undefined;
         noiView(): NoiView | undefined;
+        /** Id vật các tiệm trong danh sách việc ở nơi đang đứng có thể bày, để HUD tải sẵn icon. */
+        shopItemsHere(encounterIds: string[]): string[];
         facilitiesAt(slot: string): string[];
         /** Sư môn, cấp bậc, điều kiện bậc kế (gdd 14) cho bảng nhân vật. */
         /** Bảng nhân sự của sơn môn (gdd 33 §8); chỉ đọc. */
@@ -18738,6 +18775,43 @@ declare module "game/mod/toast" {
         key: number;
     }) | undefined;
 }
+declare module "game/mod/yamlLookup" {
+    /** Docs để tra: `base` là nội dung gốc, `merged` sau khi gộp mod (thiếu thì như gốc), `owner` id → mod sửa sau cùng. */
+    export interface LookupDocs {
+        base: Record<string, unknown>;
+        merged?: Record<string, unknown>;
+        owner?: ReadonlyMap<string, string>;
+    }
+    export interface YamlFindHit {
+        id: string;
+        ten?: string;
+        file: string;
+    }
+    /** `tuTien.yaml(id)`: YAML của một mục, dòng đầu ghi file; không có thì `undefined` và in gợi ý id gần đúng. */
+    export interface YamlLookup {
+        (id: string, opts?: {
+            original?: boolean;
+        }): string | undefined;
+        /** Chép YAML của mục vào clipboard; trình duyệt chặn thì in ra để tự chép. */
+        copy(id: string, opts?: {
+            original?: boolean;
+        }): Promise<boolean>;
+        /** Tìm theo id / tên, có dấu hay không dấu đều khớp; `prefix` lọc loại (vd `item.`). Tối đa 50 kết quả. */
+        find(text: string, prefix?: string): YamlFindHit[];
+        /** Mọi id của một loại, vd `dp.`. */
+        list(prefix: string): string[];
+        /** Tải về một file .yaml chứa mọi mục của loại `prefix` (chia theo file gốc). */
+        save(prefix: string): number;
+    }
+    /** Ghi docs lần dựng nội dung sau cùng (game/mod/content.ts gọi mỗi lần dựng). */
+    export function setLookupDocs(docs: LookupDocs): void;
+    /** Docs đang dùng; undefined khi nội dung chưa tải. */
+    export const lookupDocs: () => LookupDocs | undefined;
+    /** Bỏ dấu, chữ thường: "Kiếm" → "kiem". */
+    export function fold(s: string): string;
+    /** Dựng `tuTien.yaml`; `source` trả docs hiện tại (undefined khi nội dung chưa tải). */
+    export function createYamlLookup(source: () => LookupDocs | undefined, out?: Pick<Console, 'log' | 'warn'>): YamlLookup;
+}
 declare module "game/mod/gate" {
     import type { Content, Ctx, Effect } from "core/index";
     import type { WorldMap } from "map/WorldMap";
@@ -18747,6 +18821,7 @@ declare module "game/mod/gate" {
     import { type ModPackDocs, type ModProblem, type ModStamp } from "core/index";
     import { type ModArtKind } from "hud/art/modArt";
     import { type ModUi } from "game/mod/ui";
+    import { type YamlLookup } from "game/mod/yamlLookup";
     export type { ModEventName, ModEventPayload, ModifierInput, ModifierName, ModifierValue } from "core/kernel/modHooks";
     export type { ItemMount, LayerMount, ModDockHandle, ModSlotName, ModSlots, ModUi, Mount } from "game/mod/ui";
     /** Tăng khi đổi / bỏ thứ ghi trong gdd 60 (thêm thì không); mỗi lần tăng ghi docs/mod/doi-api.md. */
@@ -18861,6 +18936,8 @@ declare module "game/mod/gate" {
         /** Giao diện; addPanel / addDock / addSlot / openPanel chỉ gọi trong boot / ready (ngoài đó dùng `mod.ui`). */
         ui: ModUi;
         assets: ModAssets;
+        /** Tra YAML nội dung gốc trong console để làm mẫu (gdd 61): `tuTien.yaml(id)`, `.copy`, `.find`, `.list`, `.save`. Có khi nội dung đã tải. */
+        yaml: YamlLookup;
     }
     global {
         interface Window {
