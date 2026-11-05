@@ -239,8 +239,14 @@ Mỗi khi web game ra bản cập nhật mới, người dùng sẽ tải gói t
 * Nếu game cập nhật cơ chế tính sát thương, tỷ lệ rơi đồ, hoặc số lượt săn yêu (`HUNTS_PER_SLOT`, `HUNT_RECOVERY_YEARS`), đối chiếu với các thuộc tính getter động trong hàm `buildCore` (dòng ~656 - 694) để đảm bảo Tool không bị lệch số liệu với game.
 
 ### Bước 5: Cập nhật phiên bản Tool & Phát hành (Tự động Update trên Tampermonkey)
-* **Tăng phiên bản:** Nâng `@version` trong UserScript header và `TOOL_VER` trong mã nguồn `van_kiep_tro_ly_user.js` (ví dụ từ `7.0.4` lên `7.0.5`).
-* **Thêm nhật ký:** Thêm mục ghi chú vào mảng `LOG` trong module `NhatKy`.
+
+> [!IMPORTANT]
+> **QUY TẮC PHIÊN BẢN & COMMIT (BẮT BUỘC TUÂN THỦ):**
+> Mỗi lần sửa bất kỳ nội dung nào trong file script `van_kiep_tro_ly_user.js` (dù là sửa 1 dòng code, fix bug nhỏ hay thêm tính năng mới), nếu kiểm tra git (`git status` / `git diff`) thấy file có thay đổi thì **BẮT BUỘC coi đó là 1 bản cập nhật mới**:
+> 1. **Tăng số phiên bản:** Nâng `@version` trong UserScript header và `TOOL_VER` trong mã nguồn (ví dụ: `7.0.4` → `7.0.5`).
+> 2. **Thêm mục vào Nhật Ký Cập Nhật:** Bổ sung ngay 1 entry lên ĐẦU mảng `LOG` trong module `NhatKy` mô tả ngắn gọn thay đổi vừa làm, đặt `now: true` (và chuyển bản cũ thành `now: false`).
+> *Lý do:* Tampermonkey chỉ so sánh chuỗi `@version`. Nếu bạn push code lên GitHub mà không tăng `@version`, Tampermonkey sẽ bỏ qua và KHÔNG kích hoạt cập nhật tự động cho người dùng.
+
 * **Cơ chế Auto-Update của Tampermonkey:**
   * Header của `van_kiep_tro_ly_user.js` đã được gắn:
     ```javascript

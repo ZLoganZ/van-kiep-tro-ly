@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.4 - Dò Đồ Quý & Stealth)
+// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.6 - Dò Đồ Quý & Stealth)
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.0.4
+// @version      7.0.6
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.6
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.0.4';
+  var TOOL_VER = '7.0.6';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -1713,9 +1713,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           <p><b>1. Phẩm cấp Nghịch Thiên (Cấp 8):</b> Là phẩm cấp cao nhất hiện nay, vượt qua Thần Phẩm (Cấp 7). Đồ Nghịch Thiên không bị trần pháp lực giới hạn theo cảnh giới thông thường (nhân theo cảnh giới hiện tại).</p>
           <p><b>2. Dị Bảo Theo Hồn Qua Kiếp:</b> Trong 21 Dị Bảo, có 12 món có thuộc tính <i>«Theo Hồn Qua Kiếp»</i> (như Thái Hư Chu, Cửu U Hoàng Hỏa, Luân Hồi Chân Kinh, Tam Sinh Thạch, Phong Thiên Ấn,...). Một khi đã nhận, những món này vĩnh viễn theo bạn sang kiếp mới!</p>
           <p><b>3. Điều Kiện Xuất Hiện:</b> Đa số sự kiện Dị Bảo đòi hỏi cảnh giới tối thiểu là <b>Nguyên Anh (CG 4)</b> hoặc <b>Hóa Thần (CG 5)</b>. Nếu cảnh giới thấp hơn, sự kiện sẽ không xuất hiện trên bản đồ.</p>
-          <p><b>4. Bài Kiểm Định Chỉ Số:</b> Một số Dị Bảo yêu cầu Thần Thức (tới 100), Đạo Tâm (tới 75), hoặc Ngộ Tính (tới 70). Hãy cắn đan dược tăng vĩnh viễn căn cơ trước khi đến nhặt đồ.</p>
+          <p><b>4. Bài Kiểm Định Chỉ Số (Ăn chắc 100% không cần đánh nhau):</b> Có 6 món Dị Bảo chỉ kiểm tra chỉ số căn bản (Tam Sinh Thạch, Thái Hư Chu, Luân Hồi Chân Kinh, Cam Lộ Tịnh Bình, Thần Nông Bách Thảo Kinh, Tụ Bảo Bồn). Chỉ cần chỉ số đạt là nhặt được ngay mà không phải giao chiến.</p>
           <p><b>5. Hồi Chiêu 120 Năm:</b> Sau khi làm xong một sự kiện Dị Bảo, sự kiện đó cần 120 năm để có cơ hội quay lại trên bản đồ.</p>
-          <p><b>6. Boss Hóa Thần:</b> <i>Nghịch Lân Thuẫn</i> và <i>Thiên Diễn Đan</i> chỉ rơi từ Boss cảnh giới Hóa Thần.</p>
+          <p><b>6. Cơ Chế "Thiên Đạo Bù Dị Bảo" (Bảo Hiểm Pity):</b> Càng ở cảnh giới cao lâu mà chưa gặp Dị Bảo, game sẽ tự động nhân trọng số xuất hiện: <code>×(1 + số năm chờ / 25)</code>. Nếu tích lũy chờ đủ <b>500 năm</b>, lần rút kế tiếp chắc chắn 100% sẽ xuất hiện Dị Bảo!</p>
+          <p><b>7. Boss Hóa Thần:</b> <i>Nghịch Lân Thuẫn</i> và <i>Thiên Diễn Đan</i> chỉ rơi từ Boss cảnh giới Hóa Thần.</p>
         </div>
       </details>
     `;
@@ -1793,9 +1794,27 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (e.chk) bits.push(`<b>Kiểm định chỉ số:</b> ${r.statChk.ok ? '<span class="vk-ok">' + esc(r.statChk.text) + ' ✓</span>' : '<span class="vk-bad">' + esc(r.statChk.text) + ' ✗</span>'}`);
             if (e.bv) bits.push(`<b>Hộ vệ trấn giữ:</b> ${esc(e.bv)} (${realmName(e.bvcg ?? 5)})`);
             if (e.hc) bits.push(`<b>Hồi chiêu sự kiện:</b> ${e.hc} năm`);
+
+            // Đánh giá khả năng tham gia & đoạt bảo
+            let evalVerdict = '';
+            if (!e.bv && e.chk) {
+              if (r.statChk.ok) evalVerdict = '<span class="vk-ok" style="font-weight:bold">🎯 Thuần kiểm định: ĐÃ ĐẠT CHỈ SỐ — ĂN CHẮC 100% (Không cần đánh nhau) ✓</span>';
+              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">🎯 Thuần kiểm định: THIẾU CHỈ SỐ — Tham gia sẽ THẤT BẠI (Cần cắn đan tăng ${esc(r.statChk.name)}) ✗</span>`;
+            } else if (e.bv && !e.chk) {
+              const myCg = nv.canhGioi ?? 0, foeCg = e.bvcg ?? 5;
+              if (myCg >= foeCg) evalVerdict = `<span class="vk-ok" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới của bạn (${realmName(myCg)}) ngang/hơn Hộ Vệ (${realmName(foeCg)}) — Khả năng thắng cao ✓</span>`;
+              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới bạn (${realmName(myCg)}) kém hơn Hộ Vệ (${realmName(foeCg)}) — RẤT NGUY HIỂM ⚠️</span>`;
+            } else if (e.bv && e.chk) {
+              const myCg = nv.canhGioi ?? 0, foeCg = e.bvcg ?? 5;
+              const okChk = r.statChk.ok, okCg = myCg >= foeCg;
+              if (okChk && okCg) evalVerdict = '<span class="vk-ok" style="font-weight:bold">⚡ Thử thách Kép (Vừa kiểm định + Vừa đánh boss): ĐÃ ĐẠT CHỈ SỐ & ĐỦ CẢNH GIỚI ĐỐI ĐẦU ✓</span>';
+              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">⚡ Thử thách Kép (Vừa kiểm định + Vừa đánh quái): ${!okChk ? 'Thiếu chỉ số (' + r.statChk.text + ')' : ''}${!okChk && !okCg ? ' và ' : ''}${!okCg ? 'Cảnh giới thấp hơn Hộ Vệ' : ''} ⚠️</span>`;
+            }
+            if (evalVerdict) bits.push(`<b>Đánh giá đoạt bảo:</b> ${evalVerdict}`);
           } else if (r.nguon === 'boss') {
+            const myCg = nv.canhGioi ?? 0;
             bits.push(`<b>Nguồn gốc:</b> Độc quyền rơi từ Boss Hóa Thần (CG 5)`);
-            bits.push(`<b>Điều kiện:</b> Cần đủ sức đánh bại Đầu Lĩnh Hóa Thần`);
+            bits.push(`<b>Đánh giá đoạt bảo:</b> ${myCg >= 5 ? '<span class="vk-ok" style="font-weight:bold">✓ Bạn đã đạt Hóa Thần, có thể săn Boss thế giới để lấy đồ</span>' : '<span class="vk-bad" style="font-weight:bold">⚠️ Cần đạt Hóa Thần (CG 5) để có thể săn Boss rơi đồ này</span>'}`);
           }
 
           let sttBadge = '';
@@ -6718,7 +6737,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.4 · Dò Đồ Quý & Auto-Update Tampermonkey', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.6 · Làm Rõ Thử Thách Kép Dò Đồ Quý', d: '05/11/2026', now: true, pts: [
+                '<b>Làm rõ nhãn Thử Thách Kép:</b> Đổi câu thông báo thành "Thử thách Kép (Vừa kiểm định chỉ số + Vừa đánh quái hộ vệ)" để người chơi hiểu ngay sự kiện đòi hỏi cả 2 bước.',
+                '<b>Hiển thị trực quan chỉ số còn thiếu:</b> Nêu rõ số điểm còn thiếu để người chơi dễ dàng cắn đan dược hoặc trang bị pháp bảo bổ khuyết.'
+            ] },
+            { t: 'Phiên Bản 7.0.5 · Đánh Giá Tỉ Lệ Đoạt Bảo & Bí Kíp Dị Bảo', d: '05/11/2026', now: false, pts: [
+                '<b>Đánh giá khả năng đoạt bảo tự động:</b> Trên từng thẻ Dị Bảo, tự động so sánh cảnh giới và chỉ số của bạn với yêu cầu sự kiện để kết luận: Ăn chắc 100% (đủ chỉ số không cần đánh nhau), Đủ cảnh giới đối đầu, hay Cảnh báo nguy hiểm khi hộ vệ Hóa Thần mạnh hơn.',
+                '<b>Phân loại chi tiết hình thức đoạt bảo:</b> Tách bạch rõ 6 Dị Bảo thuần kiểm định chỉ số (không cần đánh nhau) và các Dị Bảo yêu cầu chiến đấu hộ vệ Hóa Thần / Nguyên Anh.',
+                '<b>Bổ sung cơ chế "Thiên Đạo Bù Dị Bảo":</b> Giải thích chi tiết hệ thống bảo hiểm (pity) trong game — chờ đủ 500 năm chắc chắn 100% xuất hiện sự kiện Dị Bảo.'
+            ] },
+            { t: 'Phiên Bản 7.0.4 · Dò Đồ Quý & Auto-Update Tampermonkey', d: '05/11/2026', now: false, pts: [
                 '<b>Tab Dò Đồ Quý (Nghịch Thiên Radar):</b> Thêm tab Dò Đồ Quý trong nhóm Tra Cứu, cho phép săn lùng toàn bộ các vật phẩm phẩm cấp cao nhất game: Nghịch Thiên (Phẩm 8 / Dị Bảo) và Thần Phẩm (Phẩm 7).',
                 '<b>Radar Bản Đồ Thời Gian Thực:</b> Tự động quét các ô cơ duyên (<code>run.nodes</code>) trên bản đồ thế giới, phát hiện ngay các sự kiện Dị Bảo đang xuất hiện, quái/boss rơi đồ quý, hạn năm còn lại, mức độ nguy hiểm và nút [🚀 Bay Đến Ngay] để dịch chuyển tức thì.',
                 '<b>Bộ Lọc & Tra Cứu Đồ Quý Đa Năng:</b> Lọc theo phẩm cấp (Nghịch Thiên 8, Thần Phẩm 7, Tiên Phẩm 6, Tất cả), lọc theo trạng thái (Đang trên map, Đủ điều kiện săn, Đang hồi chiêu 120 năm, Chưa đủ điều kiện, Đã sở hữu), lọc theo loại và tìm kiếm tự do theo từ khóa.',
