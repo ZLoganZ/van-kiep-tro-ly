@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.6
+// @version      7.1.8
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.6
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.8
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.6';
+  var TOOL_VER = '7.1.8';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -630,6 +630,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     ['ascendBlock', 'character/natal', 'ascendBlock', 'kiểm tra nâng giai'], ['temperBlock', 'character/natal', 'temperBlock', 'kiểm tra huyết luyện'],
     ['devourCandidates', 'progress/natal_act', 'devourCandidates', 'ứng viên văn khi nuốt'], ['devourItemError', 'progress/natal_act', 'devourItemError', 'kiểm tra nuốt món'],
     ['innateRuneOf', 'character/natalRunes', 'innateRuneOf', 'văn bẩm sinh của món'],
+    ['nextAutomatedAction', 'combat/playerAutomation', 'nextAutomatedAction', 'AI tự đánh trong trận'],
   ];
   // Hằng số bản mệnh: khóa Tool → tên hằng trong core['balance/natal'].
   const BM_CONST = {
@@ -5694,7 +5695,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   const AU_KEY = 'vkx_auto_cfg';
   const AU_DEF = {
     buon: { maxY: 3, banY: 5, von: 60, giu: 100, lai: 20, chuyen: 5, hiem: 'ngang_suc', tho: 15, toc: 'nhanh' },
-    san: { maxY: 3, mau: ['an_toan', 'ngang_suc', 'hiem'], tran: 20, thuong: 2, tho: 15, kt: true, neHac: true, toc: 'nhanh' },
+    san: { maxY: 3, mau: ['an_toan', 'ngang_suc', 'hiem'], tran: 20, thuong: 2, tho: 15, kt: true, neHac: true, danhAi: true, toc: 'nhanh' },
     km: { mode: 'bal', dir: 'tien', kb: '', prio: true, bk: 5, ratio: '55', iters: 3000, mo: false, moMax: 1, two: false, keep: 'tu', moBo: false, watch: false },
     rr: { pham: ['thien', 'bien_di'], he: [], heMode: 'any', tc: [], join: 'and', max: 3000, toc: 'nhanh', swap: false, lp: false, dl: 'normal', lh: false, lhIds: [], lhKeep: 0 },
   };
@@ -5800,6 +5801,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     AU.cfg.rr.lh = !!AU.cfg.rr.lh; if (!Array.isArray(AU.cfg.rr.lhIds)) AU.cfg.rr.lhIds = []; AU.cfg.rr.lhKeep = Math.max(0, Number(AU.cfg.rr.lhKeep) || 0);
     AU.cfg.san.mau = auMauNorm(AU.cfg.san.mau); delete AU.cfg.san.hiem; // Auto Săn Yêu: màu được phép do người dùng tích (mặc định Xanh, Vàng và Đỏ; Tím dừng)
     if (typeof AU.cfg.san.neHac !== 'boolean') AU.cfg.san.neHac = true;
+    if (typeof AU.cfg.san.danhAi !== 'boolean') AU.cfg.san.danhAi = true;
   }
   function auSave() { try { localStorage.setItem(AU_KEY, JSON.stringify(AU.cfg)); } catch (e) { /* bỏ qua */ } }
   auLoad();
@@ -5828,7 +5830,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const r = G().state.run; if (!r) return 'x';
     const a = r.active;
     return [r.nam, r.viTri, r.oNoi || '', r.rng, a ? a.id + ':' + (a.done ? 1 : 0) + ':' + (a.waiting ? 1 : 0) + ':' + ((a.transcript && a.transcript.length) || 0) : '',
-      r.tran ? 't' + (r.tran.ketThuc ? 1 : 0) : '', r.nhanVat.linhThach, r.thongBao || '', AU.run ? AU.run.hacSkipped || 0 : 0].join('|');
+      r.tran ? 't' + (r.tran.ketThuc ? 1 : 0) + ':' + (r.tran.daGiaoChien ? 1 : 0) + ':' + (r.tran.hiep || 0) + ':' + ((r.tran.ta && r.tran.ta.khiHuyet) || 0) + ':' + (r.tran.rng || 0) : '',
+      r.nhanVat.linhThach, r.thongBao || '', AU.run ? AU.run.hacSkipped || 0 : 0].join('|');
   }
   const auLifeLeft = () => { try { const nv = G().state.run.nhanVat; return S.core.thoNguyenToiDa(nv) - nv.tuoi; } catch (e) { return Infinity; } };
   const auBag = (id) => (G().state.run.nhanVat.tuiDo && G().state.run.nhanVat.tuiDo[id]) || 0;
@@ -5901,6 +5904,51 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return 'hiem';
   }
 
+  // Đánh tự động bằng AI trong trận khi game không cho Tốc Chiến (quái Tinh Anh/Boss hoặc máu có lúc < 60%).
+  function auFightStep() {
+    const g = G(), c = C();
+    if (!g) return 'idle';
+    let tran = g.state.run && g.state.run.tran;
+    if (!tran) return 'idle';
+    if (tran.ketThuc) return 'ok';
+
+    const autoFn = (S && S.core && S.core.nextAutomatedAction) || (TT.core && TT.core['combat/playerAutomation'] && TT.core['combat/playerAutomation'].nextAutomatedAction);
+    const defAuto = (TT.core && TT.core['combat/playerAutomation'] && TT.core['combat/playerAutomation'].DEFAULT_COMBAT_AUTOMATION) || {
+      enabled: true, autoEndTurn: true, usePills: true, useTalismans: true, stackShields: true, skillPriority: [], useInnate: true
+    };
+    const userCfg = (g.state.meta && g.state.meta.settings && g.state.meta.settings['tu-tien:combat-automation']) || defAuto;
+
+    let actionsThisTick = 0;
+    while (tran && !tran.ketThuc && actionsThisTick < 8) {
+      actionsThisTick++;
+      let act = null;
+      if (typeof autoFn === 'function') {
+        try { act = autoFn(tran, c, userCfg); } catch (e) { act = null; }
+      }
+      if (act) {
+        const r = auCall(() => g.hanhDongTran(act));
+        tran = g.state.run && g.state.run.tran;
+        if (!r.ok) {
+          const rKet = auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
+          return rKet.ok ? 'ok' : { stop: 'Lỗi trận đấu: ' + (r.err || rKet.err) };
+        }
+        if (!tran || tran.ketThuc) return 'ok';
+      } else {
+        if (tran.ta && !tran.ta.daDanhThuong) {
+          const rDt = auCall(() => g.hanhDongTran({ loai: 'danh_thuong' }));
+          tran = g.state.run && g.state.run.tran;
+          if (rDt.ok) {
+            if (!tran || tran.ketThuc) return 'ok';
+            continue;
+          }
+        }
+        const rKet = auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
+        return rKet.ok ? 'ok' : { stop: 'Không kết lượt được: ' + rKet.err };
+      }
+    }
+    return 'ok';
+  }
+
   // ── Xử lý việc đang dở (trận, sự kiện) dùng chung cho cả hai Auto.
   // Trả về 'idle' (không có việc dở), 'ok' (vừa xử lý một bước) hoặc { stop: lý do }.
   function auPending(st, opt) {
@@ -5908,10 +5956,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const g = G(), run = g.state.run;
     if (run.thongBaoDai) auCall(() => g.closeLongNotice());
     if (run.tran) {
-      if (run.tran.ketThuc) { const r = auCall(() => g.xongTran()); return r.ok ? 'ok' : { stop: 'Không kết thúc được trận: ' + r.err }; }
+      if (run.tran.ketThuc) {
+        const kq = run.tran.ketThuc;
+        const r = auCall(() => g.xongTran());
+        if (!r.ok) return { stop: 'Không kết thúc được trận: ' + r.err };
+        st.fights++; st.hacStreak = 0; if (kq === 'thang') st.wins++;
+        auLog('Đã xong trận ' + (kq === 'thang' ? 'thắng' : 'thua') + ' (Trận #' + st.fights + ').', kq === 'thang' ? 'vk-ok' : 'vk-bad');
+        return 'ok';
+      }
       if (opt.hunt && opt.neHac) {
         const hd = (run.tran.dich || []).find((d) => auIsHacEnemy(d.id, d.ten));
         if (hd) return { stop: 'Trận đang mở gặp ' + (hd.ten || auEnemyName(hd.id) || 'Hạc') + ': dừng để bạn tự rút lui, khỏi giết Hạc bị trừ Khí Vận.' };
+      }
+      if (run.tran.daGiaoChien) {
+        if (!opt.danhAi) {
+          return { stop: 'Trận đang giao chiến dở. Hãy đánh xong trong game rồi bấm chạy tiếp.' };
+        }
+        return auFightStep();
       }
       const p = g.duKienTran();
       if (!p) return { stop: 'Không đọc được dự đoán của trận đang mở. Dừng để bạn tự đánh trong game.' };
@@ -5921,10 +5982,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const r = auCall(() => g.tocChienTran());
         if (!r.ok) return { stop: 'Không Tốc Chiến được: ' + r.err };
         st.fights++; st.hacStreak = 0; if (p.thang) st.wins++;
+        auLog('Tốc Chiến thắng (Trận #' + st.fights + ').', 'vk-ok');
         return 'ok';
       }
       if (!p.thang) return { stop: 'Trận ' + m[0] + ' (' + m[2] + '): game dự đoán thua nên không cho Tốc Chiến, Auto không tự đánh tay. Dừng để bạn tự đánh trong game.' };
-      return { stop: 'Trận ' + m[0] + ' nhưng game không cho Tốc Chiến (đối thủ Tinh Anh hay Boss, hoặc khí huyết có lúc dưới 60%). Dừng để bạn tự đánh trong game.' };
+      if (opt.danhAi) {
+        const r = auCall(() => g.hanhDongTran({ loai: 'giao_chien' }));
+        if (!r.ok) return { stop: 'Không bắt đầu giao chiến được: ' + r.err };
+        auLog('Trận ' + m[0] + ' (' + m[2] + ') không Tốc Chiến được: tự động vào Giao Chiến để đánh AI...', 'vk-ok');
+        return 'ok';
+      }
+      return { stop: 'Trận ' + m[0] + ' nhưng game không cho Tốc Chiến (đối thủ Tinh Anh hay Boss, hoặc khí huyết có lúc dưới 60%). Dừng để bạn tự đánh trong game (hoặc bật ô “Tự Đánh AI Khi Không Cho Tốc Chiến”).' };
     }
     if (run.active) {
       const a = run.active;
@@ -5962,8 +6030,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const m = auMauOf(pick.risk.level);
         return { stop: 'Lựa chọn “' + pick.text + '” là ' + m[0] + ' (' + m[2] + '), ngoài màu đã chọn (' + auMauLabel(opt.mau) + '). Dừng để bạn tự quyết định trong game.', danger: pick.risk.level };
       }
+      const isFightChoice = !!(opt.hunt && (pick.risk || v.id === 'ev.san_yeu' || v.id === 'ev.yeu_thu_lang_thang' || v.id === 'ev.truy_tim_yeu' || v.id === 'ev.truy_tim_dau_dan') && !pick.thoat);
       const r = auCall(() => g.choose(pick.index));
-      return r.ok ? 'ok' : { stop: 'Không chọn được “' + pick.text + '”: ' + r.err };
+      if (!r.ok) return { stop: 'Không chọn được “' + pick.text + '”: ' + r.err };
+      const runAfter = G().state.run;
+      if (isFightChoice && runAfter && !runAfter.tran) {
+        // Trận được game tự giải quyết ngay trong choose() qua cơ chế "Tự Tốc Chiến" (tuTocChien) mà không mở màn hình vào trận (§10.4)
+        st.fights = (st.fights || 0) + 1;
+        if (!runAfter.ketThuc) st.wins = (st.wins || 0) + 1;
+        st.hacStreak = 0;
+        auLog('Đã hạ ' + (pick.text || 'yêu thú') + ' (Trận #' + st.fights + ').', 'vk-ok');
+      }
+      return 'ok';
     }
     if (run.bienCo) return { stop: 'Đang có biến cố chưa xử lý. Xem trong game rồi bấm chạy lại.' };
     return 'idle';
@@ -5971,8 +6049,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   function auPick(v, opt) {
     const cs = (v.choices || []).filter((c) => c.available);
     if (opt.hunt) {
-      if (v.id === 'ev.san_yeu') { const c = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text)); if (c) return c; }
+      if (v.id === 'ev.san_yeu' || v.id === 'ev.truy_tim_yeu') { const c = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text)); if (c) return c; }
       if (v.id === 'ev.yeu_thu_lang_thang') { const c = cs.find((x) => !x.thoat && !x.chance); if (c) return c; }
+      if (v.id === 'ev.truy_tim_dau_dan') { const c = cs.find((x) => !x.thoat); if (c) return c; }
     }
     return cs.find((x) => x.thoat) || null; // việc lạ: chọn lối thoát không tốn gì
   }
@@ -6190,7 +6269,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     // Bảng xác nhận đang hiện: đóng bằng nút Hủy rồi dừng (không bao giờ tự đồng ý).
     const cp = await auBypassConfirm();
     if (cp) return { stop: 'Phát hiện bảng xác nhận của game “' + (cp.title || 'không tên') + '”' + (cp.nguy ? ' (cảnh báo nguy hiểm)' : '') + ', Auto ' + (cp.closed ? 'đã đóng theo đường Hủy' : 'chưa đóng hẳn được, bạn đóng giúp') + ' và dừng, không tự đồng ý' };
-    const p = auPending(st, { hunt: true, mau: cfg.mau, neHac: cfg.neHac !== false });
+    const p = auPending(st, { hunt: true, mau: cfg.mau, neHac: cfg.neHac !== false, danhAi: cfg.danhAi !== false });
     if (p !== 'idle') {
       if (p === 'ok') return null;
       if (p.danger) { const r = await auBypassConfirm(); if (r) p.stop += ' (đã đóng bảng xác nhận “' + (r.title || 'không tên') + '”)'; }
@@ -6426,7 +6505,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
   async function auBuonStep(st) {
     const g = G(), cfg = AU.cfg.buon, K = S.core;
-    const p = auPending(st, { shopId: st.route && st.phase !== 'plan' ? (st.phase === 'toSell' || st.phase === 'sell' ? st.route.sell.id : st.route.buy.id) : null });
+    const p = auPending(st, { danhAi: true, shopId: st.route && st.phase !== 'plan' ? (st.phase === 'toSell' || st.phase === 'sell' ? st.route.sell.id : st.route.buy.id) : null });
     if (p !== 'idle') return p === 'ok' ? null : p;
     const route = st.route;
     if (st.phase === 'plan') {
@@ -6537,6 +6616,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       c.thuong = Math.floor(num0('au-thuong', 1, AU_TT_MAX, c.thuong)); c.toc = sel('au-toc', c.toc);
       const k = q('au-kt'); if (k) c.kt = k.checked;
       const nh = q('au-nehac'); if (nh) c.neHac = nh.checked;
+      const dai = q('au-danh-ai'); if (dai) c.danhAi = dai.checked;
       const mau = AU_MAU_ID.filter((id) => { const el = q('au-mau-' + id); return el ? el.checked : (c.mau || AU_MAU_DEF).includes(id); });
       if (mau.length) c.mau = mau;
       else { // phải giữ ít nhất một màu: trả lại lựa chọn cũ
@@ -6878,6 +6958,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       ${auTTSel(c.thuong)}
       ${auFld('au-tho', 'Dừng Khi Thọ Nguyên Còn Dưới', c.tho, '(năm)')}
       <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-nehac" ${c.neHac !== false ? 'checked' : ''} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc, Thanh Vũ Hạc, Lăng Vân Hạc, Đan Đỉnh Hạc, Cửu Cao Tiên Hạc… — tự chọn Bỏ Đi khi gặp để khỏi bị trừ Khí Vận)</span></span></label>
+      <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-danh-ai" ${c.danhAi !== false ? 'checked' : ''} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Gặp quái Tinh Anh/Boss hoặc máu có lúc &lt; 60% khiến game khóa nút Tốc Chiến: Auto tự động vào giao chiến và dùng AI đánh trận tới khi thắng để không bị dừng)</span></span></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-kt" ${c.kt ? 'checked' : ''}> Kiểm Tra Sức Trước Khi Chạy (cần thắng chắc từ ${Math.round(AU_KT * 100)}% yêu thú mẫu cùng cảnh giới)</label>
       ${auControls()}
       <button class="vk-btn sec" id="au-chk" style="margin-top:6px">Xem Sức Và Các Nơi Săn Được</button><div id="au-info"></div></div>
@@ -7722,7 +7803,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.6 · Đồng Bộ Số Phiên Bản Trên Thanh Tiêu Đề', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.1.8 · Ghi Nhận Số Trận & Dừng Đúng Hạn Khi Tự Tốc Chiến', d: '06/11/2026', now: true, pts: [
+                '<b>Ghi nhận chuẩn xác mọi trận đấu:</b> Khi tính năng Tự Tốc Chiến trong game được kích hoạt, game tự động giải quyết trận đấu ngay trong lựa chọn mà không mở màn hình giao chiến. Auto Săn Yêu phiên bản 7.1.8 đã theo dõi và ghi nhận đầy đủ số trận thắng này vào bộ đếm trận.',
+                '<b>Sửa lỗi hiển thị "Số Trận Đã Đánh: 0 (thắng 0)":</b> Khắc phục triệt để hiện tượng đã đánh qua rất nhiều quái nhưng số trận đã đánh vẫn kẹt ở 0.',
+                '<b>Chuẩn hóa điều kiện dừng theo số trận:</b> Cài đặt "Dừng sau số trận" giờ đây hoạt động chính xác tuyệt đối ngay cả khi game bật tính năng Tự Tốc Chiến.',
+                '<b>Mở rộng hỗ trợ săn theo mục tiêu:</b> Tự động nhận diện thêm các sự kiện săn quái chỉ định (Truy tìm yêu thú, Truy tìm đầu đàn) khi đi săn.'
+            ] },
+            { t: 'Phiên Bản 7.1.7 · Tự Đánh AI Khi Game Khóa Tốc Chiến', d: '06/11/2026', now: false, pts: [
+                '<b>Tự động đánh AI khi không được Tốc Chiến:</b> Khi gặp quái Tinh Anh, Boss hoặc máu có lúc dưới 60% khiến game khóa nút Tốc Chiến (dù trận dự đoán thắng), Auto Săn Yêu sẽ tự động vào Giao Chiến và kích hoạt cơ chế AI đánh trận của game tới khi chiến thắng, không bị dừng đột ngột.',
+                '<b>Tùy chọn linh hoạt trong Cấu Hình:</b> Bổ sung ô chọn <code>[x] Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</code> trong tab Tự Động → Săn Yêu (mặc định bật).',
+                '<b>Khắc phục nhận diện trạng thái trận (Anti-Stuck):</b> Cập nhật chữ ký trạng thái trận đấu theo từng hiệp/máu/RNG để Auto không bị báo nhầm “trạng thái game đứng yên” khi giao tranh kéo dài nhiều hiệp.'
+            ] },
+            { t: 'Phiên Bản 7.1.6 · Đồng Bộ Số Phiên Bản Trên Thanh Tiêu Đề', d: '06/11/2026', now: false, pts: [
                 '<b>Khắc phục số phiên bản hiển thị sai trên tiêu đề:</b> Chuyển đổi nhãn phiên bản tĩnh (<code>v7.0.0</code>) trên thanh tiêu đề chính thành biến động <code>v\' + TOOL_VER + \'</code>, đảm bảo tiêu đề cửa sổ luôn luôn hiển thị chuẩn xác số phiên bản hiện hành của Tool.'
             ] },
             { t: 'Phiên Bản 7.1.5 · Khóa Chặt Hệ Vật Phẩm Chuẩn Linh Căn (Loại Bỏ Đồ Lạc Hệ)', d: '06/11/2026', now: false, pts: [
