@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý (Bản Mod 7.0.7 - Dò Đồ Quý & Stealth)
+// @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.0.7
+// @version      7.0.8
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.7
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.0.8
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.0.7';
+  var TOOL_VER = '7.0.8';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -1412,22 +1412,40 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
   // Dò tọa độ slot của một địa danh trên thế giới
   function findDiaSlot(c, diaName) {
-    if (!c || !c.world || !diaName) return null;
-    const f = fold(diaName);
+    if (!diaName) return null;
+    const f = fold(diaName).trim();
+    if (!f) return null;
+
+    // 1. Thử qua danh sách đã index sẵn của ddBuild
     try {
-      for (const s of c.world.slots || []) {
-        if (!s) continue;
-        let ten = '';
-        if (s.dia_danh) {
-          const dd = c.world.diaDanh(s.dia_danh);
-          if (dd && dd.ten) ten = dd.ten;
-        }
-        if (!ten && typeof c.world.info === 'function') {
-          const i = c.world.info(s.id);
-          if (i && i.ten) ten = i.ten;
-        }
-        if (ten && (fold(ten) === f || fold(ten).includes(f) || f.includes(fold(ten)))) {
-          return s.id;
+      const X = ddBuild(c || ctxLite());
+      if (X && X.list) {
+        const exact = X.list.find((x) => fold(x.name).trim() === f);
+        if (exact) return String(exact.id);
+        const partial = X.list.find((x) => fold(x.name).includes(f) || f.includes(fold(x.name)));
+        if (partial) return String(partial.id);
+      }
+    } catch (e) {}
+
+    // 2. Dự phòng quét toàn bộ slot trên bản đồ thế giới
+    try {
+      const W = (c && c.world) || (G().env && G().env.world);
+      if (W && W.slots) {
+        for (const s of W.slots) {
+          if (!s) continue;
+          let ten = '';
+          if (s.dia_danh && typeof W.diaDanh === 'function') {
+            const dd = W.diaDanh(s.dia_danh);
+            if (dd && dd.ten) ten = dd.ten;
+          }
+          if (!ten && typeof W.info === 'function') {
+            const i = W.info(s.id);
+            if (i && i.ten) ten = i.ten;
+          }
+          if (ten) {
+            const ft = fold(ten).trim();
+            if (ft === f || ft.includes(f) || f.includes(ft)) return String(s.id);
+          }
         }
       }
     } catch (e) {}
@@ -1471,13 +1489,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const btn = alertEl.querySelector('.do-btn-travel');
     if (btn) {
       btn.onclick = () => {
-        const res = ddDoTravel(t.slot);
-        if (!res.ok) alert('⚠️ ' + res.msg);
-        else {
-          alert('🚀 ' + res.msg);
-          removeDiBaoAlert();
-          if (typeof render === 'function') render();
-        }
+        btn.disabled = true;
+        btn.textContent = '⏳ Đang đi...';
+        setTimeout(() => {
+          const res = ddDoTravel(t.slot);
+          if (!res.ok) {
+            try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+            alert('⚠️ ' + res.msg);
+            btn.disabled = false;
+            btn.textContent = '🚀 Bay Đến Ngay';
+          } else {
+            try { UI.notify('🚀 ' + res.msg); } catch (e) {}
+            removeDiBaoAlert();
+            if (typeof render === 'function') render();
+          }
+        }, 30);
       };
     }
 
@@ -1886,7 +1912,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               <b style="color:var(--acc2)">${esc(t.title)}</b><br>
               <span class="vk-mu" style="font-size:12px">${esc(t.sub)}</span>
             </div>
-            <button class="vk-btn do-btn-travel" data-slot="${t.slot}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;white-space:nowrap;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
+            <button class="vk-btn do-btn-travel" data-slot="${esc(t.slot)}" data-name="${esc(t.pName || t.title)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;white-space:nowrap;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
           </div>
           <div style="margin-top:4px;font-size:12px;display:flex;flex-wrap:wrap;gap:8px" class="vk-mu">
             <span>📍 ${esc(t.pName)} (Slot ${t.slot})</span>
@@ -1986,7 +2012,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             travelBox = `
               <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
                 <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + ' năm' : 'Vô hạn'}</b> · Đi: <b>${safeYrs(y)}</b></span>
-                <button class="vk-btn do-btn-travel" data-slot="${r.node.slot}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
               </div>
             `;
           } else if (!r.done && e && e.dia) {
@@ -1996,7 +2022,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (c && K && K.travelYears) {
                 try { y = K.travelYears(c, diaSlot); } catch (err) {}
               }
-              const isHere = run.viTri === diaSlot;
+              const isHere = String(run.viTri) === String(diaSlot);
               if (isHere) {
                 travelBox = `
                   <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
@@ -2008,7 +2034,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 travelBox = `
                   <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
                     <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${diaSlot}) · Cách: <b>${safeYrs(y)}</b></span>
-                    <button class="vk-btn do-btn-travel" data-slot="${diaSlot}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+                    <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
                   </div>
                 `;
               }
@@ -2135,20 +2161,38 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       };
     }
 
-    // Bắt sự kiện bấm nút Bay Đến
+    // Bắt sự kiện bấm nút Bay Đến / Đi Đến Đón Đầu
     body.onclick = (ev) => {
       const btn = ev.target.closest && ev.target.closest('.do-btn-travel');
       if (btn) {
-        const slot = +btn.dataset.slot;
-        if (Number.isFinite(slot)) {
-          if (!confirm(`Bạn có chắc muốn di chuyển ngay tới tọa độ slot ${slot} (${c ? placeName(c, slot) : ''}) không?`)) return;
-          const res = ddDoTravel(slot);
-          if (!res.ok) alert('⚠️ ' + res.msg);
-          else {
-            alert('🚀 ' + res.msg);
-            tabDoDo();
-          }
+        ev.preventDefault();
+        ev.stopPropagation();
+        const slot = btn.dataset.slot;
+        if (slot == null || slot === '' || slot === 'undefined' || slot === 'null') {
+          try { UI.notify('⚠️ Không xác định được tọa độ của mục tiêu.'); } catch (e) {}
+          return;
         }
+        btn.disabled = true;
+        const oldTxt = btn.textContent;
+        btn.textContent = '⏳ Đang đi...';
+        setTimeout(() => {
+          try {
+            const res = ddDoTravel(slot);
+            if (!res.ok) {
+              try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+              alert('⚠️ ' + res.msg);
+              btn.disabled = false;
+              btn.textContent = oldTxt;
+            } else {
+              try { UI.notify('🚀 ' + res.msg); } catch (e) {}
+              tabDoDo();
+            }
+          } catch (err) {
+            try { UI.notify('⚠️ Lỗi di chuyển: ' + (err.message || err)); } catch (e) {}
+            btn.disabled = false;
+            btn.textContent = oldTxt;
+          }
+        }, 30);
       }
     };
 
@@ -3714,15 +3758,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
   // Đi bộ tới nơi đã chọn bằng game.travelTo.
   function ddDoTravel(slot) {
-    const g = G(), run = g.state.run;
+    const g = G(), run = g.state && g.state.run;
     if (!run) return { ok: false, msg: 'Chưa có kiếp nào đang chơi.' };
     if (run.ketThuc) return { ok: false, msg: 'Kiếp này đã kết thúc.' };
     if (run.active || run.tran || run.bienCo) return { ok: false, msg: 'Đang có việc dở hoặc biến cố trong game. Xử lý xong rồi hãy đi.' };
-    if (run.viTri === slot) return { ok: false, msg: 'Bạn đang đứng ở đây rồi.' };
-    const r = auCall(() => g.travelTo(slot));
-    if (!r.ok) return { ok: false, msg: r.err };
-    const r2 = G().state.run;
-    if (r2.viTri !== slot) return { ok: false, msg: 'Giữa đường có việc xảy ra (biến cố hoặc gặp người). Xem trong game.' };
+    if (String(run.viTri) === String(slot)) return { ok: false, msg: 'Bạn đang đứng ở đây rồi.' };
+    const r = auCall(() => {
+      if (typeof g.travelTo === 'function') g.travelTo(String(slot));
+      else if (typeof TT !== 'undefined' && typeof TT.travelTo === 'function') TT.travelTo(String(slot));
+    });
+    if (!r.ok) return { ok: false, msg: r.err || 'Không thể di chuyển tới vị trí này.' };
+    const r2 = G().state && G().state.run;
+    if (r2 && String(r2.viTri) !== String(slot)) return { ok: false, msg: 'Giữa đường có việc xảy ra (biến cố hoặc gặp người). Xem trong game.' };
     return { ok: true, msg: 'Đã tới nơi bằng đường bộ.' };
   }
 
@@ -6914,7 +6961,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.0.7 · Banner Báo Dị Bảo Tức Thì & Đón Đầu Địa Danh', d: '05/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.0.8 · Khắc Phục Nút Đi Đến Đón Đầu & Bay Đến', d: '05/11/2026', now: true, pts: [
+                '<b>Khắc phục nút [📍 Đi Đến Đón Đầu] & [🚀 Bay Đến Ngay]:</b> Sửa triệt để lỗi nút bấm không phản hồi do sai định dạng kiểu dữ liệu slot (chuỗi vs số) và xung đột modal xác nhận của trình duyệt.',
+                '<b>Chuyển động tức thì & Phản hồi trực quan:</b> Bấm [📍 Đi Đến Đón Đầu] hoặc [🚀 Bay Đến Ngay] sẽ thực hiện di chuyển ngay lập tức, nút tự động đổi sang trạng thái [⏳ Đang đi...] và hiển thị thông báo toast nổi mượt mà.',
+                '<b>Tối ưu hóa thuật toán định vị địa danh:</b> Dò tìm chuẩn xác slot thông qua chỉ mục <code>ddBuild</code> và toàn bộ hệ thống slot thế giới của game, hỗ trợ cả khớp chính xác và khớp gần đúng.'
+            ] },
+            { t: 'Phiên Bản 7.0.7 · Banner Báo Dị Bảo Tức Thì & Đón Đầu Địa Danh', d: '05/11/2026', now: false, pts: [
                 '<b>Banner Thông Báo Nổi Tức Thì (Global Floating Alert):</b> Tự động quét và phát hiện ngay lập tức khi có sự kiện Dị Bảo vừa xuất hiện trên bản đồ thế giới. Hiển thị thanh thông báo nổi kèm nút [🚀 Bay Đến Ngay] trực tiếp trên màn hình game mà không cần phải mở cửa sổ Trợ Lý!',
                 '<b>Nút [📍 Đi Đến Đón Đầu] Địa Danh:</b> Với các sự kiện sắp diễn ra hoặc đang hồi chiêu, Tool tự động dò tọa độ địa danh cố định (Kiếm Trạch, Tiên Vân Điện, U Hồn Điện...) và cung cấp nút di chuyển để người chơi đến chờ sẵn, gia tăng tối đa tỉ lệ kích hoạt sự kiện.',
                 '<b>Tự động cập nhật theo thời gian game:</b> Lắng nghe sự kiện chuyển năm (timePass), di chuyển (travel) và thế cục (worldEvent) của game để đồng bộ hóa radar theo thời gian thực.'
