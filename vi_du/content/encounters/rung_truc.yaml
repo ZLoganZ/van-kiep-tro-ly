@@ -1,0 +1,17 @@
+- id: ev.vi_du_rung_truc
+  kind: chien_dau
+  ten: Rừng trúc xào xạc
+  tags:
+    noi: [hoang_da]
+    canh_gioi: [0, 1]
+  weight: 2
+  text: >
+    Qua rừng trúc ngoài {dia_danh}, gió lặng mà lá vẫn xào xạc. Một gốc trúc già chợt cựa mình, vươn ra hai cành như tay.
+  choices:
+    - text: Rút pháp khí nghênh chiến
+      effects:
+        - combat: enemy.vi_du_truc_lam_yeu
+    - text: Lùi ra khỏi rừng
+      effects:
+        - time: 0.01
+        - log: Ngươi vòng đường khác, tiếng lá sau lưng thưa dần.

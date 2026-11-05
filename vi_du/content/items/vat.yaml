@@ -1,0 +1,12 @@
+# Vật của mod: thư mục theo app/content/README.md. Icon ở img/vat/vi_du_thanh_truc_kiem.webp (tên theo phần sau "item.").
+- id: item.vi_du_thanh_truc_kiem
+  ten: Thanh Trúc Kiếm
+  loai: phap_khi
+  pham_cap: 1
+  canh_gioi: 0
+  he: [moc]
+  hinh: ["X"]
+  tag: [kiem]
+  chieu: { ten: Trúc Ảnh Trảm, phi: 1, hoi: 0, uy: 0.9, dang: cong }
+  gia: 12
+  mo_ta: Kiếm vót từ trúc xanh trăm năm, nhẹ tay mà dai, vung lên nghe vi vu như gió lùa qua rừng.

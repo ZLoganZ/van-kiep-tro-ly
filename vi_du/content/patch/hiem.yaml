@@ -1,0 +1,2 @@
+# Chỉ nạp khi tùy chọn "Rừng trúc hiểm" chọn Hiểm (mod.yaml, options.files)
+enemy.vi_du_truc_lam_yeu: { than_phap: 14 }
