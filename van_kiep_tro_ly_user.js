@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.2
+// @version      7.11.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.2";
+      var TOOL_VER = "7.11.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -21428,20 +21428,76 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (run.thongBaoDai) auCall(() => g.closeLongNotice());
           if (run.tran) {
             if (run.tran.ketThuc) {
-              const kq = run.tran.ketThuc;
+              const curTran = run.tran;
+              const kq = curTran.ketThuc;
+              const combatLog = curTran.nhatKy ? [...curTran.nhatKy] : [];
+              const dichInfo = (curTran.dich || []).map((d) => ({
+                id: d.id,
+                ten: d.ten || auEnemyName(d.id) || d.id,
+                hp: d.khiHuyet,
+                maxHp: d.khiHuyetToiDa,
+                realm: d.canhGioi,
+              }));
+              const taInfo = curTran.ta
+                ? {
+                    hp: curTran.ta.khiHuyet,
+                    maxHp: curTran.ta.khiHuyetToiDa,
+                    cn: curTran.ta.chanNguyen,
+                    maxCn: curTran.ta.chanNguyenToiDa,
+                  }
+                : null;
+
+              // Sao lưu toàn bộ nhật ký hiệp đấu và dữ liệu trận đánh vào biến toàn cục để người chơi soi lại
+              try {
+                gWin.__vkLastCombat = {
+                  time: new Date().toLocaleTimeString(),
+                  kq: kq,
+                  hiep: curTran.hiep || 1,
+                  nhatKy: combatLog,
+                  dich: dichInfo,
+                  ta: taInfo,
+                };
+              } catch (e) {}
+
               const r = auCall(() => g.xongTran());
               if (!r.ok) return { stop: "Không kết thúc được trận: " + r.err };
               st.fights++;
               st.hacStreak = 0;
               if (kq === "thang") st.wins++;
-              auLog(
-                "Đã xong trận " +
-                  (kq === "thang" ? "thắng" : "thua") +
-                  " (Trận #" +
-                  st.fights +
-                  ").",
-                kq === "thang" ? "vk-ok" : "vk-bad",
-              );
+
+              const mainEnemy = dichInfo[0];
+              const enemyName = mainEnemy ? mainEnemy.ten : "đối thủ";
+
+              if (kq === "thua") {
+                const enemyRemainHp =
+                  mainEnemy && mainEnemy.maxHp
+                    ? ` (Địch còn: ${Math.round((mainEnemy.hp / mainEnemy.maxHp) * 100)}% HP)`
+                    : "";
+                auLog(
+                  `💀 Đã thất bại trước «${enemyName}» ở Hiệp ${curTran.hiep || 1}${enemyRemainHp} (Trận #${st.fights}).`,
+                  "vk-bad",
+                );
+                // Trích xuất 3-4 đòn đánh cuối cùng để người chơi biết rõ chiêu thức/hiệu ứng hạ gục
+                if (combatLog.length > 0) {
+                  const lastLines = combatLog.slice(-4);
+                  lastLines.forEach((line) => {
+                    if (line) auLog(`   ⚔️ ${line.trim()}`, "vk-mu");
+                  });
+                }
+                auLog(
+                  `💡 Gõ <b>window.__vkLastCombat.nhatKy</b> trong F12 Console để xem toàn bộ ${combatLog.length} đòn đánh của trận này!`,
+                  "vk-mu",
+                );
+              } else {
+                auLog(
+                  "Đã xong trận thắng trước «" +
+                    enemyName +
+                    "» (Trận #" +
+                    st.fights +
+                    ").",
+                  "vk-ok",
+                );
+              }
               return "ok";
             }
             if (opt.hunt && opt.neHac) {
@@ -28638,9 +28694,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.2 · Minh Bạch Nhật Ký Sự Kiện & Chi Tiết Kết Quả Kiểm Định",
+            t: "Phiên Bản 7.11.3 · Ghi Nhận Combat Log Trận Đấu & Phân Tích Nguyên Nhân Thua",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tự Động Lưu Trữ Toàn Bộ Nhật Ký Trận Đánh (Combat Log Backup):</b> Khắc phục triệt để việc game engine xóa sạch dữ liệu hiệp đấu khi kết thúc trận. Tool nay tự động lưu trọn vẹn toàn bộ các hiệp đấu, đòn đánh, sát thương, hiệu ứng và chỉ số máu/chân nguyên của ta và địch vào <code>window.__vkLastCombat</code> trước khi gọi <code>xongTran()</code>.",
+              "<b>Phân Tích & Báo Cáo Nguyên Nhân Thất Bại Lên Nhật Ký Tác Vụ:</b> Khi bị thua trong trận đánh (đặc biệt là giao chiến với Boss thủ bảo hoặc quái tinh anh), Tool lập tức trích xuất tên đối thủ, lượng máu còn lại của địch (ví dụ: <code>Địch còn: 35% HP</code>), số hiệp đã trụ được, cùng 3–4 đòn đánh cuối cùng dẫn đến gục ngã lên bảng Nhật Ký Tác Vụ.",
+              "<b>Tra Cứu Nhanh Chi Tiết Trận Đấu Qua Console:</b> Cung cấp lối tắt <code>window.__vkLastCombat.nhatKy</code> trong F12 Console để người chơi có thể soi lại từng chiêu thức, phản chấn, bạo kích của cả trận đấu bất cứ lúc nào.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.2 · Minh Bạch Nhật Ký Sự Kiện & Chi Tiết Kết Quả Kiểm Định",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Trích Xuất Chi Tiết Diễn Biến & Kiểm Định Sự Kiện (Encounter Transcript):</b> Khi tự động giải quyết các sự kiện (đặc biệt là Dị Bảo, kỳ ngộ, thám hiểm), Tool nay tự động ghi nhận lựa chọn đã bấm kèm yêu cầu kiểm tra (ví dụ <code>[Ngộ tính +45]</code>), đồng thời trích xuất trực tiếp kết quả kiểm định (Thành công / Thất bại) và lời kể diễn biến của game (transcript narrate) lên bảng Nhật Ký Tác Vụ.",
               "<b>Cảnh Báo Biến Động Thương Thế Thời Gian Thực:</b> Tự động phát hiện và cảnh báo tức thì khi nhân vật nhận thương tổn hoặc tăng bậc thương thế (Thương nhẹ / Thương nặng / Trọng thương) sau mỗi sự kiện, giúp đạo hữu nắm bắt chính xác nguyên nhân dẫn đến thương thế mà không cần mở console hay tìm trong nhật ký game.",
