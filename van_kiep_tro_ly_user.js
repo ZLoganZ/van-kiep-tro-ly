@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.7.3
+// @version      7.8.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.7.3";
+      var TOOL_VER = "7.8.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7938,7 +7938,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
 
         // Tính toán chỉ số bảo hiểm Thiên Đạo Bù Dị Bảo (Pity)
-        function calcDiBaoPity(run, nv, sc) {
+        function calcDiBaoPity(run, nv, sc, targetRelics) {
           const nam = typeof run.nam === "number" ? run.nam : 0;
           const myCg = nv.canhGioi ?? 0;
           const isOwned = (id) => {
@@ -7957,7 +7957,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return false;
           };
 
+          if (
+            targetRelics === undefined &&
+            typeof AU !== "undefined" &&
+            AU.cfg &&
+            AU.cfg.sdb &&
+            Array.isArray(AU.cfg.sdb.targetRelics)
+          ) {
+            targetRelics = AU.cfg.sdb.targetRelics;
+          }
+          const relSet =
+            Array.isArray(targetRelics) && targetRelics.length > 0
+              ? new Set(targetRelics)
+              : null;
+
           const eligibleEvents = DIBAO.ev.filter((e) => {
+            if (relSet && !relSet.has(e.relic)) return false;
             if (isOwned(e.relic)) return false;
             const gateCg = e.gate ? e.gate[0] : 4;
             return myCg >= gateCg;
@@ -7970,6 +7985,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               mult: "1.0",
               guaranteed: false,
               topCamping: [],
+              allTargetOwned: relSet
+                ? [...relSet].every((r) => isOwned(r))
+                : false,
             };
           }
 
@@ -8473,7 +8491,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const baoLucPoints = metaRelics.length * 5;
 
           // Tính toán bảo hiểm Pity
-          const pity = calcDiBaoPity(run, nv, sc);
+          const sdbCfg =
+            (typeof AU !== "undefined" && AU.cfg && AU.cfg.sdb) || {};
+          const targetRelics = Array.isArray(sdbCfg.targetRelics)
+            ? sdbCfg.targetRelics
+            : DIBAO.ev.map((e) => e.relic);
+          const targetSummary =
+            targetRelics.length === DIBAO.ev.length
+              ? "Tất cả 19 Dị Bảo"
+              : targetRelics.length === 0
+                ? '<span class="vk-bad">Chưa chọn món nào</span>'
+                : `<b>${targetRelics.length}</b>/19 Dị Bảo đã chọn`;
+
+          const pity = calcDiBaoPity(run, nv, sc, targetRelics);
 
           // Render giao diện chính
           body.innerHTML = `
@@ -8516,6 +8546,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             </div>
             <div id="db-auto-status-text" class="vk-mu" style="font-size:12px;margin-top:3px">
               ${AU.run && AU.run.running && AU.run.kind === "sdb" ? esc(AU.run.phaseDesc || AU.run.targetTitle || "Đang quét bản đồ & săn Dị Bảo...") : (AU.run && AU.run.kind === "sdb" && AU.run.msg ? `<span class="vk-bad">Dừng: ${esc(AU.run.msg)}</span>` : "Tự động truyền tống/bay đến mục tiêu, vào sự kiện, vượt kiểm định & đánh Hộ Vệ.")}
+            </div>
+            <div style="font-size:11.5px;margin-top:3px" class="vk-mu">
+              🎯 Mục tiêu săn: <span id="db-auto-target-text" style="color:var(--acc)">${targetSummary}</span>
+              <a href="javascript:void(0)" id="db-btn-edit-target" style="margin-left:6px;color:var(--acc);text-decoration:underline;font-size:11px">[Chọn món muốn săn]</a>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -8704,6 +8738,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 const e = r.e,
                   extra = r.extra || {};
                 const syn = relicSynergy(r.id, nv.linhCan);
+                const isTarget = targetRelics.includes(r.id);
 
                 // Huy hiệu
                 const badges = [];
@@ -8833,7 +8868,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 return `
           <div class="vk-card" style="border-left:4px solid ${r.bd ? "#10b981" : "#ff3366"};margin-bottom:8px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px">
-              <h3 style="margin:0;font-size:15px;color:var(--acc)">${esc(r.ten)}</h3>
+              <div style="display:flex;align-items:center;gap:6px">
+                <h3 style="margin:0;font-size:15px;color:var(--acc)">${esc(r.ten)}</h3>
+                ${r.nguon === "ev" ? `
+                  <button type="button" class="vk-btn mini db-btn-toggle-target" data-relic="${esc(r.id)}" style="padding:1px 6px;font-size:10.5px;margin:0;border-radius:4px;border:1px solid ${isTarget ? '#10b981' : 'var(--line)'};background:${isTarget ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)'};color:${isTarget ? '#10b981' : 'var(--mu)'};cursor:pointer" title="Bật/tắt đưa vào mục tiêu Auto Săn Dị Bảo">
+                    ${isTarget ? '🎯 Săn' : '○ Bỏ qua'}
+                  </button>
+                ` : ''}
+              </div>
               <div style="display:flex;gap:4px;flex-wrap:wrap">${badges.join("")}</div>
             </div>
             <div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
@@ -8898,6 +8940,48 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 auStart("sdb", false);
               }
               tabDiBao();
+              return;
+            }
+
+            const editTargetLink =
+              ev.target.closest && ev.target.closest("#db-btn-edit-target");
+            if (editTargetLink) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              S.tab = "asdb";
+              render();
+              return;
+            }
+
+            const toggleTargetBtn =
+              ev.target.closest && ev.target.closest(".db-btn-toggle-target");
+            if (toggleTargetBtn) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const rId = toggleTargetBtn.getAttribute("data-relic");
+              if (rId) {
+                const sdbCfg = AU.cfg.sdb;
+                if (!Array.isArray(sdbCfg.targetRelics)) {
+                  sdbCfg.targetRelics = DIBAO.ev.map((e) => e.relic);
+                }
+                const idx = sdbCfg.targetRelics.indexOf(rId);
+                if (idx >= 0) {
+                  sdbCfg.targetRelics.splice(idx, 1);
+                } else {
+                  sdbCfg.targetRelics.push(rId);
+                }
+                auSave();
+                draw();
+                const tgtEl = body.querySelector("#db-auto-target-text");
+                if (tgtEl) {
+                  tgtEl.innerHTML =
+                    sdbCfg.targetRelics.length === DIBAO.ev.length
+                      ? "Tất cả 19 Dị Bảo"
+                      : sdbCfg.targetRelics.length === 0
+                        ? '<span class="vk-bad">Chưa chọn món nào</span>'
+                        : `<b>${sdbCfg.targetRelics.length}</b>/19 Dị Bảo đã chọn`;
+                }
+              }
               return;
             }
 
@@ -18903,6 +18987,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             minTho: 15,
             maxNam: 100,
             toc: "nhanh",
+            targetRelics: [],
           },
         };
         // Hằng số lấy từ code game; mô tả trên giao diện đọc lại từ đây nên đổi một chỗ là khớp hết.
@@ -19124,6 +19209,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           delete AU.cfg.san.hiem; // Auto Săn Yêu: màu được phép do người dùng tích (mặc định Xanh, Vàng và Đỏ; Tím dừng)
           if (typeof AU.cfg.san.neHac !== "boolean") AU.cfg.san.neHac = true;
           if (typeof AU.cfg.san.danhAi !== "boolean") AU.cfg.san.danhAi = true;
+          if (!Array.isArray(AU.cfg.sdb.targetRelics)) {
+            AU.cfg.sdb.targetRelics = DIBAO.ev.map((e) => e.relic);
+          }
         }
         function auSave() {
           try {
@@ -21588,6 +21676,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return false;
           };
 
+          // Danh sách Dị Bảo được chọn săn:
+          const selectedRelics = Array.isArray(cfg.targetRelics)
+            ? cfg.targetRelics
+            : DIBAO.ev.map((e) => e.relic);
+          if (selectedRelics.length === 0) {
+            return {
+              stop: "Bạn chưa chọn Dị Bảo nào để săn! Hãy vào tab Auto Săn Dị Bảo (asdb) hoặc tab Dị Bảo (db) để tích chọn ít nhất 1 món.",
+            };
+          }
+          const targetRelicSet = new Set(selectedRelics);
+
           // 6. Quét các Dị Bảo đang nở trên bản đồ (run.nodes)
           const activeTargets = [];
           if (run.nodes) {
@@ -21601,6 +21700,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 continue;
               const ev = DIBAO.ev.find((x) => x.id === n.encounter);
               if (!ev) continue;
+              if (!targetRelicSet.has(ev.relic)) continue;
               const slot = n.slot != null ? n.slot : +slotStr;
               const relInfo =
                 DIBAO.rel[ev.relic] ||
@@ -21739,18 +21839,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           // 8. NẾU CHƯA CÓ DỊ BẢO NÀO NỞ TRÊN BẢN ĐỒ:
-          const unownedCount = DIBAO.ev.filter((e) => !isOwned(e.relic)).length;
+          const targetEvs = DIBAO.ev.filter((e) => targetRelicSet.has(e.relic));
+          const unownedCount = targetEvs.filter((e) => !isOwned(e.relic)).length;
           if (unownedCount === 0) {
             return {
-              stop: "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 21 Dị Bảo trong game!",
+              stop:
+                targetRelicSet.size < DIBAO.ev.length
+                  ? `🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ ${targetRelicSet.size} Dị Bảo trong danh sách bạn đã chọn!`
+                  : "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 21 Dị Bảo trong game!",
             };
           }
 
-          const pity = calcDiBaoPity(run, nv, sc);
+          const pity = calcDiBaoPity(run, nv, sc, selectedRelics);
 
           if (cfg.cheDoCho === "stop") {
             return {
-              stop: `Hiện chưa có Dị Bảo nào nở trên bản đồ (Pity: ${pity.waitYears}/500 năm). Hãy đổi Chế Độ Chờ sang 'Cắm Trại & Bế Quan Chờ' trong Cấu Hình để Auto tự bế quan trôi năm chờ Dị Bảo nở.`,
+              stop: `Hiện chưa có Dị Bảo mục tiêu nào nở trên bản đồ (Pity: ${pity.waitYears}/500 năm). Hãy đổi Chế Độ Chờ sang 'Cắm Trại & Bế Quan Chờ' trong Cấu Hình để Auto tự bế quan trôi năm chờ Dị Bảo nở.`,
             };
           }
 
@@ -22712,6 +22816,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.tho = c.minTho;
             c.maxNam = num0("au-sdb-maxnam", 1, 1000, c.maxNam || 100);
             c.toc = sel("au-toc", c.toc || "nhanh");
+            const relicChks = body.querySelectorAll(".au-sdb-relic-chk");
+            if (relicChks.length > 0) {
+              c.targetRelics = Array.from(relicChks)
+                .filter((el) => el.checked)
+                .map((el) => el.getAttribute("data-relic"));
+            }
             auSave();
             return;
           }
@@ -22945,6 +23055,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (btn) {
               btn.textContent = run ? "⏹ Dừng Auto" : "▶ Bắt Đầu Săn";
               btn.style.background = run ? "#f87171" : "var(--acc)";
+            }
+            const tgtEl = body.querySelector("#db-auto-target-text");
+            if (tgtEl) {
+              const sdbCfg = AU.cfg && AU.cfg.sdb ? AU.cfg.sdb : {};
+              const targetRelics = Array.isArray(sdbCfg.targetRelics)
+                ? sdbCfg.targetRelics
+                : DIBAO.ev.map((e) => e.relic);
+              tgtEl.innerHTML =
+                targetRelics.length === DIBAO.ev.length
+                  ? "Tất cả 19 Dị Bảo"
+                  : targetRelics.length === 0
+                    ? '<span class="vk-bad">Chưa chọn món nào</span>'
+                    : `<b>${targetRelics.length}</b>/19 Dị Bảo đã chọn`;
             }
             return;
           }
@@ -23804,7 +23927,55 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             run = g && g.state && g.state.run,
             nv = run && run.nhanVat;
           const sc = run ? scanDiBao([run, g.state.meta]) : null;
-          const pity = run && nv && sc ? calcDiBaoPity(run, nv, sc) : null;
+
+          const selectedRelics = Array.isArray(c.targetRelics)
+            ? c.targetRelics
+            : DIBAO.ev.map((e) => e.relic);
+          const selSet = new Set(selectedRelics);
+
+          const isOwnedItem = (id) => {
+            if (!id || !sc) return false;
+            if (sc.relics.has(id)) return true;
+            if (sc.flags.has(id.replace(/^item\./, ""))) return true;
+            if (nv && nv.tuiDo && nv.tuiDo[id] > 0) return true;
+            if (
+              nv &&
+              nv.kinhMach &&
+              nv.kinhMach.manh &&
+              nv.kinhMach.manh.some((m) => m.item === id)
+            )
+              return true;
+            if (nv && nv.trangBi && Object.values(nv.trangBi).includes(id))
+              return true;
+            return false;
+          };
+
+          const pity =
+            run && nv && sc ? calcDiBaoPity(run, nv, sc, selectedRelics) : null;
+
+          const relicItemsHtml = DIBAO.ev
+            .map((e) => {
+              const rel = DIBAO.rel[e.relic] || {};
+              const isChecked = selSet.has(e.relic);
+              const owned = isOwnedItem(e.relic);
+              const isCarry = rel.bd === "Có";
+              return `
+              <label class="au-sdb-relic-card" data-relic="${esc(e.relic)}" style="display:flex;align-items:center;gap:6px;background:var(--bg2);padding:5px 8px;border-radius:6px;border:1px solid ${isChecked ? "var(--acc)" : "var(--line)"};cursor:pointer;font-size:12px;user-select:none">
+                <input type="checkbox" class="au-sdb-relic-chk" data-relic="${esc(e.relic)}" ${isChecked ? "checked" : ""} style="margin:0;cursor:pointer">
+                <div style="flex:1;min-width:0;overflow:hidden">
+                  <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isChecked ? "var(--ink)" : "var(--mu)"}">${esc(rel.ten || e.relic)}</div>
+                  <div style="font-size:10.5px;display:flex;gap:4px;align-items:center;margin-top:1px" class="vk-mu">
+                    ${isCarry ? '<span style="color:#f59e0b;font-weight:600">⭐ Hồn</span>' : '<span>Kiếp</span>'}
+                    <span>·</span>
+                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.dia || "Hoang dã")}</span>
+                    ${owned ? '<span class="vk-ok" style="font-weight:600">✓ Đã có</span>' : ""}
+                  </div>
+                </div>
+              </label>
+            `;
+            })
+            .join("");
+
           body.innerHTML = `
     <div class="vk-card"><h3>🎯 Auto Săn Dị Bảo (Nghịch Thiên P8)</h3>
       <div class="vk-mu" style="font-size:13px">
@@ -23815,6 +23986,31 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-tele" ${c.dungTruyenTong !== false ? "checked" : ""}> <b>Ưu Tiên Truyền Tống Trận / Phù Truyền Tống (0 Năm Tuổi Thọ)</b></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-danh-ai" ${c.danhAi !== false ? "checked" : ""}> <b>Tự Đánh AI Khi Không Cho Tốc Chiến</b> (Dùng Siêu AI VIP hạ Hộ Vệ)</label>
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
+
+      <!-- Danh sách chọn bảo vật muốn săn -->
+      <div style="background:var(--bg3);border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          <div>
+            <b style="font-size:13px;color:var(--acc)">🗡️ Chọn Bảo Vật Muốn Săn:</b>
+            <span id="au-sdb-count-badge" style="font-size:11.5px;margin-left:6px" class="vk-mu">
+              ${selSet.size === DIBAO.ev.length ? "(Đang săn tất cả 19 món)" : selSet.size === 0 ? '<span class="vk-bad">(Chưa chọn món nào — Auto sẽ dừng)</span>' : `(Đang chọn <b>${selSet.size}</b>/19 món)`}
+            </span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button type="button" class="vk-btn mini sec" id="au-sdb-btn-all" style="padding:2px 8px;font-size:11px;margin:0">✓ Tất Cả</button>
+            <button type="button" class="vk-btn mini sec" id="au-sdb-btn-none" style="padding:2px 8px;font-size:11px;margin:0">✕ Bỏ Hết</button>
+            <button type="button" class="vk-btn mini sec" id="au-sdb-btn-carry" style="padding:2px 8px;font-size:11px;margin:0">⭐ 12 Món Hồn</button>
+            <button type="button" class="vk-btn mini sec" id="au-sdb-btn-unowned" style="padding:2px 8px;font-size:11px;margin:0">📦 Chỉ Chưa Có</button>
+          </div>
+        </div>
+        <div class="vk-mu" style="font-size:11.5px;margin-bottom:8px">
+          Tích chọn các món bạn muốn Auto tự động săn & bế quan cắm trại đón đầu. (Bỏ tích các món bạn không muốn săn lúc này).
+        </div>
+        <div id="au-sdb-relic-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;max-height:260px;overflow-y:auto;padding-right:4px">
+          ${relicItemsHtml}
+        </div>
+      </div>
+
       ${auFld("au-sdb-winrate", "Tỉ Lệ Thắng Tối Thiểu Đánh Hộ Vệ", c.minWinRate || 70, "(% Tỉ lệ thắng — dừng an toàn nếu yếu)")}
       <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px">
         <span>Chế Độ Khi Chưa Có Dị Bảo Trên Bản Đồ</span>
@@ -23835,6 +24031,87 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           auBind("sdb");
 
+          const updateGridUI = () => {
+            const chks = body.querySelectorAll(".au-sdb-relic-chk");
+            const checkedRelics = [];
+            chks.forEach((chk) => {
+              const rId = chk.getAttribute("data-relic");
+              const label = chk.closest(".au-sdb-relic-card");
+              if (chk.checked) {
+                checkedRelics.push(rId);
+                if (label) {
+                  label.style.borderColor = "var(--acc)";
+                  const titleEl = label.querySelector("div > div");
+                  if (titleEl) titleEl.style.color = "var(--ink)";
+                }
+              } else {
+                if (label) {
+                  label.style.borderColor = "var(--line)";
+                  const titleEl = label.querySelector("div > div");
+                  if (titleEl) titleEl.style.color = "var(--mu)";
+                }
+              }
+            });
+            c.targetRelics = checkedRelics;
+            auSave();
+            const badge = body.querySelector("#au-sdb-count-badge");
+            if (badge) {
+              badge.innerHTML =
+                checkedRelics.length === DIBAO.ev.length
+                  ? "(Đang săn tất cả 19 món)"
+                  : checkedRelics.length === 0
+                    ? '<span class="vk-bad">(Chưa chọn món nào — Auto sẽ dừng)</span>'
+                    : `(Đang chọn <b>${checkedRelics.length}</b>/19 món)`;
+            }
+          };
+
+          body.querySelectorAll(".au-sdb-relic-chk").forEach((chk) => {
+            chk.onchange = updateGridUI;
+          });
+
+          const btnAll = body.querySelector("#au-sdb-btn-all");
+          if (btnAll) {
+            btnAll.onclick = () => {
+              body
+                .querySelectorAll(".au-sdb-relic-chk")
+                .forEach((chk) => (chk.checked = true));
+              updateGridUI();
+            };
+          }
+
+          const btnNone = body.querySelector("#au-sdb-btn-none");
+          if (btnNone) {
+            btnNone.onclick = () => {
+              body
+                .querySelectorAll(".au-sdb-relic-chk")
+                .forEach((chk) => (chk.checked = false));
+              updateGridUI();
+            };
+          }
+
+          const btnCarry = body.querySelector("#au-sdb-btn-carry");
+          if (btnCarry) {
+            btnCarry.onclick = () => {
+              body.querySelectorAll(".au-sdb-relic-chk").forEach((chk) => {
+                const rId = chk.getAttribute("data-relic");
+                const rel = DIBAO.rel[rId] || {};
+                chk.checked = rel.bd === "Có";
+              });
+              updateGridUI();
+            };
+          }
+
+          const btnUnowned = body.querySelector("#au-sdb-btn-unowned");
+          if (btnUnowned) {
+            btnUnowned.onclick = () => {
+              body.querySelectorAll(".au-sdb-relic-chk").forEach((chk) => {
+                const rId = chk.getAttribute("data-relic");
+                chk.checked = !isOwnedItem(rId);
+              });
+              updateGridUI();
+            };
+          }
+
           const radarBtn = body.querySelector("#au-sdb-radar-btn");
           if (radarBtn) {
             radarBtn.onclick = () => {
@@ -23850,7 +24127,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   return;
                 }
                 const sc2 = scanDiBao([run2, G().state.meta]);
-                const pity2 = calcDiBaoPity(run2, nv2, sc2);
+                const pity2 = calcDiBaoPity(run2, nv2, sc2, c.targetRelics);
 
                 const onMap = [];
                 if (run2.nodes) {
@@ -23886,7 +24163,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 let html = `<div style="margin-top:8px;font-size:13px">`;
                 html += `<div class="vk-row"><span>Đang có trên bản đồ:</span><b>${onMap.length ? `<span class="vk-ok">${onMap.length} Dị Bảo</span>` : '<span class="vk-mu">Chưa có</span>'}</b></div>`;
                 if (onMap.length) {
-                  html += `<table class="vk-t" style="margin-top:4px"><tr><th>Dị Bảo</th><th>Nơi</th><th>Hạn</th><th>Đường</th></tr>${onMap.map((m) => `<tr><td><b>${esc(m.relInf.ten || m.ev.relic)}</b></td><td>${esc(placeName(c2, m.slot))}</td><td>${m.rem != null ? m.rem + " năm" : "—"}</td><td>${safeYrs(m.y)}</td></tr>`).join("")}</table>`;
+                  html += `<table class="vk-t" style="margin-top:4px"><tr><th>Dị Bảo</th><th>Nơi</th><th>Hạn</th><th>Đường</th></tr>${onMap.map((m) => {
+                    const isTgt = !c.targetRelics || c.targetRelics.length === 0 || c.targetRelics.includes(m.ev.relic);
+                    return `<tr><td><b>${esc(m.relInf.ten || m.ev.relic)}</b> ${isTgt ? '<span class="vk-ok" style="font-size:10.5px;font-weight:600">🎯 Mục tiêu</span>' : '<span class="vk-mu" style="font-size:10.5px">○ Bỏ qua</span>'}</td><td>${esc(placeName(c2, m.slot))}</td><td>${m.rem != null ? m.rem + " năm" : "—"}</td><td>${safeYrs(m.y)}</td></tr>`;
+                  }).join("")}</table>`;
                 }
                 html += `<div class="vk-row" style="margin-top:4px"><span>Bảo hiểm Pity (500 năm):</span><b>${pity2.waitYears}/500 năm (Trọng số ×${pity2.mult})</b></div>`;
                 if (pity2.topCamping && pity2.topCamping.length) {
@@ -25809,9 +26089,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.7.3 · Sửa Lỗi Nhập Định Encounter & Tự Động Bế Quan Chờ Dị Bảo",
+            t: "Phiên Bản 7.8.0 · Ra Mắt Chức Năng Chọn Bảo Vật Muốn Săn & Cắm Trại Đích Danh",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Ra Mắt Bộ Chọn Bảo Vật Muốn Săn (Target Relic Selector):</b> Bổ sung danh sách chọn bảo vật chi tiết trong cấu hình Auto Săn Dị Bảo (asdb). Bạn có thể chủ động tích chọn từng món Dị Bảo cụ thể muốn săn; Auto sẽ chỉ tập trung dò tìm, di chuyển và đoạt các Dị Bảo nằm trong danh sách này.",
+              "<b>Thao Tác 1 Chạm Với 4 Nút Chọn Nhanh:</b> Trang bị sẵn các bộ lọc nhanh thông minh: <code>[✓ Tất Cả]</code> (săn toàn bộ 19 Dị Bảo), <code>[✕ Bỏ Hết]</code>, <code>[⭐ 12 Món Hồn]</code> (chỉ săn các món Theo Hồn Qua Kiếp - Bất Diệt), và <code>[📦 Chỉ Chưa Có]</code> (tự động nhận diện túi đồ/kinh mạch để chỉ săn những món nhân vật kiếp này chưa sở hữu).",
+              "<b>Cắm Trại & Pity Hướng Mục Tiêu:</b> Thuật toán bảo hiểm Thiên Đạo Bù Dị Bảo (Pity 500 năm) và Radar cắm trại đón đầu giờ đây ưu tiên tính toán trực tiếp trên các Dị Bảo bạn đã chọn (ví dụ: chỉ chọn Bất Chiết Kiếm thì hệ thống sẽ đón đầu tại Kiếm Trạch).",
+              "<b>Bật/Tắt Săn Ngay Tại Tab Dị Bảo:</b> Tích hợp nút bấm trực quan <code>[🎯 Săn / ○ Bỏ qua]</code> trên từng thẻ Dị Bảo tại tab Dị Bảo (<code>db</code>), cho phép tinh chỉnh danh sách săn tức thì trong lúc tra cứu.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.7.3 · Sửa Lỗi Nhập Định Encounter & Tự Động Bế Quan Chờ Dị Bảo",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Triệt Để Lỗi 'Encounter không ở trạng thái chờ':</b> Chuẩn hóa quy trình bế quan tự động trong cả Auto Săn Dị Bảo lẫn Auto Tu Luyện. Hệ thống giờ đây luôn chủ động kích hoạt trạng thái chuẩn bị bế quan (<code>g.beQuan()</code>) trước khi thực hiện nhập định (<code>g.nhapDinh()</code>), đồng thời tự động đóng popup kết quả (<code>g.closeEncounter()</code>) ngay sau khi kỳ bế quan hoàn tất.",
               "<b>Vận Hành Trơn Tru Với Thiên Đạo Bù Dị Bảo (Pity):</b> Khi đã chạm hoặc vượt mốc Pity 500 năm, chỉ cần trôi qua 1 nhịp bế quan (1-2 năm), Dị Bảo chắc chắn 100% sẽ xuất hiện trên bản đồ thế giới; Auto sẽ ngay lập tức phát hiện và tự động bay/truyền tống tới vị trí sự kiện để đoạt bảo mà không gặp bất kỳ trở ngại nào.",
