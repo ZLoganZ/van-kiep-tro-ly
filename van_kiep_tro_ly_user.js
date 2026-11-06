@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.7.2
+// @version      7.7.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.7.2";
+      var TOOL_VER = "7.7.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -21404,7 +21404,77 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
 
           const namTruoc = run.nam;
-          const rBq = auCall(() => g.nhapDinh(lcBeQuan));
+          const rBq = auCall(() => {
+            const rRun = G().state && G().state.run;
+            if (
+              rRun &&
+              rRun.active &&
+              rRun.active.done &&
+              typeof g.closeEncounter === "function"
+            ) {
+              try {
+                g.closeEncounter();
+              } catch (e) {}
+            }
+            if (
+              rRun &&
+              rRun.thongBao &&
+              typeof g.dongThongBao === "function"
+            ) {
+              try {
+                g.dongThongBao();
+              } catch (e) {}
+            }
+            if (
+              rRun &&
+              rRun.longNotice &&
+              typeof g.closeLongNotice === "function"
+            ) {
+              try {
+                g.closeLongNotice();
+              } catch (e) {}
+            }
+            const rActive = G().state && G().state.run && G().state.run.active;
+            if (
+              !rActive ||
+              !rActive.waiting ||
+              rActive.waiting.kind !== "be_quan"
+            ) {
+              if (typeof g.beQuan === "function") {
+                g.beQuan();
+              }
+            }
+            g.nhapDinh(lcBeQuan);
+            const rAfter = G().state && G().state.run;
+            if (
+              rAfter &&
+              rAfter.active &&
+              rAfter.active.done &&
+              typeof g.closeEncounter === "function"
+            ) {
+              try {
+                g.closeEncounter();
+              } catch (e) {}
+            }
+            if (
+              rAfter &&
+              rAfter.thongBao &&
+              typeof g.dongThongBao === "function"
+            ) {
+              try {
+                g.dongThongBao();
+              } catch (e) {}
+            }
+            if (
+              rAfter &&
+              rAfter.longNotice &&
+              typeof g.closeLongNotice === "function"
+            ) {
+              try {
+                g.closeLongNotice();
+              } catch (e) {}
+            }
+          });
           if (!rBq.ok) {
             return { stop: "Không nhập định được: " + rBq.err };
           }
@@ -21736,14 +21806,82 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           );
 
           const namTruoc = run.nam;
-          const rSit = auCall(() =>
+          const rSit = auCall(() => {
+            const rRun = G().state && G().state.run;
+            if (
+              rRun &&
+              rRun.active &&
+              rRun.active.done &&
+              typeof g.closeEncounter === "function"
+            ) {
+              try {
+                g.closeEncounter();
+              } catch (e) {}
+            }
+            if (
+              rRun &&
+              rRun.thongBao &&
+              typeof g.dongThongBao === "function"
+            ) {
+              try {
+                g.dongThongBao();
+              } catch (e) {}
+            }
+            if (
+              rRun &&
+              rRun.longNotice &&
+              typeof g.closeLongNotice === "function"
+            ) {
+              try {
+                g.closeLongNotice();
+              } catch (e) {}
+            }
+            const rActive = G().state && G().state.run && G().state.run.active;
+            if (
+              !rActive ||
+              !rActive.waiting ||
+              rActive.waiting.kind !== "be_quan"
+            ) {
+              if (typeof g.beQuan === "function") {
+                g.beQuan();
+              }
+            }
             g.nhapDinh({
               nam: sitYears,
               untilExhausted: false,
               dan: [],
               autoBreak: [],
-            }),
-          );
+            });
+            const rAfter = G().state && G().state.run;
+            if (
+              rAfter &&
+              rAfter.active &&
+              rAfter.active.done &&
+              typeof g.closeEncounter === "function"
+            ) {
+              try {
+                g.closeEncounter();
+              } catch (e) {}
+            }
+            if (
+              rAfter &&
+              rAfter.thongBao &&
+              typeof g.dongThongBao === "function"
+            ) {
+              try {
+                g.dongThongBao();
+              } catch (e) {}
+            }
+            if (
+              rAfter &&
+              rAfter.longNotice &&
+              typeof g.closeLongNotice === "function"
+            ) {
+              try {
+                g.closeLongNotice();
+              } catch (e) {}
+            }
+          });
           if (!rSit.ok) {
             return {
               stop: "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
@@ -25671,9 +25809,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.7.2 · Đại Tu Động Cơ Auto Săn Dị Bảo, Bế Quan Trôi Năm & Đồng Bộ Tab Dị Bảo",
+            t: "Phiên Bản 7.7.3 · Sửa Lỗi Nhập Định Encounter & Tự Động Bế Quan Chờ Dị Bảo",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Triệt Để Lỗi 'Encounter không ở trạng thái chờ':</b> Chuẩn hóa quy trình bế quan tự động trong cả Auto Săn Dị Bảo lẫn Auto Tu Luyện. Hệ thống giờ đây luôn chủ động kích hoạt trạng thái chuẩn bị bế quan (<code>g.beQuan()</code>) trước khi thực hiện nhập định (<code>g.nhapDinh()</code>), đồng thời tự động đóng popup kết quả (<code>g.closeEncounter()</code>) ngay sau khi kỳ bế quan hoàn tất.",
+              "<b>Vận Hành Trơn Tru Với Thiên Đạo Bù Dị Bảo (Pity):</b> Khi đã chạm hoặc vượt mốc Pity 500 năm, chỉ cần trôi qua 1 nhịp bế quan (1-2 năm), Dị Bảo chắc chắn 100% sẽ xuất hiện trên bản đồ thế giới; Auto sẽ ngay lập tức phát hiện và tự động bay/truyền tống tới vị trí sự kiện để đoạt bảo mà không gặp bất kỳ trở ngại nào.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.7.2 · Đại Tu Động Cơ Auto Săn Dị Bảo, Bế Quan Trôi Năm & Đồng Bộ Tab Dị Bảo",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Triệt Để Lỗi Auto Không Hoạt Động Khi Chờ Dị Bảo:</b> Khắc phục lỗi dừng khựng hoặc kẹt di chuyển khi cắm trại tại các địa danh hoang dã/di tích không có tĩnh thất bế quan (như Kiếm Trạch, U Hồn Điện); Auto giờ đây tự động nhận diện linh khí và chọn nơi bế quan an toàn gần nhất để trôi thời gian (1-2 năm/nhịp), vừa tăng tu vi vừa đẩy Pity Dị Bảo lên cực đại.",
               "<b>Tự Động Xuất Phát Đoạt Bảo Ngay Khi Dị Bảo Nở:</b> Ngay khi có bất kỳ Dị Bảo nào xuất hiện trên thế giới trong lúc bế quan, Auto tự động ngắt bế quan, lập tức truyền tống hoặc ngự kiếm tới node sự kiện để đoạt bảo.",
