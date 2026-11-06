@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.1
+// @version      7.8.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.1";
+      var TOOL_VER = "7.8.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -8215,7 +8215,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 n.hetHanNam <= nam
               )
                 continue;
-              const slot = n.slot != null ? n.slot : +slotStr;
+              const slot =
+                n.slot != null
+                  ? n.slot
+                  : /^\d+$/.test(slotStr)
+                    ? +slotStr
+                    : slotStr;
               const encId = n.encounter;
 
               const ev = DIBAO.ev.find((x) => x.id === encId);
@@ -20334,8 +20339,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (opt.shopId && a.id === opt.shopId && g.shopView())
               return "idle";
             if (a.done) {
+              const isRelicEv =
+                opt.sdb &&
+                (a.id.startsWith("ev.di_bao") ||
+                  DIBAO.ev.some((e) => e.id === a.id));
               const r = auCall(() => g.closeEncounter());
-              return r.ok ? "ok" : { stop: "Không đóng được việc: " + r.err };
+              if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
+              if (isRelicEv) {
+                st.relicsWon = (st.relicsWon || 0) + 1;
+                auLog(
+                  "🎉 Hoàn tất sự kiện Dị Bảo! Đã đoạt bảo thành công (+5 Điểm Luân Hồi).",
+                  "vk-ok",
+                );
+              }
+              return "ok";
             }
             if (a.waiting)
               return {
@@ -20490,11 +20507,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const nonThoat = cs.filter((c) => !c.thoat);
             if (nonThoat.length > 0) {
               const claim = nonThoat.find((c) =>
-                /thu nhận|đoạt|nhận lấy|lấy|thu|hái|nhặt/i.test(c.text),
+                /thu nhận|đoạt|nhận lấy|lấy|thu|hái|nhặt|nhổ|rút|nhận/i.test(
+                  c.text,
+                ),
               );
               if (claim) return claim;
               const test = nonThoat.find((c) =>
-                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai/i.test(
+                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai|xem|khám phá|bước vào|quan sát/i.test(
                   c.text,
                 ),
               );
@@ -20502,7 +20521,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const combat = nonThoat.find(
                 (c) =>
                   c.risk ||
-                  /giao chiến|chiến đấu|nghênh chiến|khiêu chiến|đánh/i.test(
+                  /giao chiến|chiến đấu|nghênh chiến|khiêu chiến|đánh|quyết đấu|tiễu trừ|hạ gục/i.test(
                     c.text,
                   ),
               );
@@ -21752,7 +21771,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const ev = DIBAO.ev.find((x) => x.id === n.encounter);
               if (!ev) continue;
               if (!targetRelicSet.has(ev.relic)) continue;
-              const slot = n.slot != null ? n.slot : +slotStr;
+              const slot =
+                n.slot != null
+                  ? n.slot
+                  : /^\d+$/.test(slotStr)
+                    ? +slotStr
+                    : slotStr;
               const relInfo =
                 DIBAO.rel[ev.relic] ||
                 (Cc && Cc.items ? Cc.items.get(ev.relic) : null) ||
@@ -21820,18 +21844,96 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             // Đang đứng đúng tại slot sự kiện:
             if (String(run.viTri) === String(target.slot)) {
+              st.phase = "hunt";
+              // 1. Nếu chưa vào bên trong node nơi chốn thì vào node trước
+              if (String(run.oNoi) !== String(target.slot)) {
+                auLog(
+                  `Đã tới ${target.pName} (Slot ${target.slot}). Đang tiến vào nơi chốn...`,
+                  "vk-ok",
+                );
+                const rEnter = auCall(() => {
+                  if (typeof g.enterNode === "function")
+                    g.enterNode(String(target.slot));
+                });
+                if (!rEnter.ok)
+                  return { stop: "Không tiến vào nơi chốn được: " + rEnter.err };
+
+                const rAfterEnter = G().state && G().state.run;
+                if (rAfterEnter && (rAfterEnter.active || rAfterEnter.tran)) {
+                  st.tried = 0;
+                  return null;
+                }
+              }
+
+              // 2. Đã ở bên trong node nơi chốn: Kích hoạt sự kiện Dị Bảo
               auLog(
                 `Đã có mặt tại ${target.pName} (Slot ${target.slot}). Tiến vào sự kiện «${target.e.ten}» để đoạt ${target.title}...`,
                 "vk-ok",
               );
-              const r = auCall(() => {
-                if (typeof g.enterNode === "function")
-                  g.enterNode(String(target.slot));
-                else if (typeof g.doAction === "function")
+
+              // Tìm ID hoạt động (activity ID) chuẩn tại nơi này
+              let actId = target.encId;
+              try {
+                const director = TT.core && TT.core["encounter/director"];
+                if (director && typeof director.placeActivities === "function") {
+                  const acts = director.placeActivities(c, String(target.slot));
+                  if (Array.isArray(acts) && acts.length > 0) {
+                    const match = acts.find(
+                      (a) =>
+                        a.id === target.encId ||
+                        a.loai === "overlay" ||
+                        (a.id && a.id.startsWith("ev.di_bao")) ||
+                        (a.id && a.id.includes(target.encId)),
+                    );
+                    if (match && match.id) actId = match.id;
+                  }
+                }
+              } catch (e) {}
+
+              // Kích hoạt qua chooseActivity
+              let rAct = auCall(() => {
+                if (typeof g.chooseActivity === "function") {
+                  try {
+                    g.chooseActivity(actId);
+                  } catch (e1) {
+                    if (actId !== target.encId) g.chooseActivity(target.encId);
+                    else throw e1;
+                  }
+                } else if (typeof g.doAction === "function") {
                   g.doAction(target.encId);
+                }
               });
-              if (!r.ok)
-                return { stop: "Không tiến vào sự kiện được: " + r.err };
+
+              let rAfterAct = G().state && G().state.run;
+              if (rAfterAct && (rAfterAct.active || rAfterAct.tran)) {
+                st.tried = 0;
+                return null;
+              }
+
+              // Nếu chưa mở được, thử fallback doAction
+              if (!rAct.ok || (rAfterAct && !rAfterAct.active && !rAfterAct.tran)) {
+                auCall(() => {
+                  if (typeof g.doAction === "function") g.doAction(target.encId);
+                });
+              }
+
+              let rFinal = G().state && G().state.run;
+              if (rFinal && (rFinal.active || rFinal.tran)) {
+                st.tried = 0;
+                return null;
+              }
+
+              if (++st.tried >= 3) {
+                return {
+                  stop:
+                    "Không thể mở sự kiện «" +
+                    target.e.ten +
+                    "» (Slot " +
+                    target.slot +
+                    "): " +
+                    (rAct.err || "sự kiện không phản hồi"),
+                };
+              }
               return null;
             }
 
@@ -24213,7 +24315,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       continue;
                     const ev = DIBAO.ev.find((x) => x.id === n.encounter);
                     if (!ev) continue;
-                    const slot = n.slot != null ? n.slot : +slotStr;
+                    const slot =
+                n.slot != null
+                  ? n.slot
+                  : /^\d+$/.test(slotStr)
+                    ? +slotStr
+                    : slotStr;
                     const relInf = DIBAO.rel[ev.relic] || {};
                     let y = Infinity;
                     try {
@@ -26166,9 +26273,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.1 · Nút Săn Nhanh Dị Bảo & Điều Hướng Auto",
+            t: "Phiên Bản 7.8.2 · Khắc Phục Lỗi Kẹt Node & Tự Động Kích Hoạt Sự Kiện Dị Bảo",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Khắc Phục Đứng Yên Tại Điểm Dị Bảo Xuất Thế:</b> Sửa triệt để lỗi lặp vô tận khi tới nơi dị bảo xuất thế; tích hợp đầy đủ quy trình mở nơi chốn (<code>enterNode</code>) kết hợp kích hoạt sự kiện phủ (<code>chooseActivity / doAction</code>).",
+              "<b>Nhận Diện Chuẩn Xác Hoạt Động (Overlay Activity):</b> Tự động truy xuất danh mục hoạt động tại địa danh (<code>placeActivities</code>) để mở chính xác sự kiện Dị Bảo và tiến vào khảo nghiệm / khiêu chiến Hộ Vệ ngay lập tức.",
+              "<b>Hoàn Tất Thu Hoạch & Cập Nhật Tiến Trình:</b> Tự động đóng sự kiện khi hoàn tất, ghi nhận số lượng Dị Bảo đoạt được vào tiến trình và bảo toàn tính mạng người chơi.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.1 · Nút Săn Nhanh Dị Bảo & Điều Hướng Auto",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Nút [🎯 Săn Món Này] Bên Cạnh [Đi Đến Đón Đầu]:</b> Bổ sung nút Săn nhanh trực tiếp bên cạnh nút đón đầu / di chuyển trên từng thẻ Dị Bảo tại Tab Dị Bảo (<code>db</code>) và danh sách gợi ý cắm trại đón đầu.",
               "<b>Tự Động Chọn Mục Tiêu & Chuyển Tab 1 Chạm:</b> Nhấn nút sẽ tự động đưa duy nhất món Dị Bảo đó vào danh sách săn của Auto Săn Dị Bảo, lưu cấu hình, chuyển ngay sang tab Auto và cuộn sáng (highlight) bảo vật đã chọn.",
