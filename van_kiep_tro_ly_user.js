@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.2.0
-// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
+// @version      7.3.0
+// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý & Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
 // @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.2.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.3.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.2.0';
+  var TOOL_VER = '7.3.0';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -60,6 +60,9 @@ var MOD_CSS_EXTRA = `
 .tc-row { display:flex; gap:6px; flex-wrap:wrap; }
 .tc-row select { flex:1 1 30%; min-width:0; }
 .do-badge-nt { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:linear-gradient(135deg, #f59e0b, #ef4444); color:#fff; text-shadow:0 1px 2px #0008; box-shadow:0 0 8px rgba(245,158,11,0.4); }
+.do-badge-carry { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; text-shadow:0 1px 2px #0008; box-shadow:0 0 8px rgba(16,185,129,0.3); }
+.do-badge-guide { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; text-shadow:0 1px 2px #0008; box-shadow:0 0 8px rgba(245,158,11,0.4); animation:doPulse 2s infinite; }
+.do-badge-single { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:600; font-size:11px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#ccc; }
 .do-badge-than { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; text-shadow:0 1px 2px #0008; box-shadow:0 0 8px rgba(168,85,247,0.3); }
 .do-badge-tien { display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700; font-size:11.5px; background:linear-gradient(135deg, #38bdf8, #2563eb); color:#fff; text-shadow:0 1px 2px #0008; }
 .do-radar-card { border:2px solid var(--acc2) !important; background:radial-gradient(120% 60% at 50% 0%, rgba(230,195,106,0.14), transparent 75%), var(--bg2) !important; box-shadow:0 0 20px rgba(230,195,106,0.2) !important; margin-bottom:12px; }
@@ -1562,6 +1565,281 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return null;
   }
 
+  // ── Hệ Thống Săn Dị Bảo & Bảo Lục Thông Minh (v7.3.0) ──
+  const DIBAO_EXTRA = {
+    'item.luan_hoi_chan_kinh': { mota: 'Kinh điển luân hồi tối thượng, bảo toàn kinh mạch & tăng mạnh ngộ tính qua mọi kiếp luân hồi.', he: 'vo_sac', tier: 'SSS' },
+    'item.thai_hu_chu': { mota: 'Phi chu thái hư viễn cổ, tốc độ di chuyển siêu việt, vượt biển khơi không tốn năm tuổi thọ.', he: 'vo_sac', tier: 'SSS' },
+    'item.cuu_u_hoang_hoa': { mota: 'Dị hỏa chí tôn cửu u, thiêu đốt nguyên thần địch, tăng cực lớn sát thương Hỏa và hỗ trợ Luyện Đan.', he: 'hoa', tier: 'SSS' },
+    'item.tam_sinh_thach': { mota: 'Thần thạch tam sinh nhìn thấu luân hồi, tăng mạnh Đạo Tâm, giảm nguy cơ tâm ma khi đột phá.', he: 'vo_sac', tier: 'SSS' },
+    'item.bat_chiet_kiem': { mota: 'Kiếm ý bất khuất ngàn năm không gãy, tăng mạnh bạo kích và kiếm khí công kích hệ Kim.', he: 'kim', tier: 'SSS' },
+    'item.yeu_hoang_huyet_kinh': { mota: 'Bí điển huyết mạch Yêu Hoàng, thể phách vô song, tăng cực lớn Khí Huyết và Hộ Thể tối đa.', he: 'tho', tier: 'SSS' },
+    'item.phong_thien_an': { mota: 'Bảo ấn phong tỏa càn khôn thiên địa, áp chế uy lực chiêu thức địch và tăng sát thương trấn áp.', he: 'vo_sac', tier: 'SSS' },
+    'item.thai_co_long_lan': { mota: 'Vảy Chân Long thái cổ hộ thể, giảm mạnh sát thương gánh chịu và phản chấn công kích địch.', he: 'thuy', tier: 'SSS' },
+    'item.cam_lo_tinh_binh': { mota: 'Bình ngọc chứa tiên lộ trị liệu bách thương, tự động hồi phục lượng lớn Khí Huyết mỗi hiệp đấu.', he: 'thuy', tier: 'SSS' },
+    'item.do_hon_linh': { mota: 'Chuông dẫn hồn hộ mệnh: TỰ ĐỘNG THEO HỒN QUA KIẾP MÀ KHÔNG CHIẾM Ô BẾN ĐÒ, bảo hộ chân linh.', he: 'vo_sac', tier: 'SSS', guide: true },
+    'item.van_kiep_hon_dang': { mota: 'Đèn hồn soi sáng vạn kiếp u minh, khắc chế quỷ dị và miễn nhiễm suy yếu, kháng độc toàn diện.', he: 'hoa', tier: 'SSS' },
+    'item.can_khon_gioi': { mota: 'Nhẫn trữ vật nạp cả càn khôn thiên địa, mở rộng cực đại số ô túi đồ và kho đồ qua mọi kiếp.', he: 'vo_sac', tier: 'SSS' },
+    'item.nghich_menh_dan': { mota: 'Đan dược nghịch thiên cải mệnh, hồi sinh tức thì khi thọ nguyên cạn hoặc độ kiếp thất bại.', he: 'vo_sac', tier: 'SS' },
+    'item.nghich_lan_thuan': { mota: 'Khiên hộ thân đúc từ nghịch lân rồng (Rơi từ Boss Hóa Thần), ngăn chặn tuyệt đối đòn chí mạng.', he: 'kim', tier: 'SS' },
+    'item.thien_dien_dan': { mota: 'Đan dược diễn hóa thiên cơ huyền diệu (Rơi từ Boss Hóa Thần), bứt phá bình cảnh cảnh giới lập tức.', he: 'vo_sac', tier: 'SS' },
+    'item.doan_thien_chien_ky': { mota: 'Chiến kỳ cổ đại đoạn tuyệt thương thiên, tăng mạnh công phòng và kích phát chiến ý tốc chiến.', he: 'kim', tier: 'SS' },
+    'item.toai_thien_kiem': { mota: 'Cổ kiếm phong lôi toái thiên, công kích mang sấm sét xé toạc hộ thể của đối thủ.', he: 'moc', tier: 'SS' },
+    'item.hon_nguyen_dan_dinh': { mota: 'Lò luyện đan hỗn nguyên viễn cổ, đảm bảo 100% không bao giờ nổ lò và tăng phẩm chất đan dược.', he: 'hoa', tier: 'S' },
+    'item.than_nong_bach_thao_kinh': { mota: 'Kinh văn nông dược của Thần Nông, tăng tỷ lệ thu hoạch linh thảo quý và chế đan hoàn mỹ.', he: 'moc', tier: 'S' },
+    'item.tu_linh_chau': { mota: 'Hạt châu hội tụ tinh hoa linh khí của trời đất, tăng tốc độ hấp thu tu vi mỗi năm.', he: 'thuy', tier: 'S' },
+    'item.tu_bao_bon': { mota: 'Bồn tụ bảo thu hút tài lộc bốn phương, tự động sinh lời linh thạch và giảm giá khi mua sắm.', he: 'kim', tier: 'S' }
+  };
+
+  // Phát chuông báo âm thanh nhẹ bằng Web Audio API
+  function playDiBaoAlertSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const actx = new AudioCtx();
+      if (actx.state === 'suspended') actx.resume();
+      const now = actx.currentTime;
+      
+      const osc1 = actx.createOscillator();
+      const gain1 = actx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, now);
+      osc1.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.3, now + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc1.connect(gain1);
+      gain1.connect(actx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.8);
+
+      const osc2 = actx.createOscillator();
+      const gain2 = actx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(880, now + 0.18);
+      osc2.frequency.exponentialRampToValueAtTime(1174.66, now + 0.4);
+      gain2.gain.setValueAtTime(0, now + 0.18);
+      gain2.gain.linearRampToValueAtTime(0.25, now + 0.22);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      osc2.connect(gain2);
+      gain2.connect(actx.destination);
+      osc2.start(now + 0.18);
+      osc2.stop(now + 1.2);
+    } catch (e) {}
+  }
+
+  // Kiểm tra khả năng dịch chuyển tức thời tới slot
+  function checkCanTeleport(slot) {
+    if (slot == null || slot === '') return null;
+    try {
+      const g = G();
+      if (!g || !g.state || !g.state.run) return null;
+      if (typeof ddTeleSources !== 'function' || typeof ddTeleOpts !== 'function') return null;
+      const srcs = ddTeleSources(g);
+      for (const src of srcs) {
+        const opts = ddTeleOpts(g, src);
+        if (opts.has(String(slot)) || opts.has(+slot)) {
+          return src;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // Dịch chuyển tức thời thông minh tới slot
+  function smartTeleportTo(slot) {
+    if (slot == null || slot === '') return { ok: false, msg: 'Tọa độ không hợp lệ.' };
+    const src = checkCanTeleport(slot);
+    if (!src) return { ok: false, msg: 'Hiện tại không có Trận Truyền Tống hoặc Phù Truyền Tống nào có thể đi thẳng tới slot ' + slot + '.' };
+    return ddDoTeleport(slot, src);
+  }
+
+  // Đánh giá tương thích Linh Căn kiếp này với Dị Bảo
+  function relicSynergy(relId, lc) {
+    const extra = DIBAO_EXTRA[relId];
+    if (!extra) return { txt: 'Bình thường', cls: 'vk-mu' };
+    const rHe = extra.he;
+    if (rHe === 'vo_sac') return { txt: '✨ Vô Sắc (Hợp Mọi Linh Căn)', cls: 'vk-ok' };
+    let myHes = [];
+    if (lc) {
+      if (Array.isArray(lc)) myHes = lc.slice();
+      else if (Array.isArray(lc.he)) myHes = lc.he.slice();
+      else if (typeof lc === 'string') myHes = [lc];
+    }
+    const goc = (h) => (typeof GOC_HE !== 'undefined' && GOC_HE[h]) ? GOC_HE[h] : h;
+    const baseHes = myHes.map(goc);
+    if (baseHes.includes(rHe)) {
+      return { txt: `🔥 Khớp Bản Mệnh (Hệ ${heTen(rHe)}) · Tối Đa Uy Lực`, cls: 'vk-ok' };
+    }
+    for (const h of baseHes) {
+      if (typeof SINH_HE !== 'undefined' && (SINH_HE[h] === rHe || SINH_HE[rHe] === h)) {
+        return { txt: `⚡ Tương Sinh Bổ Trợ (Hệ ${heTen(rHe)})`, cls: 'vk-ok' };
+      }
+    }
+    for (const h of baseHes) {
+      if (typeof KHAC_HE !== 'undefined' && (KHAC_HE[h] === rHe || KHAC_HE[rHe] === h)) {
+        return { txt: `⚠️ Tương Khắc (${heTen(rHe)}) · Cân Nhắc`, cls: 'vk-bad' };
+      }
+    }
+    return { txt: `Hệ ${heTen(rHe)}`, cls: 'vk-mu' };
+  }
+
+  // Giả lập chiến đấu ảo với Hộ Vệ Dị Bảo
+  function simDiBaoGuard(nv, e) {
+    try {
+      const Cc = C(), K = S.core;
+      if (!K || !K.taoBenTa || !K.taoBenDich || typeof fight !== 'function') return null;
+      const P = K.taoBenTa(nv, Cc);
+      let foeDef = null;
+      if (e.bv && Cc.enemies) {
+        const fName = fold(e.bv).trim();
+        foeDef = [...Cc.enemies.values()].find((x) => {
+          const tn = fold(x.ten || '').trim();
+          return tn === fName || tn.includes(fName) || fName.includes(tn);
+        });
+      }
+      const cg = e.bvcg != null ? e.bvcg : 5;
+      if (!foeDef && Cc.enemies) {
+        foeDef = [...Cc.enemies.values()].find((x) => (x.canh_gioi ?? 0) === cg && x.muc === 'tinh_anh') ||
+                 [...Cc.enemies.values()].find((x) => (x.canh_gioi ?? 0) === cg);
+      }
+      if (!foeDef) return null;
+
+      let wins = 0;
+      let minHpPct = 100;
+      const stages = [0, 1, 2, 3];
+      for (const tc of stages) {
+        try {
+          const E = K.taoBenDich({ ...foeDef, canh_gioi: cg, tieu_canh_gioi: tc }, Cc, { muc: 'tinh_anh' });
+          const res = fight(P, E);
+          if (res.thang) {
+            wins++;
+            const hpPct = Math.round((res.khiHuyetThapNhat / Math.max(1, P.khiHuyetToiDa)) * 100);
+            if (hpPct < minHpPct) minHpPct = hpPct;
+          }
+        } catch (err) {}
+      }
+      const winrate = wins / stages.length;
+      return {
+        winrate,
+        wins,
+        total: stages.length,
+        minHpPct: wins > 0 ? minHpPct : 0,
+        foeTen: foeDef.ten || e.bv,
+        cg
+      };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  // Gợi ý vật phẩm / đan dược bù điểm chỉ số kiểm định
+  function findStatBoosters(statKey, gap) {
+    try {
+      const g = G(), run = g.state && g.state.run, nv = run && run.nhanVat, Cc = C();
+      if (!nv) return { bagItems: [], recommendedPills: [] };
+      const bag = nv.tuiDo || {};
+      const bagItems = [];
+
+      for (const [id, count] of Object.entries(bag)) {
+        if (!(count > 0)) continue;
+        const it = Cc.items ? Cc.items.get(id) : null;
+        if (!it) continue;
+        let val = 0;
+        if (it.bi_dong && it.bi_dong.chi_so && typeof it.bi_dong.chi_so[statKey] === 'number') {
+          val = it.bi_dong.chi_so[statKey];
+        } else if (it.dung && typeof it.dung === 'object') {
+          const s = JSON.stringify(it.dung);
+          const m = s.match(new RegExp(`"${statKey}":\\s*(\\d+)`));
+          if (m) val = parseInt(m[1], 10);
+        }
+        if (val > 0) {
+          bagItems.push({ id, ten: it.ten || id, count, val, loai: it.loai });
+        }
+      }
+      bagItems.sort((a, b) => b.val - a.val);
+
+      const recommendedPills = [];
+      if (Cc.items) {
+        for (const it of Cc.items.values()) {
+          if (it.loai !== 'dan_duoc') continue;
+          let val = 0;
+          if (it.dung && typeof it.dung === 'object') {
+            const s = JSON.stringify(it.dung);
+            const m = s.match(new RegExp(`"${statKey}":\\s*(\\d+)`));
+            if (m) val = parseInt(m[1], 10);
+          } else if (it.bi_dong && it.bi_dong.chi_so && typeof it.bi_dong.chi_so[statKey] === 'number') {
+            val = it.bi_dong.chi_so[statKey];
+          }
+          if (val > 0) {
+            recommendedPills.push({ id: it.id, ten: it.ten || it.id, val, gia: it.gia || 0, cg: it.canh_gioi ?? 0 });
+          }
+        }
+        recommendedPills.sort((a, b) => b.val - a.val);
+      }
+      return { bagItems, recommendedPills: recommendedPills.slice(0, 3) };
+    } catch (e) {
+      return { bagItems: [], recommendedPills: [] };
+    }
+  }
+
+  // Tính toán chỉ số bảo hiểm Thiên Đạo Bù Dị Bảo (Pity)
+  function calcDiBaoPity(run, nv, sc) {
+    const nam = typeof run.nam === 'number' ? run.nam : 0;
+    const myCg = nv.canhGioi ?? 0;
+    const isOwned = (id) => {
+      if (!id) return false;
+      if (sc.relics.has(id)) return true;
+      if (sc.flags.has(id.replace(/^item\./, ''))) return true;
+      if (nv.tuiDo && nv.tuiDo[id] > 0) return true;
+      if (nv.kinhMach && nv.kinhMach.manh && nv.kinhMach.manh.some((m) => m.item === id)) return true;
+      if (nv.trangBi && Object.values(nv.trangBi).includes(id)) return true;
+      return false;
+    };
+
+    const eligibleEvents = DIBAO.ev.filter((e) => {
+      if (isOwned(e.relic)) return false;
+      const gateCg = e.gate ? e.gate[0] : 4;
+      return myCg >= gateCg;
+    });
+
+    if (eligibleEvents.length === 0) {
+      return { waitYears: 0, pityPct: 0, mult: '1.0', guaranteed: false, topCamping: [] };
+    }
+
+    let maxWait = 0;
+    const eventWaits = [];
+
+    for (const e of eligibleEvents) {
+      const h = sc.history.get(e.id);
+      let wait = 0;
+      if (h && typeof h.namCuoi === 'number') {
+        const cdEnd = h.namCuoi + (e.hc || 120);
+        if (nam >= cdEnd) wait = nam - cdEnd;
+      } else {
+        wait = Math.max(0, nam - (run.namBatDau || 0));
+      }
+      eventWaits.push({ e, wait });
+      if (wait > maxWait) maxWait = wait;
+    }
+
+    const pityPct = Math.min(100, Math.round((maxWait / 500) * 100));
+    const mult = (1 + (maxWait / 25)).toFixed(1);
+    const guaranteed = maxWait >= 500;
+
+    const topCamping = eventWaits
+      .filter((x) => x.e.dia)
+      .sort((a, b) => {
+        const relA = DIBAO.rel[a.e.relic] || {};
+        const relB = DIBAO.rel[b.e.relic] || {};
+        const bdA = relA.bd === 'Có' ? 1 : 0;
+        const bdB = relB.bd === 'Có' ? 1 : 0;
+        return bdB - bdA || b.wait - a.wait;
+      })
+      .slice(0, 4);
+
+    return { waitYears: Math.floor(maxWait), pityPct, mult, guaranteed, topCamping };
+  }
+
   // ── Global Live Alert: Banner thông báo nổi trên màn hình khi Dị Bảo nở trên map ──
   var lastDismissedDiBao = null;
   function removeDiBaoAlert() {
@@ -1577,6 +1855,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       document.body.appendChild(alertEl);
     }
     const safeY = isFinite(t.y) ? (t.y < 0.05 ? 'ngay đây' : num(t.y) + ' năm') : 'không rõ';
+    const teleBtnHtml = t.canTeleport
+      ? `<button class="vk-btn do-btn-teleport" data-slot="${t.slot}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:5px 12px;font-size:12px;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 0 10px rgba(139,92,246,0.5)">⚡ Truyền Tống (0 năm)</button>`
+      : '';
+    const dangerWarn = (t.remYears != null && isFinite(t.y) && t.remYears < t.y)
+      ? ` <b class="vk-bad">⚠️ Đi bộ (${num(t.y)} năm) > Hạn còn (${t.remYears} năm)!</b>`
+      : '';
+
     alertEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
         <span class="do-radar-pulse" style="width:12px;height:12px;border-radius:50%;background:#ff3366;box-shadow:0 0 0 0 rgba(255,51,102,0.7);animation:doPulse 1.8s infinite;flex-shrink:0"></span>
@@ -1586,15 +1871,37 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             <span style="color:#fff">${esc(t.title)}</span>
           </div>
           <div style="font-size:11.5px;color:#bbb;margin-top:2px">
-            📍 <b>${esc(t.pName)}</b> (Slot ${t.slot}) · Hạn còn: <b style="color:#f59e0b">${t.remYears != null ? t.remYears + ' năm' : 'Vô hạn'}</b> · Đường đi: <b>${safeY}</b>
+            📍 <b>${esc(t.pName)}</b> (Slot ${t.slot}) · Hạn còn: <b style="color:#f59e0b">${t.remYears != null ? t.remYears + ' năm' : 'Vô hạn'}</b> · Đường đi: <b>${safeY}</b>${dangerWarn}
           </div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${teleBtnHtml}
         <button class="vk-btn do-btn-travel" data-slot="${t.slot}" style="background:#ff3366;color:#fff;font-weight:bold;padding:5px 12px;font-size:12px;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;box-shadow:0 0 10px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
         <button id="vkx-dibao-close" style="background:rgba(255,255,255,0.1);border:none;color:#ddd;font-size:16px;width:24px;height:24px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
       </div>
     `;
+
+    const teleBtn = alertEl.querySelector('.do-btn-teleport');
+    if (teleBtn) {
+      teleBtn.onclick = () => {
+        teleBtn.disabled = true;
+        teleBtn.textContent = '⚡ Đang truyền tống...';
+        setTimeout(() => {
+          const res = smartTeleportTo(t.slot);
+          if (!res.ok) {
+            try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+            alert('⚠️ ' + res.msg);
+            teleBtn.disabled = false;
+            teleBtn.textContent = '⚡ Truyền Tống (0 năm)';
+          } else {
+            try { UI.notify('⚡ ' + res.msg); } catch (e) {}
+            removeDiBaoAlert();
+            if (typeof render === 'function') render();
+          }
+        }, 30);
+      };
+    }
 
     const btn = alertEl.querySelector('.do-btn-travel');
     if (btn) {
@@ -1683,6 +1990,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       }
 
       if (lastDismissedDiBao === activeTarget.encId + '_' + activeTarget.slot) return;
+      activeTarget.canTeleport = !!checkCanTeleport(activeTarget.slot);
+      playDiBaoAlertSound();
+      if (typeof auStop === 'function' && typeof AU !== 'undefined' && AU.run && AU.run.running) {
+        auStop('🔔 Phát hiện Dị Bảo: ' + activeTarget.title + ' (Tự động tạm dừng để bạn xử lý)');
+      }
       showDiBaoAlert(activeTarget);
     } catch (e) {}
   }
@@ -2100,20 +2412,34 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (e.bv) bits.push(`<b>Hộ vệ trấn giữ:</b> ${esc(e.bv)} (${realmName(e.bvcg ?? 5)})`);
             if (e.hc) bits.push(`<b>Hồi chiêu sự kiện:</b> ${e.hc} năm`);
 
-            // Đánh giá khả năng tham gia & đoạt bảo
+            // Đánh giá khả năng tham gia & đoạt bảo thông minh (v7.3.0)
             let evalVerdict = '';
             if (!e.bv && e.chk) {
-              if (r.statChk.ok) evalVerdict = '<span class="vk-ok" style="font-weight:bold">🎯 Thuần kiểm định: ĐÃ ĐẠT CHỈ SỐ — ĂN CHẮC 100% (Không cần đánh nhau) ✓</span>';
-              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">🎯 Thuần kiểm định: THIẾU CHỈ SỐ — Tham gia sẽ THẤT BẠI (Cần cắn đan tăng ${esc(r.statChk.name)}) ✗</span>`;
-            } else if (e.bv && !e.chk) {
-              const myCg = nv.canhGioi ?? 0, foeCg = e.bvcg ?? 5;
-              if (myCg >= foeCg) evalVerdict = `<span class="vk-ok" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới của bạn (${realmName(myCg)}) ngang/hơn Hộ Vệ (${realmName(foeCg)}) — Khả năng thắng cao ✓</span>`;
-              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới bạn (${realmName(myCg)}) kém hơn Hộ Vệ (${realmName(foeCg)}) — RẤT NGUY HIỂM ⚠️</span>`;
-            } else if (e.bv && e.chk) {
-              const myCg = nv.canhGioi ?? 0, foeCg = e.bvcg ?? 5;
-              const okChk = r.statChk.ok, okCg = myCg >= foeCg;
-              if (okChk && okCg) evalVerdict = '<span class="vk-ok" style="font-weight:bold">⚡ Thử thách Kép (Vừa kiểm định + Vừa đánh boss): ĐÃ ĐẠT CHỈ SỐ & ĐỦ CẢNH GIỚI ĐỐI ĐẦU ✓</span>';
-              else evalVerdict = `<span class="vk-bad" style="font-weight:bold">⚡ Thử thách Kép (Vừa kiểm định + Vừa đánh quái): ${!okChk ? 'Thiếu chỉ số (' + r.statChk.text + ')' : ''}${!okChk && !okCg ? ' và ' : ''}${!okCg ? 'Cảnh giới thấp hơn Hộ Vệ' : ''} ⚠️</span>`;
+              if (r.statChk.ok) {
+                evalVerdict = '<span class="vk-ok" style="font-weight:bold">🎯 Thuần kiểm định: ĐÃ ĐẠT CHỈ SỐ — ĂN CHẮC 100% (Không cần đánh nhau) ✓</span>';
+              } else {
+                const gap = r.statChk.req - r.statChk.cur;
+                const boosters = findStatBoosters(r.statChk.key, gap);
+                let bAdv = '';
+                if (boosters.bagItems.length > 0) {
+                  bAdv += `<div style="margin-top:2px;color:#f59e0b">🎒 Trong túi có: ${boosters.bagItems.map((b) => `${esc(b.ten)} (+${b.val})`).join(', ')}</div>`;
+                }
+                if (boosters.recommendedPills.length > 0) {
+                  bAdv += `<div style="margin-top:2px" class="vk-mu">💊 Đan dược khuyên cắn: ${boosters.recommendedPills.map((p) => `${esc(p.ten)} (+${p.val})`).join(', ')}</div>`;
+                }
+                evalVerdict = `<span class="vk-bad" style="font-weight:bold">🎯 Thuần kiểm định: THIẾU CHỈ SỐ (${esc(r.statChk.text)}) ✗</span>${bAdv}`;
+              }
+            } else if (e.bv) {
+              const sim = simDiBaoGuard(nv, e);
+              if (sim) {
+                const winPct = Math.round(sim.winrate * 100);
+                const isSafe = sim.winrate >= 0.75, isRisky = sim.winrate < 0.5;
+                evalVerdict = `<span style="font-weight:bold" class="${isSafe ? 'vk-ok' : isRisky ? 'vk-bad' : 'vk-mu'}">⚔️ Giả Lập Đấu Hộ Vệ (${esc(sim.foeTen)}): TỈ LỆ THẮNG ${winPct}% (${sim.wins}/${sim.total}) · Máu còn ~${sim.minHpPct}% — ${isSafe ? 'Chiến lực an toàn ✓' : isRisky ? 'RẤT NGUY HIỂM ⚠️' : 'Có rủi ro ⚡'}</span>`;
+              } else {
+                const myCg = nv.canhGioi ?? 0, foeCg = e.bvcg ?? 5;
+                if (myCg >= foeCg) evalVerdict = `<span class="vk-ok" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới của bạn (${realmName(myCg)}) ngang/hơn Hộ Vệ (${realmName(foeCg)}) ✓</span>`;
+                else evalVerdict = `<span class="vk-bad" style="font-weight:bold">⚔️ Đánh Hộ Vệ: Cảnh giới bạn (${realmName(myCg)}) kém hơn Hộ Vệ (${realmName(foeCg)}) — RẤT NGUY HIỂM ⚠️</span>`;
+              }
             }
             if (evalVerdict) bits.push(`<b>Đánh giá đoạt bảo:</b> ${evalVerdict}`);
           } else if (r.nguon === 'boss') {
@@ -2135,10 +2461,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (c && K && K.travelYears) {
               try { y = K.travelYears(c, r.node.slot); } catch (err) {}
             }
+            const canTele = checkCanTeleport(r.node.slot);
             travelBox = `
               <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
                 <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + ' năm' : 'Vô hạn'}</b> · Đi: <b>${safeYrs(y)}</b></span>
-                <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                <div style="display:flex;gap:4px">
+                  ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(139,92,246,0.4)">⚡ Truyền Tống Ngay</button>` : ''}
+                  <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                </div>
               </div>
             `;
           } else if (!r.done && e && e.dia) {
@@ -2286,8 +2616,40 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       };
     }
 
-    // Bắt sự kiện bấm nút Bay Đến / Đi Đến Đón Đầu
+    // Bắt sự kiện bấm nút Bay Đến / Đi Đến Đón Đầu / Dịch Chuyển
     body.onclick = (ev) => {
+      const teleBtn = ev.target.closest && ev.target.closest('.do-btn-teleport');
+      if (teleBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const slot = teleBtn.dataset.slot;
+        if (!slot) return;
+        teleBtn.disabled = true;
+        const oldTxt = teleBtn.textContent;
+        teleBtn.textContent = '⚡ Đang truyền tống...';
+        setTimeout(() => {
+          try {
+            const res = smartTeleportTo(slot);
+            if (!res.ok) {
+              try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+              alert('⚠️ ' + res.msg);
+              teleBtn.disabled = false;
+              teleBtn.textContent = oldTxt;
+            } else {
+              try { UI.notify('⚡ ' + res.msg); } catch (e) {}
+              if (S.core && S.core.sync) try { S.core.sync(); } catch (e) {}
+              lastRenderedViTri = String(slot);
+              tabDoDo();
+            }
+          } catch (err) {
+            try { UI.notify('⚠️ Lỗi truyền tống: ' + (err.message || err)); } catch (e) {}
+            teleBtn.disabled = false;
+            teleBtn.textContent = oldTxt;
+          }
+        }, 30);
+        return;
+      }
+
       const btn = ev.target.closest && ev.target.closest('.do-btn-travel');
       if (btn) {
         ev.preventDefault();
@@ -2328,49 +2690,546 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
 
 
+  // ── Tab Dị Bảo Toàn Diện (v7.3.0: Bảo Lục Luân Hồi · Thiên Đạo Bù Dị Bảo · Giả Lập Hộ Vệ · Trợ Lý Bù Điểm · Di Chuyển Thông Minh) ──
   function tabDiBao() {
-    const st = G().state, run = st.run, nv = run.nhanVat, nam = typeof run.nam === 'number' ? run.nam : null;
+    const g = G(), st = g ? g.state : null;
+    if (!st || !st.run) {
+      body.innerHTML = '<div class="vk-card"><b class="vk-bad">Chưa có dữ liệu kiếp đang chơi.</b><br><span class="vk-mu">Hãy vào game tải màn chơi trước rồi mở lại tool.</span></div>';
+      return;
+    }
+    const run = st.run, nv = run.nhanVat, nam = typeof run.nam === 'number' ? run.nam : null;
     const sc = scanDiBao([run, st.meta]);
+    const Cc = C();
+    let c = null; try { c = ctx(); } catch (e) {}
+    const K = S.core;
+    const safeYrs = (y) => (typeof yrs === 'function' ? yrs(y) : (y < 0.05 ? 'ngay đây' : num(y) + ' năm'));
+
+    S.dibao = S.dibao || { filter: 'all', q: '' };
+    const f = S.dibao;
+
+    // Map các node đang xuất hiện
     const nodeByEnc = new Map();
-    if (sc.nodes) for (const nd of Object.values(sc.nodes)) if (nd && typeof nd.encounter === 'string' && !nodeByEnc.has(nd.encounter)) nodeByEnc.set(nd.encounter, nd);
-    const has = (id) => sc.relics.has(id) || sc.flags.has(id.replace('item.', '')) || (nv.tuiDo && nv.tuiDo[id] > 0);
-    const rows = DIBAO.ev.map((e) => {
-      const done = has(e.relic), info = DIBAO.rel[e.relic] || {};
-      const gateOk = !e.gate || nv.canhGioi >= e.gate[0];
-      let stt = 'ok', left = null;
+    if (sc.nodes) {
+      for (const [slotStr, nd] of Object.entries(sc.nodes)) {
+        if (nd && typeof nd.encounter === 'string' && !nodeByEnc.has(nd.encounter)) {
+          nodeByEnc.set(nd.encounter, { ...nd, slot: nd.slot != null ? nd.slot : +slotStr });
+        }
+      }
+    }
+
+    // Kiểm tra đã sở hữu món đồ
+    const isOwned = (id) => {
+      if (!id) return false;
+      if (sc.relics.has(id)) return true;
+      if (sc.flags.has(id.replace(/^item\./, ''))) return true;
+      if (nv.tuiDo && nv.tuiDo[id] > 0) return true;
+      if (nv.kinhMach && nv.kinhMach.manh && nv.kinhMach.manh.some((m) => m.item === id)) return true;
+      if (nv.trangBi && Object.values(nv.trangBi).includes(id)) return true;
+      return false;
+    };
+
+    // Kiểm tra chỉ số kiểm định
+    const checkStat = (chkStr) => {
+      if (!chkStr) return { ok: true, text: 'Không yêu cầu' };
+      const m = chkStr.match(/^([a-z_]+)\s*\+(\d+)/);
+      if (!m) return { ok: true, text: chkStr };
+      const key = m[1], req = parseInt(m[2], 10);
+      let cur = 0;
+      try {
+        if (K && K.effectiveStat) cur = K.effectiveStat(nv, key, Cc);
+        else if (nv.chiSo && typeof nv.chiSo[key] === 'number') cur = nv.chiSo[key];
+        else if (typeof nv[key] === 'number') cur = nv[key];
+      } catch (e) {}
+      const name = CHI_SO_VI[key] || key;
+      return { ok: cur >= req, cur, req, key, name, text: `${name}: ${cur}/${req}` };
+    };
+
+    // Chuẩn bị danh sách 21 Dị Bảo
+    const allDb = [];
+    for (const e of DIBAO.ev) {
+      const relInfo = DIBAO.rel[e.relic] || (Cc && Cc.items ? Cc.items.get(e.relic) : null) || {};
+      const extra = DIBAO_EXTRA[e.relic] || {};
+      const done = isOwned(e.relic);
+      const gateOk = !e.gate || (nv && nv.canhGioi >= e.gate[0]);
+      const statChk = checkStat(e.chk);
       const h = sc.history.get(e.id);
-      if (done) stt = 'done';
-      else if (h && e.hc && nam != null && nam < h.namCuoi + e.hc) { stt = 'cd'; left = h.namCuoi + e.hc - nam; }
-      else if (!gateOk) stt = 'lock';
+      let cdLeft = 0;
+      if (h && e.hc && nam != null && nam < h.namCuoi + e.hc) cdLeft = Math.ceil(h.namCuoi + e.hc - nam);
       const nd = nodeByEnc.get(e.id);
       let nodeLeft = null;
-      if (!done && stt !== 'cd' && nd) { stt = 'map'; if (typeof nd.hetHanNam === 'number' && nam != null) nodeLeft = nd.hetHanNam - nam; }
-      return { e, info, stt, left, nodeLeft, gateOk };
+      if (nd && typeof nd.hetHanNam === 'number' && nam != null) nodeLeft = Math.max(0, Math.floor(nd.hetHanNam - nam));
+
+      let stt = 'ready';
+      if (done) stt = 'done';
+      else if (nd) stt = 'map';
+      else if (cdLeft > 0) stt = 'cd';
+      else if (!gateOk || !statChk.ok) stt = 'lock';
+
+      const isCarry = relInfo.bd === 'Có' || relInfo.theo_kiep || extra.tier === 'SSS';
+      const isGuide = !!extra.guide || e.relic === 'item.do_hon_linh';
+
+      allDb.push({
+        id: e.relic,
+        ten: relInfo.ten || e.relic,
+        loai: relInfo.loai || 'phap_khi',
+        pham_cap: 8,
+        gia: relInfo.gia || 0,
+        bd: isCarry,
+        guide: isGuide,
+        nguon: 'ev',
+        e,
+        relInfo,
+        extra,
+        done,
+        gateOk,
+        statChk,
+        cdLeft,
+        node: nd,
+        nodeLeft,
+        stt,
+      });
+    }
+
+    // 2 Boss Hóa Thần Dị Bảo
+    for (const bid of DIBAO.boss) {
+      const relInfo = DIBAO.rel[bid] || (Cc && Cc.items ? Cc.items.get(bid) : null) || {};
+      const extra = DIBAO_EXTRA[bid] || {};
+      const done = isOwned(bid);
+      const isCarry = relInfo.bd === 'Có' || relInfo.theo_kiep || extra.tier === 'SSS';
+
+      allDb.push({
+        id: bid,
+        ten: relInfo.ten || bid,
+        loai: relInfo.loai || (bid.includes('dan') ? 'dan_duoc' : 'phap_khi'),
+        pham_cap: 8,
+        gia: relInfo.gia || 0,
+        bd: isCarry,
+        guide: false,
+        nguon: 'boss',
+        relInfo,
+        extra,
+        done,
+        gateOk: nv && nv.canhGioi >= 5,
+        statChk: { ok: true, text: 'Hạ Boss Hóa Thần' },
+        cdLeft: 0,
+        node: null,
+        nodeLeft: null,
+        stt: done ? 'done' : (nv && nv.canhGioi >= 5 ? 'ready' : 'lock'),
+      });
+    }
+
+    // Thống kê Bảo Lục
+    const totalCount = allDb.length;
+    const doneCount = allDb.filter((x) => x.done).length;
+    const carryTotal = allDb.filter((x) => x.bd).length;
+    const carryDone = allDb.filter((x) => x.bd && x.done).length;
+    const mapActive = allDb.filter((x) => x.stt === 'map');
+
+    // Số món đã lưu trong Bảo Lục meta
+    const metaRelics = (st.meta && st.meta.tienLo && st.meta.tienLo.relics) ? st.meta.tienLo.relics : [];
+    const baoLucPoints = metaRelics.length * 5;
+
+    // Tính toán bảo hiểm Pity
+    const pity = calcDiBaoPity(run, nv, sc);
+
+    // Render giao diện chính
+    body.innerHTML = `
+      <div class="vk-card do-radar-card" style="border:1px solid #ff3366;background:linear-gradient(180deg,rgba(255,51,102,0.12) 0%,rgba(15,12,26,0.5) 100%)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <h3 style="margin:0;display:flex;align-items:center;gap:8px">
+            <span class="do-radar-pulse" style="width:12px;height:12px;border-radius:50%;background:#ff3366;box-shadow:0 0 10px #ff3366"></span>
+            <span>🏛️ BẢO LỤC & SĂN DỊ BẢO (NGHỊCH THIÊN P8)</span>
+          </h3>
+          <span class="do-badge-nt">21 Tối Thượng</span>
+        </div>
+
+        <!-- 4 Khung Chỉ Số Thống Kê -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px">
+          <div style="background:var(--bg3);padding:8px;border-radius:6px;text-align:center">
+            <div class="vk-mu" style="font-size:11px">Đã Có Trong Kiếp</div>
+            <b style="font-size:18px;color:${doneCount ? 'var(--acc)' : 'var(--mu)'}">${doneCount}/${totalCount}</b>
+          </div>
+          <div style="background:var(--bg3);padding:8px;border-radius:6px;text-align:center">
+            <div class="vk-mu" style="font-size:11px">Bảo Lục Luân Hồi</div>
+            <b style="font-size:18px;color:#10b981">${metaRelics.length}/${totalCount} <span style="font-size:12px;font-weight:normal">(+${baoLucPoints}đ)</span></b>
+          </div>
+          <div style="background:var(--bg3);padding:8px;border-radius:6px;text-align:center">
+            <div class="vk-mu" style="font-size:11px">Theo Hồn Qua Kiếp</div>
+            <b style="font-size:18px;color:#f59e0b">${carryDone}/${carryTotal}</b>
+          </div>
+          <div style="background:var(--bg3);padding:8px;border-radius:6px;text-align:center">
+            <div class="vk-mu" style="font-size:11px">Đang Trên Bản Đồ</div>
+            <b style="font-size:18px;color:${mapActive.length ? '#ff3366' : 'var(--mu)'}">${mapActive.length}</b>
+          </div>
+        </div>
+
+        <!-- Thanh Bảo Hiểm Pity (Thiên Đạo Bù Dị Bảo) -->
+        <div style="background:var(--bg2);padding:10px;border-radius:8px;border:1px solid rgba(255,51,102,0.3);margin-bottom:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:4px">
+            <b style="font-size:12.5px;color:#f59e0b">⏳ Thiên Đạo Bù Dị Bảo (Bảo Hiểm Pity 500 Năm):</b>
+            <span style="font-size:12px">${pity.guaranteed ? '<b class="vk-ok" style="color:#ef4444">🔥 ĐÃ TÍCH ĐỦ 500 NĂM — LƯỢT KẾ CHẮC CHẮN NỔ DỊ BẢO 100%!</b>' : `Đã chờ: <b>${pity.waitYears} / 500 năm</b> (Trọng số: <b>×${pity.mult}</b>)`}</span>
+          </div>
+          <div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative">
+            <div style="width:${pity.pityPct}%;height:100%;background:linear-gradient(90deg,#ec4899,#8b5cf6,#f59e0b);border-radius:5px;transition:width 0.3s"></div>
+          </div>
+          ${pity.topCamping.length > 0 ? `
+            <div style="margin-top:8px;font-size:12px" class="vk-mu">
+              <span>🏕️ <b>Gợi ý cắm trại đón đầu tối ưu:</b></span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+                ${pity.topCamping.map((cp) => {
+                  const diaSlot = findDiaSlot(c, cp.e.dia);
+                  const isHere = checkIsHere(c, run, cp.e.dia, diaSlot);
+                  const relInf = DIBAO.rel[cp.e.relic] || {};
+                  return `
+                    <div style="background:var(--bg3);padding:4px 8px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:center;gap:6px">
+                      <span>📍 <b>${esc(cp.e.dia)}</b> (${esc(relInf.ten || cp.e.relic)})</span>
+                      ${isHere ? '<span class="vk-ok" style="font-size:11px">Đang ở đây ✓</span>' : (diaSlot != null ? `<button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(cp.e.dia)}" style="padding:2px 6px;font-size:10.5px;margin:0">Đi đến</button>` : '')}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="vk-mu" style="font-size:12px;line-height:1.4">
+          💡 Dị Bảo là bảo vật cấp 8 (Nghịch Thiên). Mỗi món lần đầu ghi vào Bảo Lục tặng <b>+5 Điểm Luân Hồi</b>. Món <b>[Theo Hồn Qua Kiếp]</b> sẽ vĩnh viễn theo bạn sang kiếp sau; riêng <b>Độ Hồn Linh</b> luôn tự theo hồn mà không tốn ô bến đò.
+        </div>
+      </div>
+
+      <!-- Mục tiêu Dị Bảo đang nở trên Map -->
+      ${mapActive.length > 0 ? `
+        <div class="vk-card" style="border:1px solid #ff3366">
+          <h3 style="margin:0 0 8px;color:#ff3366;display:flex;align-items:center;gap:6px">
+            <span class="do-radar-pulse" style="width:10px;height:10px;border-radius:50%;background:#ff3366"></span>
+            <span>🎯 DỊ BẢO ĐANG NỞ TRÊN BẢN ĐỒ (${mapActive.length})</span>
+          </h3>
+          ${mapActive.map((r) => {
+            let y = Infinity;
+            if (c && K && K.travelYears) {
+              try { y = K.travelYears(c, r.node.slot); } catch (err) {}
+            }
+            const canTele = checkCanTeleport(r.node.slot);
+            const walkRisk = (r.nodeLeft != null && isFinite(y) && r.nodeLeft < y);
+            return `
+              <div style="background:var(--bg3);border:1px solid rgba(255,51,102,0.4);border-radius:6px;padding:8px;margin-bottom:6px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;flex-wrap:wrap">
+                  <div>
+                    <b style="font-size:14px;color:var(--acc)">👑 ${esc(r.ten)}</b>
+                    <span class="vk-mu" style="font-size:12px"> · Sự kiện «${esc(r.e.ten)}»</span><br>
+                    <span style="font-size:12px" class="vk-mu">📍 <b>${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}</b> (Slot ${r.node.slot}) · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + ' năm' : 'Vô hạn'}</b> · Đường đi: <b>${safeYrs(y)}</b></span>
+                    ${walkRisk ? `<div class="vk-bad" style="font-size:11.5px;margin-top:2px">⚠️ Đi bộ (${num(y)} năm) sẽ quá hạn sự kiện (${r.nodeLeft} năm)! Hãy dùng truyền tống phù/trận.</div>` : ''}
+                  </div>
+                  <div style="display:flex;gap:4px;align-items:center">
+                    ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(139,92,246,0.4)">⚡ Truyền Tống Ngay</button>` : ''}
+                    <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+
+      <!-- Bộ lọc Dị Bảo -->
+      <div class="vk-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <b>🔍 Danh Mục Dị Bảo & Sưu Tập</b>
+          <span id="db-count" class="vk-mu" style="font-size:12px"></span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="db-chips">
+          <button class="tc-chip${f.filter === 'all' ? ' on' : ''}" data-k="all">Tất Cả (21)</button>
+          <button class="tc-chip${f.filter === 'carry' ? ' on' : ''}" data-k="carry">🌟 Theo Hồn (12)</button>
+          <button class="tc-chip${f.filter === 'single' ? ' on' : ''}" data-k="single">🛡️ Dùng Trong Kiếp (9)</button>
+          <button class="tc-chip${f.filter === 'map' ? ' on' : ''}" data-k="map">🟢 Đang Trên Map</button>
+          <button class="tc-chip${f.filter === 'ready' ? ' on' : ''}" data-k="ready">⚡ Đủ Điều Kiện</button>
+          <button class="tc-chip${f.filter === 'lock' ? ' on' : ''}" data-k="lock">🔒 Chưa Đạt</button>
+          <button class="tc-chip${f.filter === 'unowned' ? ' on' : ''}" data-k="unowned">Chưa Sở Hữu</button>
+          <button class="tc-chip${f.filter === 'done' ? ' on' : ''}" data-k="done">✨ Đã Có</button>
+        </div>
+        <div style="display:flex;gap:6px">
+          <input class="vk-inp" id="db-q" style="flex:1" placeholder="Tìm theo tên dị bảo, sự kiện, hộ vệ, hiệu ứng..." value="${esc(f.q)}">
+          <button class="vk-btn sec" id="db-clr" style="padding:4px 10px">Xóa</button>
+        </div>
+      </div>
+
+      <!-- Danh Sách Thẻ Dị Bảo -->
+      <div id="db-list"></div>
+
+      <!-- Bí kíp Săn Dị Bảo -->
+      <details class="vk-card" style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:bold;color:var(--acc)">📘 Bí Kíp Đoạt Dị Bảo & Đạt Thành Tựu Bảo Lục</summary>
+        <div style="margin-top:8px;font-size:13px;line-height:1.5" class="vk-mu">
+          <p><b>1. Giá Trị Của Bảo Lục:</b> Khi bạn cầm bất kỳ món Dị Bảo nào vào túi lần đầu trong kiếp, nó sẽ được ghi nhận vào Bảo Lục vĩnh viễn và tặng ngay <b>+5 Điểm Luân Hồi</b>. Gom đủ 21 món sẽ mở khóa thành tựu ẩn <code>thanh_tuu.bao_luc.du_bo</code>.</p>
+          <p><b>2. Món Dẫn Hồn (Độ Hồn Linh):</b> Là món bảo vật đặc biệt nhất, luôn tự động theo hồn qua mọi kiếp mà hoàn toàn không tốn ô bến đò chọn mang đồ!</p>
+          <p><b>3. Thử Thách Kiểm Định (Ăn chắc 100%):</b> Có 6 món Dị Bảo không cần đánh nhau: <i>Thái Hư Chu (Thần thức 100), Tụ Bảo Bồn (Thần thức 100), Tam Sinh Thạch (Đạo tâm 75), Luân Hồi Chân Kinh (Ngộ tính 70), Cam Lộ Tịnh Bình (Đạo tâm 68), Thần Nông Bách Thảo Kinh (Ngộ tính 45)</i>. Nếu thiếu điểm, hãy xem mục gợi ý bù điểm (cắn đan hoặc tạm đổi trang bị) để đạt chuẩn.</p>
+          <p><b>4. Mô Phỏng Chiến Đấu Ảo:</b> Công cụ mô phỏng chiến đấu thực tế qua 4 tiểu cảnh giới của Hộ Vệ bằng kinh mạch hiện tại của bạn. Nếu tỷ lệ thắng $\ge 75\%$, bạn hoàn toàn có thể vượt cấp đoạt bảo an toàn.</p>
+          <p><b>5. Hồi Chiêu 120 Năm & Bảo Hiểm 500 Năm:</b> Sau khi sự kiện kết thúc, cần 120 năm để có thể nở lại. Nếu cảnh giới đã đủ mà chờ quá 500 năm chưa gặp Dị Bảo, hệ thống Thiên Đạo Bù Dị Bảo sẽ kích hoạt bảo hiểm 100% nổ sự kiện!</p>
+        </div>
+      </details>
+    `;
+
+    // Hàm vẽ danh sách
+    const draw = () => {
+      const qStr = fold(f.q).trim();
+      const countEl = body.querySelector('#db-count');
+      const listEl = body.querySelector('#db-list');
+
+      let res = allDb.filter((x) => {
+        if (f.filter === 'carry' && !x.bd) return false;
+        if (f.filter === 'single' && x.bd) return false;
+        if (f.filter === 'map' && x.stt !== 'map') return false;
+        if (f.filter === 'ready' && x.stt !== 'ready') return false;
+        if (f.filter === 'lock' && x.stt !== 'lock') return false;
+        if (f.filter === 'unowned' && x.done) return false;
+        if (f.filter === 'done' && !x.done) return false;
+
+        if (qStr) {
+          const matchName = fold(x.ten).includes(qStr);
+          const matchEv = x.e && (fold(x.e.ten).includes(qStr) || fold(x.e.dia || '').includes(qStr) || fold(x.e.bv || '').includes(qStr));
+          const matchMota = x.extra && fold(x.extra.mota || '').includes(qStr);
+          if (!matchName && !matchEv && !matchMota) return false;
+        }
+        return true;
+      });
+
+      const ORD = { map: 0, ready: 1, cd: 2, lock: 3, done: 4 };
+      res.sort((a, b) => ORD[a.stt] - ORD[b.stt] || (b.bd ? 1 : 0) - (a.bd ? 1 : 0) || a.ten.localeCompare(b.ten, 'vi'));
+
+      countEl.textContent = `${res.length} / ${allDb.length} Dị Bảo`;
+
+      if (res.length === 0) {
+        listEl.innerHTML = '<div class="vk-card vk-mu">Không tìm thấy Dị Bảo nào phù hợp với bộ lọc.</div>';
+        return;
+      }
+
+      listEl.innerHTML = res.map((r) => {
+        const e = r.e, extra = r.extra || {};
+        const syn = relicSynergy(r.id, nv.linhCan);
+
+        // Huy hiệu
+        const badges = [];
+        badges.push('<span class="do-badge-nt">Phẩm 8 Nghịch Thiên</span>');
+        if (r.guide) badges.push('<span class="do-badge-guide">🔔 Dẫn Hồn (Không Tốn Ô Bến Đò)</span>');
+        else if (r.bd) badges.push('<span class="do-badge-carry">🌟 Theo Hồn Qua Kiếp</span>');
+        else badges.push('<span class="do-badge-single">🛡️ Dùng Trong Kiếp</span>');
+
+        // Trạng thái sự kiện
+        let sttBadge = '';
+        if (r.stt === 'map') sttBadge = `<span class="vk-ok" style="font-weight:bold">🟢 Đang trên bản đồ${r.nodeLeft != null ? ' · còn ' + r.nodeLeft + ' năm' : ''}</span>`;
+        else if (r.stt === 'ready') sttBadge = '<span class="vk-ok">⚡ Đủ điều kiện · Chờ xuất hiện</span>';
+        else if (r.stt === 'cd') sttBadge = `<span class="vk-bad">⏳ Hồi chiêu còn ${r.cdLeft} năm</span>`;
+        else if (r.stt === 'lock') sttBadge = `<span class="vk-bad">🔒 Chưa đủ điều kiện (${!r.gateOk ? 'Cần ' + realmName(e ? e.gate[0] : 5) : r.statChk.text})</span>`;
+        else sttBadge = '<span class="vk-mu">✨ Đã sở hữu</span>';
+
+        // Đánh giá đoạt bảo
+        let evalHtml = '';
+        if (r.nguon === 'ev' && e) {
+          if (!e.bv && e.chk) {
+            if (r.statChk.ok) {
+              evalHtml = '<div style="margin-top:4px" class="vk-ok"><b>🎯 Thuần Kiểm Định:</b> ĐÃ ĐẠT CHỈ SỐ — ĂN CHẮC 100% (Không cần giao tranh) ✓</div>';
+            } else {
+              const gap = r.statChk.req - r.statChk.cur;
+              const boosters = findStatBoosters(r.statChk.key, gap);
+              let boostAdvice = '';
+              if (boosters.bagItems.length > 0) {
+                boostAdvice += `<div style="margin-top:2px;color:#f59e0b">🎒 <b>Trong túi có:</b> ${boosters.bagItems.map((b) => `${esc(b.ten)} (+${b.val})`).join(', ')}</div>`;
+              }
+              if (boosters.recommendedPills.length > 0) {
+                boostAdvice += `<div style="margin-top:2px" class="vk-mu">💊 <b>Đan dược khuyên cắn:</b> ${boosters.recommendedPills.map((p) => `${esc(p.ten)} (+${p.val} điểm)`).join(', ')}</div>`;
+              }
+              evalHtml = `
+                <div style="margin-top:4px" class="vk-bad">
+                  <b>🎯 Thuần Kiểm Định:</b> THIẾU CHỈ SỐ (${esc(r.statChk.text)}) ✗
+                  ${boostAdvice}
+                </div>
+              `;
+            }
+          } else if (e.bv) {
+            const sim = simDiBaoGuard(nv, e);
+            let simText = '';
+            if (sim) {
+              const winPct = Math.round(sim.winrate * 100);
+              const isSafe = sim.winrate >= 0.75;
+              const isRisky = sim.winrate < 0.5;
+              simText = `
+                <div style="margin-top:4px;padding:6px;background:var(--bg3);border-radius:4px;border-left:3px solid ${isSafe ? '#10b981' : isRisky ? '#ef4444' : '#f59e0b'}">
+                  <b>⚔️ Giả Lập Đấu Hộ Vệ:</b> ${esc(sim.foeTen)} (${realmName(sim.cg)})<br>
+                  Tỉ lệ thắng: <b style="color:${isSafe ? '#10b981' : isRisky ? '#ef4444' : '#f59e0b'}">${winPct}%</b> (${sim.wins}/${sim.total} trận) · Máu còn lại thấp nhất: ~${sim.minHpPct}%
+                  <div style="font-size:11.5px;margin-top:2px" class="${isSafe ? 'vk-ok' : isRisky ? 'vk-bad' : 'vk-mu'}">
+                    ${isSafe ? '✓ Chiến lực đủ mạnh, hoàn toàn có thể khiêu chiến an toàn' : isRisky ? '⚠️ Nguy hiểm! Cần tăng thêm tu vi hoặc điều chỉnh kinh mạch trước khi đánh' : '⚡ Có thể thắng nhưng còn rủi ro mang thương'}
+                  </div>
+                </div>
+              `;
+            } else {
+              simText = `<div style="margin-top:4px"><b>⚔️ Hộ Vệ Trấn Giữ:</b> ${esc(e.bv)} (${realmName(e.bvcg ?? 5)})</div>`;
+            }
+            evalHtml = simText;
+          }
+        } else if (r.nguon === 'boss') {
+          evalHtml = `<div style="margin-top:4px" class="vk-mu"><b>👑 Nguồn Gốc:</b> Rơi độc quyền từ Boss Hóa Thần thế giới (CG 5)</div>`;
+        }
+
+        // Khung di chuyển / đón đầu
+        let travelBox = '';
+        if (r.node) {
+          let y = Infinity;
+          if (c && K && K.travelYears) {
+            try { y = K.travelYears(c, r.node.slot); } catch (err) {}
+          }
+          const canTele = checkCanTeleport(r.node.slot);
+          travelBox = `
+            <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+              <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + ' năm' : 'Vô hạn'}</b> · Đi: <b>${safeYrs(y)}</b></span>
+              <div style="display:flex;gap:4px">
+                ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">⚡ Truyền Tống Ngay</button>` : ''}
+                <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : 'Slot ' + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
+              </div>
+            </div>
+          `;
+        } else if (!r.done && e && e.dia) {
+          const diaSlot = findDiaSlot(c, e.dia);
+          const isHere = checkIsHere(c, run, e.dia, diaSlot);
+          if (isHere) {
+            travelBox = `
+              <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
+                <b>📍 Đang đứng đón đầu tại ${esc(e.dia)} ✓</b>
+                <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
+              </div>
+            `;
+          } else if (diaSlot != null) {
+            let y = Infinity;
+            if (c && K && K.travelYears) {
+              try { y = K.travelYears(c, diaSlot); } catch (err) {}
+            }
+            travelBox = `
+              <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+                <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${esc(diaSlot)}) · Cách: <b>${safeYrs(y)}</b></span>
+                <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+              </div>
+            `;
+          }
+        }
+
+        return `
+          <div class="vk-card" style="border-left:4px solid ${r.bd ? '#10b981' : '#ff3366'};margin-bottom:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px">
+              <h3 style="margin:0;font-size:15px;color:var(--acc)">${esc(r.ten)}</h3>
+              <div style="display:flex;gap:4px;flex-wrap:wrap">${badges.join('')}</div>
+            </div>
+            <div style="margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
+              <div>${sttBadge}</div>
+              <span class="${syn.cls}" style="font-size:12px;font-weight:600">${syn.txt}</span>
+            </div>
+            ${extra.mota ? `<div style="font-size:12.5px;color:#ddd;margin-bottom:6px;line-height:1.4"><b>✨ Hiệu Ứng:</b> ${esc(extra.mota)}</div>` : ''}
+            <div class="vk-mu" style="font-size:12px;line-height:1.5">
+              <b>Loại:</b> ${esc(LOAI_VI[r.loai] || r.loai)} · <b>Giá trị:</b> ${num(r.gia)} linh thạch<br>
+              ${e ? `<b>Sự kiện:</b> «${esc(e.ten)}» ${e.dia ? '· <b>Nơi:</b> ' + esc(e.dia) : ''} · <b>Cảnh giới:</b> ${realmName(e.gate ? e.gate[0] : 4)}<br>` : ''}
+              ${evalHtml}
+            </div>
+            ${travelBox}
+          </div>
+        `;
+      }).join('');
+    };
+
+    // Gắn sự kiện bộ lọc
+    const chips = body.querySelectorAll('#db-chips button');
+    chips.forEach((btn) => {
+      btn.onclick = () => {
+        chips.forEach((b) => b.classList.remove('on'));
+        btn.classList.add('on');
+        f.filter = btn.dataset.k;
+        draw();
+      };
     });
-    const ORD = { map: 0, ok: 1, cd: 2, lock: 3, done: 4 };
-    rows.sort((a, b) => ORD[a.stt] - ORD[b.stt]);
-    const bossRows = DIBAO.boss.map((id) => ({ id, info: DIBAO.rel[id] || {}, done: has(id) }));
-    const nDone = rows.filter((r) => r.stt === 'done').length + bossRows.filter((r) => r.done).length;
-    const badge = (r) => {
-      if (r.stt === 'map') return `<span class="vk-ok">Đang có trên bản đồ${r.nodeLeft != null ? ' · còn ' + Math.max(0, Math.floor(r.nodeLeft)) + ' năm' : ''}</span>`;
-      if (r.stt === 'ok') return '<span class="vk-ok">Đủ điều kiện · chưa xuất hiện</span>';
-      if (r.stt === 'cd') return `<span class="vk-bad">Chờ hồi chiêu · còn ${Math.ceil(r.left)} năm</span>`;
-      if (r.stt === 'lock') return `<span class="vk-bad">Chưa đủ cảnh giới${r.e.gate ? ' (cần ' + esc(realmName(r.e.gate[0])) + ')' : ''}</span>`;
-      return '<span class="vk-mu">Đã nhận</span>';
+
+    const qInp = body.querySelector('#db-q');
+    let qTmr = null;
+    if (qInp) {
+      qInp.oninput = () => {
+        clearTimeout(qTmr);
+        qTmr = setTimeout(() => { f.q = qInp.value; draw(); }, 200);
+      };
+    }
+
+    const clrBtn = body.querySelector('#db-clr');
+    if (clrBtn) {
+      clrBtn.onclick = () => {
+        f.q = '';
+        if (qInp) qInp.value = '';
+        draw();
+      };
+    }
+
+    // Gắn sự kiện click di chuyển & truyền tống
+    body.onclick = (ev) => {
+      const travelBtn = ev.target.closest && ev.target.closest('.do-btn-travel');
+      if (travelBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const slot = travelBtn.dataset.slot;
+        if (!slot) return;
+        travelBtn.disabled = true;
+        const oldTxt = travelBtn.textContent;
+        travelBtn.textContent = '⏳ Đang đi...';
+        setTimeout(() => {
+          try {
+            const res = ddDoTravel(slot);
+            if (!res.ok) {
+              try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+              alert('⚠️ ' + res.msg);
+              travelBtn.disabled = false;
+              travelBtn.textContent = oldTxt;
+            } else {
+              try { UI.notify('🚀 ' + res.msg); } catch (e) {}
+              if (S.core && S.core.sync) try { S.core.sync(); } catch (e) {}
+              lastRenderedViTri = String(slot);
+              tabDiBao();
+            }
+          } catch (err) {
+            try { UI.notify('⚠️ Lỗi: ' + (err.message || err)); } catch (e) {}
+            travelBtn.disabled = false;
+            travelBtn.textContent = oldTxt;
+          }
+        }, 30);
+        return;
+      }
+
+      const teleBtn = ev.target.closest && ev.target.closest('.do-btn-teleport');
+      if (teleBtn) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const slot = teleBtn.dataset.slot;
+        if (!slot) return;
+        teleBtn.disabled = true;
+        const oldTxt = teleBtn.textContent;
+        teleBtn.textContent = '⚡ Đang truyền tống...';
+        setTimeout(() => {
+          try {
+            const res = smartTeleportTo(slot);
+            if (!res.ok) {
+              try { UI.notify('⚠️ ' + res.msg); } catch (e) {}
+              alert('⚠️ ' + res.msg);
+              teleBtn.disabled = false;
+              teleBtn.textContent = oldTxt;
+            } else {
+              try { UI.notify('⚡ ' + res.msg); } catch (e) {}
+              if (S.core && S.core.sync) try { S.core.sync(); } catch (e) {}
+              lastRenderedViTri = String(slot);
+              tabDiBao();
+            }
+          } catch (err) {
+            try { UI.notify('⚠️ Lỗi: ' + (err.message || err)); } catch (e) {}
+            teleBtn.disabled = false;
+            teleBtn.textContent = oldTxt;
+          }
+        }, 30);
+        return;
+      }
     };
-    const card = (r) => {
-      const e = r.e, i = r.info, bits = [];
-      bits.push(esc(LOAI_VI[i.loai] || i.loai || '') + (i.gia ? ' · giá ' + i.gia : ''));
-      if (e.dia || e.noi) bits.push('Nơi: ' + esc([e.dia, e.noi].filter(Boolean).join(' · ')));
-      if (e.bv) bits.push('Canh giữ: ' + esc(e.bv) + (e.bvcg != null ? ' (' + esc(realmName(e.bvcg)) + ')' : ''));
-      if (e.chk) bits.push('Kiểm định: ' + esc(e.chk.replace(/^[a-z_]+/, (m) => CHI_SO_VI[m] || m)));
-      if (e.p != null) bits.push('Tỉ lệ (theo dữ liệu của Di Bảo Companion, chưa rõ cách tính): ' + pct(e.p));
-      if (i.bd) bits.push('Theo hồn qua kiếp: ' + esc(i.bd));
-      return `<div class="vk-card"><h3>${esc(i.ten || e.relic)}</h3><div style="margin-bottom:4px">${badge(r)}</div><div class="vk-mu" style="font-size:13px">Sự kiện: «${esc(e.ten)}»<br>${bits.join('<br>')}</div></div>`;
-    };
-    body.innerHTML = `<div class="vk-card"><h3>Dị bảo đã nhận: ${nDone}/${rows.length + bossRows.length}</h3><div class="vk-mu" style="font-size:13px">Trạng thái đọc thẳng từ save đang chơi. Dị bảo chỉ hiện trên bản đồ khi game cho sự kiện xuất hiện; node tồn tại vài năm rồi tan, nên đủ điều kiện chưa chắc đã thấy. Bảng này không thể hiện được tỉ lệ rơi từ boss.</div></div>` +
-      rows.map(card).join('') +
-      (bossRows.length ? `<div class="vk-card"><h3>Chỉ rơi từ boss Hóa Thần</h3>${bossRows.map((b) => `<div class="vk-row"><span>${esc(b.info.ten || b.id)}</span><b>${b.done ? 'Đã nhận' : 'Chưa có'}</b></div>`).join('')}</div>` : '');
+
+    draw();
   }
 
   // ═════════════ KINH MẠCH 6.5: Lĩnh Ngộ · áp dụng bằng hàm của game · ô mở được ═════════════
@@ -8081,7 +8940,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.2.0 · Biệt Đội Late Game Tối Ưu Toàn Diện Theo Linh Căn Hiện Tại', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.3.0 · Trung Tâm Dị Bảo Toàn Diện & Bảo Lục Luân Hồi', d: '06/11/2026', now: true, pts: [
+                '<b>Nâng Cấp Tab Dị Bảo Toàn Diện:</b> Chuyển hóa toàn diện tab Dị Bảo thành Trung Tâm Săn Bảo & Bảo Lục Nghịch Thiên (Cấp 8) hiện đại, thống kê chi tiết tiến độ Bảo Lục Luân Hồi (+5 điểm luân hồi/món), danh mục 12 món Theo Hồn Qua Kiếp (Bất Diệt) và 9 món Dùng Trong Kiếp.',
+                '<b>Thanh Đo Bảo Hiểm Pity (Thiên Đạo Bù Dị Bảo):</b> Theo dõi chính xác số năm tích lũy chờ Dị Bảo / 500 năm, hệ số nhân trọng số xuất hiện ×(1 + năm / 25) và báo động đỏ tức thì khi đạt mốc bảo hiểm chắc chắn nổ 100% lượt kế; kèm gợi ý Top Điểm Cắm Trại Đón Đầu tối ưu.',
+                '<b>Giả Lập Chiến Đấu Ảo Hộ Vệ (Combat Sim):</b> Sử dụng trực tiếp engine chiến đấu thực tế để thử sức với Hộ Vệ sự kiện qua 4 tiểu cảnh giới, tính toán % Tỉ lệ thắng và % Máu còn lại để người chơi an tâm đoạt bảo hoặc kịp thời tránh rủi ro mất mạng.',
+                '<b>Trợ Lý Bù Điểm Kiểm Định (Stat Gap Closer):</b> Với các sự kiện kiểm định (Thần thức, Đạo tâm, Ngộ tính...), tự động quét túi đồ để chỉ ra trang bị/vật phẩm có sẵn giúp bù điểm, đồng thời gợi ý Top đan dược nên cắn để đạt chuẩn nhận Dị Bảo 100% không cần đánh nhau.',
+                '<b>Di Chuyển Thông Minh (Ưu Tiên Truyền Tống Trận/Phù):</b> Bổ sung nút <code>[⚡ Truyền Tống Ngay]</code> tự động kích hoạt Trận Truyền Tống hoặc Phù Truyền Tống tới thẳng tọa độ mục tiêu (0 năm tuổi thọ), cảnh báo khi đi bộ tốn nhiều năm hơn hạn còn lại của sự kiện.',
+                '<b>Chuông Báo Âm Thanh & Tự Động Tạm Dừng (Emergency Auto-Pause):</b> Tích hợp chuông báo Web Audio du dương khi có Dị Bảo mới nở trên bản đồ, đồng thời tự động phanh ngắt các vòng lặp Auto (Auto Săn, Auto Buôn...) để người chơi không bị trôi năm lỡ mất bảo vật.',
+                '<b>Món Dẫn Hồn Đặc Biệt (Độ Hồn Linh):</b> Đánh dấu và giải thích rõ đặc quyền của Độ Hồn Linh: luôn tự động theo hồn qua mọi kiếp mà hoàn toàn không tốn ô bến đò chọn mang đồ.'
+            ] },
+            { t: 'Phiên Bản 7.2.0 · Biệt Đội Late Game Tối Ưu Toàn Diện Theo Linh Căn Hiện Tại', d: '06/11/2026', now: false, pts: [
                 '<b>Tự Động Quét Theo Linh Căn Của Kiếp Đang Chơi:</b> Nhận diện chính xác 100% Linh Căn hiện tại của nhân vật (Đơn Linh Căn, Song Linh Căn, Tam/Tứ/Ngũ Linh Căn, Dị Linh Căn Lôi/Phong/Băng/Ám hay Phàm Căn) để quét toàn bộ kho dữ liệu game, không còn bị bó hẹp trong hệ Kim - Thổ.',
                 '<b>Phân Tích Tương Sinh & Khóa Chặt Tương Khắc Mọi Hệ:</b> Tự động suy diễn hệ Bản Mệnh, các hệ Tương Sinh hỗ trợ (Mẹ dưỡng & Con trợ) cùng các nhánh dị căn tương ứng; đồng thời khóa chặt và loại trừ triệt để các hệ tương khắc để đảm bảo ma trận đạt 0 điểm nghịch hệ.',
                 '<b>Thuật Toán Tham Lam Tẩy Tủy Thông Minh (bisGreedy):</b> Khởi tạo thế cờ trực tiếp từ Đan Điền qua hệ thống tâm pháp chuẩn tẩy tủy, đảm bảo mạch nối thông suốt 100% trước khi đưa vào giải thuật luyện kim mô phỏng (Simulated Annealing) và leo đồi (Hill Climbing).',
