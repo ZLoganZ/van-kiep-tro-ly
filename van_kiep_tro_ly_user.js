@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.6
+// @version      7.11.7
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.6
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.7
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.6";
+      var TOOL_VER = "7.11.7";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -9533,7 +9533,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         <div style="background:var(--bg2);padding:10px;border-radius:8px;border:1px solid rgba(255,51,102,0.3);margin-bottom:8px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:4px">
             <b style="font-size:12.5px;color:#f59e0b">⏳ Thiên Đạo Bù Dị Bảo (Bảo Hiểm Pity 500 Năm):</b>
-            <span style="font-size:12px">${pity.guaranteed ? '<b class="vk-ok" style="color:#ef4444">🔥 ĐÃ TÍCH ĐỦ 500 NĂM — LƯỢT KẾ CHẮC CHẮN NỔ DỊ BẢO 100%!</b>' : `Đã chờ: <b>${pity.waitYears} / 500 năm</b> (Trọng số: <b>×${pity.mult}</b>)`}</span>
+            <span style="font-size:12px">${pity.guaranteed ? '<b class="vk-ok" style="color:#ef4444">🔥 ĐÃ TÍCH ĐỦ 500 NĂM — 100% LƯỢT KẾ XUẤT THẾ (Rơi khi thắng: 7%)</b>' : `Đã chờ: <b>${pity.waitYears} / 500 năm</b> (Trọng số: <b>×${pity.mult}</b>)`}</span>
           </div>
           <div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative">
             <div style="width:${pity.pityPct}%;height:100%;background:linear-gradient(90deg,#ec4899,#8b5cf6,#f59e0b);border-radius:5px;transition:width 0.3s"></div>
@@ -9665,7 +9665,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           <p><b>2. Món Dẫn Hồn (Độ Hồn Linh):</b> Là món bảo vật đặc biệt nhất, luôn tự động theo hồn qua mọi kiếp mà hoàn toàn không tốn ô bến đò chọn mang đồ!</p>
           <p><b>3. Thử Thách Kiểm Định (Ăn chắc 100%):</b> Có 6 món Dị Bảo không cần đánh nhau: <i>Thái Hư Chu (Thần thức 100), Tụ Bảo Bồn (Thần thức 100), Tam Sinh Thạch (Đạo tâm 75), Luân Hồi Chân Kinh (Ngộ tính 70), Cam Lộ Tịnh Bình (Đạo tâm 68), Thần Nông Bách Thảo Kinh (Ngộ tính 45)</i>. Nếu thiếu điểm, hãy xem mục gợi ý bù điểm (cắn đan hoặc tạm đổi trang bị) để đạt chuẩn.</p>
           <p><b>4. Mô Phỏng Chiến Đấu Ảo:</b> Công cụ mô phỏng chiến đấu thực tế qua 4 tiểu cảnh giới của Hộ Vệ bằng kinh mạch hiện tại của bạn. Nếu tỷ lệ thắng $\ge 75\%$, bạn hoàn toàn có thể vượt cấp đoạt bảo an toàn.</p>
-          <p><b>5. Hồi Chiêu 120 Năm & Bảo Hiểm 500 Năm:</b> Sau khi sự kiện kết thúc, cần 120 năm để có thể nở lại. Nếu cảnh giới đã đủ mà chờ quá 500 năm chưa gặp Dị Bảo, hệ thống Thiên Đạo Bù Dị Bảo sẽ kích hoạt bảo hiểm 100% nổ sự kiện!</p>
+          <p><b>5. Hồi Chiêu 120 Năm & Bảo Hiểm 500 Năm:</b> Sau khi sự kiện kết thúc, cần 120 năm để có thể nở lại. Nếu cảnh giới đã đủ mà chờ quá 500 năm chưa gặp Dị Bảo, hệ thống Thiên Đạo Bù Dị Bảo sẽ kích hoạt bảo hiểm 100% xuất thế sự kiện! <i>(Lưu ý cơ chế game: Hạ Boss xong chỉ có tỉ lệ <b>7% (hoặc 3%)</b> đoạt được bảo vật; 93% trường hợp bảo vật sẽ nứt vỡ/tiêu tán theo cốt truyện và địa danh bước vào hồi chiêu 120 năm tiếp theo).</i></p>
         </div>
       </details>
     `;
@@ -21844,9 +21844,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   );
                 } else {
                   auLog(
-                    "Đã kết thúc sự kiện «" +
+                    "Đã hoàn tất sự kiện «" +
                       encTen +
-                      "» nhưng chưa nhận được Dị Bảo trong lần này.",
+                      "» nhưng chưa rơi Dị Bảo lần này (tỉ lệ rớt khi thắng là 7%, bảo vật đã nứt vỡ/tiêu tán theo kịch bản game và vào hồi chiêu 120 năm).",
                     "vk-mu",
                   );
                 }
@@ -25030,7 +25030,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             rows.push([
               "Thiên Đạo Bù (Pity)",
               pity2.guaranteed
-                ? '<b class="vk-ok" style="color:#ef4444">100% LƯỢT KẾ NỔ DỊ BẢO!</b>'
+                ? '<b class="vk-ok" style="color:#ef4444">100% XUẤT THẾ (Rơi khi thắng: 7%)</b>'
                 : pity2.waitYears + " / 500 năm (×" + pity2.mult + ")",
             ]);
             rows.push([
@@ -26308,7 +26308,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     const pctVal = Math.round((cp.w || 0) * 100);
                     const pctStr =
                       cp.wait >= 500
-                        ? '<b class="vk-ok" style="color:#ef4444">100% 🔥 CHẮC CHẮN NỔ</b>'
+                        ? '<b class="vk-ok" style="color:#ef4444">100% 🔥 XUẤT THẾ (Rơi: 7%)</b>'
                         : `xác suất <b>${pctVal}%</b>`;
                     const waitStr =
                       cp.wait > 0
@@ -28891,9 +28891,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.6 · Tinh Gọn UI Tiến Trình & Khắc Phục Triệt Để Lag Khi Auto Săn Dị Bảo",
+            t: "Phiên Bản 7.11.7 · Làm Rõ Cơ Chế Pity 500 Năm & Tỉ Lệ Rớt Dị Bảo Thực Tế",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Minh Bạch Cơ Chế Pity 500 Năm (Spawn Rate vs Drop Rate):</b> Điều chỉnh hiển thị từ '100% Nổ Dị Bảo' thành '100% Lượt Kế Xuất Thế Sự Kiện (Tỉ lệ rớt khi thắng: 7%)' trên toàn bộ giao diện (Thanh Pity tab Dị Bảo, Tiến Trình Auto Săn Dị Bảo, Radar Cắm Trại). Giúp người chơi hiểu đúng cơ chế game: Thiên Đạo Bù Dị Bảo bảo đảm 100% sự kiện xuất hiện tại nơi chốn, nhưng khi hạ Boss Hộ Vệ thì tỉ lệ rớt bảo vật là 7% (hoặc 3% tùy món).",
+              "<b>Chi Tiết Hóa Nhật Ký Kết Thúc Sự Kiện Dị Bảo:</b> Khi đánh thắng Boss hoặc hoàn tất sự kiện mà không đoạt được bảo vật (do trúng 93% tỉ lệ bảo vật nứt vỡ/tiêu tán theo kịch bản game), Tool ghi nhận chi tiết tỉ lệ rớt và trạng thái hồi chiêu 120 năm, tránh gây hoang mang hoặc hiểu nhầm rằng Boss chắc chắn rơi đồ.",
+              "<b>Cập Nhật Chú Thích Cơ Chế Dị Bảo:</b> Bổ sung giải thích chi tiết trong phần hướng dẫn Tab Dị Bảo về hồi chiêu 120 năm và xúc xắc ngẫu nhiên 7% đoạt bảo.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.6 · Tinh Gọn UI Tiến Trình & Khắc Phục Triệt Để Lag Khi Auto Săn Dị Bảo",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tinh Gọn & Loại Bỏ Trùng Lặp UI Tiến Trình Săn Bảo:</b> Loại bỏ hoàn toàn sự trùng lặp thông tin Pity (0/500n), hệ số nhân (×1.0) và chuỗi mô tả cắm trại dài dòng giữa các hàng 'Thiên Đạo Bù', 'Mục Tiêu Đang Săn' và 'Hành Động Hiện Tại'. UI nay hiển thị rõ ràng, súc tích: hiển thị đích danh Dị Bảo đón đầu hoặc 'Chờ Dị Bảo xuất thế' và nơi cắm trại tinh gọn.",
               "<b>Đại Tu Tốc Độ scanDiBao (O(1) Direct Access):</b> Thay thế toàn bộ thuật toán duyệt đệ quy 7 tầng qua hàng chục nghìn đối tượng save game bằng cơ chế đọc trực tiếp từ các cấu trúc dữ liệu chuẩn của game (<code>flags</code>, <code>history</code>, <code>tienLo.relics</code>, <code>nodes</code>), tăng tốc độ quét lên gấp hàng ngàn lần và triệt tiêu 100% rác bộ nhớ gây nghẽn Garbage Collector.",
