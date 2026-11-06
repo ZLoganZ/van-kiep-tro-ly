@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.9.0
+// @version      7.9.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.9.0";
+      var TOOL_VER = "7.9.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -86,6 +86,13 @@
 .vkx-mini-close { background:transparent; border:none; color:#aaa; cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
 .vkx-mini-close:hover { color:#ff4466; }
 @media (max-width:600px) { #vkx-dibao-mini { font-size:11px; padding:3px 8px; gap:6px; max-width:calc(100vw - 16px); } .vkx-mini-badge { font-size:10px; padding:1px 5px; } }
+.au-sdb-relic-card { display:flex; align-items:center; gap:6px; background:var(--bg2); padding:5px 8px; border-radius:6px; border:1px solid var(--line); cursor:pointer; font-size:12px; user-select:none; transition:all .15s ease; }
+.au-sdb-relic-card:hover { border-color:var(--acc); background:var(--bg3); }
+.au-sdb-relic-card.checked { background:rgba(61,220,151,0.22) !important; border:1px solid var(--acc) !important; box-shadow:0 0 10px rgba(61,220,151,0.28) !important; }
+.au-sdb-relic-title { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--txt); transition:color .15s,font-weight .15s; }
+.au-sdb-relic-card.checked .au-sdb-relic-title { font-weight:700 !important; color:#ffffff !important; text-shadow:0 1px 3px rgba(0,0,0,0.9) !important; }
+.au-sdb-relic-sub { font-size:10.5px; display:flex; gap:4px; align-items:center; margin-top:1px; color:var(--mut); }
+.au-sdb-relic-card.checked .au-sdb-relic-sub { color:#c7f9df !important; text-shadow:0 1px 2px rgba(0,0,0,0.8) !important; }
 `;
       var THEME_CSS =
         '/* ═════════ THEME (biến màu) ═════════ */\n#vkx-win, #vkx-fab, #vkx-toast {\n  --bg:#0b1210; --bg2:#111b18; --bg3:#16231f; --line:#233832; --txt:#e7f1ec; --mut:#8aa397;\n  --acc:#3ddc97; --acc2:#e6c36a; --ink:#05140d; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24;\n  --glow:rgba(61,220,151,.22); --shade:rgba(0,0,0,.55); --hi:rgba(61,220,151,.10);\n}\n#vkx-win[data-vkx-theme="tuTieu"], #vkx-fab[data-vkx-theme="tuTieu"], #vkx-toast[data-vkx-theme="tuTieu"] {\n  --bg:#0f0c1a; --bg2:#161226; --bg3:#1d1832; --line:#2e2650; --txt:#ece8fa; --mut:#9a92bd;\n  --acc:#a78bfa; --acc2:#f0abfc; --ink:#14092a; --ok:#86efac; --bad:#fb7185; --warn:#fcd34d;\n  --glow:rgba(167,139,250,.25); --hi:rgba(167,139,250,.12);\n}\n#vkx-win[data-vkx-theme="giayCo"], #vkx-fab[data-vkx-theme="giayCo"], #vkx-toast[data-vkx-theme="giayCo"] {\n  --bg:#f3ebdc; --bg2:#fbf6ea; --bg3:#fffdf7; --line:#dccdab; --txt:#2a1d14; --mut:#6f5c49;\n  --acc:#8c2f24; --acc2:#a9741a; --ink:#ffffff; --ok:#1a7f37; --bad:#b3261e; --warn:#9a6700;\n  --glow:rgba(140,47,36,.18); --shade:rgba(60,40,20,.28); --hi:rgba(140,47,36,.07);\n}\n\n/* ═════════ NÚT MỞ (FAB) ═════════ */\n#vkx-fab {\n  position:fixed; right:14px; bottom:190px; z-index:2147483001; width:50px; height:50px;\n  border-radius:16px; border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);\n  background:linear-gradient(145deg,var(--bg3),var(--bg)); color:var(--acc);\n  font:400 24px/1 system-ui,"Segoe UI Symbol",sans-serif; cursor:pointer;\n  box-shadow:0 6px 22px var(--shade),0 0 0 4px var(--glow); display:none;\n  transition:transform .15s ease, box-shadow .2s ease;\n}\n#vkx-fab:hover { transform:translateY(-2px) scale(1.04); }\n#vkx-fab:active { transform:scale(.95); }\n@media (min-width:721px){ #vkx-fab { bottom:24px; right:24px; } }\n\n/* ═════════ CỬA SỔ ═════════ */\n#vkx-win {\n  position:fixed; top:16px; right:16px; width:440px; max-width:calc(100vw - 16px);\n  max-height:min(88vh,800px); height:min(88vh,800px); z-index:2147483000;\n  display:none; flex-direction:column; overflow:hidden;\n  background:var(--bg); color:var(--txt); border-radius:18px;\n  border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));\n  box-shadow:0 24px 60px var(--shade),0 0 0 1px var(--glow),0 0 34px var(--glow);\n  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;\n  -webkit-font-smoothing:antialiased;\n}\n#vkx-win *, #vkx-win *::before, #vkx-win *::after { box-sizing:border-box; }\n#vkx-win.open { display:flex; }\n@media (max-width:720px){\n  #vkx-win { inset:0; top:0; right:0; width:100%; max-width:none; height:100%; max-height:none; border-radius:0; border:0;\n    padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0); }\n}\n\n/* header */\n.vkx-hd { display:flex; align-items:center; gap:10px; padding:12px 12px 10px 14px; cursor:grab; user-select:none; -webkit-user-select:none;\n  background:linear-gradient(180deg,var(--hi),transparent); touch-action:none; }\n.vkx-hd:active { cursor:grabbing; }\n@media (max-width:720px){ .vkx-hd { cursor:default; touch-action:auto; } }\n.vkx-logo { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; flex:0 0 34px;\n  background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 55%,var(--acc2)));\n  color:var(--ink); font:400 22px/1 system-ui,"Segoe UI Symbol",sans-serif; box-shadow:0 4px 14px var(--glow); }\n.vkx-ttl { flex:1; min-width:0; line-height:1.15; }\n.vkx-ttl b { display:block; font-size:15px; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }\n.vkx-ttl span { font-size:11px; color:var(--mut); }\n.vkx-ib { width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--bg2); color:var(--txt);\n  font-size:15px; cursor:pointer; display:grid; place-items:center; transition:background .15s,border-color .15s; }\n.vkx-ib:hover { border-color:var(--acc); background:var(--bg3); }\n.vkx-ib.x:hover { border-color:var(--bad); color:var(--bad); }\n\n/* segmented */\n.vkx-seg { display:flex; gap:4px; margin:2px 12px 10px; padding:4px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; }\n.vkx-seg button { flex:1; border:0; background:none; color:var(--mut); font:600 14px/1 inherit; padding:10px 8px; border-radius:10px; cursor:pointer; transition:all .15s; }\n.vkx-seg button.on { background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 60%,var(--acc2))); color:var(--ink); box-shadow:0 3px 12px var(--glow); }\n\n/* sections */\n.vkx-sec { display:none; flex:1; min-height:0; flex-direction:column; }\n.vkx-sec.on { display:flex; }\n.vkx-scroll { flex:1; min-height:0; overflow-y:auto; padding:2px 12px 28px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }\n.vkx-scroll::-webkit-scrollbar { width:7px; } .vkx-scroll::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }\n\n/* tab con của Trợ lý */\n.vkx-tabbar { display:flex; align-items:center; gap:6px; padding:0 12px 8px; }\n#vkx-tabs { flex:1; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px 0; }\n#vkx-tabs::-webkit-scrollbar { display:none; }\n#vkx-tabs button { flex:0 0 auto; border:1px solid var(--line); background:var(--bg2); color:var(--mut); font:600 13px/1 inherit; padding:8px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; transition:all .15s; }\n#vkx-tabs button:hover { color:var(--txt); border-color:var(--acc); }\n#vkx-tabs button.on { background:var(--acc); border-color:var(--acc); color:var(--ink); }\n#vk-rf { flex:0 0 auto; }\n\n/* toast */\n#vkx-toast { position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px); z-index:2147483002; max-width:min(92vw,520px);\n  background:var(--bg2); color:var(--txt); padding:11px 16px; border-radius:12px; border:1px solid var(--line); border-left:4px solid var(--acc);\n  font:600 13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; box-shadow:0 10px 30px var(--shade); opacity:0; pointer-events:none; transition:opacity .22s,transform .22s; }\n#vkx-toast.on { opacity:1; transform:translate(-50%,0); }\n\n/* ═════════ PHẦN TỬ DÙNG CHUNG ═════════ */\n#vkx-win button { font-family:inherit; }\n#vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select, #vkx-win textarea {\n  font-family:inherit; font-size:14px; color:var(--txt); background:var(--bg3); border:1px solid var(--line); border-radius:9px;\n  padding:8px 10px; outline:none; min-width:0; max-width:100%; transition:border-color .15s, box-shadow .15s; color-scheme:dark; }\n#vkx-win[data-vkx-theme="giayCo"] input, #vkx-win[data-vkx-theme="giayCo"] select { color-scheme:light; }\n#vkx-win input:focus, #vkx-win select:focus { border-color:var(--acc); box-shadow:0 0 0 3px var(--glow); }\n#vkx-win input[type=checkbox] { width:16px; height:16px; accent-color:var(--acc); vertical-align:-3px; }\n@media (max-width:720px){ #vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select { font-size:16px; }\n     }\n\n/* ═════════ PANEL MOD (vm-*) ═════════ */\n\n.vm-hint { font-size:11.5px; color:var(--mut); text-align:center; margin:6px 0; }\n\n \n\n\n\n\n/* ═════════ TRỢ LÝ (vk-*) ═════════ */\n.vk-card { background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:12px 13px; margin:0 0 10px; }\n.vk-card h3 { margin:0 0 8px; font-size:15px; color:var(--acc); letter-spacing:.2px; }\n.vk-row { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }\n.vk-row:last-child { border-bottom:0; }\n.vk-row > b { text-align:right; }\n.vk-mu { color:var(--mut); }\n.vk-ok { color:var(--ok); font-weight:600; } .vk-bad { color:var(--bad); font-weight:600; }\n.vk-btn { display:inline-block; border:0; cursor:pointer; font-weight:700; font-size:14px; padding:10px 15px; margin:4px 6px 4px 0; border-radius:10px;\n  color:var(--ink); background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 65%,var(--acc2))); transition:transform .1s,filter .15s; }\n.vk-btn:hover { filter:brightness(1.08); } .vk-btn:active { transform:scale(.97); }\n.vk-btn.sec { background:var(--bg3); color:var(--txt); border:1px solid var(--line); }\n.vk-btn:disabled { opacity:.45; cursor:not-allowed; }\n.vk-img { width:100%; max-width:480px; display:block; margin:8px auto; border-radius:10px; border:1px solid var(--line); }\n.vk-note { font-size:12px; color:var(--mut); text-align:center; margin-bottom:6px; }\n.vk-lg { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:14px; }\n.vk-sw { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; color:#fff; font-weight:700; font-size:13px; flex:0 0 26px; text-shadow:0 1px 2px #0008; }\ntable.vk-t { width:100%; border-collapse:collapse; font-size:13.5px; color:var(--txt); }\ntable.vk-t th, table.vk-t td { padding:7px 5px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }\ntable.vk-t th { color:var(--acc); font-weight:700; font-size:12.5px; }\ntable.vk-t tr:last-child td { border-bottom:0; }\n.vk-bar { height:9px; background:var(--bg3); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:8px 0; }\n.vk-bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); transition:width .15s; }\n.vk-sel { font-size:14px; padding:8px 10px; max-width:100%; }\n.vk-err { background:color-mix(in srgb,var(--bad) 12%,var(--bg2)); border:1px solid color-mix(in srgb,var(--bad) 45%,var(--line)); color:var(--txt); border-radius:12px; padding:11px 13px; }\n#vkx-win details > summary { cursor:pointer; }\n#vkx-win details.vk-card > summary { font-size:14px; }\n#vkx-win summary { color:var(--txt); }\n#vkx-win ul { color:var(--txt); }\n#vkx-win a { color:var(--acc); }\n#vkx-win hr { border:0; border-top:1px solid var(--line); }\n';
@@ -7442,6 +7449,140 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return "Slot " + slot;
         }
 
+        // Quét toàn diện Dị Bảo đang nở trên thế giới: bao gồm run.nodes, run.noiChon (di tích/sơn môn), theGioi.dangDien (thế cục), và placeActivities
+        function scanMapActiveDiBao(run, c) {
+          const map = new Map();
+          if (!run) return map;
+          const nam = typeof run.nam === "number" ? run.nam : null;
+
+          // 1. Quét từ run.nodes (tất cả các node sự kiện trên bản đồ)
+          if (run.nodes) {
+            for (const [slotStr, n] of Object.entries(run.nodes)) {
+              if (!n || !n.encounter) continue;
+              if (
+                n.hetHanNam !== undefined &&
+                nam != null &&
+                n.hetHanNam <= nam
+              )
+                continue;
+              const ev = DIBAO.ev.find((x) => x.id === n.encounter);
+              if (!ev) continue;
+              const slot =
+                n.slot != null
+                  ? n.slot
+                  : /^\d+$/.test(slotStr)
+                    ? +slotStr
+                    : slotStr;
+              map.set(ev.id, {
+                encId: ev.id,
+                slot,
+                hetHanNam: n.hetHanNam,
+                vars: n.vars,
+                source: "node",
+                ev,
+              });
+            }
+          }
+
+          // 2. Quét từ run.noiChon (các khu di tích, sơn môn, nơi chốn có sự kiện thường trú, sự kiện di tích)
+          if (run.noiChon) {
+            for (const [slotStr, nc] of Object.entries(run.noiChon)) {
+              if (!nc) continue;
+              const slot = /^\d+$/.test(slotStr) ? +slotStr : slotStr;
+              const allEncIds = [
+                ...(Array.isArray(nc.suKien) ? nc.suKien : []),
+                ...(Array.isArray(nc.contextual) ? nc.contextual : []),
+                ...(Array.isArray(nc.standing) ? nc.standing : []),
+              ];
+              for (const encId of allEncIds) {
+                if (!encId || map.has(encId)) continue;
+                const ev = DIBAO.ev.find((x) => x.id === encId);
+                if (ev) {
+                  map.set(ev.id, {
+                    encId: ev.id,
+                    slot,
+                    hetHanNam: undefined,
+                    vars: nc.vars,
+                    source: "noiChon",
+                    ev,
+                  });
+                }
+              }
+            }
+          }
+
+          // 3. Quét từ theGioi.dangDien (sự kiện thế giới / thế cục đang diễn ra)
+          if (run.theGioi && Array.isArray(run.theGioi.dangDien)) {
+            for (const dd of run.theGioi.dangDien) {
+              if (
+                !dd ||
+                (dd.denNam !== undefined && nam != null && dd.denNam <= nam)
+              )
+                continue;
+              const slot = dd.slot;
+              try {
+                const cnt = C();
+                const theCucContent =
+                  cnt && cnt.theCuc && cnt.theCuc.get
+                    ? cnt.theCuc.get(dd.id)
+                    : null;
+                if (theCucContent && Array.isArray(theCucContent.encounter)) {
+                  for (const encId of theCucContent.encounter) {
+                    if (!encId || map.has(encId)) continue;
+                    const ev = DIBAO.ev.find((x) => x.id === encId);
+                    if (ev) {
+                      map.set(ev.id, {
+                        encId: ev.id,
+                        slot,
+                        hetHanNam: dd.denNam,
+                        source: "theCuc",
+                        ev,
+                      });
+                    }
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+
+          // 4. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
+          try {
+            const director = TT.core && TT.core["encounter/director"];
+            if (
+              director &&
+              typeof director.placeActivities === "function" &&
+              run
+            ) {
+              const curSlot =
+                run.oNoi != null
+                  ? String(run.oNoi)
+                  : run.viTri != null
+                    ? String(run.viTri)
+                    : null;
+              if (curSlot) {
+                const acts = director.placeActivities(c || ctxLite(), curSlot);
+                if (Array.isArray(acts)) {
+                  for (const a of acts) {
+                    if (!a || !a.id || map.has(a.id)) continue;
+                    const ev = DIBAO.ev.find((x) => x.id === a.id);
+                    if (ev) {
+                      map.set(ev.id, {
+                        encId: ev.id,
+                        slot: curSlot,
+                        hetHanNam: undefined,
+                        source: "placeActivity",
+                        ev,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) {}
+
+          return map;
+        }
+
         // Dò xem người chơi có đang đứng đón đầu tại đúng địa danh (hoặc slot tương đương) không
         function checkIsHere(c, run, eDia, diaSlot) {
           if (!run) return false;
@@ -8435,7 +8576,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const run = g.state.run,
               nv = run.nhanVat,
               nam = typeof run.nam === "number" ? run.nam : null;
-            if (!run.nodes) {
+            if (!run) {
               removeDiBaoAlert();
               removeDiBaoMini();
               return;
@@ -8464,23 +8605,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             } catch (e) {}
             const K = S.core;
 
-            for (const [slotStr, n] of Object.entries(run.nodes)) {
-              if (!n || !n.encounter) continue;
+            const activeMap = scanMapActiveDiBao(run, c);
+            for (const item of activeMap.values()) {
+              const encId = item.encId;
+              const slot = item.slot;
+              const hetHanNam = item.hetHanNam;
               if (
-                n.hetHanNam !== undefined &&
+                hetHanNam !== undefined &&
                 nam != null &&
-                n.hetHanNam <= nam
+                hetHanNam <= nam
               )
                 continue;
-              const slot =
-                n.slot != null
-                  ? n.slot
-                  : /^\d+$/.test(slotStr)
-                    ? +slotStr
-                    : slotStr;
-              const encId = n.encounter;
 
-              const ev = DIBAO.ev.find((x) => x.id === encId);
+              const ev = item.ev || DIBAO.ev.find((x) => x.id === encId);
               if (ev && !isOwned(ev.relic)) {
                 let y = Infinity;
                 if (c && K && K.travelYears) {
@@ -8489,8 +8626,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   } catch (e) {}
                 }
                 const remYears =
-                  n.hetHanNam !== undefined && nam != null
-                    ? Math.max(0, Math.floor(n.hetHanNam - nam))
+                  hetHanNam !== undefined && nam != null
+                    ? Math.max(0, Math.floor(hetHanNam - nam))
                     : null;
                 const pName = c ? placeName(c, slot) : "Slot " + slot;
                 const relInfo = DIBAO.rel[ev.relic] || {};
@@ -8639,22 +8776,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           S.dibao = S.dibao || { filter: "all", q: "" };
           const f = S.dibao;
 
-          // Map các node đang xuất hiện
-          const nodeByEnc = new Map();
-          if (sc.nodes) {
-            for (const [slotStr, nd] of Object.entries(sc.nodes)) {
-              if (
-                nd &&
-                typeof nd.encounter === "string" &&
-                !nodeByEnc.has(nd.encounter)
-              ) {
-                nodeByEnc.set(nd.encounter, {
-                  ...nd,
-                  slot: nd.slot != null ? nd.slot : +slotStr,
-                });
-              }
-            }
-          }
+          // Map các node đang xuất hiện (Quét toàn diện từ run.nodes, di tích run.noiChon, theGioi, placeActivities)
+          const nodeByEnc = scanMapActiveDiBao(run, c);
 
           // Kiểm tra đã sở hữu món đồ
           const isOwned = (id) => {
@@ -20659,6 +20782,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 );
                 removeDiBaoAlert();
                 removeDiBaoMini();
+                if (st.skipEnc) {
+                  st.skipEnc.delete(a.id);
+                }
+                if (st.encAttempts) {
+                  delete st.encAttempts[a.id + "@" + run.viTri];
+                  delete st.encAttempts[a.id + "@" + run.oNoi];
+                }
               }
               return "ok";
             }
@@ -20758,6 +20888,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   pick.text +
                   "» là Tử Địa (nguy cơ mất mạng 100%). Dừng để an toàn!",
               };
+            }
+            if (opt.sdb && pick.thoat) {
+              const isRelicEv =
+                (v.id && v.id.startsWith("ev.di_bao")) ||
+                DIBAO.ev.some((e) => e.id === v.id);
+              if (isRelicEv) {
+                st.skipEnc = st.skipEnc || new Set();
+                st.skipEnc.add(v.id);
+                const curSlot = run.oNoi != null ? run.oNoi : run.viTri;
+                if (curSlot != null) st.skipEnc.add(v.id + "@" + curSlot);
+                auLog(
+                  `⚠️ Không đủ điều kiện hoàn tất «${v.ten || v.id}» (phải chọn rút lui/bỏ đi). Tạm thời bỏ qua sự kiện này...`,
+                  "vk-warn",
+                );
+              }
             }
             const isFightChoice = !!(
               (opt.hunt || opt.sdb) &&
@@ -21879,7 +22024,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (
               rRun &&
               rRun.active &&
-              rRun.active.done &&
+              (rRun.active.done || !rRun.active.waiting) &&
               typeof g.closeEncounter === "function"
             ) {
               try {
@@ -21900,15 +22045,32 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 g.closeLongNotice();
               } catch (e) {}
             }
-            const rActive = G().state && G().state.run && G().state.run.active;
+            let curActive = G().state && G().state.run && G().state.run.active;
             if (
-              !rActive ||
-              !rActive.waiting ||
-              rActive.waiting.kind !== "be_quan"
+              !curActive ||
+              !curActive.waiting ||
+              curActive.waiting.kind !== "be_quan"
             ) {
               if (typeof g.beQuan === "function") {
-                g.beQuan();
+                try {
+                  g.beQuan();
+                } catch (eBq) {
+                  if (typeof g.closeEncounter === "function") {
+                    try {
+                      g.closeEncounter();
+                    } catch (eCl) {}
+                  }
+                  g.beQuan();
+                }
               }
+            }
+            curActive = G().state && G().state.run && G().state.run.active;
+            if (
+              !curActive ||
+              !curActive.waiting ||
+              curActive.waiting.kind !== "be_quan"
+            ) {
+              throw new Error("Encounter hiện tại chưa sẵn sàng cho bế quan");
             }
             g.nhapDinh(lcBeQuan);
             const rAfter = G().state && G().state.run;
@@ -21942,8 +22104,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           });
           if (!rBq.ok) {
+            if (++st.tried < 2) {
+              return null;
+            }
             return { stop: "Không nhập định được: " + rBq.err };
           }
+          st.tried = 0;
 
           const namSau = G().state.run.nam;
           const deltaY = Math.max(0, namSau - namTruoc);
@@ -22066,73 +22232,80 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           const targetRelicSet = new Set(selectedRelics);
 
-          // 6. Quét các Dị Bảo đang nở trên bản đồ (run.nodes)
+          // 6. Quét toàn diện Dị Bảo đang nở trên thế giới (run.nodes, di tích run.noiChon, theGioi, placeActivities)
+          st.encAttempts = st.encAttempts || {};
+          st.skipEnc = st.skipEnc || new Set();
+
           const activeTargets = [];
           const ignoredTargets = [];
-          if (run.nodes) {
-            for (const [slotStr, n] of Object.entries(run.nodes)) {
-              if (!n || !n.encounter) continue;
-              if (
-                n.hetHanNam !== undefined &&
-                nam != null &&
-                n.hetHanNam <= nam
-              )
-                continue;
-              const ev = DIBAO.ev.find((x) => x.id === n.encounter);
-              if (!ev) continue;
-              const owned = isOwned(ev.relic);
-              if (cfg.boQuaDaCo !== false && owned) continue;
+          const activeMap = scanMapActiveDiBao(run, c);
 
-              const isTarget = targetRelicSet.has(ev.relic);
-              if (!isTarget && !allowAllSpawns) {
-                ignoredTargets.push({ ev, slotStr });
-                continue;
-              }
+          for (const item of activeMap.values()) {
+            const ev = item.ev || DIBAO.ev.find((x) => x.id === item.encId);
+            if (!ev) continue;
+            const slotStr = String(item.slot);
+            const slot = item.slot;
 
-              const slot =
-                n.slot != null
-                  ? n.slot
-                  : /^\d+$/.test(slotStr)
-                    ? +slotStr
-                    : slotStr;
-              const relInfo =
-                DIBAO.rel[ev.relic] ||
-                (Cc && Cc.items ? Cc.items.get(ev.relic) : null) ||
-                {};
+            // Kiểm tra hạn năm nếu có
+            if (
+              item.hetHanNam !== undefined &&
+              nam != null &&
+              item.hetHanNam <= nam
+            )
+              continue;
 
-              let y = Infinity;
-              if (c && K && K.travelYears) {
-                try {
-                  y = K.travelYears(c, slot);
-                } catch (e) {}
-              }
-              const remYears =
-                n.hetHanNam !== undefined && nam != null
-                  ? Math.max(0, Math.floor(n.hetHanNam - nam))
-                  : 999;
-              const isCarry = relInfo.bd === "Có" || relInfo.theo_kiep;
-              const pName = placeName(c, slot);
+            const owned = isOwned(ev.relic);
+            if (cfg.boQuaDaCo !== false && owned) continue;
 
-              const statChk = checkStat(ev.chk, nv);
-              const sim = simDiBaoGuard(nv, ev);
-
-              activeTargets.push({
-                slot,
-                encId: ev.id,
-                e: ev,
-                relic: ev.relic,
-                title: relInfo.ten || ev.relic,
-                isCarry,
-                pName,
-                y,
-                remYears,
-                owned,
-                statChk,
-                sim,
-                isTarget,
-                canTele: checkCanTeleport(slot),
-              });
+            const isTarget = targetRelicSet.has(ev.relic);
+            if (!isTarget && !allowAllSpawns) {
+              ignoredTargets.push({ ev, slotStr });
+              continue;
             }
+
+            // Bỏ qua nếu sự kiện này đang bị tạm dừng do không vượt qua khảo nghiệm/quá mạnh
+            const encKey = ev.id + "@" + slotStr;
+            if (st.skipEnc.has(ev.id) || st.skipEnc.has(encKey)) {
+              continue;
+            }
+
+            const relInfo =
+              DIBAO.rel[ev.relic] ||
+              (Cc && Cc.items ? Cc.items.get(ev.relic) : null) ||
+              {};
+
+            let y = Infinity;
+            if (c && K && K.travelYears) {
+              try {
+                y = K.travelYears(c, slot);
+              } catch (e) {}
+            }
+            const remYears =
+              item.hetHanNam !== undefined && nam != null
+                ? Math.max(0, Math.floor(item.hetHanNam - nam))
+                : 999;
+            const isCarry = relInfo.bd === "Có" || relInfo.theo_kiep;
+            const pName = placeName(c, slot);
+
+            const statChk = checkStat(ev.chk, nv);
+            const sim = simDiBaoGuard(nv, ev);
+
+            activeTargets.push({
+              slot,
+              encId: ev.id,
+              e: ev,
+              relic: ev.relic,
+              title: relInfo.ten || ev.relic,
+              isCarry,
+              pName,
+              y,
+              remYears,
+              owned,
+              statChk,
+              sim,
+              isTarget,
+              canTele: checkCanTeleport(slot),
+            });
           }
 
           // 7. NẾU CÓ DỊ BẢO ĐANG NỞ TRÊN BẢN ĐỒ:
@@ -22173,7 +22346,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
 
             // Đang đứng đúng tại slot sự kiện:
-            if (String(run.viTri) === String(target.slot)) {
+            if (
+              String(run.viTri) === String(target.slot) ||
+              String(run.oNoi) === String(target.slot)
+            ) {
               st.phase = "hunt";
               removeDiBaoAlert();
               showDiBaoMini(
@@ -22191,6 +22367,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 },
                 true,
               );
+
+              const encKey = target.encId + "@" + target.slot;
+              st.encAttempts[encKey] = (st.encAttempts[encKey] || 0) + 1;
+              if (st.encAttempts[encKey] > 3) {
+                auLog(
+                  `⚠️ Đã thử vào sự kiện «${target.e.ten}» ${st.encAttempts[encKey] - 1} lần nhưng không thể hoàn tất (chưa đủ chỉ số hoặc đối thủ quá mạnh). Tạm thời bỏ qua bảo vật này...`,
+                  "vk-warn",
+                );
+                st.skipEnc.add(target.encId);
+                st.skipEnc.add(encKey);
+                st.tried = 0;
+                return null;
+              }
+
               // 1. Nếu chưa vào bên trong node nơi chốn thì vào node trước
               if (String(run.oNoi) !== String(target.slot)) {
                 auLog(
@@ -22484,7 +22674,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (
               rRun &&
               rRun.active &&
-              rRun.active.done &&
+              (rRun.active.done || !rRun.active.waiting) &&
               typeof g.closeEncounter === "function"
             ) {
               try {
@@ -22505,15 +22695,32 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 g.closeLongNotice();
               } catch (e) {}
             }
-            const rActive = G().state && G().state.run && G().state.run.active;
+            let curActive = G().state && G().state.run && G().state.run.active;
             if (
-              !rActive ||
-              !rActive.waiting ||
-              rActive.waiting.kind !== "be_quan"
+              !curActive ||
+              !curActive.waiting ||
+              curActive.waiting.kind !== "be_quan"
             ) {
               if (typeof g.beQuan === "function") {
-                g.beQuan();
+                try {
+                  g.beQuan();
+                } catch (eBq) {
+                  if (typeof g.closeEncounter === "function") {
+                    try {
+                      g.closeEncounter();
+                    } catch (eCl) {}
+                  }
+                  g.beQuan();
+                }
               }
+            }
+            curActive = G().state && G().state.run && G().state.run.active;
+            if (
+              !curActive ||
+              !curActive.waiting ||
+              curActive.waiting.kind !== "be_quan"
+            ) {
+              throw new Error("Encounter hiện tại chưa sẵn sàng cho bế quan");
             }
             g.nhapDinh({
               nam: sitYears,
@@ -22552,11 +22759,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           });
           if (!rSit.ok) {
+            if (++st.tried < 2) {
+              return null;
+            }
             return {
               stop:
                 "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
             };
           }
+          st.tried = 0;
 
           const namSau =
             G().state && G().state.run ? G().state.run.nam : namTruoc;
@@ -24535,11 +24746,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const owned = isOwnedItem(e.relic);
               const isCarry = rel.bd === "Có";
               return `
-              <label class="au-sdb-relic-card" data-relic="${esc(e.relic)}" style="display:flex;align-items:center;gap:6px;background:${isChecked ? "rgba(61, 220, 151, 0.14)" : "var(--bg2)"};padding:5px 8px;border-radius:6px;border:1px solid ${isChecked ? "var(--acc)" : "var(--line)"};box-shadow:${isChecked ? "0 0 8px rgba(61, 220, 151, 0.2)" : "none"};cursor:pointer;font-size:12px;user-select:none;transition:all 0.15s ease">
+              <label class="au-sdb-relic-card ${isChecked ? "checked" : ""}" data-relic="${esc(e.relic)}">
                 <input type="checkbox" class="au-sdb-relic-chk" data-relic="${esc(e.relic)}" ${isChecked ? "checked" : ""} style="margin:0;cursor:pointer;width:15px;height:15px;accent-color:var(--acc)">
                 <div style="flex:1;min-width:0;overflow:hidden">
-                  <div style="font-weight:${isChecked ? "700" : "600"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isChecked ? "#ffffff" : "var(--txt)"};transition:color 0.15s">${esc(rel.ten || e.relic)}</div>
-                  <div style="font-size:10.5px;display:flex;gap:4px;align-items:center;margin-top:1px" class="vk-mu">
+                  <div class="au-sdb-relic-title">${esc(rel.ten || e.relic)}</div>
+                  <div class="au-sdb-relic-sub">
                     ${isCarry ? '<span style="color:#f59e0b;font-weight:600">⭐ Hồn</span>' : "<span>Kiếp</span>"}
                     <span>·</span>
                     <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.dia || "Hoang dã")}</span>
@@ -24616,25 +24827,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (chk.checked) {
                 checkedRelics.push(rId);
                 if (label) {
-                  label.style.borderColor = "var(--acc)";
-                  label.style.background = "rgba(61, 220, 151, 0.14)";
-                  label.style.boxShadow = "0 0 8px rgba(61, 220, 151, 0.2)";
-                  const titleEl = label.querySelector("div > div");
-                  if (titleEl) {
-                    titleEl.style.color = "#ffffff";
-                    titleEl.style.fontWeight = "700";
-                  }
+                  label.classList.add("checked");
+                  label.style.borderColor = "";
+                  label.style.background = "";
+                  label.style.boxShadow = "";
                 }
               } else {
                 if (label) {
-                  label.style.borderColor = "var(--line)";
-                  label.style.background = "var(--bg2)";
-                  label.style.boxShadow = "none";
-                  const titleEl = label.querySelector("div > div");
-                  if (titleEl) {
-                    titleEl.style.color = "var(--txt)";
-                    titleEl.style.fontWeight = "600";
-                  }
+                  label.classList.remove("checked");
+                  label.style.borderColor = "";
+                  label.style.background = "";
+                  label.style.boxShadow = "";
                 }
               }
             });
@@ -27361,9 +27564,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.9.0 · Ra Mắt Bộ Quản Lý Lưu & Nạp Save (Tránh Thiên Đạo)",
+            t: "Phiên Bản 7.9.1 · Tối Ưu Săn Dị Bảo Di Tích, Chống Kẹt Vòng Lặp & Tăng Tương Phản UI",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Quét Toàn Diện Dị Bảo Tại Khu Di Tích (Ruin Events Scanner):</b> Mở rộng động cơ phát hiện Dị Bảo (<code>scanMapActiveDiBao</code>) quét đồng thời từ <code>run.nodes</code>, <code>run.noiChon</code> (các địa danh, di tích có sự kiện thường trú, sự kiện di tích), <code>theGioi.dangDien</code> (thế cục thế giới) và <code>placeActivities</code>; khắc phục triệt để lỗi không săn được và tự động chuyển sang bế quan khi Dị Bảo nở tại khu di tích đang có sự kiện.",
+              "<b>Cơ Chế Chống Kẹt Vòng Lặp Khi Chưa Đủ Điều Kiện:</b> Khi tới điểm xuất thế (như Tàn Phong, Kiếm Trạch...) nếu bài kiểm định chưa đạt chỉ số hoặc Hộ Vệ quá mạnh khiến sự kiện phải tạm rút lui, hệ thống tự động ghi nhận số lần thử (<code>encAttempts</code>) và tạm thời bỏ qua để tiếp tục hành trình săn các bảo vật khác, chấm dứt hoàn toàn tình trạng lặp vô tận thông báo tiến vào sự kiện.",
+              "<b>Khắc Phục Lỗi 'Encounter không ở trạng thái chờ':</b> Chuẩn hóa chặt chẽ điều kiện tiền bế quan; tự động dọn dẹp các sự kiện dở dang và chỉ thực hiện nhập định (<code>g.nhapDinh</code>) khi trò chơi đã xác nhận trạng thái sẵn sàng (<code>waiting.kind === 'be_quan'</code>).",
+              "<b>Nâng Cấp Giao Diện Chọn Dị Bảo Sắc Nét, Dễ Nhìn:</b> Tối ưu hóa màu chữ, viền sáng và bóng đổ cho thẻ Dị Bảo khi được tích chọn (<code>.au-sdb-relic-card.checked</code>); tên bảo vật luôn hiển thị màu trắng sáng nổi bật trên nền xanh ngọc đậm, giải quyết hoàn toàn tình trạng chữ tối màu khó đọc.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.9.0 · Ra Mắt Bộ Quản Lý Lưu & Nạp Save (Tránh Thiên Đạo)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Quản Lý Lưu/Nạp Save Toàn Diện (Tab 'sv'):</b> Ra mắt trung tâm quản lý save chuyên nghiệp trong nhóm Luân Hồi và phím tắt nhanh tại Tổng Quan; hỗ trợ xuất/tải file save (.txt) kèm thông tin tên, cảnh giới, năm tu luyện và nạp lại save từ file hoặc dán mã.",
               "<b>Cơ Chế Tránh Thiên Đạo (Anti-Heaven Tribulation):</b> Tự động thanh tẩy sạch sẽ bộ nhớ theo dõi reload ngầm của game (<code>tu-tien:thien-dao:v1</code>), xóa bỏ cờ cảnh báo sổ mệnh có nét bút lạ (<code>saveWarning</code>), gỡ bỏ hộp thoại bắt bớ/chế giễu của Thiên Đạo.",
