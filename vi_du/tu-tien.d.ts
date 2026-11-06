@@ -3005,6 +3005,61 @@ declare module "core/world/member_enemy" {
      */
     export function evilMemberEnemy(ctx: Pick<Ctx, 'content' | 'world'>, slot: string, realm: number): string | undefined;
 }
+declare module "core/character/npc_items" {
+    import type { ItemDef } from "core/content/types/index";
+    import type { Ctx } from "core/kernel/context";
+    import type { NpcState } from "core/kernel/state";
+    type ItemCtx = Pick<Ctx, 'run' | 'content'>;
+    /** Thọ nguyên của người này: thọ của cảnh giới cộng phần đan được tặng. */
+    /** Hệ số 0..1 cố định của một người (băm khuôn + tên, không cần field trong save), `salt` tách từng việc. */
+    export const npcTrait: (n: Pick<NpcState, "goc" | "ten">, salt: string) => number;
+    /** Thọ NPC: thọ nguyên cảnh giới, cộng phần tự dùng đan (0..NPC_LIFESPAN_BONUS_MAX, phần lớn ít) và đan người chơi tặng. */
+    export const npcLifespan: (n: Pick<NpcState, "canhGioi" | "extraLifespan" | "goc" | "ten">) => number;
+    export type ItemBranch = 'use' | 'gear' | 'bag' | 'keep';
+    /** Một việc người nhận làm với món quà: `preview` cho hộp tặng ("thọ thêm ~30 năm"), `log` kể sau khi tặng. */
+    interface ItemPart {
+        preview: string;
+        log: string;
+        apply: () => void;
+    }
+    export interface ItemUse {
+        branch: ItemBranch;
+        /** Câu xem trước (hộp tặng: sau chữ "Người ấy sẽ: "). */
+        preview: string;
+        parts: ItemPart[];
+        /** Tặng nhiều viên một lúc có ý nghĩa (đan thọ nguyên / tu vi dùng dần có dược kháng, phù và đan bỏ túi cộng dồn); món khác chỉ tặng một. */
+        stackable: boolean;
+    }
+    /** Món có thể mang theo: công pháp / pháp khí như pool của tu sĩ (trừ Nghịch Thiên, trấn phái, theo kiếp). Có `realm` thì thêm điều kiện đủ cảnh giới để dùng trong trận. */
+    export function carriableGear(item: ItemDef, realm?: number): boolean;
+    /** Món có thể bỏ túi dùng trong trận: phù và đan có `tran` mà AI đơn vị trận dùng được (đan hồi, phù thuẫn, phù công, phù trói; gdd 12 §17). */
+    export const carriableBag: (item: ItemDef) => boolean;
+    /**
+     * Lập kế hoạch người nhận dùng món `item`: dùng ngay các phần có tác dụng, nếu không thì mang theo đánh, nếu không thì bỏ túi,
+     * nếu không thì chỉ cất. Món nhiều tác dụng (Cửu Chuyển Kim Đan) làm hết phần dùng được.
+     */
+    export function npcItemUse(ctx: ItemCtx, _id: string, n: NpcState, item: ItemDef): ItemUse;
+    /** NPC nhận món `item` và dùng / mang theo / cất túi. Trả nhánh đã đi và các dòng nhật ký kể việc đó (người gọi tự ghi). */
+    export function npcReceiveItem(ctx: Ctx, id: string, item: ItemDef, qty?: number): {
+        branch: ItemBranch;
+        lines: string[];
+    };
+    /** Dòng "Mang theo: …" ở bảng Nhân mạch: tên món mang theo đánh, phù / đan ghi số lượng. Không có thì undefined. `max`: chỉ kể chừng đó món đầu, còn lại gộp "…và N món khác". */
+    export function carryLabel(ctx: Pick<Ctx, 'content'>, n: NpcState, max?: number): string | undefined;
+}
+declare module "core/character/npc_style" {
+    import type { Ctx } from "core/kernel/context";
+    import type { CultivatorStyle, NpcState } from "core/kernel/state";
+    /** Tên hệ tu cho người chơi đọc. */
+    export const STYLE_NAME: Record<CultivatorStyle, string>;
+    /** Id khuôn trận người có tên đánh bằng (loại, hệ, chiêu; ảnh riêng của khuôn nếu có): khuôn tà tông theo cảnh giới hiện tại → `dich` → mặc định. */
+    export function npcTemplate(ctx: Pick<Ctx, 'content' | 'world'>, n: NpcState): string;
+    /**
+     * Hệ tu của một người có tên, theo thứ tự: khuôn NPC khai `kieu` → khuôn tà tông đúng phái → khuôn trận riêng (kiếm tu, võ tăng,
+     * ma đầu…) → phái tông (`theLuc`) → khuôn trận chung → rút cố định theo người. Phàm nhân là võ phu. Tính lại mỗi lần (vào tông khác thì đổi theo).
+     */
+    export function npcStyle(ctx: Pick<Ctx, 'content' | 'world'>, n: NpcState): CultivatorStyle;
+}
 declare module "core/character/npc" {
     import { type Ctx } from "core/kernel/context";
     import type { EnemyDef, GioiTinh, Nghe, NpcDef } from "core/content/types/index";
@@ -3955,48 +4010,6 @@ declare module "core/encounter/do_hiem" {
     export const shownCapNen: (env: Env, slot: string) => number;
     /** Độ chênh để hiện (như `doChenh`, nhưng Vô Nhai Uyên luôn là tử địa). Luật chơi vẫn đọc `doChenh`. */
     export const shownChenh: (env: Env, run: RunState, slot: string) => number;
-}
-declare module "core/character/npc_items" {
-    import type { ItemDef } from "core/content/types/index";
-    import type { Ctx } from "core/kernel/context";
-    import type { NpcState } from "core/kernel/state";
-    type ItemCtx = Pick<Ctx, 'run' | 'content'>;
-    /** Thọ nguyên của người này: thọ của cảnh giới cộng phần đan được tặng. */
-    /** Hệ số 0..1 cố định của một người (băm khuôn + tên, không cần field trong save), `salt` tách từng việc. */
-    export const npcTrait: (n: Pick<NpcState, "goc" | "ten">, salt: string) => number;
-    /** Thọ NPC: thọ nguyên cảnh giới, cộng phần tự dùng đan (0..NPC_LIFESPAN_BONUS_MAX, phần lớn ít) và đan người chơi tặng. */
-    export const npcLifespan: (n: Pick<NpcState, "canhGioi" | "extraLifespan" | "goc" | "ten">) => number;
-    export type ItemBranch = 'use' | 'gear' | 'bag' | 'keep';
-    /** Một việc người nhận làm với món quà: `preview` cho hộp tặng ("thọ thêm ~30 năm"), `log` kể sau khi tặng. */
-    interface ItemPart {
-        preview: string;
-        log: string;
-        apply: () => void;
-    }
-    export interface ItemUse {
-        branch: ItemBranch;
-        /** Câu xem trước (hộp tặng: sau chữ "Người ấy sẽ: "). */
-        preview: string;
-        parts: ItemPart[];
-        /** Tặng nhiều viên một lúc có ý nghĩa (đan thọ nguyên / tu vi dùng dần có dược kháng, phù và đan bỏ túi cộng dồn); món khác chỉ tặng một. */
-        stackable: boolean;
-    }
-    /** Món có thể mang theo: công pháp / pháp khí như pool của tu sĩ (trừ Nghịch Thiên, trấn phái, theo kiếp). Có `realm` thì thêm điều kiện đủ cảnh giới để dùng trong trận. */
-    export function carriableGear(item: ItemDef, realm?: number): boolean;
-    /** Món có thể bỏ túi dùng trong trận: phù và đan có `tran` mà AI đơn vị trận dùng được (đan hồi, phù thuẫn, phù công, phù trói; gdd 12 §17). */
-    export const carriableBag: (item: ItemDef) => boolean;
-    /**
-     * Lập kế hoạch người nhận dùng món `item`: dùng ngay các phần có tác dụng, nếu không thì mang theo đánh, nếu không thì bỏ túi,
-     * nếu không thì chỉ cất. Món nhiều tác dụng (Cửu Chuyển Kim Đan) làm hết phần dùng được.
-     */
-    export function npcItemUse(ctx: ItemCtx, _id: string, n: NpcState, item: ItemDef): ItemUse;
-    /** NPC nhận món `item` và dùng / mang theo / cất túi. Trả nhánh đã đi và các dòng nhật ký kể việc đó (người gọi tự ghi). */
-    export function npcReceiveItem(ctx: Ctx, id: string, item: ItemDef, qty?: number): {
-        branch: ItemBranch;
-        lines: string[];
-    };
-    /** Dòng "Mang theo: …" ở bảng Nhân mạch: tên món mang theo đánh, phù / đan ghi số lượng. Không có thì undefined. `max`: chỉ kể chừng đó món đầu, còn lại gộp "…và N món khác". */
-    export function carryLabel(ctx: Pick<Ctx, 'content'>, n: NpcState, max?: number): string | undefined;
 }
 declare module "core/balance/loot" {
     /**
@@ -17213,6 +17226,7 @@ declare module "core/index" {
     export * from "core/character/npc_effects";
     export * from "core/character/npc_interact";
     export * from "core/character/npc_items";
+    export * from "core/character/npc_style";
     export * from "core/character/nhan_mach";
     export * from "core/character/nhan_mach_view";
     export * from "core/character/nhan_vat";
@@ -19132,6 +19146,7 @@ type TuTienCore = {
     "character/npc_items": typeof import("core/character/npc_items");
     "character/npc_life": typeof import("core/character/npc_life");
     "character/npc_place": typeof import("core/character/npc_place");
+    "character/npc_style": typeof import("core/character/npc_style");
     "character/path": typeof import("core/character/path");
     "character/pham": typeof import("core/character/pham");
     "character/statDefs": typeof import("core/character/statDefs");
