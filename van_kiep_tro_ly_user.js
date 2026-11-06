@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.4
+// @version      7.8.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.4";
+      var TOOL_VER = "7.8.5";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -75,6 +75,17 @@
 @keyframes doPulse { 0% { opacity:1; } 50% { opacity:0.65; } 100% { opacity:1; } }
 #vkx-dibao-alert { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483003; background:rgba(15,12,26,0.96); border:2px solid #ff3366; box-shadow:0 0 25px rgba(255,51,102,0.5), 0 8px 30px rgba(0,0,0,0.85); border-radius:14px; padding:10px 16px; color:#fff; display:flex; align-items:center; gap:12px; max-width:min(94vw,560px); width:max-content; box-sizing:border-box; animation:doAlertUp 0.35s cubic-bezier(0.16,1,0.3,1); font-family:inherit; }
 @keyframes doAlertUp { from { opacity:0; transform:translate(-50%,30px) scale(0.95); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
+#vkx-dibao-mini { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:2147483002; background:rgba(15,12,26,0.94); border:1.5px solid #ff3366; border-radius:999px; padding:4px 12px 4px 14px; color:#fff; display:flex; align-items:center; gap:9px; box-shadow:0 4px 20px rgba(0,0,0,0.7), 0 0 14px rgba(255,51,102,0.35); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); cursor:grab; user-select:none; -webkit-user-select:none; animation:doMiniIn 0.3s cubic-bezier(0.16,1,0.3,1); font-family:inherit; font-size:12.5px; max-width:min(96vw,600px); white-space:nowrap; box-sizing:border-box; }
+#vkx-dibao-mini:active { cursor:grabbing; }
+@keyframes doMiniIn { from { opacity:0; transform:translate(-50%,-15px) scale(0.95); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
+.vkx-mini-badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:1.5px 7px; border-radius:999px; line-height:1.2; }
+.vkx-mini-badge.here { background:rgba(61,220,151,0.18); color:#3ddc97; border:1px solid rgba(61,220,151,0.45); }
+.vkx-mini-badge.hon { background:rgba(245,158,11,0.22); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); }
+.vkx-mini-btn { background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:999px; padding:2px 8px; font-size:11.5px; font-weight:600; cursor:pointer; transition:all .15s; }
+.vkx-mini-btn:hover { background:#ff3366; border-color:#ff3366; color:#fff; }
+.vkx-mini-close { background:transparent; border:none; color:#aaa; cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.vkx-mini-close:hover { color:#ff4466; }
+@media (max-width:600px) { #vkx-dibao-mini { font-size:11px; padding:3px 8px; gap:6px; max-width:calc(100vw - 16px); } .vkx-mini-badge { font-size:10px; padding:1px 5px; } }
 `;
       var THEME_CSS =
         '/* ═════════ THEME (biến màu) ═════════ */\n#vkx-win, #vkx-fab, #vkx-toast {\n  --bg:#0b1210; --bg2:#111b18; --bg3:#16231f; --line:#233832; --txt:#e7f1ec; --mut:#8aa397;\n  --acc:#3ddc97; --acc2:#e6c36a; --ink:#05140d; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24;\n  --glow:rgba(61,220,151,.22); --shade:rgba(0,0,0,.55); --hi:rgba(61,220,151,.10);\n}\n#vkx-win[data-vkx-theme="tuTieu"], #vkx-fab[data-vkx-theme="tuTieu"], #vkx-toast[data-vkx-theme="tuTieu"] {\n  --bg:#0f0c1a; --bg2:#161226; --bg3:#1d1832; --line:#2e2650; --txt:#ece8fa; --mut:#9a92bd;\n  --acc:#a78bfa; --acc2:#f0abfc; --ink:#14092a; --ok:#86efac; --bad:#fb7185; --warn:#fcd34d;\n  --glow:rgba(167,139,250,.25); --hi:rgba(167,139,250,.12);\n}\n#vkx-win[data-vkx-theme="giayCo"], #vkx-fab[data-vkx-theme="giayCo"], #vkx-toast[data-vkx-theme="giayCo"] {\n  --bg:#f3ebdc; --bg2:#fbf6ea; --bg3:#fffdf7; --line:#dccdab; --txt:#2a1d14; --mut:#6f5c49;\n  --acc:#8c2f24; --acc2:#a9741a; --ink:#ffffff; --ok:#1a7f37; --bad:#b3261e; --warn:#9a6700;\n  --glow:rgba(140,47,36,.18); --shade:rgba(60,40,20,.28); --hi:rgba(140,47,36,.07);\n}\n\n/* ═════════ NÚT MỞ (FAB) ═════════ */\n#vkx-fab {\n  position:fixed; right:14px; bottom:190px; z-index:2147483001; width:50px; height:50px;\n  border-radius:16px; border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);\n  background:linear-gradient(145deg,var(--bg3),var(--bg)); color:var(--acc);\n  font:400 24px/1 system-ui,"Segoe UI Symbol",sans-serif; cursor:pointer;\n  box-shadow:0 6px 22px var(--shade),0 0 0 4px var(--glow); display:none;\n  transition:transform .15s ease, box-shadow .2s ease;\n}\n#vkx-fab:hover { transform:translateY(-2px) scale(1.04); }\n#vkx-fab:active { transform:scale(.95); }\n@media (min-width:721px){ #vkx-fab { bottom:24px; right:24px; } }\n\n/* ═════════ CỬA SỔ ═════════ */\n#vkx-win {\n  position:fixed; top:16px; right:16px; width:440px; max-width:calc(100vw - 16px);\n  max-height:min(88vh,800px); height:min(88vh,800px); z-index:2147483000;\n  display:none; flex-direction:column; overflow:hidden;\n  background:var(--bg); color:var(--txt); border-radius:18px;\n  border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));\n  box-shadow:0 24px 60px var(--shade),0 0 0 1px var(--glow),0 0 34px var(--glow);\n  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;\n  -webkit-font-smoothing:antialiased;\n}\n#vkx-win *, #vkx-win *::before, #vkx-win *::after { box-sizing:border-box; }\n#vkx-win.open { display:flex; }\n@media (max-width:720px){\n  #vkx-win { inset:0; top:0; right:0; width:100%; max-width:none; height:100%; max-height:none; border-radius:0; border:0;\n    padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0); }\n}\n\n/* header */\n.vkx-hd { display:flex; align-items:center; gap:10px; padding:12px 12px 10px 14px; cursor:grab; user-select:none; -webkit-user-select:none;\n  background:linear-gradient(180deg,var(--hi),transparent); touch-action:none; }\n.vkx-hd:active { cursor:grabbing; }\n@media (max-width:720px){ .vkx-hd { cursor:default; touch-action:auto; } }\n.vkx-logo { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; flex:0 0 34px;\n  background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 55%,var(--acc2)));\n  color:var(--ink); font:400 22px/1 system-ui,"Segoe UI Symbol",sans-serif; box-shadow:0 4px 14px var(--glow); }\n.vkx-ttl { flex:1; min-width:0; line-height:1.15; }\n.vkx-ttl b { display:block; font-size:15px; letter-spacing:.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }\n.vkx-ttl span { font-size:11px; color:var(--mut); }\n.vkx-ib { width:34px; height:34px; border-radius:10px; border:1px solid var(--line); background:var(--bg2); color:var(--txt);\n  font-size:15px; cursor:pointer; display:grid; place-items:center; transition:background .15s,border-color .15s; }\n.vkx-ib:hover { border-color:var(--acc); background:var(--bg3); }\n.vkx-ib.x:hover { border-color:var(--bad); color:var(--bad); }\n\n/* segmented */\n.vkx-seg { display:flex; gap:4px; margin:2px 12px 10px; padding:4px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; }\n.vkx-seg button { flex:1; border:0; background:none; color:var(--mut); font:600 14px/1 inherit; padding:10px 8px; border-radius:10px; cursor:pointer; transition:all .15s; }\n.vkx-seg button.on { background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 60%,var(--acc2))); color:var(--ink); box-shadow:0 3px 12px var(--glow); }\n\n/* sections */\n.vkx-sec { display:none; flex:1; min-height:0; flex-direction:column; }\n.vkx-sec.on { display:flex; }\n.vkx-scroll { flex:1; min-height:0; overflow-y:auto; padding:2px 12px 28px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }\n.vkx-scroll::-webkit-scrollbar { width:7px; } .vkx-scroll::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }\n\n/* tab con của Trợ lý */\n.vkx-tabbar { display:flex; align-items:center; gap:6px; padding:0 12px 8px; }\n#vkx-tabs { flex:1; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px 0; }\n#vkx-tabs::-webkit-scrollbar { display:none; }\n#vkx-tabs button { flex:0 0 auto; border:1px solid var(--line); background:var(--bg2); color:var(--mut); font:600 13px/1 inherit; padding:8px 12px; border-radius:999px; cursor:pointer; white-space:nowrap; transition:all .15s; }\n#vkx-tabs button:hover { color:var(--txt); border-color:var(--acc); }\n#vkx-tabs button.on { background:var(--acc); border-color:var(--acc); color:var(--ink); }\n#vk-rf { flex:0 0 auto; }\n\n/* toast */\n#vkx-toast { position:fixed; left:50%; bottom:26px; transform:translate(-50%,20px); z-index:2147483002; max-width:min(92vw,520px);\n  background:var(--bg2); color:var(--txt); padding:11px 16px; border-radius:12px; border:1px solid var(--line); border-left:4px solid var(--acc);\n  font:600 13px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif; box-shadow:0 10px 30px var(--shade); opacity:0; pointer-events:none; transition:opacity .22s,transform .22s; }\n#vkx-toast.on { opacity:1; transform:translate(-50%,0); }\n\n/* ═════════ PHẦN TỬ DÙNG CHUNG ═════════ */\n#vkx-win button { font-family:inherit; }\n#vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select, #vkx-win textarea {\n  font-family:inherit; font-size:14px; color:var(--txt); background:var(--bg3); border:1px solid var(--line); border-radius:9px;\n  padding:8px 10px; outline:none; min-width:0; max-width:100%; transition:border-color .15s, box-shadow .15s; color-scheme:dark; }\n#vkx-win[data-vkx-theme="giayCo"] input, #vkx-win[data-vkx-theme="giayCo"] select { color-scheme:light; }\n#vkx-win input:focus, #vkx-win select:focus { border-color:var(--acc); box-shadow:0 0 0 3px var(--glow); }\n#vkx-win input[type=checkbox] { width:16px; height:16px; accent-color:var(--acc); vertical-align:-3px; }\n@media (max-width:720px){ #vkx-win input[type=text], #vkx-win input[type=number], #vkx-win select { font-size:16px; }\n     }\n\n/* ═════════ PANEL MOD (vm-*) ═════════ */\n\n.vm-hint { font-size:11.5px; color:var(--mut); text-align:center; margin:6px 0; }\n\n \n\n\n\n\n/* ═════════ TRỢ LÝ (vk-*) ═════════ */\n.vk-card { background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:12px 13px; margin:0 0 10px; }\n.vk-card h3 { margin:0 0 8px; font-size:15px; color:var(--acc); letter-spacing:.2px; }\n.vk-row { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px dashed var(--line); }\n.vk-row:last-child { border-bottom:0; }\n.vk-row > b { text-align:right; }\n.vk-mu { color:var(--mut); }\n.vk-ok { color:var(--ok); font-weight:600; } .vk-bad { color:var(--bad); font-weight:600; }\n.vk-btn { display:inline-block; border:0; cursor:pointer; font-weight:700; font-size:14px; padding:10px 15px; margin:4px 6px 4px 0; border-radius:10px;\n  color:var(--ink); background:linear-gradient(145deg,var(--acc),color-mix(in srgb,var(--acc) 65%,var(--acc2))); transition:transform .1s,filter .15s; }\n.vk-btn:hover { filter:brightness(1.08); } .vk-btn:active { transform:scale(.97); }\n.vk-btn.sec { background:var(--bg3); color:var(--txt); border:1px solid var(--line); }\n.vk-btn:disabled { opacity:.45; cursor:not-allowed; }\n.vk-img { width:100%; max-width:480px; display:block; margin:8px auto; border-radius:10px; border:1px solid var(--line); }\n.vk-note { font-size:12px; color:var(--mut); text-align:center; margin-bottom:6px; }\n.vk-lg { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:14px; }\n.vk-sw { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:8px; color:#fff; font-weight:700; font-size:13px; flex:0 0 26px; text-shadow:0 1px 2px #0008; }\ntable.vk-t { width:100%; border-collapse:collapse; font-size:13.5px; color:var(--txt); }\ntable.vk-t th, table.vk-t td { padding:7px 5px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }\ntable.vk-t th { color:var(--acc); font-weight:700; font-size:12.5px; }\ntable.vk-t tr:last-child td { border-bottom:0; }\n.vk-bar { height:9px; background:var(--bg3); border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:8px 0; }\n.vk-bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); transition:width .15s; }\n.vk-sel { font-size:14px; padding:8px 10px; max-width:100%; }\n.vk-err { background:color-mix(in srgb,var(--bad) 12%,var(--bg2)); border:1px solid color-mix(in srgb,var(--bad) 45%,var(--line)); color:var(--txt); border-radius:12px; padding:11px 13px; }\n#vkx-win details > summary { cursor:pointer; }\n#vkx-win details.vk-card > summary { font-size:14px; }\n#vkx-win summary { color:var(--txt); }\n#vkx-win ul { color:var(--txt); }\n#vkx-win a { color:var(--acc); }\n#vkx-win hr { border:0; border-top:1px solid var(--line); }\n';
@@ -8065,12 +8076,173 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
         }
 
-        // ── Global Live Alert: Banner thông báo nổi trên màn hình khi Dị Bảo nở trên map ──
+        // ── Global Live Alert & Live Mini Tracker: Thông báo nổi trên màn hình khi Dị Bảo nở trên map ──
         var lastDismissedDiBao = null;
+        var lastDismissedMini = null;
+
         function removeDiBaoAlert() {
           const alertEl = document.getElementById("vkx-dibao-alert");
           if (alertEl && alertEl.parentNode)
             alertEl.parentNode.removeChild(alertEl);
+        }
+
+        function removeDiBaoMini() {
+          const miniEl = document.getElementById("vkx-dibao-mini");
+          if (miniEl && miniEl.parentNode)
+            miniEl.parentNode.removeChild(miniEl);
+        }
+
+        function makeMiniDraggable(el) {
+          if (!el || el._dragInit) return;
+          el._dragInit = true;
+          let dragSt = null,
+            moved = false;
+          el.addEventListener("pointerdown", function (e) {
+            if (e.target.closest("button") || e.target.closest("a")) return;
+            const r = el.getBoundingClientRect();
+            dragSt = { sx: e.clientX, sy: e.clientY, ox: r.left, oy: r.top };
+            moved = false;
+            try {
+              el.setPointerCapture(e.pointerId);
+            } catch (err) {}
+          });
+          el.addEventListener("pointermove", function (e) {
+            if (!dragSt) return;
+            const dx = e.clientX - dragSt.sx,
+              dy = e.clientY - dragSt.sy;
+            if (!moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+            moved = true;
+            el._isDragging = true;
+            el.style.transform = "none";
+            el.style.left =
+              Math.max(
+                8,
+                Math.min(
+                  window.innerWidth - el.offsetWidth - 8,
+                  dragSt.ox + dx,
+                ),
+              ) + "px";
+            el.style.top =
+              Math.max(
+                8,
+                Math.min(
+                  window.innerHeight - el.offsetHeight - 8,
+                  dragSt.oy + dy,
+                ),
+              ) + "px";
+          });
+          const endDrag = function () {
+            if (dragSt && moved) {
+              const r = el.getBoundingClientRect();
+              try {
+                localStorage.setItem(
+                  "vkx_dibao_mini_pos",
+                  JSON.stringify({
+                    left: Math.round(r.left),
+                    top: Math.round(r.top),
+                  }),
+                );
+              } catch (err) {}
+            }
+            dragSt = null;
+            setTimeout(() => {
+              el._isDragging = false;
+            }, 50);
+          };
+          el.addEventListener("pointerup", endDrag);
+          el.addEventListener("pointercancel", endDrag);
+        }
+
+        function showDiBaoMini(t, isHere) {
+          if (!t) return;
+          let miniEl = document.getElementById("vkx-dibao-mini");
+          const isFirstCreate = !miniEl;
+          if (isFirstCreate) {
+            miniEl = document.createElement("div");
+            miniEl.id = "vkx-dibao-mini";
+            document.body.appendChild(miniEl);
+            makeMiniDraggable(miniEl);
+
+            let savedPos = null;
+            try {
+              const p = localStorage.getItem("vkx_dibao_mini_pos");
+              if (p) savedPos = JSON.parse(p);
+            } catch (e) {}
+            if (
+              savedPos &&
+              typeof savedPos.left === "number" &&
+              typeof savedPos.top === "number"
+            ) {
+              const maxL = Math.max(8, window.innerWidth - 180);
+              const maxT = Math.max(8, window.innerHeight - 40);
+              miniEl.style.transform = "none";
+              miniEl.style.left =
+                Math.min(Math.max(8, savedPos.left), maxL) + "px";
+              miniEl.style.top =
+                Math.min(Math.max(8, savedPos.top), maxT) + "px";
+            } else {
+              miniEl.style.top = "12px";
+              miniEl.style.left = "50%";
+              miniEl.style.transform = "translateX(-50%)";
+            }
+          }
+
+          if (miniEl._isDragging) return;
+
+          const safeY = isFinite(t.y)
+            ? t.y < 0.05
+              ? "ngay đây"
+              : num(t.y) + "n"
+            : "?";
+          const relTitle = t.relName || t.title;
+
+          miniEl.innerHTML = `
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3366;box-shadow:0 0 8px #ff3366;animation:doPulse 1.8s infinite;flex-shrink:0"></span>
+            <span style="font-weight:700;color:#fff;display:inline-flex;align-items:center;gap:5px">
+              <span>👑 ${esc(relTitle)}</span>
+              ${t.isCarry ? `<span class="vkx-mini-badge hon">⭐ Hồn</span>` : ""}
+            </span>
+            <span style="color:#475569">|</span>
+            <span style="color:#cbd5e1;display:inline-flex;align-items:center;gap:4px">
+              <span>📍 <b>${esc(t.pName)}</b></span>
+              <span style="color:#94a3b8;font-size:11px">(${t.slot})</span>
+            </span>
+            <span style="color:#475569">|</span>
+            ${
+              isHere
+                ? `<span class="vkx-mini-badge here">Đang ở đây ✓</span>`
+                : `<span style="color:#94a3b8;font-size:11.5px">Cách: <b>${safeY}</b></span>`
+            }
+            <span style="color:#f59e0b;font-weight:600;font-size:11.5px">⏳ ${t.remYears != null ? t.remYears + "n" : "∞"}</span>
+            <div style="display:inline-flex;align-items:center;gap:4px;margin-left:2px">
+              <button class="vkx-mini-btn do-mini-view" title="Xem chi tiết tại Tab Dị Bảo">🔍 Xem</button>
+              <button class="vkx-mini-close do-mini-close" title="Tắt thanh theo dõi">✕</button>
+            </div>
+          `;
+
+          const viewBtn = miniEl.querySelector(".do-mini-view");
+          if (viewBtn) {
+            viewBtn.onclick = (e) => {
+              e.stopPropagation();
+              try {
+                if (typeof UI !== "undefined" && UI) {
+                  if (typeof UI.open === "function") UI.open();
+                  if (typeof UI.setSection === "function") UI.setSection("tl");
+                }
+                S.tab = "db";
+                if (typeof render === "function") render();
+              } catch (err) {}
+            };
+          }
+
+          const closeBtn = miniEl.querySelector(".do-mini-close");
+          if (closeBtn) {
+            closeBtn.onclick = (e) => {
+              e.stopPropagation();
+              lastDismissedMini = t.encId + "_" + t.slot;
+              removeDiBaoMini();
+            };
+          }
         }
 
         function showDiBaoAlert(t) {
@@ -8141,6 +8313,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     UI.notify("⚡ " + res.msg);
                   } catch (e) {}
                   removeDiBaoAlert();
+                  showDiBaoMini(t, true);
                   if (typeof render === "function") render();
                 }
               }, 30);
@@ -8166,6 +8339,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     UI.notify("🚀 " + res.msg);
                   } catch (e) {}
                   removeDiBaoAlert();
+                  showDiBaoMini(t, true);
                   if (typeof render === "function") render();
                 }
               }, 30);
@@ -8177,6 +8351,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             closeBtn.onclick = () => {
               lastDismissedDiBao = t.encId + "_" + t.slot;
               removeDiBaoAlert();
+              showDiBaoMini(t, false);
             };
           }
         }
@@ -8190,6 +8365,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               nam = typeof run.nam === "number" ? run.nam : null;
             if (!run.nodes) {
               removeDiBaoAlert();
+              removeDiBaoMini();
               return;
             }
             const sc = scanDiBao([run, g.state.meta]);
@@ -8209,7 +8385,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return false;
             };
 
-            let activeTarget = null;
+            const candidates = [];
             let c = null;
             try {
               c = ctx();
@@ -8246,28 +8422,72 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     : null;
                 const pName = c ? placeName(c, slot) : "Slot " + slot;
                 const relInfo = DIBAO.rel[ev.relic] || {};
-                activeTarget = {
+                const isCarry = relInfo.bd === "Có" || relInfo.theo_kiep;
+                candidates.push({
                   encId,
                   slot,
                   pName,
                   y,
                   remYears,
                   title: `«${ev.ten}» (${relInfo.ten || ev.relic})`,
-                };
-                break;
+                  relic: ev.relic,
+                  relName: relInfo.ten || ev.relic,
+                  evName: ev.ten,
+                  isCarry,
+                });
               }
             }
 
-            if (!activeTarget) {
+            if (candidates.length === 0) {
               removeDiBaoAlert();
+              removeDiBaoMini();
               return;
             }
 
-            if (
-              lastDismissedDiBao ===
-              activeTarget.encId + "_" + activeTarget.slot
-            )
+            // Sắp xếp ưu tiên: Nếu đang ở cùng slot với dị bảo thì ưu tiên trước tiên
+            candidates.sort((a, b) => {
+              const aHere =
+                String(run.viTri) === String(a.slot) ||
+                String(run.oNoi) === String(a.slot);
+              const bHere =
+                String(run.viTri) === String(b.slot) ||
+                String(run.oNoi) === String(b.slot);
+              if (aHere && !bHere) return -1;
+              if (!aHere && bHere) return 1;
+              if (a.isCarry && !b.isCarry) return -1;
+              if (!a.isCarry && b.isCarry) return 1;
+              return a.y - b.y;
+            });
+
+            const activeTarget = candidates[0];
+            const isHere =
+              String(run.viTri) === String(activeTarget.slot) ||
+              String(run.oNoi) === String(activeTarget.slot);
+
+            const targetKey = activeTarget.encId + "_" + activeTarget.slot;
+
+            // ĐÃ TỚI NƠI DỊ BẢO XUẤT THẾ:
+            // Tự động tắt alert to đi để không che khuất màn hình / nút bấm của game,
+            // đồng thời hiển thị Live Mini Tracker tinh gọn ở trên cùng để tiện theo dõi.
+            if (isHere) {
+              removeDiBaoAlert();
+              if (lastDismissedMini !== targetKey) {
+                showDiBaoMini(activeTarget, true);
+              }
               return;
+            }
+
+            // CHƯA TỚI NƠI:
+            if (lastDismissedDiBao === targetKey) {
+              removeDiBaoAlert();
+              if (lastDismissedMini !== targetKey) {
+                showDiBaoMini(activeTarget, false);
+              } else {
+                removeDiBaoMini();
+              }
+              return;
+            }
+
             activeTarget.canTeleport = !!checkCanTeleport(activeTarget.slot);
             playDiBaoAlertSound();
             if (
@@ -8284,6 +8504,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               );
             }
             showDiBaoAlert(activeTarget);
+            removeDiBaoMini();
           } catch (e) {}
         }
 
@@ -20364,6 +20585,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   "🎉 Hoàn tất sự kiện Dị Bảo! Đã đoạt bảo thành công (+5 Điểm Luân Hồi).",
                   "vk-ok",
                 );
+                removeDiBaoAlert();
+                removeDiBaoMini();
               }
               return "ok";
             }
@@ -21880,6 +22103,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             // Đang đứng đúng tại slot sự kiện:
             if (String(run.viTri) === String(target.slot)) {
               st.phase = "hunt";
+              removeDiBaoAlert();
+              showDiBaoMini(
+                {
+                  encId: target.encId,
+                  slot: target.slot,
+                  pName: target.pName,
+                  y: 0,
+                  remYears: target.remYears,
+                  title: `«${target.e.ten}» (${target.title})`,
+                  relic: target.relic,
+                  relName: target.title,
+                  evName: target.e.ten,
+                  isCarry: target.isCarry,
+                },
+                true,
+              );
               // 1. Nếu chưa vào bên trong node nơi chốn thì vào node trước
               if (String(run.oNoi) !== String(target.slot)) {
                 auLog(
@@ -26380,9 +26619,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.4 · Ưu Tiên Săn Dị Bảo Xuất Thế & Ngắt Bế Quan",
+            t: "Phiên Bản 7.8.5 · Thanh Theo Dõi Dị Bảo Mini & Tự Động Ẩn Alert Khi Tới Nơi",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tự Động Ẩn Alert Khi Tới Nơi:</b> Khi người chơi hoặc Auto có mặt tại đúng ô/nơi chốn Dị Bảo xuất thế, hệ thống tự động gỡ bỏ banner thông báo lớn phía dưới để tránh che khuất các nút thao tác sự kiện, kiểm định chỉ số hoặc giao chiến.",
+              "<b>Thanh Theo Dõi Mini Tinh Gọn (Live Tracker Pill):</b> Hiển thị thanh trạng thái thu nhỏ gắn ở mép trên màn hình gồm đầy đủ thông tin: Tên Dị Bảo (kèm huy hiệu ⭐ Hồn), vị trí nơi chốn/slot, trạng thái Đang ở đây ✓ và số năm còn lại của sự kiện.",
+              "<b>Tương Tác Linh Hoạt & Kéo Thả (Draggable):</b> Hỗ trợ kéo thả thanh Mini tự do trên màn hình và tự động lưu vị trí (localStorage); tích hợp nút [🔍 Xem] mở nhanh Tab Dị Bảo và nút [✕] tắt thanh theo dõi; tự động dọn dẹp khi sự kiện kết thúc.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.4 · Ưu Tiên Săn Dị Bảo Xuất Thế & Ngắt Bế Quan",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tự Động Ngắt Bế Quan Đi Săn Dị Bảo Xuất Thế:</b> Khắc phục triệt để lỗi khi có thông báo Linh Bảo / Dị Bảo xuất thế nhưng Auto vẫn tiếp tục bế quan; tích hợp cơ chế <code>sanMoiDiBaoXuatThe</code> (mặc định bật) lập tức ưu tiên đoạt bảo bất kỳ món nào nở trên map.",
               "<b>Đồng Bộ Cảnh Báo Live & Auto Săn Bảo:</b> Tự động liên kết hệ thống phát hiện Live Alert với hàng đợi di chuyển của Auto; tự động đóng banner và dọn dẹp trạng thái chờ bế quan khi chuyển sang pha di chuyển/truyền tống tới vị trí Dị Bảo.",
