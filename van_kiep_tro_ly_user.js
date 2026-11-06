@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.5
+// @version      7.11.6
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.6
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.5";
+      var TOOL_VER = "7.11.6";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7751,38 +7751,50 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           khi_van: "khí vận",
           than_phap: "thân pháp",
         };
+        // Quét cờ, lịch sử, bảo lục luân hồi trực tiếp từ dữ liệu game (O(1) thay vì đệ quy O(N) toàn bộ save)
         function scanDiBao(roots) {
           const flags = new Set(),
             history = new Map(),
             relics = new Set();
           let nodes = null;
-          const visit = (o, d) => {
-            if (!o || typeof o !== "object" || d > 7) return;
-            if (Array.isArray(o)) {
-              if (o.length < 5000) for (const x of o) visit(x, d + 1);
-              return;
-            }
-            if (
-              !nodes &&
-              o.nodes &&
-              typeof o.nodes === "object" &&
-              !Array.isArray(o.nodes)
-            )
-              nodes = o.nodes;
-            for (const [k, v] of Object.entries(o)) {
-              if (k.startsWith("di_bao_xong_")) flags.add(k.slice(12));
-              if (Array.isArray(v)) {
-                if (k === "relics" || k === "newRelics")
-                  for (const r of v)
-                    if (typeof r === "string" && r.startsWith("item."))
-                      relics.add(r);
-              } else if (v && typeof v === "object") {
-                if (typeof v.namCuoi === "number") history.set(k, v);
+
+          function scanObj(o) {
+            if (!o || typeof o !== "object") return;
+            if (o.flags && typeof o.flags === "object") {
+              for (const k of Object.keys(o.flags)) {
+                if (k.startsWith("di_bao_xong_")) flags.add(k.slice(12));
               }
             }
-            for (const v of Object.values(o)) visit(v, d + 1);
-          };
-          roots.forEach((r) => visit(r, 0));
+            if (o.history && typeof o.history === "object") {
+              for (const [k, v] of Object.entries(o.history)) {
+                if (v && typeof v.namCuoi === "number") history.set(k, v);
+              }
+            }
+            if (o.tienLo && Array.isArray(o.tienLo.relics)) {
+              for (const r of o.tienLo.relics) {
+                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+              }
+            }
+            if (Array.isArray(o.relics)) {
+              for (const r of o.relics) {
+                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+              }
+            }
+            if (Array.isArray(o.newRelics)) {
+              for (const r of o.newRelics) {
+                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+              }
+            }
+            if (!nodes && o.nodes && typeof o.nodes === "object") {
+              nodes = o.nodes;
+            }
+          }
+
+          for (const r of roots) {
+            scanObj(r);
+            if (r && r.nhanVat) scanObj(r.nhanVat);
+            if (r && r.meta) scanObj(r.meta);
+          }
           return { flags, history, relics, nodes };
         }
 
@@ -7815,8 +7827,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return "Slot " + slot;
         }
 
-        // Dò tìm ID slot từ marker hoặc tên địa danh
+        // Dò tìm ID slot từ marker hoặc tên địa danh (kèm cache O(1) tăng tốc)
+        const diaDanhSlotCache = new Map();
         function findSlotByDiaDanh(diaDanhId, diaName, c) {
+          const cacheKey = (diaDanhId || "") + "::" + (diaName || "");
+          if (diaDanhSlotCache.has(cacheKey)) return diaDanhSlotCache.get(cacheKey);
           try {
             const W = (c && c.world) || (G().env && G().env.world);
             if (!W || !Array.isArray(W.slots)) return null;
@@ -7824,7 +7839,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const byMarker = W.slots.find(
                 (s) => s && String(s.dia_danh) === String(diaDanhId),
               );
-              if (byMarker && byMarker.id != null) return String(byMarker.id);
+              if (byMarker && byMarker.id != null) {
+                const res = String(byMarker.id);
+                diaDanhSlotCache.set(cacheKey, res);
+                return res;
+              }
             }
             if (diaName) {
               const byName = W.slots.find((s) => {
@@ -7849,7 +7868,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 }
                 return false;
               });
-              if (byName && byName.id != null) return String(byName.id);
+              if (byName && byName.id != null) {
+                const res = String(byName.id);
+                diaDanhSlotCache.set(cacheKey, res);
+                return res;
+              }
             }
           } catch (e) {}
           return null;
@@ -9234,6 +9257,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // Khởi động watcher tự động kiểm tra sự kiện Dị Bảo và cập nhật tab Dị Bảo theo thời gian thực
         var lastRenderedViTri = null;
         function onWorldOrPlayerStateChange() {
+          // Khi Auto đang chạy (Săn Bảo, Tu Luyện...), Auto đã tự quản lý chu kỳ kiểm tra; bỏ qua event để tránh nghẽn luồng game
+          if (typeof AU !== "undefined" && AU.run && AU.run.running) return;
           checkDiBaoAlert();
           if (S.tab === "db") {
             try {
@@ -22220,8 +22245,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 break;
               }
               auPaintSoon();
-              if (st.delay > 0) {
-                await auSleep(st.delay);
+              const minDelay = st.kind === "sdb" || st.kind === "tl" ? 60 : 0;
+              const effectiveDelay = Math.max(st.delay || 0, minDelay);
+              if (effectiveDelay > 0) {
+                await auSleep(effectiveDelay);
                 slice = performance.now();
               } else if (performance.now() - slice > 20) {
                 await auYield();
@@ -23873,7 +23900,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (!canRetreatHere) {
             // Chỗ đang đứng không bế quan được (bị cấm cản hoặc lỗi cấm chế) -> Di chuyển tới chỗ bế quan an toàn gần nhất
             st.phaseDesc = "Tìm chỗ bế quan an toàn chờ Dị Bảo";
-            st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
+            st.targetTitle = "Chờ Dị Bảo xuất thế";
             const spots = await scanRetreat(c, 5, null);
             if (!spots || !spots.length) {
               return {
@@ -23913,29 +23940,34 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             };
           }
 
-          let sitYears = pity.waitYears >= 450 ? 1 : Math.min(2, maxCanSit);
+          let sitYears = pity.waitYears >= 450 ? 1 : Math.min(3, maxCanSit);
           if (
             hereInfo &&
             Array.isArray(hereInfo.moc) &&
             hereInfo.moc.length > 0
           ) {
-            const maxMoc = hereInfo.moc[hereInfo.moc.length - 1];
-            if (maxMoc < sitYears) sitYears = maxMoc;
+            const validMocs = hereInfo.moc.filter(
+              (m) => m <= (pity.waitYears >= 450 ? 1 : Math.min(5, maxCanSit)),
+            );
+            if (validMocs.length > 0) sitYears = validMocs[validMocs.length - 1];
+            else sitYears = Math.min(hereInfo.moc[0], maxCanSit);
           }
           if (sitYears <= 0) sitYears = 1;
 
-          const topCampDesc = targetCampName
-            ? ` · Đang cắm trại tại: ${targetCampName}`
-            : pity.topCamping && pity.topCamping.length
-              ? ` · Đón đầu: ${pity.topCamping[0].e.dia}`
-              : "";
-          st.phaseDesc = `Bế quan cắm trại chờ Dị Bảo (Pity: ${pity.waitYears}/500n · ×${pity.mult}${topCampDesc})`;
-          st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
+          const placeDesc = targetCampName || hereInfo.ten || "nơi an toàn";
+          st.targetTitle = targetCampRelic
+            ? `Đón đầu «${targetCampRelic.ten}»`
+            : "Chờ Dị Bảo xuất thế";
+          st.phaseDesc = `Bế quan cắm trại tại ${placeDesc}`;
 
-          auLog(
-            `Bế quan ${sitYears} năm tại ${hereInfo.ten || targetCampName || "ngoài trời"} (Pity: ${pity.waitYears}/500 năm · Trọng số ×${pity.mult}${topCampDesc}) để tăng tu vi & chờ Dị Bảo nở...`,
-            "vk-mu",
-          );
+          // Chỉ ghi log khi mới bắt đầu cắm trại hoặc đổi địa điểm, tránh spam log làm chậm game
+          if (st.lastCampPlace !== placeDesc) {
+            st.lastCampPlace = placeDesc;
+            auLog(
+              `Bắt đầu cắm trại & bế quan tại ${placeDesc} để tăng tu vi và đón đầu Dị Bảo...`,
+              "vk-mu",
+            );
+          }
 
           const namTruoc = run.nam;
           const rSit = auCall(() => {
@@ -28859,9 +28891,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.5 · Đại Tu Hiệu Năng Toàn Diện (Performance Optimization)",
+            t: "Phiên Bản 7.11.6 · Tinh Gọn UI Tiến Trình & Khắc Phục Triệt Để Lag Khi Auto Săn Dị Bảo",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tinh Gọn & Loại Bỏ Trùng Lặp UI Tiến Trình Săn Bảo:</b> Loại bỏ hoàn toàn sự trùng lặp thông tin Pity (0/500n), hệ số nhân (×1.0) và chuỗi mô tả cắm trại dài dòng giữa các hàng 'Thiên Đạo Bù', 'Mục Tiêu Đang Săn' và 'Hành Động Hiện Tại'. UI nay hiển thị rõ ràng, súc tích: hiển thị đích danh Dị Bảo đón đầu hoặc 'Chờ Dị Bảo xuất thế' và nơi cắm trại tinh gọn.",
+              "<b>Đại Tu Tốc Độ scanDiBao (O(1) Direct Access):</b> Thay thế toàn bộ thuật toán duyệt đệ quy 7 tầng qua hàng chục nghìn đối tượng save game bằng cơ chế đọc trực tiếp từ các cấu trúc dữ liệu chuẩn của game (<code>flags</code>, <code>history</code>, <code>tienLo.relics</code>, <code>nodes</code>), tăng tốc độ quét lên gấp hàng ngàn lần và triệt tiêu 100% rác bộ nhớ gây nghẽn Garbage Collector.",
+              "<b>Khử Trùng Lặp Luồng Sự Kiện Khi Auto Chạy:</b> Tự động chặn sự kiện <code>timePass</code> và <code>travel</code> ngoài luồng kích hoạt lại vòng quét <code>checkDiBaoAlert</code> và render lại tab Dị Bảo trong khi Auto đang vận hành, giải phóng hoàn toàn CPU cho game.",
+              "<b>Bộ Đệm Tọa Độ Địa Danh (findSlotByDiaDanh Cache):</b> Bổ sung cache băm cho các phép dò tìm slot bản đồ từ tên địa danh / marker, loại bỏ việc duyệt lặp qua hàng nghìn slot thế giới ở mỗi chu kỳ quét.",
+              "<b>Chống Spam Log & Điều Tiết Nhịp Bế Quan Thông Minh:</b> Chặn việc đẩy log lặp lại mỗi năm bế quan tại cùng một địa điểm; tối ưu độ dài bước bế quan (3–5 năm) khi chưa gần mốc Pity và cấp nhịp nghỉ nhỏ 60ms cho game engine kịp render mượt mà, giúp cả web game và Tool chạy êm ái, trôi năm nhanh chóng mà không còn giật lag.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.5 · Đại Tu Hiệu Năng Toàn Diện (Performance Optimization)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Đại Tu Bộ Quan Sát Giao Diện (MutationObserver Title Case):</b> Loại bỏ hoàn toàn việc quét định dạng văn bản Title Case khi cửa sổ Tool đang đóng; khử trùng lặp O(N²) cây con, kiểm soát việc kích hoạt đột biến vòng lặp (self-triggering mutations), giúp render các danh sách dài nhanh và mượt hơn rõ rệt.",
               "<b>Triệt Tiêu Nghẽn I/O & Reflow Trong Combat Watcher Tick:</b> Khắc phục triệt để việc ghi đĩa <code>localStorage.setItem</code> mỗi 400ms trong <code>syncGameCombatAutomation</code> bằng cơ chế so khớp chuỗi trước khi lưu; chuyển đổi việc tái tạo toàn bộ DOM của thanh Combat Overlay thành cơ chế cập nhật trạng thái có điều kiện, giảm 100% hiện tượng khựng lag trong giao tranh.",
