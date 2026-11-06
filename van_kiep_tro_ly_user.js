@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.10.3
+// @version      7.11.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.10.3";
+      var TOOL_VER = "7.11.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -4913,6 +4913,114 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             "pillWasted",
             "kiểm tra lãng phí đan",
           ],
+          [
+            "breakthroughGrade",
+            "progress/dot_pha",
+            "breakthroughGrade",
+            "phẩm chất đột phá dự kiến",
+          ],
+          [
+            "resolveBreakthrough",
+            "progress/dot_pha",
+            "resolveBreakthrough",
+            "kết quả sau trận tâm ma",
+          ],
+          [
+            "pillFitsRealm",
+            "progress/dot_pha",
+            "pillFitsRealm",
+            "đan hợp cảnh giới",
+          ],
+          [
+            "pillMaxRealm",
+            "progress/dot_pha",
+            "pillMaxRealm",
+            "cảnh giới tối đa của đan",
+          ],
+          [
+            "isRuneMaxed",
+            "character/natal",
+            "isRuneMaxed",
+            "kiểm tra văn đầy cấp",
+          ],
+          [
+            "isRuneHighTier",
+            "character/natal",
+            "isRuneHighTier",
+            "văn bậc tỉ lệ",
+          ],
+          [
+            "runeUpgradeChance",
+            "character/natal",
+            "runeUpgradeChance",
+            "tỉ lệ nâng văn thành công",
+          ],
+          [
+            "runeLore",
+            "character/natal",
+            "runeLore",
+            "thông tin văn đã ngộ",
+          ],
+          [
+            "runeUpgradeBlock",
+            "character/natal",
+            "runeUpgradeBlock",
+            "kiểm tra nâng văn",
+          ],
+          [
+            "describeRune",
+            "character/natalRunes",
+            "describeRune",
+            "mô tả chi tiết văn",
+          ],
+          [
+            "collectRuneMods",
+            "character/natalRunes",
+            "collectRuneMods",
+            "tổng hợp chỉ số văn",
+          ],
+          [
+            "THONG_MACH_VUNG",
+            "character/kinh_mach",
+            "THONG_MACH_VUNG",
+            "vùng thông mạch theo bậc",
+          ],
+          [
+            "luotMo",
+            "character/kinh_mach",
+            "luotMo",
+            "tổng lượt mở ô kinh mạch",
+          ],
+          [
+            "vungCuaBac",
+            "character/kinh_mach",
+            "vungCuaBac",
+            "vùng với tới theo bậc đan",
+          ],
+          [
+            "oTrongTam",
+            "character/kinh_mach",
+            "oTrongTam",
+            "ô trong tầm đan",
+          ],
+          [
+            "bountyRealm",
+            "world/bounty",
+            "bountyRealm",
+            "cảnh giới việc treo thưởng",
+          ],
+          [
+            "reforgeSources",
+            "progress/grade",
+            "reforgeSources",
+            "nguồn cộng bậc trùng kết",
+          ],
+          [
+            "shopItemsAt",
+            "encounter/shop/market",
+            "shopItemsAt",
+            "danh sách hàng tiệm",
+          ],
         ];
         // Hằng số bản mệnh: khóa Tool → tên hằng trong core['balance/natal'].
         const BM_CONST = {
@@ -4952,6 +5060,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           weakMul: "NATAL_DEVOUR_LOW_RATIO",
           newGap: "NATAL_LEARN_GAP",
           cand: "NATAL_RUNE_CANDIDATES",
+          runeMaxLv: "NATAL_RUNE_MAX_LEVEL",
+          highChance: "NATAL_RUNE_HIGH_CHANCE",
+          luckStep: "NATAL_RUNE_LUCK_STEP",
+          failChance: "NATAL_RUNE_FAIL_CHANCE",
+          mutantChance: "NATAL_RUNE_MUTANT_CHANCE",
+          mutantMult: "NATAL_RUNE_MUTANT_MULT",
+          gradeUyExp: "NATAL_GRADE_UY_EXPONENT",
+          bloodPower: "NATAL_BLOOD_SACRIFICE_POWER",
         };
         const BM_RUNE_KEYS = [
           "liet",
@@ -5068,7 +5184,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             get() {
               try {
                 const o = R["balance/natal"].NATAL_RUNE_VALUE;
-                return o && BM_RUNE_KEYS.every((k) => numArr(o[k], 3))
+                return o && BM_RUNE_KEYS.every((k) => numArr(o[k], 5) || numArr(o[k], 3))
                   ? o
                   : undefined;
               } catch (e) {
@@ -5133,6 +5249,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // ───────────────────────── 2. Tiện ích ─────────────────────────
         const G = () => TT.game;
         const C = () => G().env.content;
+        const HUD = () => TT.hud;
+        const gamePanel = (name, open) =>
+          TT.ui && TT.ui.gamePanel ? TT.ui.gamePanel(name, open) : false;
         const clone = (x) => structuredClone(x);
         const sleep0 = () => new Promise((r) => setTimeout(r, 0));
         const pct = (x, d = 0) => (x * 100).toFixed(d).replace(".", ",") + "%";
@@ -5159,8 +5278,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const heTen = (h) => HE[h] ?? h;
         const STAGE = ["Sơ", "Trung", "Hậu", "ĐVM"];
 
-        function ctx() {
-          const rc = G().readCtx && G().readCtx(); // ctx chính thức của game, dựng trên bản sao kiếp đang chơi
+        function ctx(opts) {
+          const rc = G().readCtx && G().readCtx(opts); // ctx chính thức của game, dựng trên bản sao kiếp đang chơi
           if (rc) return rc;
           const K = S.core,
             st = G().state;
@@ -11070,6 +11189,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               .map((x, i) => (x.duoc ? i + 1 : null))
               .filter(Boolean),
           ];
+          const GRADE_TEN = {
+            hoan_my: "Hoàn Mỹ",
+            thuong: "Thượng",
+            trung: "Trung",
+            ha: "Hạ",
+          };
+          const gradeBadge = (g) => {
+            if (!g) return "—";
+            const clr =
+              g === "hoan_my"
+                ? "#f59e0b"
+                : g === "thuong"
+                  ? "#a855f7"
+                  : g === "trung"
+                    ? "#3b82f6"
+                    : "#94a3b8";
+            return `<span style="color:${clr};font-weight:bold">${GRADE_TEN[g] || g}</span>`;
+          };
           const combos = [];
           const sets = [[]];
           pills.forEach((p) => sets.push([p]));
@@ -11080,22 +11217,29 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             for (const td of tdOpts) {
               try {
                 const h = K.chuanBiDotPha(ctx(), { dan, thieuDot: td });
-                combos.push({ dan, td, tiLe: h.tiLe, h });
+                let expGrade = null;
+                if (K.breakthroughGrade) {
+                  try {
+                    expGrade = K.breakthroughGrade(ctx(), { dan, thieuDot: td });
+                  } catch (e) {}
+                }
+                combos.push({ dan, td, tiLe: h.tiLe, h, grade: expGrade });
               } catch {}
             }
           combos.sort(
             (a, b) =>
               b.tiLe - a.tiLe || a.dan.length - b.dan.length || a.td - b.td,
           );
+          const hasGradeCol = combos.some((x) => x.grade);
           const itemTen = (id) => (C().items.get(id) || {}).ten || id;
           const rows = combos
             .slice(0, 10)
             .map(
               (x) =>
-                `<tr><td>${x.dan.length ? x.dan.map(itemTen).map(esc).join(" + ") : "—"}</td><td>${x.td ? x.td + " nấc (−" + h0.thieuDot[x.td - 1].nam + " năm)" : "—"}</td><td><b>${pct(x.tiLe, 1)}</b></td></tr>`,
+                `<tr><td>${x.dan.length ? x.dan.map(itemTen).map(esc).join(" + ") : "—"}</td><td>${x.td ? x.td + " nấc (−" + h0.thieuDot[x.td - 1].nam + " năm)" : "—"}</td><td><b>${pct(x.tiLe, 1)}</b></td>${hasGradeCol ? `<td>${gradeBadge(x.grade)}</td>` : ""}</tr>`,
             )
             .join("");
-          const best = combos[0] || { h: h0, tiLe: h0.tiLe };
+          const best = combos[0] || { h: h0, tiLe: h0.tiLe, grade: null };
           const nguon = (best.h.nguon || [])
             .map(
               (n) =>
@@ -11108,17 +11252,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const chan = h0.chan
             ? `<div class="vk-err" style="margin-bottom:8px">Chưa đột phá được: ${esc(typeof h0.chan === "string" ? h0.chan : Array.isArray(h0.chan) ? h0.chan.join("; ") : h0.chan.ten || h0.chan.lyDo || JSON.stringify(h0.chan))}</div>`
             : "";
+          const curExpGrade = best.grade || (K.breakthroughGrade ? (() => { try { return K.breakthroughGrade(ctx(), { dan: [], thieuDot: 0 }); } catch (e) { return null; } })() : null);
           body.innerHTML = `${chan}
     <div class="vk-card"><h3>Lên ${esc(realmName(h0.len))}</h3>
       <div class="vk-row"><span>Đang ở</span><b>${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</b></div>
       <div class="vk-row"><span>Nơi đang đứng</span><b>${cho}</b></div>
       <div class="vk-row"><span>Tỉ lệ nếu không dùng gì</span><b>${pct(h0.tiLe, 1)}</b></div>
+      ${curExpGrade ? `<div class="vk-row"><span>Phẩm chất dự kiến nếu thành công ngay</span><b>${gradeBadge(curExpGrade)}</b></div>` : ""}
       ${h0.som ? '<div class="vk-bad" style="font-size:13px">Chưa Đại viên mãn: đột phá sớm bị trừ tỉ lệ.</div>' : ""}
     </div>
     <div class="vk-card"><h3>Các phương án (đan trong túi + đốt thọ)</h3>
       ${pills.length ? "" : '<div class="vk-mu" style="font-size:13px">Trong túi chưa có đan đột phá dùng được.</div>'}
-      <table class="vk-t"><tr><th>Đan</th><th>Đốt thọ</th><th>Tỉ lệ</th></tr>${rows}</table>
-      <div class="vk-mu" style="font-size:12px;margin-top:6px">Chưa tính hộ pháp (+5% nếu có). Đột phá ở động phủ hoặc sư môn của mình sẽ cao hơn ở thành thị.</div></div>
+      <table class="vk-t"><tr><th>Đan</th><th>Đốt thọ</th><th>Tỉ lệ</th>${hasGradeCol ? "<th>Phẩm dự kiến</th>" : ""}</tr>${rows}</table>
+      <div class="vk-mu" style="font-size:12px;margin-top:6px">Chưa tính hộ pháp (+5% nếu có). Đột phá ở động phủ hoặc sư môn của mình sẽ cao hơn ở thành thị. Phẩm dự kiến lấy trực tiếp từ cơ chế seed tháng của game engine.</div></div>
     <div class="vk-card"><h3>Chi tiết phương án tốt nhất</h3>${nguon}</div>`;
         }
 
@@ -12490,23 +12636,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           cand: 3,
         };
         const BM_RUNE_VAL = {
-          liet: [0.08, 0.14, 0.2],
-          phagiap: [0.1, 0.15, 0.2],
-          lienhoan: [0.1, 0.15, 0.2],
-          echo_ratio: [0.5, 0.5, 0.5],
-          hothe: [0.03, 0.06, 0.1],
-          kimchung: [0.05, 0.08, 0.12],
-          hutmau: [0.05, 0.1, 0.15],
-          tulinh: [0.04, 0.08, 0.12],
-          effect_chance: [0.25, 0.35, 0.45],
-          troi: [0.1, 0.15, 0.2],
-          troi_turns: [1, 1, 1],
-          phan: [0.75, 0.8, 0.85],
-          van: [0.6, 0.65, 0.7],
-          quy: [1.33, 1.4, 1.5],
-          nhiem: [0, 0.04, 0.08],
-          uanbao: [0.08, 0.14, 0.2],
-          inner_stat: [0.6, 1, 1.5],
+          liet: [0.08, 0.14, 0.2, 0.25, 0.3],
+          phagiap: [0.1, 0.15, 0.2, 0.25, 0.3],
+          lienhoan: [0.1, 0.15, 0.2, 0.25, 0.3],
+          echo_ratio: [0.5, 0.5, 0.5, 0.5, 0.5],
+          hothe: [0.03, 0.06, 0.1, 0.13, 0.16],
+          kimchung: [0.05, 0.08, 0.12, 0.15, 0.18],
+          hutmau: [0.05, 0.1, 0.15, 0.18, 0.21],
+          tulinh: [0.04, 0.08, 0.12, 0.15, 0.18],
+          effect_chance: [0.25, 0.35, 0.45, 0.5, 0.55],
+          troi: [0.1, 0.15, 0.2, 0.22, 0.24],
+          troi_turns: [1, 1, 1, 1, 1],
+          phan: [0.75, 0.8, 0.85, 0.9, 0.95],
+          van: [0.6, 0.65, 0.7, 0.72, 0.75],
+          quy: [1.33, 1.4, 1.5, 1.55, 1.6],
+          nhiem: [0, 0.06, 0.12, 0.15, 0.18],
+          uanbao: [0.08, 0.14, 0.2, 0.25, 0.3],
+          inner_stat: [0.6, 1, 1.5, 1.7, 1.9],
         };
         const BM_HESO = [0.5, 1, 1.75, 2.75, 4, 5.5, 7.5, 5]; // hệ số phẩm (Phàm → Nghịch Thiên)
         const BM_PHAM_CG = [0, 0, 1, 2, 3, 4, 5, 2]; // cảnh giới tối thiểu để dùng món theo phẩm
@@ -12531,7 +12677,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           `×${String(Math.round(x * 100) / 100).replace(".", ",")}`;
         const bmLv = (a, lv) => a[Math.max(0, Math.min(a.length - 1, lv))];
         function bmRunes() {
-          const V = bmV(),
+          const K = S.core,
+            V = bmV(),
             v = (k, l) => bmLv(V[k], l);
           const inner = [
             ["van.minh_than", "Minh Thần", "Thần thức"],
@@ -12558,94 +12705,114 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ["van.nhiem_phong", "Nhiễm Phong", "Phong"],
             ["van.nhiem_am", "Nhiễm Ám", "Ám"],
           ];
+          const desc = (id, l, mut, fallback) => {
+            if (K && K.describeRune) {
+              try {
+                return K.describeRune(id, l, mut);
+              } catch (e) {}
+            }
+            return fallback();
+          };
           const R = [
             {
               id: "van.uan_bao",
               name: "Uẩn Bảo",
               g: "inner",
               relic: true,
-              d: (l) => `Bị động và linh lực của món +${bmP(v("uanbao", l))}`,
+              d: (l, m) =>
+                desc("van.uan_bao", l, m, () => `Bị động và linh lực của món +${bmP(v("uanbao", l))}`),
             },
             ...inner.map(([id, name, st]) => ({
               id,
               name,
               g: "inner",
               relic: true,
-              d: (l) =>
-                `${st} +${String(Math.round(v("inner_stat", l) * 100) / 100).replace(".", ",")} × hệ số phẩm`,
+              d: (l, m) =>
+                desc(id, l, m, () =>
+                  `${st} +${String(Math.round(v("inner_stat", l) * 100) / 100).replace(".", ",")} × hệ số phẩm`),
             })),
             {
               id: "van.liet",
               name: "Liệt",
               g: "strike",
               atk: true,
-              d: (l) => `Uy chiêu +${bmP(v("liet", l))}`,
+              d: (l, m) =>
+                desc("van.liet", l, m, () => `Uy chiêu +${bmP(v("liet", l))}`),
             },
             {
               id: "van.phagiap",
               name: "Phá Giáp",
               g: "strike",
               atk: true,
-              d: (l) =>
-                `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`,
+              d: (l, m) =>
+                desc("van.phagiap", l, m, () =>
+                  `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`),
             },
             {
               id: "van.lienhoan",
               name: "Liên Hoàn",
               g: "strike",
               atk: true,
-              d: (l) =>
-                `${bmP(v("lienhoan", l))} đánh thêm một đòn, uy ${bmX(v("echo_ratio", l))}`,
+              d: (l, m) =>
+                desc("van.lienhoan", l, m, () =>
+                  `${bmP(v("lienhoan", l))} đánh thêm một đòn, uy ${bmX(v("echo_ratio", l))}`),
             },
             {
               id: "van.ho_the",
               name: "Hộ Thể",
               g: "guard",
-              d: (l) => `Hộ thể +${bmP(v("hothe", l))}`,
+              d: (l, m) =>
+                desc("van.ho_the", l, m, () => `Hộ thể +${bmP(v("hothe", l))}`),
             },
             {
               id: "van.kim_chung",
               name: "Kim Chung",
               g: "guard",
-              d: (l) =>
-                `Ra chiêu xong dựng thuẫn ${bmP(v("kimchung", l))} khí huyết tối đa, giữ một lượt`,
+              d: (l, m) =>
+                desc("van.kim_chung", l, m, () =>
+                  `Ra chiêu xong dựng thuẫn ${bmP(v("kimchung", l))} khí huyết tối đa, giữ một lượt`),
             },
             {
               id: "van.hut_huyet",
               name: "Hút Huyết",
               g: "heal",
               atk: true,
-              d: (l) =>
-                `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`,
+              d: (l, m) =>
+                desc("van.hut_huyet", l, m, () =>
+                  `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`),
             },
             {
               id: "van.tu_linh",
               name: "Tụ Linh",
               g: "heal",
-              d: (l) => `Linh lực mỗi lượt +${bmP(v("tulinh", l))}`,
+              d: (l, m) =>
+                desc("van.tu_linh", l, m, () => `Linh lực mỗi lượt +${bmP(v("tulinh", l))}`),
             },
             ...eff.map(([id, name, lb]) => ({
               id,
               name,
               g: "effect",
               atk: true,
-              d: (l) =>
-                `${bmP(v("effect_chance", l))} gây ${lb}, uy chiêu ${bmX(BM_PN)}`,
+              d: (l, m) =>
+                desc(id, l, m, () =>
+                  `${bmP(v("effect_chance", l))} gây ${lb}, uy chiêu ${bmX(BM_PN)}`),
             })),
             {
               id: "van.troi",
               name: "Trói",
               g: "effect",
               atk: true,
-              d: (l) =>
-                `${bmP(v("troi", l))} trói địch ${v("troi_turns", l)} lượt, uy chiêu ${bmX(BM_PN)}`,
+              d: (l, m) =>
+                desc("van.troi", l, m, () =>
+                  `${bmP(v("troi", l))} trói địch ${v("troi_turns", l)} lượt, uy chiêu ${bmX(BM_PN)}`),
             },
             {
               id: "van.phan_anh",
               name: "Phân Ảnh",
               g: "form",
               atk: true,
-              d: (l) => `Chiêu đơn hóa lan, uy ${bmX(v("phan", l))}`,
+              d: (l, m) =>
+                desc("van.phan_anh", l, m, () => `Chiêu đơn hóa lan, uy ${bmX(v("phan", l))}`),
             },
             {
               id: "van.van_anh",
@@ -12653,23 +12820,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "form",
               atk: true,
               tier: 3,
-              d: (l) => `Chiêu hóa toàn trận, uy ${bmX(v("van", l))}`,
+              d: (l, m) =>
+                desc("van.van_anh", l, m, () => `Chiêu hóa toàn trận, uy ${bmX(v("van", l))}`),
             },
             {
               id: "van.quy_nhat",
               name: "Quy Nhất",
               g: "form",
               atk: true,
-              d: (l) =>
-                `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`,
+              d: (l, m) =>
+                desc("van.quy_nhat", l, m, () =>
+                  `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`),
             },
             ...he.map(([id, name, h]) => ({
               id,
               name,
               g: "element",
               atk: true,
-              d: (l) =>
-                `Nhuộm chiêu sang hệ ${h}${v("nhiem", l) ? `, uy +${bmP(v("nhiem", l))}` : ""}`,
+              d: (l, m) =>
+                desc(id, l, m, () =>
+                  `Nhuộm chiêu sang hệ ${h}${v("nhiem", l) ? `, uy +${bmP(v("nhiem", l))}` : ""}`),
             })),
           ];
           return Object.fromEntries(R.map((r) => [r.id, r]));
@@ -12886,18 +13056,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const damaged = n.damagedUntil && n.damagedUntil > nv.tuoi;
             const inn = n.innate,
               innNext = D.runeLv[inn.level];
+            const isInnMax = K.isRuneMaxed ? K.isRuneMaxed(inn.level) : inn.level >= 4;
+            const isInnHigh = K.isRuneHighTier ? K.isRuneHighTier(inn.level) : (inn.level >= 2 && !isInnMax);
+            let innProgress = "";
+            if (isInnMax) {
+              innProgress = " (tối đa)";
+            } else if (isInnHigh) {
+              const ch = K.runeUpgradeChance ? K.runeUpgradeChance(inn) : null;
+              innProgress = ch ? ` (tỉ lệ ${pct(ch, 1)})` : " (bậc tỉ lệ)";
+            } else if (innNext) {
+              innProgress = ` (${inn.points || 0}/${innNext})`;
+            }
+
             const runesOn =
               n.runes
                 .map((id) => {
                   const r = (nv.natalRunes || {})[id] || { level: 0 };
-                  return `<span class="tc-pill">${esc(bmRuneName(id))} · cấp ${r.level + 1}</span>`;
+                  const isMut = r.mutant || false;
+                  return `<span class="tc-pill">${esc(bmRuneName(id))} · cấp ${r.level + 1}${isMut ? " · Dị" : ""}</span>`;
                 })
                 .join("") || '<span class="vk-mu">chưa khắc văn nào</span>';
             const kho = Object.entries(nv.natalRunes || {})
               .filter(([id]) => id !== inn.id)
               .map(([id, r]) => {
                 const nx = D.runeLv[r.level];
-                return `<span class="tc-pill">${esc(bmRuneName(id))} · cấp ${r.level + 1}${nx ? ` (${r.points}/${nx})` : " (tối đa)"}${n.runes.includes(id) ? " · đang khắc" : ""}</span>`;
+                const isMut = r.mutant || false;
+                const isMax = K.isRuneMaxed ? K.isRuneMaxed(r.level) : r.level >= 4;
+                const isHigh = K.isRuneHighTier ? K.isRuneHighTier(r.level) : (r.level >= 2 && !isMax);
+                let progress = "";
+                if (isMax) {
+                  progress = " (tối đa)";
+                } else if (isHigh) {
+                  const ch = K.runeUpgradeChance ? K.runeUpgradeChance(r) : null;
+                  progress = ch ? ` (tỉ lệ ${pct(ch, 1)})` : " (bậc tỉ lệ)";
+                } else if (nx) {
+                  progress = ` (${r.points || 0}/${nx})`;
+                }
+                return `<span class="tc-pill">${esc(bmRuneName(id))} · cấp ${r.level + 1}${isMut ? " · Dị" : ""}${progress}${n.runes.includes(id) ? " · đang khắc" : ""}</span>`;
               })
               .join("");
             const tmp = (nv.natalTemper || {})[nv.canhGioi] || 0;
@@ -12916,8 +13111,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         ${row("Tầng", `${BM_TANG[ti]} <span class="vk-mu">· tâm huyết ${n.exp}${nextT !== undefined ? "/" + nextT : " (đầy)"}</span>`)}
         ${row("Hệ số cố định", bmX(D.mult[ti]))}
         ${row("Ô khắc văn", `${n.runes.length}/${slots}`)}
-        ${row("Văn bẩm sinh", `${esc(bmRuneName(inn.id))} · cấp ${inn.level + 1}${innNext ? ` (${inn.points}/${innNext})` : " (tối đa)"}`)}
-        <div class="vk-mu" style="font-size:12.5px;margin:2px 0 4px">${esc(RN[inn.id] ? RN[inn.id].d(inn.level) : "")}</div>
+        ${row("Văn bẩm sinh", `${esc(bmRuneName(inn.id))} · cấp ${inn.level + 1}${inn.mutant ? " · Dị" : ""}${innProgress}`)}
+        <div class="vk-mu" style="font-size:12.5px;margin:2px 0 4px">${esc(RN[inn.id] ? RN[inn.id].d(inn.level, inn.mutant) : "")}</div>
         ${row("Huyết luyện cảnh giới này", `${tmp}/${D.tempMax}`)}
         ${row("Nuốt món năm nay", `${dev}/${D.devourMax}`)}
         ${row("Tình trạng", damaged ? `<span class="vk-bad">Đang tổn, còn ${num(n.damagedUntil - nv.tuoi, 2)} năm</span>` : '<span class="vk-ok">Nguyên vẹn</span>')}
@@ -14796,16 +14991,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             try {
               y = S.core.travelYears(c, v.slot);
             } catch {}
+            let bRealm = null;
+            if (S.core && S.core.bountyRealm) {
+              try {
+                bRealm = S.core.bountyRealm(c, run, v);
+              } catch (e) {}
+            }
             return {
               v,
               y,
+              bRealm,
               th: encThreat(v.enc, v.slot, v.vars, run.nam + y),
               left:
                 v.hetHanNam !== undefined ? v.hetHanNam - run.nam : undefined,
             };
           });
           body.innerHTML = `
-    <div class="vk-card"><h3>Việc đang nhận</h3>${taken.length ? `<table class="vk-t"><tr><th>Việc</th><th>Đi</th><th>Sức</th></tr>${taken.map((x) => `<tr><td><b>${esc(cleanTxt(x.v.ten))}</b><br><span class="vk-mu" style="font-size:12px">${esc(placeName(c, x.v.slot))}${x.left !== undefined ? ` · còn <span class="${x.left < x.y ? "vk-bad" : ""}">${num(x.left)} năm</span>` : ""}${x.v.thuong ? ` · ${x.v.thuong} linh thạch` : ""}${x.v.congHien ? ` · ${x.v.congHien} cống hiến` : ""}</span></td><td>${yrs(x.y)}</td><td>${threatHtml(x.th)}</td></tr>`).join("")}</table>` : '<div class="vk-mu">Chưa nhận việc nào.</div>'}</div>
+    <div class="vk-card"><h3>Việc đang nhận</h3>${taken.length ? `<table class="vk-t"><tr><th>Việc</th><th>Đi</th><th>Sức</th></tr>${taken.map((x) => `<tr><td><b>${esc(cleanTxt(x.v.ten))}</b>${x.bRealm !== null && x.bRealm !== undefined ? ` <span class="tc-pill" style="font-size:11px;vertical-align:middle">${esc(realmName(x.bRealm))}</span>` : ""}<br><span class="vk-mu" style="font-size:12px">${esc(placeName(c, x.v.slot))}${x.left !== undefined ? ` · còn <span class="${x.left < x.y ? "vk-bad" : ""}">${num(x.left)} năm</span>` : ""}${x.v.thuong ? ` · ${x.v.thuong} linh thạch` : ""}${x.v.congHien ? ` · ${x.v.congHien} cống hiến` : ""}</span></td><td>${yrs(x.y)}</td><td>${threatHtml(x.th)}</td></tr>`).join("")}</table>` : '<div class="vk-mu">Chưa nhận việc nào.</div>'}</div>
     <div class="vk-card"><h3>Bảng treo thưởng quanh đây</h3>
       <div class="vk-mu" style="font-size:13px">Bảng ở thành, trấn, thôn và bảng nhiệm vụ sư môn. Mỗi bảng đổi việc sau 1 năm kể từ lần có người xem; Tool tính đúng danh sách bạn sẽ thấy khi tới nơi (theo tốc độ đi của bạn), rồi dùng chính hàm của game để thử sức với từng trận trong việc đó.</div>
       <div style="margin:8px 0"><select class="vk-sel" id="vk-tby"><option value="0.6">Trong 6 tháng đường</option><option value="1.2" selected>Trong 1 năm đường</option><option value="2.5">Trong 2,5 năm đường</option></select>
@@ -22248,9 +22450,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               };
             }
 
+            const GRADE_MAP = {
+              hoan_my: "Hoàn Mỹ",
+              thuong: "Thượng",
+              trung: "Trung",
+              ha: "Hạ",
+            };
+            let expGrade = null;
+            if (S.core && S.core.breakthroughGrade) {
+              try {
+                expGrade = S.core.breakthroughGrade(ctx(), { dan: best.dan, thieuDot: best.td });
+              } catch (e) {}
+            }
             auLog(
               "Bắt đầu xung kích đột phá (Tỉ lệ: " +
                 pct(best.tiLe, 1) +
+                (expGrade ? " · Phẩm dự kiến: " + (GRADE_MAP[expGrade] || expGrade) : "") +
                 (best.dan.length
                   ? " · Đan: " + best.dan.map(auItemName).join("+")
                   : "") +
@@ -22265,12 +22480,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return { stop: "Không thực hiện xung kích được: " + rDotPha.err };
             }
 
+            const outcome = rDotPha.res;
+            if (outcome && outcome.result === "tam_ma") {
+              auLog("⚡ Xuất hiện Trận Tâm Ma! Đang nghênh chiến tâm ma...", "vk-warn");
+            }
+            if (outcome && outcome.disturbed) {
+              auLog("⚠️ Bị quấy nhiễu giữa lúc xung kích (trừ tỉ lệ)!", "vk-warn");
+            }
+
             const runAfter = G().state.run;
             if (runAfter.nhanVat.canhGioi > curCg) {
               st.breakouts = (st.breakouts || 0) + 1;
+              const gName = outcome && outcome.grade ? (" (" + (GRADE_MAP[outcome.grade] || outcome.grade) + ")") : (expGrade ? (" (" + (GRADE_MAP[expGrade] || expGrade) + ")") : "");
               auLog(
                 "🎉 Đột phá thành công lên " +
                   realmName(runAfter.nhanVat.canhGioi) +
+                  gName +
                   "!",
                 "vk-ok",
               );
@@ -22278,6 +22503,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 UI.notify(
                   "🎉 Đột phá thành công lên " +
                     realmName(runAfter.nhanVat.canhGioi) +
+                    gName +
                     "!",
                 );
               } catch (e) {}
@@ -28012,9 +28238,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.10.3 · Đột Phá Auto Săn Dị Bảo (Cắm Trại Đích Danh & Quét Toàn Diện Di Tích)",
+            t: "Phiên Bản 7.11.0 · Thích Ứng Game Update (Bản Mệnh Cấp 5, Dị Văn & Dự Báo Phẩm Đột Phá)",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Hệ Thống Bản Mệnh & Dị Văn Cấp 5 (Level 0–4):</b> Đồng bộ 100% với bản cập nhật mới của game — nâng trần cấp văn Bản Mệnh lên Cấp 5 (NATAL_RUNE_MAX_LEVEL = 4), hỗ trợ nâng cấp bằng tỉ lệ ở bậc cao (Cấp 4–5), tích hợp xác suất Linh quang, nhận diện và hiển thị Dị Văn (Mutant Rune) kèm mô tả hiệu quả đột biến trực tiếp từ <code>core['character/natalRunes'].describeRune</code>.",
+              "<b>Cập Nhật Bảng Chỉ Số Văn & Hằng Số Cân Bằng Mới:</b> Cập nhật mảng giá trị 5 cấp cho toàn bộ 17 loại văn (Nhiễm 5 cấp: 0% → 18%, Chỉ số nội tại 5 cấp: 0.6 → 1.9, Hộ thể 5 cấp: 3% → 16%...), mở rộng cơ chế kiểm tra <code>K.bmRune</code> để nhận diện trọn vẹn mảng 5 phần tử từ game; cập nhật hệ số Dưỡng giai uy lực (0.5) và Tế huyết (uy 2x) theo bản cân bằng mới nhất.",
+              "<b>Dự Báo Chính Xác Phẩm Chất Đột Phá (Breakthrough Grade Preview):</b> Tích hợp hàm lõi <code>breakthroughGrade</code> của game vào Tab Đột Phá — dự báo trước chính xác 100% phẩm chất sẽ đạt được (Hoàn Mỹ, Thượng, Trung, Hạ) tương ứng với từng tổ hợp đan dược và nấc thiêu đốt thọ nguyên ngay thời điểm xung kích.",
+              "<b>Nâng Cấp Auto Tu Luyện Với Kết Quả Xung Kích Mới:</b> Đồng bộ kết quả xung kích <code>BreakthroughOutcome</code> mới của game engine: tự động nhận diện và cảnh báo sớm khi xuất hiện Trận Tâm Ma (<code>tam_ma</code>), cảnh báo khi bị quấy nhiễu (<code>disturbed</code>), và hiển thị chính xác phẩm chất đạt được ngay khi đột phá thành công.",
+              "<b>Mở Rộng Kết Nối Lõi Game (tuTien.core & tuTien.hud):</b> Đăng ký bổ sung 18 hàm / hằng số lõi mới của game (<code>breakthroughGrade</code>, <code>resolveBreakthrough</code>, <code>pillFitsRealm</code>, <code>isRuneMaxed</code>, <code>isRuneHighTier</code>, <code>runeUpgradeChance</code>, <code>describeRune</code>, <code>THONG_MACH_VUNG</code>, <code>luotMo</code>, <code>vungCuaBac</code>, <code>oTrongTam</code>, <code>bountyRealm</code>, <code>shopItemsAt</code>...); đồng thời tích hợp cầu nối trực tiếp tới Zustand store của HUD (<code>tuTien.hud</code>) và bộ điều khiển giao diện chuẩn <code>ui.gamePanel</code>.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.10.3 · Đột Phá Auto Săn Dị Bảo (Cắm Trại Đích Danh & Quét Toàn Diện Di Tích)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Cơ Chế Cắm Trại Đích Danh Di Tích (Camping Strategy):</b> Khi chưa có Dị Bảo nở, Auto Săn Dị Bảo sẽ tự động truyền tống / bay thẳng tới vị trí di tích của Dị Bảo mục tiêu (Tiên Vân Điện cho Tam Sinh Thạch, Kiếm Trạch cho Bất Chiết Kiếm, Lan Đài cho Càn Khôn Giới...), tiến vào nơi chốn và bế quan 'ngoài trời' ngay tại chỗ. Điều này trực tiếp kích hoạt hàm Đạo Diễn (<code>refreshPlaceEncounters</code>) của game engine tại mỗi chu kỳ năm, đẩy xác suất rút trúng sự kiện xuất thế lên tối đa (100% khi Pity ≥ 500) thay vì bế quan thụ động ở động phủ.",
               "<b>Quét Toàn Diện & Chuẩn Xác Di Tích (run.noiChon Scanner):</b> Khôi phục và nâng cấp bộ quét <code>run.noiChon</code> bao quát toàn bộ 16 Dị Bảo di tích kết hợp kiểm tra thời hạn 5 năm (<code>namLamMoi</code>), cờ hoàn tất (<code>flags</code>), hồi chiêu 120 năm (<code>history</code>) và túi đồ (<code>checkOwnedRelic</code>). Chấm dứt triệt để tình trạng sự kiện Dị Bảo đã xuất hiện tại di tích nhưng Tool không nhận diện được.",
@@ -28761,7 +28999,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           {
             t: "Phiên Bản 6.1.1",
             d: "31/10/2026",
-            now: true,
+            now: false,
             pts: [
               "<b>Đối chiếu source game 0.0.2 mới nhất:</b> toàn bộ hàm Trợ Lý nhận diện được, các hàm điều khiển của Auto vẫn còn, hằng số săn cạn và bốn mức Thương Thế vẫn khớp.",
               "<b>Sửa đọc ngưỡng chặn giữa đường:</b> game đặt hằng số này qua một tên khác nên bản trước chỉ dùng giá trị mặc định 30; nay Tool tự lần theo tên để đọc đúng giá trị thật (hiện vẫn là 30).",
