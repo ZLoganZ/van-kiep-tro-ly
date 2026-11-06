@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.12.0
+// @version      7.13.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.12.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.12.0";
+      var TOOL_VER = "7.13.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6949,7 +6949,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           [
             "au",
             "Tự Động",
-            ["atl", "atc", "asdb", "asy", "abb", "akm", "bis", "arr"],
+            ["atl", "atc", "asdb", "abb", "akm", "bis", "arr"],
           ],
         ];
         const grpOf = (k) => GROUPS.find((g) => g[2].includes(k)) || GROUPS[0];
@@ -7115,7 +7115,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               atc: tabAutoTacChien,
               asdb: tabAutoSdb,
               abb: tabAutoBuon,
-              asy: tabAutoSan,
+              asy: () => {
+                S.tab = "atl";
+                if (AU.cfg && AU.cfg.tl) {
+                  AU.cfg.tl.mode = "danh_quai";
+                  auSave();
+                }
+                tabAutoTuLuyen();
+              },
               akm: tabAutoKm,
               bis: tabBis,
               arr: tabAutoReroll,
@@ -20299,6 +20306,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             lhKeep: 0,
           },
           tl: {
+            mode: "be_quan", // "be_quan" | "danh_quai"
             targetRealm: 5,
             minSafeRate: 65,
             minTho: 10,
@@ -20309,6 +20317,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             autoThaMang: true,
             autoEnemyEscape: true,
             toc: "nhanh",
+            // Cấu hình khi chọn chế độ Đánh Quái (Săn Yêu):
+            maxY: 3,
+            mau: ["an_toan", "ngang_suc", "hiem"],
+            tran: 20,
+            thuong: 2,
+            kt: true,
+            neHac: true,
+            danhAi: true,
           },
           tc: {
             autoCombatOverlay: true,
@@ -20589,6 +20605,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (typeof AU.cfg.tl.autoEnemyEscape !== "boolean") {
             AU.cfg.tl.autoEnemyEscape = true;
           }
+          if (!["be_quan", "danh_quai"].includes(AU.cfg.tl.mode)) {
+            AU.cfg.tl.mode = "be_quan";
+          }
+          if (o.san) {
+            if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined) AU.cfg.tl.maxY = o.san.maxY;
+            if (o.tl && o.tl.tran === undefined && o.san.tran !== undefined) AU.cfg.tl.tran = o.san.tran;
+            if (o.tl && o.tl.thuong === undefined && o.san.thuong !== undefined) AU.cfg.tl.thuong = o.san.thuong;
+            if (o.tl && o.tl.kt === undefined && o.san.kt !== undefined) AU.cfg.tl.kt = o.san.kt;
+            if (o.tl && o.tl.neHac === undefined && o.san.neHac !== undefined) AU.cfg.tl.neHac = o.san.neHac;
+            if (o.tl && o.tl.danhAi === undefined && o.san.danhAi !== undefined) AU.cfg.tl.danhAi = o.san.danhAi;
+            if (o.tl && !o.tl.mau && o.san.mau) AU.cfg.tl.mau = o.san.mau;
+          }
+          AU.cfg.tl.mau = auMauNorm(AU.cfg.tl.mau || AU_DEF.tl.mau);
+          if (typeof AU.cfg.tl.neHac !== "boolean") AU.cfg.tl.neHac = true;
+          if (typeof AU.cfg.tl.danhAi !== "boolean") AU.cfg.tl.danhAi = true;
         }
         function auSave() {
           try {
@@ -22916,7 +22947,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             Cc = C();
           if (!has("taoBenTa", "taoBenDich", "tinhTocChien")) return null;
           const P = K.taoBenTa(nv, Cc);
-          const neHac = AU.cfg && AU.cfg.san && AU.cfg.san.neHac !== false;
+          const neHac =
+            AU.cfg &&
+            ((AU.cfg.tl && AU.cfg.tl.neHac !== false) ||
+              (AU.cfg.san && AU.cfg.san.neHac !== false));
           const defs = [...Cc.enemies.values()].filter(
             (e) =>
               e.loai === "yeu_thu" &&
@@ -22946,7 +22980,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
 
         // ═════════ AUTO TU LUYỆN & ĐỘT PHÁ TOÀN NĂNG ═════════
-        // Tự động hóa trọn gói: Bế Quan (Nhập Định) → Tích Lũy Tu Vi → Đột Phá Xung Kích → Trấn Áp Tâm Ma
+        // Tự động hóa trọn gói: Tích Lũy Tu Vi (Bế Quan Nhập Định hoặc Đánh Quái Săn Yêu) → Đột Phá Xung Kích → Trấn Áp Tâm Ma
         async function auTlStep(st) {
           const g = G(),
             cfg = AU.cfg.tl;
@@ -22959,10 +22993,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 "”, Auto đã đóng bằng nút Hủy để an toàn.",
             };
 
-          // 1. Kiểm tra việc dở (trận tâm ma / biến cố quấy bế quan)
-          const p = auPending(st, { hunt: false, danhAi: true, tl: true });
+          const isDanhQuai = cfg.mode === "danh_quai";
+
+          // 1. Kiểm tra việc dở (trận đánh quái / tâm ma / biến cố quấy bế quan)
+          const p = auPending(st, {
+            hunt: isDanhQuai,
+            mau: isDanhQuai ? cfg.mau : undefined,
+            neHac: isDanhQuai ? cfg.neHac !== false : false,
+            danhAi: isDanhQuai ? cfg.danhAi !== false : true,
+            tl: true,
+          });
           if (p !== "idle") {
             if (p === "ok") return null;
+            if (p.danger) {
+              const r = await auBypassConfirm();
+              if (r)
+                p.stop +=
+                  " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)";
+            }
             return p;
           }
 
@@ -23134,7 +23182,142 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return null;
           }
 
-          // ───── TIẾN HÀNH BẾ QUAN (NHẬP ĐỊNH) ─────
+          // ───── TÍCH LŨY TU VI (BẾ QUAN HOẶC ĐÁNH QUÁI) ─────
+          if (isDanhQuai) {
+            // === CHẾ ĐỘ ĐÁNH QUÁI (SĂN YÊU THÚ CÀY TU VI) ===
+            if (cfg.tran && st.fights >= cfg.tran)
+              return { stop: "Đã đánh đủ " + cfg.tran + " trận như đã đặt" };
+            if ((nv.thuongThe || 0) >= (cfg.thuong != null ? cfg.thuong : 2))
+              return {
+                stop:
+                  "Thương Thế đã tới mức " +
+                  AU_TT_TEN[Math.min(AU_TT_MAX, nv.thuongThe)] +
+                  ", dừng để bạn chữa thương",
+              };
+
+            const cLite = ctxLite();
+            const dNow = danger(cLite, run.viTri);
+            if (dNow && auRedPurple(dNow.id) && !auColorOK(dNow.id, cfg.mau)) {
+              const m = auMauOf(dNow.id),
+                r = await auBypassConfirm();
+              return {
+                stop:
+                  "Nơi đang đứng là " +
+                  m[0] +
+                  " (" +
+                  dNow.ten +
+                  "): ngoài màu đã chọn (" +
+                  auMauLabel(cfg.mau) +
+                  "). Dừng để bạn tự quyết định" +
+                  (r
+                    ? " (đã đóng bảng xác nhận “" +
+                      (r.title || "không tên") +
+                      "”)"
+                    : ""),
+                danger: dNow.id,
+              };
+            }
+
+            if (st.phase === "plan") {
+              st.phase = "run";
+              if (cfg.kt) {
+                const pw = auHuntPower();
+                if (pw && pw.n && pw.win < Math.ceil(pw.n * AU_KT))
+                  return {
+                    stop:
+                      "Kiểm tra sức: chỉ thắng chắc " +
+                      pw.win +
+                      "/" +
+                      pw.n +
+                      " yêu thú mẫu cùng cảnh giới, dưới mức " +
+                      Math.round(AU_KT * 100) +
+                      "%. Tăng sức hoặc tắt “Kiểm tra sức trước khi chạy” nếu vẫn muốn chạy",
+                  };
+              }
+            }
+
+            // Đang đứng nơi hoang dã săn được thì săn ngay
+            if (
+              auIsWild(cLite, run.viTri) &&
+              !st.bad.has(run.viTri) &&
+              auSanSpotOK(cLite, run.viTri, cfg) &&
+              g.canDo("ev.san_yeu")
+            ) {
+              if (cfg.neHac !== false && typeof g.huntTargets === "function") {
+                try {
+                  const tgs = g.huntTargets();
+                  if (
+                    Array.isArray(tgs) &&
+                    tgs.length > 0 &&
+                    tgs.every((t) => auIsHacEnemy(t.id, t.ten))
+                  ) {
+                    st.bad.add(run.viTri);
+                    auLog(
+                      "Nơi này chỉ có yêu thú Hạc, bỏ qua để giữ Khí Vận.",
+                      "vk-mu",
+                    );
+                    return null;
+                  }
+                } catch (e) {}
+              }
+              st.rngBeforeSan = run.rng;
+              const r = auCall(() => g.doAction("ev.san_yeu"));
+              if (!r.ok) {
+                st.bad.add(run.viTri);
+                auLog("Không săn được ở đây: " + r.err);
+              }
+              return null;
+            }
+
+            if (auIsWild(cLite, run.viTri) && !g.canDo("ev.san_yeu"))
+              st.bad.add(run.viTri);
+
+            // Hết lượt ở đây: sang nơi hoang dã khác gần nhất
+            const spots = auHuntSpots(cLite, cfg, st).filter(
+              (x) => x.slot !== run.viTri,
+            );
+            if (!spots.length) {
+              const sk = auSkipColor(cLite, cfg, st);
+              return {
+                stop:
+                  "Không còn nơi hoang dã thuộc màu đã chọn (" +
+                  auMauLabel(cfg.mau) +
+                  ") trong " +
+                  (cfg.maxY || 3) +
+                  " năm đường (đã săn cạn" +
+                  (sk ? ", bỏ qua " + sk + " nơi ngoài màu đã chọn" : "") +
+                  "). Chờ vài năm cho yêu thú hồi lại, nới bán kính hoặc chuyển sang Bế Quan.",
+              };
+            }
+            const t = spots[0];
+            const r = auCall(() => g.travelTo(t.slot));
+            const r2 = G().state.run;
+            if (
+              !r.ok ||
+              (r2.viTri !== t.slot && !r2.active && !r2.tran && !r2.bienCo)
+            ) {
+              st.bad.add(t.slot);
+              if (++st.tried >= 4)
+                return {
+                  stop:
+                    "Không đi tới được các nơi săn: " +
+                    (r.err || r2.thongBao || "bị chặn"),
+                };
+              return null;
+            }
+            st.tried = 0;
+            st.hacStreak = 0;
+            auLog(
+              "Tới " +
+                placeName(cLite, t.slot) +
+                " (" +
+                num(t.y) +
+                " năm) săn yêu cày tu vi.",
+            );
+            return null;
+          }
+
+          // === CHẾ ĐỘ BẾ QUAN (NHẬP ĐỊNH) ===
           if (!plan.here || plan.here.chan || !(plan.here.tuViNam > 0)) {
             const spots = await scanRetreat(c, 3, null);
             if (!spots || !spots.length) {
@@ -24802,6 +24985,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const el = q(id);
               return el ? !!el.checked : d;
             };
+            c.mode = sel("au-tl-mode", c.mode || "be_quan");
             c.targetRealm = Math.floor(
               num0("au-tl-realm", 1, 5, c.targetRealm),
             );
@@ -24820,6 +25004,42 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "au-tl-enemy-escape",
               c.autoEnemyEscape !== false,
             );
+            // Các tùy chọn khi chọn chế độ Đánh Quái (Săn Yêu):
+            c.maxY = num0("au-tl-maxy", 0.5, 30, c.maxY != null ? c.maxY : 3);
+            c.tran = Math.floor(
+              num0("au-tl-tran", 0, 9999, c.tran != null ? c.tran : 20),
+            );
+            c.thuong = Math.floor(
+              num0(
+                "au-tl-thuong",
+                1,
+                AU_TT_MAX,
+                c.thuong != null ? c.thuong : 2,
+              ),
+            );
+            const k = q("au-tl-kt");
+            if (k) c.kt = k.checked;
+            const nh = q("au-tl-nehac");
+            if (nh) c.neHac = nh.checked;
+            const da = q("au-tl-danh-ai");
+            if (da) c.danhAi = da.checked;
+            const m = AU_MAU_ID.filter((x) => {
+              const el = q("au-tl-mau-" + x);
+              return el ? el.checked : (c.mau || []).includes(x);
+            });
+            if (m.length > 0) c.mau = auMauNorm(m);
+            if (AU.cfg.san) {
+              Object.assign(AU.cfg.san, {
+                maxY: c.maxY,
+                tran: c.tran,
+                thuong: c.thuong,
+                kt: c.kt,
+                neHac: c.neHac,
+                danhAi: c.danhAi,
+                mau: c.mau,
+                toc: c.toc,
+              });
+            }
             auSave();
             return;
           }
@@ -24994,8 +25214,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 `<option value="${k}" ${v === k ? "selected" : ""}>${t[0]}</option>`,
             )
             .join("")}</select></label>`;
-        const auTTSel = (v) =>
-          `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>Dừng Khi Thương Thế Từ</span><select class="vk-sel" id="au-thuong" style="width:150px">${[
+        const auTTSel = (v, id = "au-thuong") =>
+          `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>Dừng Khi Thương Thế Từ</span><select class="vk-sel" id="${id}" style="width:150px">${[
             1, 2, 3,
           ]
             .filter((i) => i <= AU_TT_MAX)
@@ -25066,9 +25286,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               esc(realmName(Number(AU.cfg.tl.targetRealm || 5))),
             ]);
             rows.push([
-              "Số Năm Đã Bế Quan",
-              num(st.retreatYearsDone || 0) + " năm",
+              "Phương Thức Tu Luyện",
+              AU.cfg.tl.mode === "danh_quai"
+                ? "⚔️ Đánh Quái (Săn Yêu Thú)"
+                : "🧘 Bế Quan (Nhập Định)",
             ]);
+            if (AU.cfg.tl.mode === "danh_quai") {
+              rows.push([
+                "Số Trận Đã Đánh",
+                (st.fights || 0) + " (thắng " + (st.wins || 0) + ")",
+              ]);
+              if (st.hacSkipped) rows.push(["Số Lần Né Hạc", st.hacSkipped]);
+            } else {
+              rows.push([
+                "Số Năm Đã Bế Quan",
+                num(st.retreatYearsDone || 0) + " năm",
+              ]);
+            }
             rows.push(["Đột Phá Thành Công", (st.breakouts || 0) + " lần"]);
             if (st.breakoutFails)
               rows.push(["Đột Phá Thất Bại", st.breakoutFails + " lần"]);
@@ -25235,10 +25469,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           tu_dia:
             "Như Đỏ (kể cả “thần thức không dò ra”) nhưng là tử địa, rủi ro chết rất cao: chỉ tích khi bạn chắc chắn.",
         };
-        const auMauHtml = (mau) =>
+        const auMauHtml = (mau, prefix = "au-mau") =>
           AU_MAU_ID.map((k) => {
             const m = AU_MAU[k];
-            return `<label class="vk-lg" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="au-mau-${k}" ${mau.includes(k) ? "checked" : ""} style="margin-top:5px"><span class="vk-sw" style="background:${m[1]}">${m[0].charAt(0)}</span><span><b>${m[0]}</b> · ${esc(m[2])}<br><span class="vk-mu" style="font-size:12px">${esc(AU_MAU_ACT[k])}</span></span></label>`;
+            return `<label class="vk-lg" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="${prefix}-${k}" ${mau.includes(k) ? "checked" : ""} style="margin-top:5px"><span class="vk-sw" style="background:${m[1]}">${m[0].charAt(0)}</span><span><b>${m[0]}</b> · ${esc(m[2])}<br><span class="vk-mu" style="font-size:12px">${esc(AU_MAU_ACT[k])}</span></span></label>`;
           }).join("");
         // ═════════ AUTO REROLL TƯ CHẤT (LINH CĂN + THỂ CHẤT) ═════════
         // Game gieo Linh Căn và Thể Chất cùng lúc với cả kiếp mới, từ một "hạt giống" (seed): cùng hạt giống + cùng dữ liệu Vong Xuyên thì luôn ra đúng một nhân vật.
@@ -25968,15 +26202,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // ═════════ TAB AUTO TU LUYỆN & ĐỘT PHÁ (atl) ═════════
         function tabAutoTuLuyen() {
           const c = AU.cfg.tl;
+          const isDanhQuai = c.mode === "danh_quai";
           body.innerHTML = `
     <div class="vk-card"><h3>Auto Tu Luyện & Đột Phá</h3>
       <div class="vk-mu" style="font-size:13px">
-        Tự động hóa hoàn toàn chu trình tu tiên: <b>Bế Quan (Nhập Định) → Tích Lũy Tu Vi → Đột Phá Xung Kích → Trấn Áp Tâm Ma → Lên Cảnh Giới Tiếp Theo</b>.
-        Tool tự tính số năm nhập định tối ưu theo lượng tu vi thiếu tới Đại Viên Mãn, tự nuốt đan tu luyện và đan phá bình cảnh trong túi, tự tính combo đan có <b>tỉ lệ đột phá cao nhất</b>, kiểm tra ngưỡng an toàn trước khi xung kích để chống nổ đan, và tự dùng <b>Siêu AI Tác Chiến</b> để hạ gục Tâm Ma khi kiếp nạn ập tới!
+        Tự động hóa hoàn toàn chu trình tu tiên: <b>Tích Lũy Tu Vi (Bế Quan hoặc Đánh Quái) → Đột Phá Xung Kích → Trấn Áp Tâm Ma → Lên Cảnh Giới Tiếp Theo</b>.
+        Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự tính số năm tối ưu, nuốt đan tu luyện và đan phá bình cảnh) hoặc <b>Đánh Quái Săn Yêu</b> (tự động tới các bãi hoang dã quanh đây để săn yêu quái cày tu vi). Khi tu vi chạm trần hoặc Đại Viên Mãn, Tool tự động chọn combo đan có <b>tỉ lệ đột phá cao nhất</b>, kiểm tra ngưỡng an toàn, xung kích và dùng <b>Siêu AI Tác Chiến VIP</b> hạ gục Tâm Ma!
       </div>
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;font-size:13.5px">
+        <span><b>Phương Thức Tu Luyện (Tích Tu Vi)</b></span>
+        <select class="vk-sel" id="au-tl-mode" style="width:190px;font-weight:700">
+          <option value="be_quan" ${!isDanhQuai ? "selected" : ""}>🧘 Bế Quan (Nhập Định)</option>
+          <option value="danh_quai" ${isDanhQuai ? "selected" : ""}>⚔️ Đánh Quái (Săn Yêu)</option>
+        </select>
+      </label>
       <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px">
-        <span><b>Mục Tiêu Tu Luyện Tới Cảnh Giới</b></span>
-        <select class="vk-sel" id="au-tl-realm" style="width:160px">
+        <span><b>Mục Tiêu Đột Phá Tới Cảnh Giới</b></span>
+        <select class="vk-sel" id="au-tl-realm" style="width:190px">
           <option value="1" ${c.targetRealm === 1 ? "selected" : ""}>Trúc Cơ</option>
           <option value="2" ${c.targetRealm === 2 ? "selected" : ""}>Kim Đan</option>
           <option value="3" ${c.targetRealm === 3 ? "selected" : ""}>Nguyên Anh</option>
@@ -25987,9 +26229,32 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       ${auFld("au-tl-rate", "Tỉ Lệ Đột Phá An Toàn Tối Thiểu", c.minSafeRate, "(%)")}
       ${auFld("au-tl-tho", "Dừng Khi Thọ Nguyên Còn Dưới", c.minTho, "(năm)")}
       ${auTocSel(c.toc)}
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-cult-pills" ${c.useCultPills !== false ? "checked" : ""}> Tự nuốt Đan Tu Luyện trong túi khi bế quan</label>
+
+      <!-- KHỐI TÙY CHỌN BẾ QUAN -->
+      <div id="au-tl-be-quan-box" style="display:${!isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
+        <div style="font-weight:700;color:var(--acc);margin-bottom:6px">⚙️ Cài Đặt Bế Quan (Nhập Định)</div>
+        <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-cult-pills" ${c.useCultPills !== false ? "checked" : ""}> Tự nuốt Đan Tu Luyện trong túi khi bế quan</label>
+        <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-bottleneck" ${c.autoBreakBottleneck !== false ? "checked" : ""}> Tự nuốt Đan Phá Bình Cảnh khi chạm nấc</label>
+      </div>
+
+      <!-- KHỐI TÙY CHỌN ĐÁNH QUÁI (SĂN YÊU) -->
+      <div id="au-tl-danh-quai-box" style="display:${isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
+        <div style="font-weight:700;color:var(--acc);margin-bottom:6px">⚔️ Cài Đặt Đánh Quái (Săn Yêu Thú Cày Tu Vi)</div>
+        ${auFld("au-tl-maxy", "Mỗi Chặng Đi Tối Đa", c.maxY != null ? c.maxY : 3, "(năm)")}
+        <div style="margin:8px 0 4px">${auMauHtml(c.mau || ["an_toan", "ngang_suc", "hiem"], "au-tl-mau")}</div>
+        ${auFld("au-tl-tran", "Dừng Sau Số Trận (0 = không giới hạn, đánh tới khi viên mãn)", c.tran != null ? c.tran : 20)}
+        ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc... tự chọn Bỏ Đi khi gặp để không bị trừ Khí Vận)</span></span></label>
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-danh-ai" ${c.danhAi !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Dùng Siêu AI VIP tự đánh khi game khóa nút Tốc Chiến)</span></span></label>
+        <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-kt" ${c.kt ? "checked" : ""}> Kiểm Tra Sức Trước Khi Chạy (thắng chắc từ ${Math.round(AU_KT * 100)}% yêu thú mẫu)</label>
+        <button class="vk-btn sec" id="au-tl-chk-hunt" style="margin-top:6px;width:100%">🔍 Xem Sức Đánh & Các Bãi Săn Quanh Đây</button>
+        <div id="au-tl-hunt-info" style="margin-top:6px"></div>
+      </div>
+
+      <!-- KHỐI ĐỘT PHÁ & AN TOÀN CHUNG -->
+      <hr style="border:0;border-top:1px dashed var(--line);margin:10px 0">
+      <div style="font-weight:700;color:var(--acc);margin-bottom:6px">🛡️ Đột Phá & Xử Trí An Toàn</div>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-break-pills" ${c.useBreakPills !== false ? "checked" : ""}> Tự chọn combo Đan Đột Phá có tỉ lệ cao nhất</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-bottleneck" ${c.autoBreakBottleneck !== false ? "checked" : ""}> Tự nuốt Đan Phá Bình Cảnh khi chạm nấc</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-demons" ${c.autoBeatDemons !== false ? "checked" : ""}> Tự đánh trấn áp Tâm Ma / Quái quấy bế quan (dùng Siêu AI VIP)</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự tha mạng cho trộm cắp / kẻ đột kích động phủ khi bế quan, tránh bị dừng Auto</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-enemy-escape" ${c.autoEnemyEscape !== false ? "checked" : ""}> <b>Buông Tha Kẻ Tháo Chạy (enemy_escape):</b> Tự động chọn «Buông Tha / Bỏ Qua» khi kẻ địch tháo chạy, không dừng Auto</label>
@@ -25998,6 +26263,49 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     <div class="vk-card"><h3>Tiến Trình</h3><div id="au-st"></div></div>
     <div class="vk-card"><h3>Nhật Ký</h3><div id="au-lg"></div></div>`;
           auBind("tl");
+
+          const modeSel = body.querySelector("#au-tl-mode");
+          if (modeSel) {
+            modeSel.onchange = () => {
+              const isDq = modeSel.value === "danh_quai";
+              const bqBox = body.querySelector("#au-tl-be-quan-box");
+              const dqBox = body.querySelector("#au-tl-danh-quai-box");
+              if (bqBox) bqBox.style.display = !isDq ? "block" : "none";
+              if (dqBox) dqBox.style.display = isDq ? "block" : "none";
+              auReadCfg("tl");
+            };
+          }
+
+          const chkBtn = body.querySelector("#au-tl-chk-hunt");
+          if (chkBtn) {
+            chkBtn.onclick = () => {
+              auReadCfg("tl");
+              const box = body.querySelector("#au-tl-hunt-info");
+              try {
+                const c2 = ctxLite(),
+                  cfg = AU.cfg.tl,
+                  pw = auHuntPower();
+                const spots = auHuntSpots(c2, cfg, null).slice(0, 10);
+                box.innerHTML =
+                  (pw
+                    ? `<div class="vk-mu" style="font-size:13px;margin:8px 0">Cảnh giới <b>${esc(pw.realm)}</b>: thắng chắc <b>${pw.win}</b> · có thể thắng ${pw.maybe} · dễ thua ${pw.lose} (trên ${pw.n} yêu thú mẫu).</div>`
+                    : '<div class="vk-mu" style="font-size:13px;margin:8px 0">Chưa đo được sức (thiếu dữ liệu yêu thú hoặc hàm mô phỏng).</div>') +
+                  (spots.length
+                    ? `<table class="vk-t"><tr><th>Nơi</th><th>Đường</th><th>Lượt Săn</th></tr>${spots.map((x) => `<tr><td>${esc(placeName(c2, x.slot))}<br>${dangerTag(x.d)}</td><td>${yrs(x.y)}</td><td>${Math.floor(x.left)}</td></tr>`).join("")}</table>`
+                    : '<div class="vk-mu" style="font-size:13px">Không có nơi hoang dã nào thuộc màu đã chọn (' +
+                      esc(auMauLabel(cfg.mau)) +
+                      ") trong bán kính đã đặt.</div>") +
+                  (() => {
+                    const sk = auSkipColor(c2, cfg, null);
+                    return sk
+                      ? `<div class="vk-mu" style="font-size:12px;margin-top:6px">Bỏ qua ${sk} nơi hoang dã ngoài màu đã chọn (Auto không tới).</div>`
+                      : "";
+                  })();
+              } catch (e) {
+                box.innerHTML = errBox(e);
+              }
+            };
+          }
         }
 
         // ═════════ TAB SIÊU AI TÁC CHIẾN VIP (atc) ═════════
@@ -26600,52 +26908,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
 
         function tabAutoSan() {
-          const c = AU.cfg.san;
-          body.innerHTML = `
-    <div class="vk-card"><h3>Auto Săn Yêu</h3>
-      <div class="vk-mu" style="font-size:13px">Tự đi qua các nơi hoang dã quanh đây, làm việc <b>Săn Yêu</b> ở từng nơi cho tới khi cạn lượt (tối đa ${AU_T4} lần mỗi nơi, hồi 1 lần mỗi ${AU_ZAN} năm), rồi sang nơi kế tiếp. Màu nguy hiểm đọc đúng như game tô. <b>Tích các màu Auto được phép đi tới và giao chiến</b> (mặc định Xanh, Vàng và Đỏ; Tím thì dừng); màu không tích thì Auto bỏ qua nơi đó, còn gặp giữa đường (nơi đang đứng, lựa chọn giao chiến hay trận đang mở) thì tự phát hiện, đóng bảng xác nhận của game bằng nút Hủy (không bao giờ bấm đồng ý) rồi dừng. <b>Tốc Chiến chỉ dùng được khi game dự đoán thắng</b>, nên trận Đỏ hoặc Tím (dự đoán thua) Auto không tự đánh tay: nó dừng ngay khi trận mở để bạn tự đánh trong game. Việc lạ hay cần bạn chọn cũng dừng ngay. Dừng khi <b>Thương Thế</b> tới mức bạn chọn (${AU_TT_TEN.slice(1, AU_TT_MAX + 1).join(" · ")}). Mỗi trận và mỗi chặng đường đều tốn năm tuổi thọ.</div>
-      ${auFld("au-maxy", "Mỗi Chặng Đi Tối Đa", c.maxY, "(năm)")}
-      <div style="margin:8px 0 4px">${auMauHtml(c.mau)}</div>
-      ${auTocSel(c.toc)}
-      ${auFld("au-tran", "Dừng Sau Số Trận", c.tran)}
-      ${auTTSel(c.thuong)}
-      ${auFld("au-tho", "Dừng Khi Thọ Nguyên Còn Dưới", c.tho, "(năm)")}
-      <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc, Thanh Vũ Hạc, Lăng Vân Hạc, Đan Đỉnh Hạc, Cửu Cao Tiên Hạc… — tự chọn Bỏ Đi khi gặp để khỏi bị trừ Khí Vận)</span></span></label>
-      <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-danh-ai" ${c.danhAi !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Gặp quái Tinh Anh/Boss hoặc máu có lúc &lt; 60% khiến game khóa nút Tốc Chiến: Auto tự động vào giao chiến và dùng AI đánh trận tới khi thắng để không bị dừng)</span></span></label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-kt" ${c.kt ? "checked" : ""}> Kiểm Tra Sức Trước Khi Chạy (cần thắng chắc từ ${Math.round(AU_KT * 100)}% yêu thú mẫu cùng cảnh giới)</label>
-      ${auControls()}
-      <button class="vk-btn sec" id="au-chk" style="margin-top:6px">Xem Sức Và Các Nơi Săn Được</button><div id="au-info"></div></div>
-    <div class="vk-card"><h3>Tiến Trình</h3><div id="au-st"></div></div>
-    <div class="vk-card"><h3>Nhật Ký</h3><div id="au-lg"></div></div>`;
-          auBind("san");
-          body.querySelector("#au-chk").onclick = () => {
-            auReadCfg("san");
-            const box = body.querySelector("#au-info");
-            try {
-              const k = S.core,
-                c2 = ctx(),
-                cfg = AU.cfg.san,
-                pw = auHuntPower();
-              const spots = auHuntSpots(c2, cfg, null).slice(0, 10);
-              box.innerHTML =
-                (pw
-                  ? `<div class="vk-mu" style="font-size:13px;margin:8px 0">Cảnh giới <b>${esc(pw.realm)}</b>: thắng chắc <b>${pw.win}</b> · có thể thắng ${pw.maybe} · dễ thua ${pw.lose} (trên ${pw.n} yêu thú mẫu).</div>`
-                  : '<div class="vk-mu" style="font-size:13px;margin:8px 0">Chưa đo được sức (thiếu dữ liệu yêu thú hoặc hàm mô phỏng).</div>') +
-                (spots.length
-                  ? `<table class="vk-t"><tr><th>Nơi</th><th>Đường</th><th>Lượt Săn</th></tr>${spots.map((x) => `<tr><td>${esc(placeName(c2, x.slot))}<br>${dangerTag(x.d)}</td><td>${yrs(x.y)}</td><td>${Math.floor(x.left)}</td></tr>`).join("")}</table>`
-                  : '<div class="vk-mu" style="font-size:13px">Không có nơi hoang dã nào thuộc màu đã chọn (' +
-                    esc(auMauLabel(cfg.mau)) +
-                    ") trong bán kính đã đặt.</div>") +
-                (() => {
-                  const sk = auSkipColor(c2, cfg, null);
-                  return sk
-                    ? `<div class="vk-mu" style="font-size:12px;margin-top:6px">Bỏ qua ${sk} nơi hoang dã ngoài màu đã chọn (Auto không tới).</div>`
-                    : "";
-                })();
-            } catch (e) {
-              box.innerHTML = errBox(e);
-            }
-          };
+          S.tab = "atl";
+          if (AU.cfg && AU.cfg.tl) {
+            AU.cfg.tl.mode = "danh_quai";
+            auSave();
+          }
+          tabAutoTuLuyen();
         }
         function tabAutoBuon() {
           const c = AU.cfg.buon;
@@ -29163,9 +29431,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.12.0 · Đại Tu Toàn Diện Giao Diện Tab Auto Săn Dị Bảo & Tự Động Quick Save Trước Trận",
+            t: "Phiên Bản 7.13.0 · Gộp Toàn Diện Auto Tu Luyện & Săn Yêu (Tùy Chọn Bế Quan Hoặc Đánh Quái Cày Tu Vi)",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Hợp Nhất Auto Tu Luyện & Auto Săn Yêu:</b> Nhận thấy đánh yêu thú cũng nhằm mục đích tích lũy tu vi và tài nguyên đột phá, Tool chính thức gộp toàn bộ tính năng Săn Yêu vào Tab Auto Tu Luyện (atl), mang lại trải nghiệm tu tiên liền mạch và tinh gọn.",
+              "<b>Tùy Chọn Phương Thức Tu Luyện Linh Hoạt:</b> Người chơi có thể tự do chuyển đổi giữa 2 chế độ: <b>Bế Quan (Nhập Định)</b> (tự nuốt đan tu luyện, tự giải phóng bình cảnh, tính số năm tối ưu) hoặc <b>Đánh Quái (Săn Yêu)</b> (tự động tới các bãi hoang dã quanh khu vực, kiểm tra sức đánh, tự Tốc Chiến hoặc dùng Siêu AI VIP nghênh chiến, né chim Hạc giữ Khí Vận).",
+              "<b>Tự Động Đột Phá Khi Tu Vi Chạm Trần:</b> Dù tu luyện bằng hình thức Bế Quan hay Đánh Quái, ngay khi tu vi đạt mức viên mãn hoặc chạm ngưỡng đại cảnh giới, Tool sẽ tự động chuyển sang quy trình Đột Phá: tính toán combo đan dược có tỉ lệ thành công cao nhất, kiểm tra ngưỡng an toàn chống nổ đan, xung kích cảnh giới và dùng Siêu AI VIP hạ gục Tâm Ma khi kiếp nạn xuất hiện.",
+              "<b>Giao Diện Điều Khiển Thông Minh & Chuyển Đổi Mượt Mà:</b> Bảng cấu hình tự động ẩn/hiện các khối chức năng tương ứng theo chế độ được chọn, tích hợp nút <i>«🔍 Xem Sức Đánh & Các Bãi Săn Quanh Đây»</i> trực quan.",
+              "<b>Tinh Gọn Thanh Tab Tự Động:</b> Loại bỏ tab Săn Yêu riêng lẻ để thanh điều hướng gọn gàng, đồng thời duy trì cơ chế chuyển hướng tương thích ngược 100%."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.12.0 · Đại Tu Toàn Diện Giao Diện Tab Auto Săn Dị Bảo & Tự Động Quick Save Trước Trận",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Giao Diện Dashboard Săn Bảo Hiện Đại:</b> Tái thiết kế toàn bộ Tab Auto Săn Dị Bảo thành giao diện bảng điều khiển trực quan. Tích hợp thanh trạng thái nổi bật, bộ chỉ số tổng quan nhanh (Đã Có Trong Kiếp, Bảo Lục Luân Hồi, Đang Chọn Săn, Đang Nở Trên Map) cùng các nút thao tác nhanh (Bắt Đầu, Dừng, Lưu Cấu Hình, Quick Save, Quét Lại).",
               "<b>Radar & Trinh Sát Bản Đồ Thời Gian Thực (Live Radar):</b> Tự động hiển thị ngay khi mở tab mà không cần bấm nút quét thủ công. Nhận diện lập tức các Dị Bảo đang nở rộ trên thế giới kèm nút [⚡ Truyền Tống] và [🚀 Bay Tới] trực tiếp. Khi chưa có Dị Bảo nở, hiển thị tiến độ Pity 500 năm trực quan cùng Top 3 tọa độ cắm trại đắc địa nhất (có nút [🏕️ Cắm Trại] 1-chạm).",
