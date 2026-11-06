@@ -215,9 +215,13 @@ Tính năng mới được bổ sung từ bản 7.0.4 để phục vụ nhu cầ
 
 ---
 
-## 5. QUY TRÌNH ĐỒNG BỘ KHI GAME CẬP NHẬT (KHI THƯ MỤC `vi_du/` ĐƯỢC TẢI MỚI)
+## 5. QUY TRÌNH ĐỒNG BỘ KHI GAME CẬP NHẬT (KHI THƯ MỤC `vi_du/` HOẶC BUNDLE ĐƯỢC TẢI MỚI)
 
-Mỗi khi web game ra bản cập nhật mới, người dùng sẽ tải gói template mới đè vào thư mục `vi_du/`. Để kiểm tra và điều chỉnh `van_kiep_tro_ly_user.js` tương thích với bản game mới, hãy thực hiện theo đúng 5 bước sau:
+Mỗi khi web game ra bản cập nhật mới, thực hiện quy trình điều tra chuẩn xác theo **Mục 5 trong `AGENTS.md`**:
+- **Bắt buộc dọn dẹp thư mục `scratch/` trước khi tải mới:** Xóa toàn bộ file bundle/zip/script nháp cũ, chỉ giữ 1 bản mốc `old_*` để diff.
+- **Sau khi hoàn tất cập nhật:** Xóa các script tạm, chỉ lưu bộ source mới nhất (`latest_game_bundle.js`, `latest_template_extracted`, `latest_template.zip`, `latest_content.json`) làm chuẩn.
+
+Các bước kiểm tra và điều chỉnh `van_kiep_tro_ly_user.js` tương thích với bản game mới:
 
 ### Bước 1: Đọc `vi_du/doi-api.md`
 * Xem các dòng trên cùng của file `doi-api.md`. Tác giả game sẽ ghi rõ:
