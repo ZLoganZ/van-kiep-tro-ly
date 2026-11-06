@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.6.0
+// @version      7.6.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý & Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.5.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.6.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.6.0';
+  var TOOL_VER = '7.6.1';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7308,7 +7308,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       }
     }
 
-    // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection)
+    // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection - Toàn Diện 100% Không Bỏ Chiêu)
     const skills = ta.chieu || [];
     const curRound = tran.hiep || 1;
     const usableSkills = skills.filter((c) => {
@@ -7328,32 +7328,69 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       return true;
     });
 
-    // 5A. Buff / Hỗ trợ: Nếu chưa bộc phát và có chiêu buff
+    // 5A. Tự Động Bù Mana Nếu Có Chiêu Chưa Tung Được Chỉ Vì Thiếu Linh Lực
+    // Nếu trong bộ chiêu có chiêu chưa dùng được do cạn linh lực, và trong túi có đan hồi mana -> nuốt ngay!
+    const outOfManaSkills = skills.filter((c) => {
+      if (!c || !c.id || failedActions.has('chieu:' + c.id)) return false;
+      const onCd = ta.hoi && ta.hoi[c.id] && ta.hoi[c.id] > curRound;
+      return !onCd && (c.phi || 0) > (ta.linhLuc || 0);
+    });
+    if (outOfManaSkills.length > 0 && canUseItem && !ta.danLuotNay && ta.tui) {
+      for (const [id, count] of Object.entries(ta.tui)) {
+        if (!count || count <= 0 || failedActions.has('dan:' + id)) continue;
+        const it = Cc.items && Cc.items.get(id);
+        if (!it || it.loai !== 'dan_duoc' || !it.tran) continue;
+        if (it.tran.linh_luc && it.tran.linh_luc > 0 && !it.tran.bo_chay) {
+          return { loai: 'dan', item: it.id, so: 1 };
+        }
+      }
+    }
+
+    // 5B. Buff / Hỗ trợ: Nếu chưa bộc phát và có chiêu buff
     if (usableSkills.length > 0 && cfg.comboSequence !== false && !ta.bocPhatDen) {
-      const buffSkill = usableSkills.find((c) => (c.dang === 'buff' || c.dang === 'ho_tro' || /bộc phát|tăng công|cuồng nộ/i.test(c.ten || '')));
+      const buffSkill = usableSkills.find((c) => (c.dang === 'buff' || c.dang === 'ho_tro' || /bộc phát|tăng công|cuồng nộ|hóa thần/i.test(c.ten || '')));
       if (buffSkill) {
         return { loai: 'chieu', id: buffSkill.id };
       }
     }
 
-    // 5B. Khống chế ngắt chiêu địch khi địch chuẩn bị tung đòn nặng
+    // 5C. Phòng Thủ / Hộ Thuẫn (Shield Skills): Khi chưa có khiên hoặc khiên mỏng -> Luôn dựng khiên!
+    if (usableSkills.length > 0) {
+      const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
+      if (curShield < ta.khiHuyetToiDa * 0.35) {
+        const shieldSkill = usableSkills.find((c) => c.dang === 'thu' || /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp/i.test(c.ten || ''));
+        if (shieldSkill) {
+          return { loai: 'chieu', id: shieldSkill.id };
+        }
+      }
+    }
+
+    // 5D. Hồi Phục (Heal Skills): Khi mất máu -> Luôn tung chiêu hồi phục!
+    if (usableSkills.length > 0 && ta.khiHuyet < ta.khiHuyetToiDa * 0.9) {
+      const healSkill = usableSkills.find((c) => c.dang === 'hoi_phuc' || /hồi|trị thương|sinh cơ|trường sinh/i.test(c.ten || ''));
+      if (healSkill) {
+        return { loai: 'chieu', id: healSkill.id };
+      }
+    }
+
+    // 5E. Khống Chế (Control Skills): Ngắt chiêu địch / khóa tay
     const isImmune = (target.controlImmunity && target.controlImmunity > 0) || (target.mienDen && target.mienDen >= curRound);
-    if (!isImmune && cfg.smartCc !== false && usableSkills.length > 0) {
-      const ccSkill = usableSkills.find((c) => (c.controlChance && c.controlChance > 0) || (c.controlTurns && c.controlTurns > 0) || /choáng|định thân|trầm mặc|trói/i.test(c.ten || ''));
+    if (!isImmune && cfg.smartCc !== false && usableSkills.length > 0 && !target.khongChe) {
+      const ccSkill = usableSkills.find((c) => c.dang === 'khong_che' || (c.controlChance && c.controlChance > 0) || (c.controlTurns && c.controlTurns > 0) || /choáng|định thân|trầm mặc|trói|đóng băng/i.test(c.ten || ''));
       if (ccSkill) {
         return { loai: 'chieu', id: ccSkill.id };
       }
     }
 
-    // 5C. TẬN DỤNG QUYỀN CƯỚC DỨT ĐIỂM (Normal Attack Finisher)
-    // Nếu địch còn ít máu có thể chết ngay bằng Quyền Cước -> Đánh thường luôn để tiết kiệm 100% mana và giữ chiêu cho hiệp sau!
+    // 5F. Quyền Cước Dứt Điểm (Finisher):
+    // Nếu địch còn ít máu có thể chết ngay bằng Quyền Cước -> Đánh thường luôn để tiết kiệm 100% mana!
     if (cfg.autoNormalAttack !== false && !ta.daDanhThuong && !failedActions.has('danh_thuong')) {
       if ((target.khiHuyet || 0) <= estNormalDmg) {
         return { loai: 'danh_thuong' };
       }
     }
 
-    // 5D. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
+    // 5G. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
     if (!tran.natalUsed && usableSkills.length > 0) {
       const natalSkill = usableSkills.find((c) => c.natal);
       if (natalSkill) {
@@ -7361,7 +7398,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       }
     }
 
-    // 5E. Chiêu Tấn Công Tối Ưu (Khắc hệ & Mana Efficiency)
+    // 5H. Chiêu Tấn Công Tối Ưu (Khắc hệ & Mana Efficiency)
     const attackSkills = usableSkills.filter((c) => c.dang === 'cong' || c.uy > 0 || !c.dang);
     if (attackSkills.length > 0) {
       const scored = attackSkills.map((c) => {
@@ -7381,6 +7418,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       return { loai: 'chieu', id: scored[0].c.id };
     }
 
+    // 5I. Fallback Toàn Diện: Tung Nốt BẤT KỲ Chiêu Nào Còn Dùng Được Trong UsableSkills (Không Bỏ Chiêu!)
+    if (usableSkills.length > 0) {
+      return { loai: 'chieu', id: usableSkills[0].id };
+    }
+
     // 6. QUYỀN CƯỚC MIỄN PHÍ MỖI LƯỢT (Basic Attack - danh_thuong)
     // Sau khi đã tung hết chiêu (hoặc không còn chiêu nào dùng được), luôn vung Quyền Cước trước khi kết lượt
     if (cfg.autoNormalAttack !== false && !ta.daDanhThuong && !failedActions.has('danh_thuong')) {
@@ -7391,9 +7433,83 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return { loai: 'ket_luot' };
   }
 
-  // Đánh tự động bằng AI trong trận khi game không cho Tốc Chiến (hoặc do người chơi kích hoạt)
+  let combatStepTimer = null;
+
+  // Đánh tự động bằng AI trong trận với nhịp độ trực quan (Visual Pacing: 200ms) để người chơi nhìn rõ từng đòn
   // singleAction: true nếu người chơi bấm "Đánh 1 Đòn" -> chỉ chạy đúng 1 hành động rồi dừng để quan sát
   function auFightStep(singleAction) {
+    const g = G(), c = C();
+    if (!g) return 'idle';
+    let tran = g.state.run && g.state.run.tran;
+    if (!tran) return 'idle';
+    if (tran.ketThuc) {
+      if (combatStepTimer) { clearTimeout(combatStepTimer); combatStepTimer = null; }
+      return 'ok';
+    }
+    if (tran.luot !== 'ta') return 'idle';
+
+    const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
+    const failedActions = new Set();
+
+    if (singleAction) {
+      let act = smartCombatAction(tran, c, cfg, failedActions);
+      if (!act) {
+        if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false) {
+          act = { loai: 'danh_thuong' };
+        } else {
+          act = { loai: 'ket_luot' };
+        }
+      }
+      auCall(() => g.hanhDongTran(act));
+      return 'ok';
+    }
+
+    let act = smartCombatAction(tran, c, cfg, failedActions);
+    if (!act) {
+      if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
+        act = { loai: 'danh_thuong' };
+      } else {
+        act = { loai: 'ket_luot' };
+      }
+    }
+
+    const r = auCall(() => g.hanhDongTran(act));
+    tran = g.state.run && g.state.run.tran;
+
+    if (!r.ok) {
+      if (act.loai === 'chieu') failedActions.add('chieu:' + act.id);
+      else if (act.loai === 'dan') failedActions.add('dan:' + act.item);
+      else if (act.loai === 'danh_thuong') failedActions.add('danh_thuong');
+      else if (act.loai === 'muc_tieu') failedActions.add('muc_tieu:' + act.ma);
+
+      if (tran && tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
+        auCall(() => g.hanhDongTran({ loai: 'danh_thuong' }));
+      } else {
+        auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
+      }
+      return 'ok';
+    }
+
+    if (!tran || tran.ketThuc || act.loai === 'ket_luot') {
+      if (combatStepTimer) { clearTimeout(combatStepTimer); combatStepTimer = null; }
+      return 'ok';
+    }
+
+    if (combatAutoActive) {
+      if (combatStepTimer) clearTimeout(combatStepTimer);
+      combatStepTimer = setTimeout(() => {
+        combatStepTimer = null;
+        const liveTran = g.state.run && g.state.run.tran;
+        if (combatAutoActive && liveTran && !liveTran.ketThuc && liveTran.luot === 'ta') {
+          auFightStep(false);
+        }
+      }, 200);
+    }
+    return 'ok';
+  }
+
+  // Đánh tự động tức thì (Zero-delay) dùng cho Auto Săn Yêu / Auto Tháp chạy ngầm trong auPending
+  function auFightInstant() {
     const g = G(), c = C();
     if (!g) return 'idle';
     let tran = g.state.run && g.state.run.tran;
@@ -7402,47 +7518,31 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (tran.luot !== 'ta') return 'idle';
 
     const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
-    let actionsThisTick = 0;
-    const failedActions = new Set();
-
-    while (tran && !tran.ketThuc && tran.luot === 'ta' && actionsThisTick < 10) {
-      actionsThisTick++;
-      let act = smartCombatAction(tran, c, cfg, failedActions);
+    let iters = 0;
+    const failed = new Set();
+    while (tran && !tran.ketThuc && tran.luot === 'ta' && iters < 12) {
+      iters++;
+      let act = smartCombatAction(tran, c, cfg, failed);
       if (!act) {
-        if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
+        if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failed.has('danh_thuong')) {
           act = { loai: 'danh_thuong' };
         } else {
           act = { loai: 'ket_luot' };
         }
       }
-
       const r = auCall(() => g.hanhDongTran(act));
       tran = g.state.run && g.state.run.tran;
-
       if (!r.ok) {
-        // Ghi nhận hành động lỗi để tránh lặp vô hạn
-        if (act.loai === 'chieu') failedActions.add('chieu:' + act.id);
-        else if (act.loai === 'dan') failedActions.add('dan:' + act.item);
-        else if (act.loai === 'danh_thuong') failedActions.add('danh_thuong');
-        else if (act.loai === 'muc_tieu') failedActions.add('muc_tieu:' + act.ma);
+        if (act.loai === 'chieu') failed.add('chieu:' + act.id);
+        else if (act.loai === 'dan') failed.add('dan:' + act.item);
+        else if (act.loai === 'danh_thuong') failed.add('danh_thuong');
 
-        // Nếu còn quyền cước chưa đánh và lỗi không phải từ quyền cước, thử vung quyền cước trước khi kết lượt
-        if (tran && tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
-          const rQ = auCall(() => g.hanhDongTran({ loai: 'danh_thuong' }));
-          if (!rQ.ok) failedActions.add('danh_thuong');
-          tran = g.state.run && g.state.run.tran;
+        if (tran && tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failed.has('danh_thuong')) {
+          auCall(() => g.hanhDongTran({ loai: 'danh_thuong' }));
         }
-
-        // Nếu đã thử nhiều lần mà vẫn lỗi hoặc hành động là kết lượt thì kết thúc lượt an toàn
-        if (failedActions.size >= 4 || act.loai === 'ket_luot') {
-          const rKet = auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
-          return rKet.ok ? 'ok' : { stop: 'Lỗi trận đấu: ' + (r.err || rKet.err) };
-        }
-        continue;
+        auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
+        break;
       }
-
-      if (!tran || tran.ketThuc) return 'ok';
-      if (singleAction) break;
       if (act.loai === 'ket_luot') break;
     }
     return 'ok';
@@ -7452,7 +7552,29 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   let combatAutoActive = false;
   let combatOverlayEl = null;
 
+  // Đồng bộ cấu hình Auto của game gốc trong localStorage để nếu người chơi bấm nút "Tự" của game thì game vẫn cắn đan & dùng phù
+  function syncGameCombatAutomation() {
+    try {
+      const raw = localStorage.getItem('tu-tien:combat-automation');
+      let c = raw ? JSON.parse(raw) : {};
+      c.usePills = true;
+      c.useTalismans = true;
+      c.autoEndTurn = true;
+      c.useInnate = true;
+      if (!c.pillRules) {
+        c.pillRules = { healBelow: 0.45, spiritBelow: 0.25, maxGrade: 0, burstOn: 'strong' };
+      } else {
+        c.pillRules.spiritBelow = Math.max(c.pillRules.spiritBelow || 0, 0.25);
+      }
+      if (!c.talismanRules) {
+        c.talismanRules = { shieldBelow: 0.5, maxGrade: 0, controlOn: 'strong', attackOn: 'strong' };
+      }
+      localStorage.setItem('tu-tien:combat-automation', JSON.stringify(c));
+    } catch (e) {}
+  }
+
   function updateCombatOverlay() {
+    syncGameCombatAutomation();
     const g = G();
     const run = g && g.state && g.state.run;
     const inCombat = !!(run && run.tran && run.tran.daGiaoChien && !run.tran.ketThuc);
@@ -7539,7 +7661,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         if (!opt.danhAi) {
           return { stop: 'Trận đang giao chiến dở. Hãy đánh xong trong game rồi bấm chạy tiếp.' };
         }
-        return auFightStep(false);
+        return auFightInstant();
       }
       const p = g.duKienTran();
       if (!p) return { stop: 'Không đọc được dự đoán của trận đang mở. Dừng để bạn tự đánh trong game.' };
@@ -9903,7 +10025,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.6.0 · Đại Tu Siêu AI Tác Chiến: Sửa Lỗi Đan Dược, Khôi Phục Quyền Cước & Tác Chiến Hoàn Hảo', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.6.1 · Tối Ưu Nhịp Đánh Trực Quan, Khắc Phục Bỏ Chiêu & Tự Động Hồi Linh Lực', d: '06/11/2026', now: true, pts: [
+                '<b>Khắc Phục Triệt Để Bỏ Chiêu & Kết Lượt Sớm:</b> Bổ sung hỗ trợ đầy đủ các hệ chiêu thức dạng Khiên Hộ Thuẫn (<code>thu</code>), Trị Liệu Hồi Máu (<code>hoi_phuc</code>), Khống Chế (<code>khong_che</code>) thay vì chỉ lọc chiêu công như trước, kèm cơ chế xả vét toàn bộ kỹ năng khả dụng trước khi chuyển lượt.',
+                '<b>Tự Động Bơm Đan Linh Lực Khi Thiếu Mana:</b> Tự phát hiện kỹ năng chưa hồi chiêu nhưng bị kẹt do thiếu linh lực để ưu tiên cắn ngay Đan Linh Lực trong lượt và tiếp tục xả chiêu.',
+                '<b>Nhịp Đánh Trực Quan (Visual Combat Pacing - Delay 200ms):</b> Tách biệt các hành động chiến đấu trực tiếp trên màn hình theo từng nhịp 200ms, giúp engine đồ họa Pixi.js kịp vẽ hoạt ảnh quyền cước, hiệu ứng chiêu và số nhảy sát thương.',
+                '<b>Bảo Đảm Luôn Tung Quyền Cước (danh_thuong):</b> Tuyệt đối không kết thúc lượt khi chưa tung đòn đánh thường miễn phí nếu quái đối thủ vẫn còn sống.',
+                '<b>Đồng Bộ Cấu Hình Nút Tự Của Game:</b> Tự động ghi đè kích hoạt đan dược và bùa chú vào <code>localStorage["tu-tien:combat-automation"]</code> để nút Tự mặc định của game không bị lỏ.'
+            ] },
+            { t: 'Phiên Bản 7.6.0 · Đại Tu Siêu AI Tác Chiến: Sửa Lỗi Đan Dược, Khôi Phục Quyền Cước & Tác Chiến Hoàn Hảo', d: '06/11/2026', now: false, pts: [
                 '<b>Sửa Triệt Để Lỗi Không Dùng Đan Dược (dan_duoc):</b> Bóc tách trực tiếp mã nguồn game mới nhất, thay thế hoàn toàn bộ lọc regex cũ bằng thuộc tính chuẩn xác của lõi game (<code>it.tran.khi_huyet</code> cho đan hồi máu, <code>it.tran.linh_luc</code> cho đan hồi mana, <code>it.tran.bao_phat</code> cho đan tăng sát thương). Kết nối trực tiếp vào các hàm lõi <code>estimatePillRestore</code>, <code>chanDungDo</code>, và <code>pillWasted</code>.',
                 '<b>Tính Đúng Cơ Chế Dược Kháng & Nuốt Nhiều Viên (so: n):</b> Sửa công thức dược kháng lũy thừa thực tế <code>(1 - retention^exp) * 100%</code> thay vì so sánh nhầm số mũ với %, đồng thời tự động vượt trần kháng đan khi máu nguy kịch (&lt; 20%) để bảo toàn tính mạng. Tự động tính toán lượng máu thiếu để nuốt đúng số lượng viên cần thiết (<code>so: n</code>) giúp hồi phục thần tốc trong 1 lượt.',
                 '<b>Khôi Phục Triệt Để Quyền Cước (danh_thuong):</b> Sửa lỗi nghiêm trọng khiến quyền cước bị bỏ quên: sửa cơ chế chọn mục tiêu tự động chuyển sang quái sống khi mục tiêu hiện tại ngã xuống (loại bỏ lỗi "Không còn ai để nhắm" làm ngắt lượt); dệt đòn đánh thường miễn phí 0 linh lực vào đúng thời điểm sau khi buff bộc phát; tích hợp cơ chế <b>Quyền Cước Dứt Điểm</b> (kết liễu ngay quái yếu máu bằng đánh thường để tiết kiệm 100% linh lực và bảo lưu chiêu thức lớn).',
