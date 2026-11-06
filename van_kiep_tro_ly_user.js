@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.0
+// @version      7.8.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.0";
+      var TOOL_VER = "7.8.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -8591,6 +8591,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     <div style="background:var(--bg3);padding:4px 8px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:center;gap:6px">
                       <span>📍 <b>${esc(cp.e.dia)}</b> (${esc(relInf.ten || cp.e.relic)}${pctStr})</span>
                       ${isHere ? '<span class="vk-ok" style="font-size:11px">Đang ở đây ✓</span>' : diaSlot != null ? `<button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(cp.e.dia)}" style="padding:2px 6px;font-size:10.5px;margin:0">Đi đến</button>` : ""}
+                      <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(cp.e.relic)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:2px 6px;font-size:10.5px;margin:0;border:none;border-radius:3px;cursor:pointer" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn</button>
                     </div>
                   `;
                   })
@@ -8637,6 +8638,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     ${walkRisk ? `<div class="vk-bad" style="font-size:11.5px;margin-top:2px">⚠️ Đi bộ (${num(y)} năm) sẽ quá hạn sự kiện (${r.nodeLeft} năm)! Hãy dùng truyền tống phù/trận.</div>` : ""}
                   </div>
                   <div style="display:flex;gap:4px;align-items:center">
+                    <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.4)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn</button>
                     ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(139,92,246,0.4)">⚡ Truyền Tống Ngay</button>` : ""}
                     <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
                   </div>
@@ -8833,7 +8835,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   travelBox = `
             <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
               <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đi: <b>${safeYrs(y)}</b></span>
-              <div style="display:flex;gap:4px">
+              <div style="display:flex;gap:4px;align-items:center">
+                <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.3)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn Món Này</button>
                 ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">⚡ Truyền Tống Ngay</button>` : ""}
                 <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
               </div>
@@ -8844,9 +8847,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   const isHere = checkIsHere(c, run, e.dia, diaSlot);
                   if (isHere) {
                     travelBox = `
-              <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e">
-                <b>📍 Đang đứng đón đầu tại ${esc(e.dia)} ✓</b>
-                <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
+              <div style="margin-top:6px;padding:6px;background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:4px;font-size:12px;color:#22c55e;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+                <div>
+                  <b>📍 Đang đứng đón đầu tại ${esc(e.dia)} ✓</b>
+                  <div class="vk-mu" style="font-size:11px;margin-top:2px">Đứng tại địa danh này giúp tăng xác suất Đạo Diễn rút trúng sự kiện sớm nhất!</div>
+                </div>
+                <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.3)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn Món Này</button>
               </div>
             `;
                   } else if (diaSlot != null) {
@@ -8859,7 +8865,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     travelBox = `
               <div style="margin-top:6px;padding:6px;background:var(--bg2);border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
                 <span style="font-size:12px">📍 Điểm đón đầu: <b>${esc(e.dia)}</b> (Slot ${esc(diaSlot)}) · Cách: <b>${safeYrs(y)}</b></span>
-                <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.3)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn Món Này</button>
+                  <button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(e.dia)}" style="background:var(--acc2);color:#fff;font-weight:bold;padding:3px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">📍 Đi Đến Đón Đầu</button>
+                </div>
               </div>
             `;
                   }
@@ -8950,6 +8959,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ev.stopPropagation();
               S.tab = "asdb";
               render();
+              return;
+            }
+
+            const huntNavBtn =
+              ev.target.closest && ev.target.closest(".db-btn-hunt-nav");
+            if (huntNavBtn) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const rId = huntNavBtn.getAttribute("data-relic");
+              if (rId) {
+                const sdbCfg = AU.cfg.sdb;
+                sdbCfg.targetRelics = [rId];
+                auSave();
+                const relName = (DIBAO.rel[rId] && DIBAO.rel[rId].ten) || rId;
+                try {
+                  UI.notify("🎯 Đã chọn mục tiêu: " + relName + " trong Auto Săn Dị Bảo.");
+                } catch (e) {}
+                S.tab = "asdb";
+                render();
+                setTimeout(() => {
+                  try {
+                    const card = document.querySelector(
+                      `.au-sdb-relic-card[data-relic="${rId}"]`
+                    );
+                    if (card) {
+                      card.scrollIntoView({ behavior: "smooth", block: "center" });
+                      card.style.transition = "all 0.4s ease";
+                      card.style.outline = "2px solid #ff3366";
+                      card.style.boxShadow = "0 0 14px rgba(255, 51, 102, 0.7)";
+                      setTimeout(() => {
+                        card.style.outline = "";
+                        card.style.boxShadow = "";
+                      }, 3000);
+                    }
+                  } catch (err) {}
+                }, 150);
+              }
               return;
             }
 
@@ -26089,9 +26135,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.0 · Ra Mắt Chức Năng Chọn Bảo Vật Muốn Săn & Cắm Trại Đích Danh",
+            t: "Phiên Bản 7.8.1 · Nút Săn Nhanh Dị Bảo & Điều Hướng Auto",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Nút [🎯 Săn Món Này] Bên Cạnh [Đi Đến Đón Đầu]:</b> Bổ sung nút Săn nhanh trực tiếp bên cạnh nút đón đầu / di chuyển trên từng thẻ Dị Bảo tại Tab Dị Bảo (<code>db</code>) và danh sách gợi ý cắm trại đón đầu.",
+              "<b>Tự Động Chọn Mục Tiêu & Chuyển Tab 1 Chạm:</b> Nhấn nút sẽ tự động đưa duy nhất món Dị Bảo đó vào danh sách săn của Auto Săn Dị Bảo, lưu cấu hình, chuyển ngay sang tab Auto và cuộn sáng (highlight) bảo vật đã chọn.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.0 · Ra Mắt Chức Năng Chọn Bảo Vật Muốn Săn & Cắm Trại Đích Danh",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Ra Mắt Bộ Chọn Bảo Vật Muốn Săn (Target Relic Selector):</b> Bổ sung danh sách chọn bảo vật chi tiết trong cấu hình Auto Săn Dị Bảo (asdb). Bạn có thể chủ động tích chọn từng món Dị Bảo cụ thể muốn săn; Auto sẽ chỉ tập trung dò tìm, di chuyển và đoạt các Dị Bảo nằm trong danh sách này.",
               "<b>Thao Tác 1 Chạm Với 4 Nút Chọn Nhanh:</b> Trang bị sẵn các bộ lọc nhanh thông minh: <code>[✓ Tất Cả]</code> (săn toàn bộ 19 Dị Bảo), <code>[✕ Bỏ Hết]</code>, <code>[⭐ 12 Món Hồn]</code> (chỉ săn các món Theo Hồn Qua Kiếp - Bất Diệt), và <code>[📦 Chỉ Chưa Có]</code> (tự động nhận diện túi đồ/kinh mạch để chỉ săn những món nhân vật kiếp này chưa sở hữu).",
