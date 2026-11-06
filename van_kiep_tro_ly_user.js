@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.2
+// @version      7.8.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.2";
+      var TOOL_VER = "7.8.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -24134,10 +24134,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const owned = isOwnedItem(e.relic);
               const isCarry = rel.bd === "Có";
               return `
-              <label class="au-sdb-relic-card" data-relic="${esc(e.relic)}" style="display:flex;align-items:center;gap:6px;background:var(--bg2);padding:5px 8px;border-radius:6px;border:1px solid ${isChecked ? "var(--acc)" : "var(--line)"};cursor:pointer;font-size:12px;user-select:none">
-                <input type="checkbox" class="au-sdb-relic-chk" data-relic="${esc(e.relic)}" ${isChecked ? "checked" : ""} style="margin:0;cursor:pointer">
+              <label class="au-sdb-relic-card" data-relic="${esc(e.relic)}" style="display:flex;align-items:center;gap:6px;background:${isChecked ? "rgba(61, 220, 151, 0.14)" : "var(--bg2)"};padding:5px 8px;border-radius:6px;border:1px solid ${isChecked ? "var(--acc)" : "var(--line)"};box-shadow:${isChecked ? "0 0 8px rgba(61, 220, 151, 0.2)" : "none"};cursor:pointer;font-size:12px;user-select:none;transition:all 0.15s ease">
+                <input type="checkbox" class="au-sdb-relic-chk" data-relic="${esc(e.relic)}" ${isChecked ? "checked" : ""} style="margin:0;cursor:pointer;width:15px;height:15px;accent-color:var(--acc)">
                 <div style="flex:1;min-width:0;overflow:hidden">
-                  <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isChecked ? "var(--ink)" : "var(--mu)"}">${esc(rel.ten || e.relic)}</div>
+                  <div style="font-weight:${isChecked ? "700" : "600"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${isChecked ? "#ffffff" : "var(--txt)"};transition:color 0.15s">${esc(rel.ten || e.relic)}</div>
                   <div style="font-size:10.5px;display:flex;gap:4px;align-items:center;margin-top:1px" class="vk-mu">
                     ${isCarry ? '<span style="color:#f59e0b;font-weight:600">⭐ Hồn</span>' : "<span>Kiếp</span>"}
                     <span>·</span>
@@ -24215,14 +24215,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 checkedRelics.push(rId);
                 if (label) {
                   label.style.borderColor = "var(--acc)";
+                  label.style.background = "rgba(61, 220, 151, 0.14)";
+                  label.style.boxShadow = "0 0 8px rgba(61, 220, 151, 0.2)";
                   const titleEl = label.querySelector("div > div");
-                  if (titleEl) titleEl.style.color = "var(--ink)";
+                  if (titleEl) {
+                    titleEl.style.color = "#ffffff";
+                    titleEl.style.fontWeight = "700";
+                  }
                 }
               } else {
                 if (label) {
                   label.style.borderColor = "var(--line)";
+                  label.style.background = "var(--bg2)";
+                  label.style.boxShadow = "none";
                   const titleEl = label.querySelector("div > div");
-                  if (titleEl) titleEl.style.color = "var(--mu)";
+                  if (titleEl) {
+                    titleEl.style.color = "var(--txt)";
+                    titleEl.style.fontWeight = "600";
+                  }
                 }
               }
             });
@@ -26273,9 +26283,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.2 · Khắc Phục Lỗi Kẹt Node & Tự Động Kích Hoạt Sự Kiện Dị Bảo",
+            t: "Phiên Bản 7.8.3 · Tối Ưu Độ Tương Phản & Hiển Thị Tên Dị Bảo Đã Chọn",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tối Ưu Độ Tương Phản Tên Dị Bảo:</b> Khắc phục triệt để lỗi chữ bị tối/chìm màu đen khi tích chọn trong bộ lọc Auto Săn Dị Bảo; chuyển sang chữ trắng sáng (#ffffff) sắc nét trên nền sáng nhẹ (accent tint) nổi bật.",
+              "<b>Hiệu Ứng Trực Quan Mượt Mà:</b> Bổ sung viền phát sáng nhẹ và hiệu ứng chuyển màu êm ái khi tích chọn hoặc chuyển đổi qua các bộ lọc nhanh.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.2 · Khắc Phục Lỗi Kẹt Node & Tự Động Kích Hoạt Sự Kiện Dị Bảo",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Khắc Phục Đứng Yên Tại Điểm Dị Bảo Xuất Thế:</b> Sửa triệt để lỗi lặp vô tận khi tới nơi dị bảo xuất thế; tích hợp đầy đủ quy trình mở nơi chốn (<code>enterNode</code>) kết hợp kích hoạt sự kiện phủ (<code>chooseActivity / doAction</code>).",
               "<b>Nhận Diện Chuẩn Xác Hoạt Động (Overlay Activity):</b> Tự động truy xuất danh mục hoạt động tại địa danh (<code>placeActivities</code>) để mở chính xác sự kiện Dị Bảo và tiến vào khảo nghiệm / khiêu chiến Hộ Vệ ngay lập tức.",
