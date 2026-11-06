@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.3
+// @version      7.11.4
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.4
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.3";
+      var TOOL_VER = "7.11.4";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -75,7 +75,7 @@
 @keyframes doPulse { 0% { opacity:1; } 50% { opacity:0.65; } 100% { opacity:1; } }
 #vkx-dibao-alert { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483003; background:rgba(15,12,26,0.96); border:2px solid #ff3366; box-shadow:0 0 25px rgba(255,51,102,0.5), 0 8px 30px rgba(0,0,0,0.85); border-radius:14px; padding:10px 16px; color:#fff; display:flex; align-items:center; gap:12px; max-width:min(94vw,560px); width:max-content; box-sizing:border-box; animation:doAlertUp 0.35s cubic-bezier(0.16,1,0.3,1); font-family:inherit; }
 @keyframes doAlertUp { from { opacity:0; transform:translate(-50%,30px) scale(0.95); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
-#vkx-dibao-mini { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:2147483002; background:rgba(15,12,26,0.94); border:1.5px solid #ff3366; border-radius:999px; padding:4px 12px 4px 14px; color:#fff; display:flex; align-items:center; gap:9px; box-shadow:0 4px 20px rgba(0,0,0,0.7), 0 0 14px rgba(255,51,102,0.35); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); cursor:grab; user-select:none; -webkit-user-select:none; animation:doMiniIn 0.3s cubic-bezier(0.16,1,0.3,1); font-family:inherit; font-size:12.5px; max-width:min(96vw,600px); white-space:nowrap; box-sizing:border-box; }
+#vkx-dibao-mini { position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:2147483002; background:rgba(15,12,26,0.94); border:1.5px solid #ff3366; border-radius:999px; padding:3px 14px 3px 14px; color:#fff; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,0,0,0.7), 0 0 14px rgba(255,51,102,0.35); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); cursor:grab; user-select:none; -webkit-user-select:none; animation:doMiniIn 0.3s cubic-bezier(0.16,1,0.3,1); font-family:inherit; font-size:12px; width:max-content; max-width:calc(100vw - 20px); white-space:nowrap; box-sizing:border-box; }
 #vkx-dibao-mini:active { cursor:grabbing; }
 @keyframes doMiniIn { from { opacity:0; transform:translate(-50%,-15px) scale(0.95); } to { opacity:1; transform:translate(-50%,0) scale(1); } }
 .vkx-mini-badge { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:1.5px 7px; border-radius:999px; line-height:1.2; }
@@ -85,7 +85,7 @@
 .vkx-mini-btn:hover { background:#ff3366; border-color:#ff3366; color:#fff; }
 .vkx-mini-close { background:transparent; border:none; color:#aaa; cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
 .vkx-mini-close:hover { color:#ff4466; }
-@media (max-width:600px) { #vkx-dibao-mini { font-size:11px; padding:3px 8px; gap:6px; max-width:calc(100vw - 16px); } .vkx-mini-badge { font-size:10px; padding:1px 5px; } }
+@media (max-width:600px) { #vkx-dibao-mini { font-size:11px; padding:3px 8px; gap:5px; max-width:calc(100vw - 12px); } .vkx-mini-badge { font-size:10px; padding:1px 5px; } }
 .au-sdb-relic-card { display:flex; align-items:center; gap:6px; background:var(--bg2); padding:5px 8px; border-radius:6px; border:1px solid var(--line); cursor:pointer; font-size:12px; user-select:none; transition:all .15s ease; }
 .au-sdb-relic-card:hover { border-color:var(--acc); background:var(--bg3); }
 .au-sdb-relic-card.checked { background:rgba(61,220,151,0.22) !important; border:1px solid var(--acc) !important; box-shadow:0 0 10px rgba(61,220,151,0.28) !important; }
@@ -8829,7 +8829,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 : `<span style="color:#94a3b8;font-size:11.5px">Cách: <b>${safeY}</b></span>`
             }
             <span style="color:#f59e0b;font-weight:600;font-size:11.5px">⏳ ${t.remYears != null ? t.remYears + "n" : "∞"}</span>
-            <div style="display:inline-flex;align-items:center;gap:4px;margin-left:2px">
+            <div style="display:inline-flex;align-items:center;gap:3px;margin-left:3px;flex-shrink:0">
               <button class="vkx-mini-btn do-mini-view" title="Xem chi tiết tại Tab Dị Bảo">🔍 Xem</button>
               <button class="vkx-mini-close do-mini-close" title="Tắt thanh theo dõi">✕</button>
             </div>
@@ -20682,6 +20682,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // 3. Sửa lỗi nhắm mục tiêu: tự động chuyển mục tiêu khi quái hiện tại chết, không bị kẹt hay bắn trượt.
         // 4. Dự báo bật bùa hộ thuẫn / bùa trói chuẩn xác (loai: phu_luc).
         // 5. Kiểm tra chiêu qua S.core.chanChieu hoặc bộ lọc toàn diện để không bao giờ bị lỗi ngắt lượt giữa chừng.
+        // ═════════ CHIẾN LƯỢC TÁC CHIẾN TỰ ĐỘNG THÔNG MINH (SMART COMBAT AI) ═════════
+        // 1. Tận dụng trực tiếp AI lõi game (core/combat/playerAutomation.nextAutomatedAction) khi có sẵn.
+        // 2. Dự phòng toàn diện 100% không bỏ sót chiêu: Phân bổ thứ tự tung chiêu ưu tiên tuyệt đối cho
+        //    Kỹ năng (Vạn Kiếm Quy Tông, Trảm Tiên Kiếm, Chiêu Bản Mệnh, Bẩm Sinh, Buff, Thuẫn, Khống Chế).
+        // 3. TUYỆT ĐỐI không đánh thường (danh_thuong) trước khi toàn bộ chiêu thức khả dụng đã được tung hết.
+        // 4. Sửa cơ chế vòng lặp tác chiến (auFightInstant & auFightStep): khi một hành động thất bại, tiếp tục
+        //    thử các chiêu kế tiếp trong danh sách thay vì lập tức vội vã đánh thường rồi kết lượt bỏ cuộc.
         function smartCombatAction(tran, Cc, cfg, failedActions) {
           cfg = cfg || (AU && AU.cfg && AU.cfg.tc) || {};
           failedActions = failedActions || new Set();
@@ -20690,47 +20697,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const dich = (tran && tran.dich) || [];
           if (!dich.length) return null;
 
+          const core =
+            (S && S.core) || (typeof TT !== "undefined" && TT && TT.core);
+
           // 1. CHỌN MỤC TIÊU TỐI ƯU (Targeting & Retargeting)
           const liveFoes = dich.filter((d) => (d.khiHuyet || 0) > 0);
           if (!liveFoes.length) return { loai: "ket_luot" };
 
           let target = liveFoes.find((d) => d.ma === tran.mucTieu);
           if (!target) {
-            // Mục tiêu cũ đã gục hoặc không hợp lệ -> chuyển ngay sang mục tiêu sống đầu tiên
             const nextTarget = liveFoes[0];
             if (nextTarget && !failedActions.has("muc_tieu:" + nextTarget.ma)) {
               return { loai: "muc_tieu", ma: nextTarget.ma };
             }
             target = nextTarget;
-          }
-
-          // Ước lượng sát thương Quyền Cước (danh_thuong)
-          const burstMult =
-            ta.bocPhatDen && ta.bocPhatDen >= (tran.hiep || 1) ? 1.5 : 1.0;
-          const estNormalDmg = Math.max(
-            1,
-            Math.round(0.4 * (ta.bodyPower || ta.spellPower || 10) * burstMult),
-          );
-
-          // Nếu có nhiều mục tiêu sống: ưu tiên chuyển sang kết liễu kẻ địch sắp chết bằng đòn thường / chiêu nhẹ
-          if (liveFoes.length > 1) {
-            const killable = liveFoes.find(
-              (d) => d.ma !== target.ma && (d.khiHuyet || 0) <= estNormalDmg,
-            );
-            if (killable && !failedActions.has("muc_tieu:" + killable.ma)) {
-              return { loai: "muc_tieu", ma: killable.ma };
-            }
-            const lowest = liveFoes
-              .slice()
-              .sort((a, b) => (a.khiHuyet || 0) - (b.khiHuyet || 0))[0];
-            if (
-              lowest &&
-              lowest.ma !== target.ma &&
-              (lowest.khiHuyet || 0) < (target.khiHuyet || 0) * 0.35 &&
-              !failedActions.has("muc_tieu:" + lowest.ma)
-            ) {
-              return { loai: "muc_tieu", ma: lowest.ma };
-            }
           }
 
           // 2. CỨU NGỰ LINH KHẨN CẤP (Pet Emergency Recall)
@@ -20769,7 +20749,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           );
           const maxResist =
             cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70;
-          // Khi máu cực thấp (< 20%), giữ mạng là trên hết, bỏ qua trần dược kháng!
           const allowHealPill = hpRatio < 0.2 || curResistPct <= maxResist;
 
           // 3A. Nuốt đan hồi phục Khí Huyết (Heal Pill)
@@ -20794,21 +20773,36 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (it.pham_cap && it.pham_cap > maxGrade) continue;
               if (!(it.tran.khi_huyet && it.tran.khi_huyet > 0)) continue;
 
-              if (S.core && S.core.chanDungDo) {
+              const chanDungDo =
+                (core &&
+                  core["combat/actions"] &&
+                  core["combat/actions"].chanDungDo) ||
+                (core && core.chanDungDo);
+              if (typeof chanDungDo === "function") {
                 try {
-                  if (S.core.chanDungDo(tran, it) !== undefined) continue;
+                  if (chanDungDo(tran, it) !== undefined) continue;
                 } catch (e) {}
               }
-              if (S.core && S.core.pillWasted) {
+              const pillWasted =
+                (core &&
+                  core["combat/actions"] &&
+                  core["combat/actions"].pillWasted) ||
+                (core && core.pillWasted);
+              if (typeof pillWasted === "function") {
                 try {
-                  if (S.core.pillWasted(ta, it)) continue;
+                  if (pillWasted(ta, it)) continue;
                 } catch (e) {}
               }
 
               let estOne = 0;
-              if (S.core && S.core.estimatePillRestore) {
+              const estPill =
+                (core &&
+                  core["combat/actions"] &&
+                  core["combat/actions"].estimatePillRestore) ||
+                (core && core.estimatePillRestore);
+              if (typeof estPill === "function") {
                 try {
-                  estOne = S.core.estimatePillRestore(ta, it).khiHuyet;
+                  estOne = estPill(ta, it).khiHuyet;
                 } catch (e) {}
               }
               if (!estOne || estOne <= 0) {
@@ -20857,14 +20851,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (it.pham_cap && it.pham_cap > maxGrade) continue;
               if (!(it.tran.linh_luc && it.tran.linh_luc > 0)) continue;
 
-              if (S.core && S.core.chanDungDo) {
+              const chanDungDo =
+                (core &&
+                  core["combat/actions"] &&
+                  core["combat/actions"].chanDungDo) ||
+                (core && core.chanDungDo);
+              if (typeof chanDungDo === "function") {
                 try {
-                  if (S.core.chanDungDo(tran, it) !== undefined) continue;
-                } catch (e) {}
-              }
-              if (S.core && S.core.pillWasted) {
-                try {
-                  if (S.core.pillWasted(ta, it)) continue;
+                  if (chanDungDo(tran, it) !== undefined) continue;
                 } catch (e) {}
               }
 
@@ -20934,7 +20928,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           // 4B. TỰ ĐỘNG BÀY TRẬN BÀN CHIẾN ĐẤU (Tactical Formations - bay_tran)
-          // Khi đối đầu Boss, Tinh Anh hoặc khi máu dưới 65%, tự động kích hoạt Trận Bàn trong túi
           if (
             ta.tui &&
             (isBossOrElite || hpRatio < 0.65) &&
@@ -20945,9 +20938,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 continue;
               const it = Cc.items && Cc.items.get(id);
               if (!it || it.loai !== "tran_ban" || !it.tran_phap) continue;
-              if (S.core && S.core.formationBlock) {
+              const formationBlock =
+                (core &&
+                  core["combat/actions"] &&
+                  core["combat/actions"].formationBlock) ||
+                (core && core.formationBlock);
+              if (typeof formationBlock === "function") {
                 try {
-                  if (S.core.formationBlock(tran, Cc, it.id) !== undefined)
+                  if (formationBlock(tran, Cc, it.id) !== undefined)
                     continue;
                 } catch (e) {}
               }
@@ -20955,19 +20953,72 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection - Toàn Diện 100% Không Bỏ Chiêu)
+          // 5. TÍCH HỢP AI LÕI GAME (nextAutomatedAction) NẾU CÓ SẴN
+          const autoFn =
+            (core &&
+              core["combat/playerAutomation"] &&
+              core["combat/playerAutomation"].nextAutomatedAction) ||
+            (core && core.nextAutomatedAction);
+          if (typeof autoFn === "function") {
+            try {
+              const autoSettings = {
+                enabled: true,
+                autoEndTurn: false,
+                usePills: true,
+                useTalismans: true,
+                stackShields: true,
+                useInnate: true,
+                skillPriority: [],
+                recallFamiliarBelow: cfg.saveFamiliars !== false ? 0.25 : 0,
+                healBelow:
+                  (cfg.healHpThreshold != null ? cfg.healHpThreshold : 35) /
+                  100,
+                spiritBelow:
+                  (cfg.spiritThreshold != null ? cfg.spiritThreshold : 20) /
+                  100,
+                maxGrade: cfg.maxPillGrade || 5,
+              };
+              const cand = autoFn(tran, Cc, autoSettings);
+              if (
+                cand &&
+                (cand.loai === "chieu" ||
+                  cand.loai === "dan" ||
+                  cand.loai === "muc_tieu" ||
+                  cand.loai === "thu_hoi")
+              ) {
+                const actKey =
+                  cand.loai === "chieu"
+                    ? "chieu:" + cand.id
+                    : cand.loai === "dan"
+                      ? "dan:" + cand.item
+                      : cand.loai === "thu_hoi"
+                        ? "thu_hoi:" + cand.id
+                        : "muc_tieu:" + cand.ma;
+                if (!failedActions.has(actKey)) {
+                  return cand;
+                }
+              }
+            } catch (e) {}
+          }
+
+          // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection - 100% Không Bỏ Chiêu)
           const skills = ta.chieu || [];
           const curRound = tran.hiep || 1;
+          const chanChieuFn =
+            (core &&
+              core["combat/actions"] &&
+              core["combat/actions"].chanChieu) ||
+            (core && core.chanChieu);
+
           const usableSkills = skills.filter((c) => {
             if (!c || !c.id) return false;
             if (failedActions.has("chieu:" + c.id)) return false;
-            if (S.core && S.core.chanChieu) {
+            if (typeof chanChieuFn === "function") {
               try {
-                if (S.core.chanChieu(tran, c) !== undefined) return false;
+                if (chanChieuFn(tran, c) !== undefined) return false;
               } catch (e) {}
             } else {
-              if (ta.hoi && ta.hoi[c.id] && ta.hoi[c.id] > curRound)
-                return false;
+              if (ta.hoi && (ta.hoi[c.id] ?? 0) > curRound) return false;
               if ((c.phi || 0) > (ta.linhLuc || 0)) return false;
               if (c.natal && (ta.natalBrokenUntil || 0) >= curRound)
                 return false;
@@ -20983,10 +21034,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           });
 
           // 5A. Tự Động Bù Mana Nếu Có Chiêu Chưa Tung Được Chỉ Vì Thiếu Linh Lực
-          // Nếu trong bộ chiêu có chiêu chưa dùng được do cạn linh lực, và trong túi có đan hồi mana -> nuốt ngay!
           const outOfManaSkills = skills.filter((c) => {
             if (!c || !c.id || failedActions.has("chieu:" + c.id)) return false;
-            const onCd = ta.hoi && ta.hoi[c.id] && ta.hoi[c.id] > curRound;
+            const onCd = ta.hoi && (ta.hoi[c.id] ?? 0) > curRound;
             return !onCd && (c.phi || 0) > (ta.linhLuc || 0);
           });
           if (
@@ -21076,18 +21126,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 5F. Quyền Cước Dứt Điểm (Finisher):
-          // Nếu địch còn ít máu có thể chết ngay bằng Quyền Cước -> Đánh thường luôn để tiết kiệm 100% mana!
-          if (
-            cfg.autoNormalAttack !== false &&
-            !ta.daDanhThuong &&
-            !failedActions.has("danh_thuong")
-          ) {
-            if ((target.khiHuyet || 0) <= estNormalDmg) {
-              return { loai: "danh_thuong" };
-            }
-          }
-
           // 5G. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
           if (!tran.natalUsed && usableSkills.length > 0) {
             const natalSkill = usableSkills.find((c) => c.natal);
@@ -21105,8 +21143,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               let score = c.uy || 1;
               if (c.he && target.he) {
                 try {
+                  const heSoHe =
+                    (core &&
+                      core["combat/actions"] &&
+                      core["combat/actions"].heSoHe) ||
+                    (core && core.heSoHe);
                   const heP =
-                    S.core && S.core.heSoHe ? S.core.heSoHe(c.he, target) : 1;
+                    typeof heSoHe === "function" ? heSoHe(c.he, target) : 1;
                   score *= heP;
                 } catch (e) {}
               }
@@ -21125,7 +21168,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           // 6. QUYỀN CƯỚC MIỄN PHÍ MỖI LƯỢT (Basic Attack - danh_thuong)
-          // Sau khi đã tung hết chiêu (hoặc không còn chiêu nào dùng được), luôn vung Quyền Cước trước khi kết lượt
+          // CHỈ đánh thường khi TOÀN BỘ kỹ năng đã tung hết, đang hồi chiêu hoặc cạn kiệt linh lực!
           if (
             cfg.autoNormalAttack !== false &&
             !ta.daDanhThuong &&
@@ -21160,41 +21203,28 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
           const failedActions = new Set();
 
-          if (singleAction) {
-            let act = smartCombatAction(tran, c, cfg, failedActions);
+          let act = null;
+          let r = { ok: false };
+          for (let attempt = 0; attempt < 10; attempt++) {
+            act = smartCombatAction(tran, c, cfg, failedActions);
             if (!act) {
               if (
                 tran.ta &&
                 !tran.ta.daDanhThuong &&
-                cfg.autoNormalAttack !== false
+                cfg.autoNormalAttack !== false &&
+                !failedActions.has("danh_thuong")
               ) {
                 act = { loai: "danh_thuong" };
               } else {
                 act = { loai: "ket_luot" };
               }
             }
-            auCall(() => g.hanhDongTran(act));
-            return "ok";
-          }
 
-          let act = smartCombatAction(tran, c, cfg, failedActions);
-          if (!act) {
-            if (
-              tran.ta &&
-              !tran.ta.daDanhThuong &&
-              cfg.autoNormalAttack !== false &&
-              !failedActions.has("danh_thuong")
-            ) {
-              act = { loai: "danh_thuong" };
-            } else {
-              act = { loai: "ket_luot" };
-            }
-          }
+            r = auCall(() => g.hanhDongTran(act));
+            tran = g.state.run && g.state.run.tran;
 
-          const r = auCall(() => g.hanhDongTran(act));
-          tran = g.state.run && g.state.run.tran;
+            if (r.ok) break;
 
-          if (!r.ok) {
             if (act.loai === "chieu") failedActions.add("chieu:" + act.id);
             else if (act.loai === "dan") failedActions.add("dan:" + act.item);
             else if (act.loai === "bay_tran")
@@ -21204,21 +21234,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             else if (act.loai === "muc_tieu")
               failedActions.add("muc_tieu:" + act.ma);
 
-            if (
-              tran &&
-              tran.ta &&
-              !tran.ta.daDanhThuong &&
-              cfg.autoNormalAttack !== false &&
-              !failedActions.has("danh_thuong")
-            ) {
-              auCall(() => g.hanhDongTran({ loai: "danh_thuong" }));
-            } else {
-              auCall(() => g.hanhDongTran({ loai: "ket_luot" }));
-            }
-            return "ok";
+            if (act.loai === "ket_luot") break;
           }
 
-          if (!tran || tran.ketThuc || act.loai === "ket_luot") {
+          if (singleAction) return "ok";
+
+          if (!tran || tran.ketThuc || (act && act.loai === "ket_luot")) {
             if (combatStepTimer) {
               clearTimeout(combatStepTimer);
               combatStepTimer = null;
@@ -21257,7 +21278,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
           let iters = 0;
           const failed = new Set();
-          while (tran && !tran.ketThuc && tran.luot === "ta" && iters < 12) {
+          while (tran && !tran.ketThuc && tran.luot === "ta" && iters < 16) {
             iters++;
             let act = smartCombatAction(tran, c, cfg, failed);
             if (!act) {
@@ -21280,18 +21301,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               else if (act.loai === "bay_tran")
                 failed.add("bay_tran:" + act.item);
               else if (act.loai === "danh_thuong") failed.add("danh_thuong");
+              else if (act.loai === "muc_tieu") failed.add("muc_tieu:" + act.ma);
 
-              if (
-                tran &&
-                tran.ta &&
-                !tran.ta.daDanhThuong &&
-                cfg.autoNormalAttack !== false &&
-                !failed.has("danh_thuong")
-              ) {
-                auCall(() => g.hanhDongTran({ loai: "danh_thuong" }));
+              // Nếu hành động này thất bại, TIẾP TỤC VÒNG LẶP để thử chiêu / hành động khác!
+              // TUYỆT ĐỐI không lập tức đánh thường rồi kết lượt bỏ cuộc!
+              if (act.loai === "ket_luot" || failed.size >= 12) {
+                auCall(() => g.hanhDongTran({ loai: "ket_luot" }));
+                break;
               }
-              auCall(() => g.hanhDongTran({ loai: "ket_luot" }));
-              break;
+              continue;
             }
             if (act.loai === "ket_luot") break;
           }
@@ -28694,9 +28712,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.3 · Ghi Nhận Combat Log Trận Đấu & Phân Tích Nguyên Nhân Thua",
+            t: "Phiên Bản 7.11.4 · Khắc Phục Lỗi Combat AI Bị Khóa Đánh Thường & Sửa UI Mini Tracker",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Khắc Phục Triệt Để Lỗi Combat AI Chỉ Đánh Thường:</b> Loại bỏ hoàn toàn cơ chế kết liễu sớm (Finisher) sai lệch ở đòn đánh thường, đảm bảo 100% chiêu thức công phá (Vạn Kiếm Quy Tông, Trảm Tiên Kiếm, chiêu bản mệnh, chiêu bẩm sinh...) luôn được ưu tiên thi triển tối đa. Đồng thời cải tổ cơ chế vòng lặp tác chiến (auFightInstant & auFightStep): khi một hành động bị game từ chối, AI tiếp tục thử các chiêu kế tiếp thay vì vội vã đánh thường rồi kết lượt bỏ cuộc.",
+              "<b>Tích Hợp Bộ Não Chiến Đấu Tự Động Chuẩn Game Core (nextAutomatedAction):</b> Kết nối trực tiếp với hàm tự động đánh chuẩn của lõi game (<code>combat/playerAutomation</code>), đồng bộ kiểm tra bùa chú, đan dược, trận bàn và thời gian hồi chiêu, giúp nhân vật xả toàn bộ sát thương uy lực nhất trong mọi trận giao chiến.",
+              "<b>Sửa Lỗi Tràn Viền Giao Diện Mini Tracker Dị Bảo:</b> Mở rộng chiều ngang linh hoạt cho thanh theo dõi Mini Dị Bảo (<code>#vkx-dibao-mini</code>), tinh chỉnh khoảng cách và padding nút bấm, khắc phục triệt để lỗi nút <code>🔍 Xem</code> và nút đóng <code>✕</code> bị lòi ra ngoài viền đỏ bo tròn khi tên dị bảo và địa danh dài.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.3 · Ghi Nhận Combat Log Trận Đấu & Phân Tích Nguyên Nhân Thua",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tự Động Lưu Trữ Toàn Bộ Nhật Ký Trận Đánh (Combat Log Backup):</b> Khắc phục triệt để việc game engine xóa sạch dữ liệu hiệp đấu khi kết thúc trận. Tool nay tự động lưu trọn vẹn toàn bộ các hiệp đấu, đòn đánh, sát thương, hiệu ứng và chỉ số máu/chân nguyên của ta và địch vào <code>window.__vkLastCombat</code> trước khi gọi <code>xongTran()</code>.",
               "<b>Phân Tích & Báo Cáo Nguyên Nhân Thất Bại Lên Nhật Ký Tác Vụ:</b> Khi bị thua trong trận đánh (đặc biệt là giao chiến với Boss thủ bảo hoặc quái tinh anh), Tool lập tức trích xuất tên đối thủ, lượng máu còn lại của địch (ví dụ: <code>Địch còn: 35% HP</code>), số hiệp đã trụ được, cùng 3–4 đòn đánh cuối cùng dẫn đến gục ngã lên bảng Nhật Ký Tác Vụ.",
