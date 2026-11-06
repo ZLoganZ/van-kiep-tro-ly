@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.4
+// @version      7.11.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.4";
+      var TOOL_VER = "7.11.5";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -310,6 +310,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         document.body.appendChild(toastEl);
 
         /* ---- Title Case cho giao diện ---- */
+        var flushTitleCase = null;
         (function () {
           var RE = /(^|[\s(\[«“\/])(\p{L})(?!\d)(?![^\s]*(?:_|\.\p{L}))/gu;
           function tc(t) {
@@ -321,7 +322,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
           var busy = false,
             timer = null,
-            pending = new Set();
+            pending = new Set(),
+            needsPass = false;
+
           function fixNode(root) {
             if (!root || !root.isConnected) return;
             var els = [];
@@ -334,42 +337,91 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               root.parentNode &&
               root.parentNode.matches &&
               root.parentNode.matches(SEL)
-            )
+            ) {
               els.push(root.parentNode);
+            }
             for (var i = 0; i < els.length; i++) {
-              var ch = els[i].childNodes;
+              var el = els[i];
+              var ch = el.childNodes;
               for (var j = 0; j < ch.length; j++) {
                 if (ch[j].nodeType === 3) {
-                  var v = ch[j].nodeValue,
-                    w = tc(v);
-                  if (w !== v) ch[j].nodeValue = w;
+                  var v = ch[j].nodeValue;
+                  if (!v || v.length > 500) continue;
+                  var w = tc(v);
+                  if (w !== v) {
+                    busy = true;
+                    ch[j].nodeValue = w;
+                    busy = false;
+                  }
                 }
               }
             }
           }
+
           function pass() {
+            if (busy) return;
             busy = true;
             try {
-              pending.forEach(fixNode);
+              // Lọc chỉ giữ lại các node gốc độc lập để tránh O(N^2) querySelectorAll lặp lại trên cây con
+              var roots = Array.from(pending).filter(function (n) {
+                if (!n || !n.isConnected) return false;
+                var p = n.parentNode;
+                while (p) {
+                  if (pending.has(p)) return false;
+                  p = p.parentNode;
+                }
+                return true;
+              });
+              for (var i = 0; i < roots.length; i++) {
+                fixNode(roots[i]);
+              }
             } catch (e) {}
             pending.clear();
+            needsPass = false;
             busy = false;
           }
+
+          function schedPass() {
+            if (!timer) {
+              timer = setTimeout(function () {
+                timer = null;
+                // Nếu cửa sổ Tool đang đóng và không có toast hiển thị, tạm hoãn Title Case
+                var isWinOpen = win.classList.contains("open");
+                var isToastActive = toastEl.classList.contains("on");
+                if (!isWinOpen && !isToastActive) {
+                  needsPass = true;
+                  return;
+                }
+                pass();
+              }, 60);
+            }
+          }
+
+          flushTitleCase = function () {
+            if (needsPass || pending.size) {
+              if (timer) {
+                clearTimeout(timer);
+                timer = null;
+              }
+              pass();
+            }
+          };
+
           function later(muts) {
             if (busy) return;
             for (var i = 0; i < muts.length; i++) {
               var m = muts[i];
-              if (m.type === "characterData") pending.add(m.target);
-              else
-                for (var j = 0; j < m.addedNodes.length; j++)
+              if (m.type === "characterData") {
+                if (m.target && m.target.parentNode) pending.add(m.target.parentNode);
+              } else {
+                for (var j = 0; j < m.addedNodes.length; j++) {
                   pending.add(m.addedNodes[j]);
+                }
+              }
             }
-            if (pending.size && !timer)
-              timer = setTimeout(function () {
-                timer = null;
-                pass();
-              }, 40);
+            if (pending.size) schedPass();
           }
+
           var mo = new MutationObserver(later);
           mo.observe(win, {
             childList: true,
@@ -446,6 +498,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         };
         api.open = function () {
           win.classList.add("open");
+          if (typeof flushTitleCase === "function") flushTitleCase();
           if (api.fit && api.fit.run) api.fit.run();
           fab.style.display = "none";
           ls("vkx_open", "1");
@@ -645,13 +698,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           probe.style.cssText =
             "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
           document.body.appendChild(probe);
+          var cachedIns = null;
+          function getIns(forceRefresh) {
+            if (!cachedIns || forceRefresh) {
+              try {
+                var cs = getComputedStyle(probe);
+                cachedIns = {
+                  t: parseFloat(cs.paddingTop) || 0,
+                  r: parseFloat(cs.paddingRight) || 0,
+                  b: parseFloat(cs.paddingBottom) || 0,
+                  l: parseFloat(cs.paddingLeft) || 0,
+                };
+              } catch (e) {
+                cachedIns = { t: 0, r: 0, b: 0, l: 0 };
+              }
+            }
+            return cachedIns;
+          }
           var mqC = window.matchMedia("(pointer:coarse)"),
             mqL = window.matchMedia("(orientation:landscape)"),
             mqF = window.matchMedia("(hover:hover) and (pointer:fine)");
           function clamp(v, lo, hi) {
             return Math.min(Math.max(v, lo), hi);
           }
-          function measure() {
+          function measure(forceIns) {
             var vv = window.visualViewport,
               de = document.documentElement;
             var lw = de.clientWidth || window.innerWidth,
@@ -681,7 +751,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               0.7,
               Math.max(0.7, lw / 300),
             ); /* không phóng quá mức làm cửa sổ hẹp dưới 300 px */
-            var cs = getComputedStyle(probe);
+            var ins = getIns(forceIns);
             return {
               k: k,
               comp: comp,
@@ -692,17 +762,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               dpr: window.devicePixelRatio || 1,
               coarse: coarse,
               land: land,
-              ins: {
-                t: parseFloat(cs.paddingTop) || 0,
-                r: parseFloat(cs.paddingRight) || 0,
-                b: parseFloat(cs.paddingBottom) || 0,
-                l: parseFloat(cs.paddingLeft) || 0,
-              },
+              ins: ins,
             };
           }
-          function run() {
+          function run(forceIns) {
             raf = 0;
-            var m = measure(),
+            var m = measure(forceIns),
               k = m.k,
               effW = m.lw / k,
               effH = m.vh / k,
@@ -718,6 +783,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             F.coarse = m.coarse;
             F.land = m.land;
             F.phone = phone;
+
+            // Nếu cửa sổ Tool đang đóng, bỏ qua việc định hình lại layout win.style để tránh layout thrashing
+            if (!api.isOpen()) {
+              F.dirty = true;
+              if (!fab.style.left) {
+                fab.style.right = 14 + ins.r / k + "px";
+                fab.style.bottom =
+                  (phone ? Math.max(14, Math.min(190, effH * 0.3)) : 24) +
+                  ins.b / k +
+                  "px";
+                fab.style.transformOrigin = "100% 100%";
+              } else if (api.refitFab) api.refitFab();
+              toastEl.style.bottom = 26 + ins.b / k + "px";
+              return;
+            }
+            F.dirty = false;
+
             [win, fab, toastEl].forEach(function (el) {
               el.style.setProperty("--vkx-k", String(k));
             });
@@ -780,26 +862,50 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             toastEl.style.bottom = 26 + ins.b / k + "px";
             toastEl.style.maxWidth = Math.min((0.92 * m.lw) / k, 520) + "px";
           }
-          function sched() {
-            if (!raf) raf = requestAnimationFrame(run);
+          var nextForceIns = false;
+          function sched(forceIns) {
+            if (forceIns) nextForceIns = true;
+            if (!raf) {
+              raf = requestAnimationFrame(function () {
+                var fi = nextForceIns;
+                nextForceIns = false;
+                run(fi);
+              });
+            }
           }
-          window.addEventListener("resize", sched);
-          window.addEventListener("orientationchange", function () {
-            sched();
-            setTimeout(sched, 160);
+          window.addEventListener("resize", function () {
+            sched(true);
           });
-          window.addEventListener("pageshow", sched);
-          document.addEventListener("fullscreenchange", sched);
+          window.addEventListener("orientationchange", function () {
+            sched(true);
+            setTimeout(function () {
+              sched(true);
+            }, 160);
+          });
+          window.addEventListener("pageshow", function () {
+            sched(true);
+          });
+          document.addEventListener("fullscreenchange", function () {
+            sched(true);
+          });
           if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", sched);
-            window.visualViewport.addEventListener("scroll", sched);
+            window.visualViewport.addEventListener("resize", function () {
+              sched(true);
+            });
+            window.visualViewport.addEventListener("scroll", function () {
+              if (api.isOpen()) sched(false);
+            });
           }
           [mqC, mqL].forEach(function (q) {
             try {
-              q.addEventListener("change", sched);
+              q.addEventListener("change", function () {
+                sched(true);
+              });
             } catch (e) {
               try {
-                q.addListener(sched);
+                q.addListener(function () {
+                  sched(true);
+                });
               } catch (x) {}
             }
           });
@@ -7618,6 +7724,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           },
           boss: ["item.nghich_lan_thuan", "item.thien_dien_dan"],
         };
+        DIBAO.evMap = new Map();
+        DIBAO.evRelicMap = new Map();
+        for (let i = 0; i < DIBAO.ev.length; i++) {
+          const item = DIBAO.ev[i];
+          DIBAO.evMap.set(item.id, item);
+          if (item.relic) DIBAO.evRelicMap.set(item.relic, item);
+        }
         const LOAI_VI = {
           cong_phap: "Công pháp",
           phap_khi: "Pháp khí",
@@ -7783,7 +7896,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 n.hetHanNam <= nam
               )
                 continue;
-              const ev = DIBAO.ev.find((x) => x.id === n.encounter);
+              const ev = DIBAO.evMap.get(n.encounter);
               if (!ev) continue;
 
               // Kiểm tra xem đã sở hữu món đồ này chưa
@@ -7833,7 +7946,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
               for (const encId of allPlaceEncs) {
                 if (!encId || map.has(encId)) continue;
-                const ev = DIBAO.ev.find((x) => x.id === encId);
+                const ev = DIBAO.evMap.get(encId);
                 if (!ev) continue;
 
                 // Kiểm tra đã sở hữu món đồ chưa
@@ -7900,7 +8013,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (theCucContent && Array.isArray(theCucContent.encounter)) {
                   for (const encId of theCucContent.encounter) {
                     if (!encId || map.has(encId)) continue;
-                    const ev = DIBAO.ev.find((x) => x.id === encId);
+                    const ev = DIBAO.evMap.get(encId);
                     if (ev) {
                       if (checkOwnedRelic(ev.relic, run)) continue;
                       const relicBare = ev.relic.replace(/^item\./, "");
@@ -7949,7 +8062,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   for (const a of acts) {
                     if (!a || !a.id || map.has(a.id)) continue;
                     if (a.lockedReason) continue;
-                    const ev = DIBAO.ev.find((x) => x.id === a.id);
+                    const ev = DIBAO.evMap.get(a.id);
                     if (ev) {
                       if (checkOwnedRelic(ev.relic, run)) continue;
                       const relicBare = ev.relic.replace(/^item\./, "");
@@ -8810,6 +8923,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               : num(t.y) + "n"
             : "?";
           const relTitle = t.relName || t.title;
+          const curSig = `${t.encId}|${t.slot}|${isHere}|${t.remYears}|${safeY}|${relTitle}|${t.isCarry}`;
+          if (miniEl._lastSig === curSig) return;
+          miniEl._lastSig = curSig;
 
           miniEl.innerHTML = `
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3366;box-shadow:0 0 8px #ff3366;animation:doPulse 1.8s infinite;flex-shrink:0"></span>
@@ -9015,7 +9131,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (hetHanNam !== undefined && nam != null && hetHanNam <= nam)
                 continue;
 
-              const ev = item.ev || DIBAO.ev.find((x) => x.id === encId);
+              const ev = item.ev || DIBAO.evMap.get(encId);
               if (ev && !isOwned(ev.relic)) {
                 let y = Infinity;
                 if (c && K && K.travelYears) {
@@ -15295,14 +15411,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ev.target.disabled = false;
           };
         }
-        // tìm quái theo tên, không phân biệt dấu
-        const fold = (x) =>
-          String(x || "")
+        // tìm quái theo tên, không phân biệt dấu (kèm bộ nhớ đệm & đường tắt ASCII tối ưu hiệu năng)
+        const foldCache = new Map();
+        const fold = (x) => {
+          if (!x) return "";
+          const s = String(x);
+          if (!/[^\x00-\x7F]/.test(s)) return s.toLowerCase();
+          const cached = foldCache.get(s);
+          if (cached !== undefined) return cached;
+          const res = s
             .normalize("NFD")
             .replace(/[̀-ͯ]/g, "")
             .replace(/đ/g, "d")
             .replace(/Đ/g, "D")
             .toLowerCase();
+          if (foldCache.size < 3000) {
+            foldCache.set(s, res);
+          }
+          return res;
+        };
 
         // ═════════════════════════ BẢN 2.3: Đồ nên săn + Đồ trong game ═════════════════════════
         const NOT_SHOP = {
@@ -20241,7 +20368,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         ]);
         function auIsHacText(s) {
           if (!s) return false;
-          const n = String(s).normalize("NFC");
+          const str = String(s);
+          if (!/hạc/i.test(str)) return false;
+          const n = str.normalize("NFC");
           if (/đồng\s+hạc\s+khôi/i.test(n)) return false;
           return /(^|[^\p{L}])hạc($|[^\p{L}])/iu.test(n);
         }
@@ -21319,6 +21448,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // ═════════ GIAO DIỆN NỔI TÁC CHIẾN TRONG TRẬN (COMBAT OVERLAY) ═════════
         let combatAutoActive = false;
         let combatOverlayEl = null;
+        let lastSyncedCombatAutomationStr = "";
 
         // Đồng bộ cấu hình Auto của game gốc trong localStorage để nếu người chơi bấm nút "Tự" của game thì game vẫn cắn đan & dùng phù
         function syncGameCombatAutomation() {
@@ -21350,15 +21480,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 attackOn: "strong",
               };
             }
-            localStorage.setItem(
-              "tu-tien:combat-automation",
-              JSON.stringify(c),
-            );
+            const nextStr = JSON.stringify(c);
+            if (nextStr !== lastSyncedCombatAutomationStr && nextStr !== raw) {
+              lastSyncedCombatAutomationStr = nextStr;
+              localStorage.setItem("tu-tien:combat-automation", nextStr);
+            }
           } catch (e) {}
         }
 
         function updateCombatOverlay() {
-          syncGameCombatAutomation();
           const g = G();
           const run = g && g.state && g.state.run;
           const inCombat = !!(
@@ -21378,19 +21508,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return;
           }
 
+          // Chỉ đồng bộ localStorage khi thực sự có trận đấu
+          syncGameCombatAutomation();
+
           if (!combatOverlayEl) {
             combatOverlayEl = document.createElement("div");
             combatOverlayEl.id = "vkx-combat-overlay";
             combatOverlayEl.style.cssText =
               "position:fixed;top:68px;right:18px;z-index:2147483002;background:rgba(15,25,22,0.94);backdrop-filter:blur(10px);border:1px solid #3ddc97;box-shadow:0 8px 24px rgba(0,0,0,0.6),0 0 16px rgba(61,220,151,0.3);border-radius:14px;padding:8px 12px;display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif;color:#e7f1ec;font-size:13px;user-select:none;";
-            document.body.appendChild(combatOverlayEl);
 
             if (cfg.autoInCombat) {
               combatAutoActive = true;
             }
-          }
 
-          combatOverlayEl.innerHTML = `
+            combatOverlayEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:16px">⚔️</span>
         <b style="color:var(--acc, #3ddc97)">Siêu Auto VIP</b>
@@ -21399,24 +21530,40 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <button id="vkx-btn-combat-toggle" class="vk-btn" style="padding:4px 10px;font-size:12px;border-radius:8px;cursor:pointer;background:${combatAutoActive ? "#f87171" : "#3ddc97"};color:#05140d;font-weight:700">${combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh"}</button>
     `;
 
-          const btnStep = combatOverlayEl.querySelector("#vkx-btn-combat-step");
-          if (btnStep) {
-            btnStep.onclick = (e) => {
-              e.stopPropagation();
-              auFightStep(true);
-            };
-          }
+            document.body.appendChild(combatOverlayEl);
 
-          const btnToggle = combatOverlayEl.querySelector(
-            "#vkx-btn-combat-toggle",
-          );
-          if (btnToggle) {
-            btnToggle.onclick = (e) => {
-              e.stopPropagation();
-              combatAutoActive = !combatAutoActive;
-              updateCombatOverlay();
-              if (combatAutoActive) auFightStep(false);
-            };
+            const btnStep = combatOverlayEl.querySelector("#vkx-btn-combat-step");
+            if (btnStep) {
+              btnStep.onclick = (e) => {
+                e.stopPropagation();
+                auFightStep(true);
+              };
+            }
+
+            const btnToggle = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-toggle",
+            );
+            if (btnToggle) {
+              btnToggle.onclick = (e) => {
+                e.stopPropagation();
+                combatAutoActive = !combatAutoActive;
+                updateCombatOverlay();
+                if (combatAutoActive) auFightStep(false);
+              };
+            }
+            combatOverlayEl._lastAutoActive = combatAutoActive;
+          } else {
+            // Khi đã tồn tại: chỉ cập nhật nút toggle nếu trạng thái auto thay đổi, không vẽ lại innerHTML
+            if (combatOverlayEl._lastAutoActive !== combatAutoActive) {
+              combatOverlayEl._lastAutoActive = combatAutoActive;
+              const btnToggle = combatOverlayEl.querySelector(
+                "#vkx-btn-combat-toggle",
+              );
+              if (btnToggle) {
+                btnToggle.textContent = combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh";
+                btnToggle.style.background = combatAutoActive ? "#f87171" : "#3ddc97";
+              }
+            }
           }
         }
 
@@ -21657,12 +21804,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const isRelicEv =
                 opt.sdb &&
                 (a.id.startsWith("ev.di_bao") ||
-                  DIBAO.ev.some((e) => e.id === a.id));
+                  DIBAO.evMap.has(a.id));
               const r = auCall(() => g.closeEncounter());
               if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
               if (isRelicEv) {
                 const curRun = G().state && G().state.run;
-                const evObj = DIBAO.ev.find((e) => e.id === a.id);
+                const evObj = DIBAO.evMap.get(a.id);
                 const hasRelic = evObj && checkOwnedRelic(evObj.relic, curRun);
                 if (hasRelic) {
                   st.relicsWon = (st.relicsWon || 0) + 1;
@@ -23256,7 +23403,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const activeMap = scanMapActiveDiBao(run, c);
 
           for (const item of activeMap.values()) {
-            const ev = item.ev || DIBAO.ev.find((x) => x.id === item.encId);
+            const ev = item.ev || DIBAO.evMap.get(item.encId);
             if (!ev) continue;
             const slotStr = String(item.slot);
             const slot = item.slot;
@@ -26076,7 +26223,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       n.hetHanNam <= run2.nam
                     )
                       continue;
-                    const ev = DIBAO.ev.find((x) => x.id === n.encounter);
+                    const ev = DIBAO.evMap.get(n.encounter);
                     if (!ev) continue;
                     const slot =
                       n.slot != null
@@ -26800,7 +26947,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const res = { dibao: null, drops: [], shops: [], craft: null };
 
           // 1. Dị bảo thế giới
-          const dbEv = DIBAO.ev.find((e) => e.relic === id);
+          const dbEv = DIBAO.evRelicMap.get(id);
           if (dbEv) {
             res.dibao = {
               name: dbEv.ten,
@@ -28712,9 +28859,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.4 · Khắc Phục Lỗi Combat AI Bị Khóa Đánh Thường & Sửa UI Mini Tracker",
+            t: "Phiên Bản 7.11.5 · Đại Tu Hiệu Năng Toàn Diện (Performance Optimization)",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Đại Tu Bộ Quan Sát Giao Diện (MutationObserver Title Case):</b> Loại bỏ hoàn toàn việc quét định dạng văn bản Title Case khi cửa sổ Tool đang đóng; khử trùng lặp O(N²) cây con, kiểm soát việc kích hoạt đột biến vòng lặp (self-triggering mutations), giúp render các danh sách dài nhanh và mượt hơn rõ rệt.",
+              "<b>Triệt Tiêu Nghẽn I/O & Reflow Trong Combat Watcher Tick:</b> Khắc phục triệt để việc ghi đĩa <code>localStorage.setItem</code> mỗi 400ms trong <code>syncGameCombatAutomation</code> bằng cơ chế so khớp chuỗi trước khi lưu; chuyển đổi việc tái tạo toàn bộ DOM của thanh Combat Overlay thành cơ chế cập nhật trạng thái có điều kiện, giảm 100% hiện tượng khựng lag trong giao tranh.",
+              "<b>Loại Bỏ Layout Thrashing Khi Cuộn Màn Hình (Fit Screen):</b> Bỏ qua việc tính toán lại bố cục cửa sổ Tool khi đang ẩn; đồng thời lưu bộ đệm Safe Area Insets (tai thỏ) thay vì gọi <code>getComputedStyle</code> liên tục trong mỗi frame cuộn màn hình, mang lại trải nghiệm mượt mà 60–120 FPS.",
+              "<b>Tăng Tốc Chuỗi & Tra Cứu (Fast-Path & Memoization):</b> Trang bị bộ nhớ đệm (LRU cache) và đường tắt ASCII cho hàm chuẩn hóa chuỗi tiếng Việt <code>fold()</code>; bổ sung bộ lọc nhanh cho <code>auIsHacText()</code>; chuyển đổi toàn bộ tra cứu danh mục Dị Bảo <code>DIBAO.ev.find()</code> sang bảng băm <code>DIBAO.evMap</code> với độ phức tạp O(1); bổ sung cơ chế kiểm tra chữ ký DOM tránh vẽ lại Mini Tracker không cần thiết.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.4 · Khắc Phục Lỗi Combat AI Bị Khóa Đánh Thường & Sửa UI Mini Tracker",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Khắc Phục Triệt Để Lỗi Combat AI Chỉ Đánh Thường:</b> Loại bỏ hoàn toàn cơ chế kết liễu sớm (Finisher) sai lệch ở đòn đánh thường, đảm bảo 100% chiêu thức công phá (Vạn Kiếm Quy Tông, Trảm Tiên Kiếm, chiêu bản mệnh, chiêu bẩm sinh...) luôn được ưu tiên thi triển tối đa. Đồng thời cải tổ cơ chế vòng lặp tác chiến (auFightInstant & auFightStep): khi một hành động bị game từ chối, AI tiếp tục thử các chiêu kế tiếp thay vì vội vã đánh thường rồi kết lượt bỏ cuộc.",
               "<b>Tích Hợp Bộ Não Chiến Đấu Tự Động Chuẩn Game Core (nextAutomatedAction):</b> Kết nối trực tiếp với hàm tự động đánh chuẩn của lõi game (<code>combat/playerAutomation</code>), đồng bộ kiểm tra bùa chú, đan dược, trận bàn và thời gian hồi chiêu, giúp nhân vật xả toàn bộ sát thương uy lực nhất trong mọi trận giao chiến.",
