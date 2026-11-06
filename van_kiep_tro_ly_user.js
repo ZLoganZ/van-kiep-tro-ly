@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.1.8
+// @version      7.2.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý (Nghịch Thiên & Thần Phẩm), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.1.8
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.2.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.1.8';
+  var TOOL_VER = '7.2.0';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7011,55 +7011,123 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     };
   }
 
-    // ───────────────────────── Biệt Đội Late Game · Kinh Mạch Tối Thượng (Bản 7.1.0) ─────────────────────────
-  // Phân tích Linh Căn của kiếp này, suy diễn chuỗi Ngũ Hành Tương Sinh & cầu nối trực tiếp.
-  // Giả định full lượt tẩy tủy cho toàn bộ ô kinh mạch late game để tìm cấu hình Best-in-Slot (BIS) mạnh nhất.
+    // ───────────────────────── Biệt Đội Late Game · Kinh Mạch Tối Thượng (Bản 7.2.0) ─────────────────────────
+  // Phân tích toàn diện Linh Căn của kiếp hiện tại (Đơn Linh Căn, Song Linh Căn, Tam/Tứ/Ngũ Linh Căn, Dị Căn hay Phàm Căn).
+  // Quét toàn bộ kho dữ liệu game (c.items), suy diễn chuỗi Ngũ Hành Tương Sinh (Mẹ dưỡng & Con trợ, Cầu nối) và khóa chặt các hệ tương khắc.
+  // Giả định full lượt tẩy tủy cho toàn bộ ô kinh mạch late game để tìm cấu hình Best-in-Slot (BIS) mạnh nhất cho đúng Linh Căn đó.
   // Sinh cẩm nang săn đồ chi tiết (quái/boss rơi, tiệm bán, sự kiện Dị Bảo, công thức luyện).
 
   function bisDeduceElements(lc) {
-    const baseHe = Array.isArray(lc && lc.he) ? lc.he.map((h) => String(h).toLowerCase()) : [];
+    let baseHe = [];
+    if (lc) {
+      if (Array.isArray(lc.he)) baseHe = lc.he;
+      else if (Array.isArray(lc)) baseHe = lc;
+      else if (typeof lc.he === 'string') baseHe = [lc.he];
+      else if (typeof lc === 'string') baseHe = [lc];
+    }
+    baseHe = baseHe.map((h) => String(h).toLowerCase().trim()).filter((h) => h && h !== 'vo' && h !== 'vo_sac');
+
     const SINH = { kim: 'thuy', thuy: 'moc', moc: 'hoa', hoa: 'tho', tho: 'kim' };
+    const KHAC = { kim: 'moc', moc: 'tho', tho: 'thuy', thuy: 'hoa', hoa: 'kim' };
+    const ME = { thuy: 'kim', moc: 'thuy', hoa: 'moc', tho: 'hoa', kim: 'tho' };
     const GOC = { loi: 'moc', phong: 'moc', bang: 'thuy', am: 'thuy' };
+    const ALL_ROOTS = ['kim', 'moc', 'thuy', 'hoa', 'tho'];
+
     const baseRoots = [...new Set(baseHe.map((h) => GOC[h] || h))];
     const relatedRoots = new Set(baseRoots);
     const bridges = [];
+    const forbiddenRoots = new Set();
 
-    // Chỉ tìm cầu nối tương sinh khi 2 hệ cách nhau đúng 1 bước trung gian: A -> Bridge -> B
-    // Ví dụ: Kim và Mộc -> Kim sinh Thủy, Thủy sinh Mộc => Cầu nối Thủy!
-    // Còn nếu 2 hệ đã kề nhau trực tiếp (ví dụ Thổ -> Kim) thì TUYỆT ĐỐI KHÔNG thêm hệ thứ 3 vì chúng đã tương sinh trực tiếp!
-    for (const a of baseRoots) {
-      const c = SINH[a];
-      if (c && !baseRoots.includes(c)) {
-        const b = SINH[c];
-        if (baseRoots.includes(b)) {
-          relatedRoots.add(c);
-          bridges.push({ from: a, bridge: c, to: b });
+    if (baseRoots.length === 1) {
+      // Đơn Linh Căn (hoặc Dị Linh Căn 1 hệ):
+      // Hệ bản mệnh r; tương sinh hỗ trợ: Mẹ sinh ra r (sinh nhập) và r sinh ra Con (sinh xuất)
+      const r = baseRoots[0];
+      const me = ME[r];
+      const con = SINH[r];
+      relatedRoots.add(me);
+      relatedRoots.add(con);
+
+      // Khóa chặt 2 hệ tương khắc trực tiếp với r để triệt tiêu điểm nghịch:
+      forbiddenRoots.add(KHAC[r]); // Hệ bị r khắc
+      for (const [k, v] of Object.entries(KHAC)) {
+        if (v === r) forbiddenRoots.add(k); // Hệ khắc r
+      }
+    } else if (baseRoots.length === 2) {
+      const [a, b] = baseRoots;
+      if (SINH[a] === b || SINH[b] === a) {
+        // Hai hệ đã tương sinh trực tiếp (ví dụ Thổ sinh Kim, Kim sinh Thủy...)
+        const allowed = new Set([a, b]);
+        ALL_ROOTS.forEach((x) => { if (!allowed.has(x)) forbiddenRoots.add(x); });
+      } else {
+        // Hai hệ cách nhau 1 bước trong chuỗi tương sinh -> Cần cầu nối tương sinh ở giữa
+        for (const x of baseRoots) {
+          const c = SINH[x];
+          if (c && !baseRoots.includes(c)) {
+            const d = SINH[c];
+            if (baseRoots.includes(d)) {
+              relatedRoots.add(c);
+              bridges.push({ from: x, bridge: c, to: d });
+            }
+          }
+        }
+        ALL_ROOTS.forEach((x) => { if (!relatedRoots.has(x)) forbiddenRoots.add(x); });
+      }
+    } else if (baseRoots.length >= 3) {
+      // Tam Linh Căn / Tứ Linh Căn
+      for (const x of baseRoots) {
+        const c = SINH[x];
+        if (c && !baseRoots.includes(c)) {
+          const d = SINH[c];
+          if (baseRoots.includes(d)) {
+            relatedRoots.add(c);
+            bridges.push({ from: x, bridge: c, to: d });
+          }
         }
       }
+      ALL_ROOTS.forEach((x) => { if (!relatedRoots.has(x)) forbiddenRoots.add(x); });
+    } else {
+      // Phàm Căn (không có linh căn): Cho phép toàn bộ hệ tự do, không cấm hệ nào
+      ALL_ROOTS.forEach((x) => relatedRoots.add(x));
     }
 
-    // Các dị linh căn tương ứng với các hệ hợp lệ
+    // Mở rộng các dị linh căn nhánh tương ứng
     const allElements = new Set(relatedRoots);
     for (const [sub, root] of Object.entries(GOC)) {
       if (relatedRoots.has(root)) allElements.add(sub);
     }
     allElements.add('vo_sac');
 
+    // Khóa các dị linh căn thuộc nhánh tương khắc
+    const forbidden = new Set(forbiddenRoots);
+    for (const [sub, root] of Object.entries(GOC)) {
+      if (forbiddenRoots.has(root)) forbidden.add(sub);
+    }
+
+    const lcPhamRaw = (lc && lc.pham) || (baseHe.length === 1 ? 'thien' : baseHe.length === 2 ? 'song' : baseHe.length === 3 ? 'tam' : baseHe.length === 4 ? 'tu' : baseHe.length === 5 ? 'hon_don' : 'vo');
+
     return {
-      lcPham: (lc && lc.pham) || 'vo',
+      lcPham: lcPhamRaw,
       baseHe,
       baseRoots,
       relatedRoots: [...relatedRoots],
       bridges,
+      forbiddenRoots: [...forbiddenRoots],
+      forbidden: [...forbidden],
       allElements: [...allElements]
     };
   }
 
-  function bisSelectPool(allElements, targetRealm, mode) {
+  function bisSelectPool(deduced, targetRealm, mode) {
     const c = C();
     if (!c || !c.items) return [];
-    const setHe = new Set(allElements.map((h) => String(h).toLowerCase()));
-    const items = [];
+    const setHe = new Set(deduced.allElements.map((h) => String(h).toLowerCase()));
+    const setForbidden = new Set(deduced.forbidden.map((h) => String(h).toLowerCase()));
+    const baseHeSet = new Set(deduced.baseHe.map((h) => String(h).toLowerCase()));
+    const baseRootSet = new Set(deduced.baseRoots.map((h) => String(h).toLowerCase()));
+    const relRootSet = new Set(deduced.relatedRoots.map((h) => String(h).toLowerCase()));
+
+    const cpList = [];
+    const pkList = [];
 
     for (const it of c.items.values()) {
       if (!it || (!it.hinh && !it.manh)) continue;
@@ -7070,34 +7138,91 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       if (pham < 3 && (it.canh_gioi ?? 0) < targetRealm - 1) continue;
 
       const heRaw = it.he || ['vo_sac'];
-      const heArr = Array.isArray(heRaw) ? heRaw : [heRaw];
-      const primaryHe = String(heArr[0] || 'vo_sac').toLowerCase();
-      // Hệ chính của món đồ BẮT BUỘC phải thuộc tập hợp hệ cho phép (hoặc vô sắc)
-      if (!setHe.has(primaryHe) && primaryHe !== 'vo' && primaryHe !== 'vo_sac') continue;
+      const heArr = (Array.isArray(heRaw) ? heRaw : [heRaw]).map((h) => String(h).toLowerCase());
 
-      let score = pham * 30 + (it.canh_gioi ?? 0) * 15;
-      if (it.chieu && it.chieu.length) {
-        score += 25;
-        if (mode === 'danh') score += 30;
-      }
-      if (it.biDong) {
-        if (mode === 'tu' && (it.biDong.toc_do || it.biDong.dot_pha)) score += 45;
-        if (mode === 'bal' && (it.biDong.hp || it.biDong.giap)) score += 35;
-      }
-      if (pham >= 7) score += 60; // Nghịch thiên / Thần phẩm
+      // 1. Tuyệt đối loại bỏ nếu chứa hệ tương khắc:
+      if (heArr.some((h) => setForbidden.has(h))) continue;
 
-      items.push({ it, id: it.id, score });
+      // 2. Phải có ít nhất 1 hệ nằm trong tập hợp cho phép hoặc là vô sắc:
+      const hasAllowed = heArr.some((h) => setHe.has(h) || h === 'vo' || h === 'vo_sac');
+      if (!hasAllowed) continue;
+
+      // 3. Tính điểm chất lượng và độ hợp với Linh Căn hiện tại của kiếp này:
+      let score = pham * 32 + (it.canh_gioi ?? 0) * 16;
+      if (pham >= 7) score += 65; // Nghịch thiên / Thần phẩm
+
+      // Thưởng tương thích Linh Căn hiện tại:
+      const matchesBaseHe = heArr.some((h) => baseHeSet.has(h));
+      const matchesBaseRoot = heArr.some((h) => baseRootSet.has(gocHe(h)));
+      const matchesRelRoot = heArr.some((h) => relRootSet.has(gocHe(h)));
+
+      if (matchesBaseHe) {
+        score += 90; // Trùng khớp Linh Căn bản mệnh của kiếp này!
+      } else if (matchesBaseRoot) {
+        score += 65; // Dị căn cùng gốc với Linh Căn kiếp này!
+      } else if (matchesRelRoot) {
+        score += 35; // Hệ tương sinh tiếp sức
+      } else {
+        score += 20; // Vô sắc trung tính
+      }
+
+      // Điểm theo chiến thuật:
+      if (mode === 'danh') {
+        if (it.chieu && it.chieu.length) {
+          score += 35;
+          const totalUy = it.chieu.reduce((a, x) => a + (x.uyLuc || x.uy || 0), 0);
+          score += Math.min(30, Math.round(totalUy / 10));
+        }
+      } else if (mode === 'tu') {
+        if (it.biDong && (it.biDong.toc_do || it.biDong.dot_pha)) score += 55;
+      } else { // bal
+        if (it.biDong && (it.biDong.hp || it.biDong.giap)) score += 40;
+        if (it.chieu && it.chieu.length) score += 20;
+      }
+
+      // Dị bảo thế giới hoặc Boss rơi:
+      if (DIBAO.ev.some((e) => e.relic === it.id) || DIBAO.boss.includes(it.id)) {
+        score += 30;
+      }
+
+      const entry = { it, id: it.id, score };
+      if (it.loai === 'cong_phap') cpList.push(entry);
+      else pkList.push(entry);
     }
 
-    items.sort((a, b) => b.score - a.score);
+    cpList.sort((a, b) => b.score - a.score);
+    pkList.sort((a, b) => b.score - a.score);
+
+    // Cân bằng tỉ lệ: lấy top Công Pháp (để dẫn truyền thông mạch) và top Pháp Khí (để chiến đấu)
     const pool = [];
     const seenNames = new Set();
-    for (const entry of items) {
-      if (seenNames.has(entry.it.ten)) continue;
+    const addEntry = (entry) => {
+      if (!entry || seenNames.has(entry.it.ten)) return;
       seenNames.add(entry.it.ten);
       pool.push(entry.it);
-      if (pool.length >= 36) break;
+    };
+
+    const maxCp = 18;
+    const maxPk = 20;
+    for (let i = 0; i < Math.max(cpList.length, pkList.length); i++) {
+      if (i < cpList.length && pool.filter((x) => x.loai === 'cong_phap').length < maxCp) {
+        addEntry(cpList[i]);
+      }
+      if (i < pkList.length && pool.filter((x) => x.loai === 'phap_khi').length < maxPk) {
+        addEntry(pkList[i]);
+      }
+      if (pool.length >= 38) break;
     }
+
+    // Nếu thiếu, bù thêm các món còn lại có điểm cao nhất
+    if (pool.length < 32) {
+      const remaining = [...cpList, ...pkList].sort((a, b) => b.score - a.score);
+      for (const entry of remaining) {
+        addEntry(entry);
+        if (pool.length >= 36) break;
+      }
+    }
+
     return pool;
   }
 
@@ -7129,10 +7254,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     return nvMock;
   }
 
-  function makeBisEval(nv0, enemies, mode) {
+  function makeBisEval(nv0, enemies, mode, deduced) {
     const K = S.core, c = C();
     const cache = new Map();
     const g = K.luoiKinhMach(c, nv0);
+    const baseHeSet = new Set(deduced.baseHe.map((h) => String(h).toLowerCase()));
+    const baseRootSet = new Set(deduced.baseRoots.map((h) => String(h).toLowerCase()));
+    const relRootSet = new Set(deduced.relatedRoots.map((h) => String(h).toLowerCase()));
 
     return (input) => {
       const rawList = Array.isArray(input) ? input : (input && Array.isArray(input.manh) ? input.manh : []);
@@ -7150,17 +7278,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       const nv = clone(nv0);
       nv.kinhMach.manh = manh.map((p) => ({ ...p.m }));
 
-      // Giả định tẩy tủy: Với mỗi mảnh ghép được đặt lên, đổi màu các ô mà nó chiếm sang hệ chính của món đó
+      // Giả định tẩy tủy: Đổi màu các ô mà món đó chiếm giữ sang hệ tương thích nhất của món theo Linh Căn
       manh.forEach((p) => {
         const it = c.items.get(p.m.item);
         if (!it) return;
         const heRaw = it.he || ['vo_sac'];
-        const he = (Array.isArray(heRaw) ? heRaw[0] : heRaw) || 'vo_sac';
+        const heArr = Array.isArray(heRaw) ? heRaw : [heRaw];
+        let chosenHe = heArr.find((h) => baseHeSet.has(String(h).toLowerCase()))
+          || heArr.find((h) => baseRootSet.has(gocHe(String(h).toLowerCase())))
+          || heArr.find((h) => relRootSet.has(gocHe(String(h).toLowerCase())))
+          || heArr[0]
+          || 'vo_sac';
+        chosenHe = String(chosenHe).toLowerCase();
+
         const cells = p.cells || K.oCuaManh(g, p.m, it) || [];
         for (const idx of cells) {
           if (idx >= 0 && idx < nv.kinhMach.mau.length) {
-            if (he !== 'vo' && he !== 'vo_sac') {
-              nv.kinhMach.mau[idx] = he;
+            if (chosenHe !== 'vo' && chosenHe !== 'vo_sac') {
+              nv.kinhMach.mau[idx] = chosenHe;
             }
           }
         }
@@ -7181,25 +7316,103 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       }
 
       const thong = R.manh.filter((m) => m && m.thong).length;
+      const dead = R.manh.filter((m) => m && !m.thong).length;
       const toc = R.biDong.toc_do || 0, dp = R.biDong.dot_pha || 0;
-      const ng = (R.diemNghich || 0) * 10;
+      const ng = (R.diemNghich || 0) * 20; // Phạt nặng điểm nghịch hệ
       const ll = P.linhLucMoiLuot || 0;
       const atk = (P.chieu || []).filter((x) => x.dang && x.phi > 0).map((x) => x.phi);
       const minCost = atk.length ? Math.min(...atk) : 0;
-      const dead = R.manh.filter((m) => m && !m.thong).length;
-      const llScore = (mode === 'tu' ? 1 : mode === 'danh' ? 6 : 4) * ll - (minCost && ll < minCost ? 35 : 0) - 10 * dead;
+      const llScore = (mode === 'tu' ? 1 : mode === 'danh' ? 6 : 4) * ll - (minCost && ll < minCost ? 35 : 0);
+
+      // Thưởng tương thích bản mệnh Linh Căn kiếp này:
+      let lcBonus = 0;
+      manh.forEach((p) => {
+        const it = c.items.get(p.m.item);
+        if (!it) return;
+        const itHeArr = (Array.isArray(it.he) ? it.he : [it.he || 'vo_sac']).map((h) => String(h).toLowerCase());
+        if (itHeArr.some((h) => baseHeSet.has(h))) lcBonus += 25;
+        else if (itHeArr.some((h) => baseRootSet.has(gocHe(h)))) lcBonus += 15;
+        else if (itHeArr.some((h) => relRootSet.has(gocHe(h)))) lcBonus += 8;
+      });
 
       let s;
-      if (mode === 'tu') s = 0.3 * fightScore + 500 * toc + 400 * dp + thong * 2 - ng + llScore;
-      else if (mode === 'danh') s = fightScore * 1.5 + 0.5 * thong - ng + llScore;
-      else s = fightScore + 35 * toc + 25 * dp + 0.3 * thong - ng + llScore;
+      if (mode === 'tu') s = 0.3 * fightScore + 500 * toc + 400 * dp + thong * 5 - ng + llScore;
+      else if (mode === 'danh') s = fightScore * 1.5 + thong * 2 - ng + llScore;
+      else s = fightScore + 35 * toc + 25 * dp + thong * 2 - ng + llScore;
 
-      s += 15 * manh.reduce((a, p) => a + (p.cells ? p.cells.length : 0), 0);
+      s += lcBonus;
+      s -= dead * 80; // Phạt nặng mảnh không thông
+      s += 12 * manh.reduce((a, p) => a + (p.cells ? p.cells.length : 0), 0);
 
       const out = { s, wins, P, R, nvFinal: nv };
       cache.set(key, out);
       return out;
     };
+  }
+
+  async function bisGreedy(mockNv, customEval, onProg) {
+    const K = S.core, c = C();
+    const { cand, g } = buildCandidates(mockNv);
+    const ids = Object.keys(cand).filter((k) => cand[k].length);
+    const items = c.items;
+
+    let cur = [];
+    let curS = customEval(cur).s;
+    const usedCells = new Set();
+
+    for (let round = 0; round < 35; round++) {
+      let best = null;
+      const validCands = [];
+
+      for (const id of ids) {
+        if (cur.some((p) => p.m.item === id)) continue;
+        const it = items.get(id);
+        const isCp = it && it.loai === 'cong_phap';
+
+        for (const cn of cand[id]) {
+          if (cn.cells.some((x) => usedCells.has(x))) continue;
+
+          if (round === 0) {
+            const touchesDanDien = cn.cells.some((x) => {
+              const cx = x % g.rong;
+              return [cx > 0 ? x - 1 : -1, cx < g.rong - 1 ? x + 1 : -1, x - g.rong, x + g.rong].some((n) => n === g.danDien) || x === g.danDien;
+            });
+            if (!touchesDanDien) continue;
+            validCands.push({ cn, prio: isCp ? 100 : 30 });
+          } else {
+            const isAdj = cn.cells.some((x) => {
+              const cx = x % g.rong;
+              return [cx > 0 ? x - 1 : -1, cx < g.rong - 1 ? x + 1 : -1, x - g.rong, x + g.rong].some((n) => n === g.danDien || usedCells.has(n));
+            });
+            if (isAdj) {
+              validCands.push({ cn, prio: isCp ? 20 : 10 });
+            }
+          }
+        }
+      }
+
+      if (!validCands.length) break;
+
+      validCands.sort((a, b) => (b.prio + b.cn.cells.length * 2) - (a.prio + a.cn.cells.length * 2));
+      const topCandidates = validCands.slice(0, 15);
+      for (const { cn } of topCandidates) {
+        const next = [...cur, cn];
+        const evRes = customEval(next);
+        if (!best || evRes.s > best.s) {
+          best = { s: evRes.s, cn };
+        }
+      }
+
+      if (!best || best.s <= curS) break;
+
+      cur.push(best.cn);
+      curS = best.s;
+      best.cn.cells.forEach((x) => usedCells.add(x));
+
+      if (round % 3 === 0) await sleep0();
+    }
+
+    return cur.map((p) => ({ ...p.m }));
   }
 
   function bisGetItemHuntingGuide(it) {
@@ -7258,37 +7471,37 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   async function bisSolve(nvReal, targetRealm, mode, onProg) {
     const lc = nvReal.linhCan;
     const deduced = bisDeduceElements(lc);
-    const pool = bisSelectPool(deduced.allElements, targetRealm, mode);
-    if (!pool.length) throw new Error('Không tìm thấy đủ vật phẩm phù hợp trong dữ liệu game.');
+    const pool = bisSelectPool(deduced, targetRealm, mode);
+    if (!pool.length) throw new Error('Không tìm thấy đủ vật phẩm phù hợp trong dữ liệu game theo Linh Căn này.');
 
     const mockNv = createBisMockNv(nvReal, targetRealm, pool);
     const enemies = benchEnemies(targetRealm, 3);
-    const customEval = makeBisEval(mockNv, enemies, mode);
+    const customEval = makeBisEval(mockNv, enemies, mode, deduced);
 
-    onProg(10, 'Khởi tạo thế cờ tham lam ban đầu...');
-    const init = await greedy(mockNv, mode);
+    onProg(10, 'Quét toàn bộ data game & phân tích chuỗi tương sinh...');
+    const init = await bisGreedy(mockNv, customEval, onProg);
 
-    onProg(25, 'Giải thuật luyện kim mô phỏng (Simulated Annealing)...');
+    onProg(30, 'Luyện kim mô phỏng (Simulated Annealing) tối ưu hóa...');
     const annealed = await anneal({
       nv0: mockNv,
       mode,
-      iters: 240,
+      iters: 400,
       init,
-      onProg: (pct, best) => onProg(25 + pct * 50, 'Đang tối ưu vị trí mảnh ghép...'),
+      onProg: (pct, best) => onProg(30 + pct * 45, 'Đang hoán vị tối ưu vị trí mảnh ghép...'),
       label: 'Đang giải ma trận kinh mạch...',
       seed: 8888,
       customEval
     });
 
-    onProg(80, 'Tinh chỉnh leo đồi lần cuối (Hill Climbing Polish)...');
-    const polished = await polish(mockNv, mode, annealed, (pct) => onProg(80 + pct * 18, 'Đang hoàn thiện các ô kề cạnh...'), customEval);
+    onProg(75, 'Tinh chỉnh leo đồi lần cuối (Hill Climbing Polish)...');
+    const polished = await polish(mockNv, mode, annealed, (pct) => onProg(75 + pct * 23, 'Đang lấp đầy các ô kề cạnh...'), customEval);
     onProg(100, 'Hoàn thành!');
 
     const finalManh = (polished && Array.isArray(polished.manh) && polished.manh.length)
       ? polished.manh
       : (annealed && Array.isArray(annealed.manh) && annealed.manh.length)
         ? annealed.manh
-        : [];
+        : (init && init.length ? init : []);
 
     const evalFinal = customEval(finalManh);
     return {
@@ -7302,7 +7515,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
 
   function tabBis() {
-    const nv = G().state.run.nhanVat;
+    const g = G(), run = g && g.state && g.state.run, nv = run && run.nhanVat;
+    if (!nv) {
+      body.innerHTML = `
+        <div class="vk-card">
+          <h2 style="margin:0 0 6px;color:var(--acc);font-size:16px">🌌 Biệt Đội Late Game · Kinh Mạch Tối Thượng</h2>
+          <div class="vk-mu" style="font-size:13px;line-height:1.5">
+            Chưa tìm thấy dữ liệu nhân vật của kiếp hiện tại. Hãy vào một ván chơi (hoặc tiếp tục kiếp đang tu luyện) để Trợ Lý quét dữ liệu Linh Căn và thiết lập Biệt Đội Late Game tối ưu!
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     const lc = nv.linhCan;
     const deduced = bisDeduceElements(lc);
     const c = C();
@@ -7312,22 +7537,75 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (!S.bisMode) S.bisMode = 'danh';
 
     const SINH = { kim: 'thuy', thuy: 'moc', moc: 'hoa', hoa: 'tho', tho: 'kim' };
-    let bridgeHtml = '';
-    if (deduced.bridges.length) {
-      bridgeHtml = deduced.bridges.map((b) => `<b>${heTen(b.from)}</b> ➔ <span class="vk-ok" style="font-weight:bold;text-decoration:underline">${heTen(b.bridge)}</span> ➔ <b>${heTen(b.to)}</b>`).join(' &bull; ');
+    const ME = { thuy: 'kim', moc: 'thuy', hoa: 'moc', tho: 'hoa', kim: 'tho' };
+
+    let analysisHtml = '';
+    if (deduced.baseRoots.length === 1) {
+      const r = deduced.baseRoots[0];
+      const me = ME[r], con = SINH[r];
+      analysisHtml = `
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span>Hệ Bản Mệnh: </span><b style="color:var(--acc)">${heTen(r)}</b>
+          <span class="vk-mu">· Tương sinh hỗ trợ: </span><b>${heTen(me)}</b> (Mẹ dưỡng) & <b>${heTen(con)}</b> (Con trợ)
+        </div>
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span style="color:var(--bad)">Đã khóa hệ tương khắc: </span>
+          ${deduced.forbiddenRoots.map((h) => `<span class="vk-pill" style="margin:1px;background:rgba(248,113,113,0.15);color:var(--bad);border:1px solid rgba(248,113,113,0.3)">🚫 ${heTen(h)}</span>`).join(' ')}
+          <span class="vk-mu" style="font-size:11.5px">(Triệt tiêu 100% điểm nghịch hệ)</span>
+        </div>
+      `;
     } else if (deduced.baseRoots.length === 2) {
-      const a = deduced.baseRoots[0], b = deduced.baseRoots[1];
-      const dir = SINH[a] === b ? `${heTen(a)} ➔ ${heTen(b)}` : SINH[b] === a ? `${heTen(b)} ➔ ${heTen(a)}` : '';
-      bridgeHtml = dir
-        ? `<span class="vk-ok" style="font-weight:bold">Đã tương sinh trực tiếp (${dir}) — Không cần cầu nối ✓</span>`
-        : '<span class="vk-mu">Không cần cầu nối</span>';
-    } else if (deduced.baseRoots.length === 1) {
-      bridgeHtml = '<span class="vk-mu">Đơn Linh Căn thuần túy</span>';
+      const [a, b] = deduced.baseRoots;
+      const isDirect = SINH[a] === b || SINH[b] === a;
+      const dirText = SINH[a] === b ? `${heTen(a)} ➔ ${heTen(b)}` : SINH[b] === a ? `${heTen(b)} ➔ ${heTen(a)}` : '';
+      analysisHtml = `
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span>Song Hệ Bản Mệnh: </span><b style="color:var(--acc)">${heTen(a)} - ${heTen(b)}</b>
+          ${isDirect ? `— <span class="vk-ok" style="font-weight:bold">Đã tương sinh trực tiếp (${dirText}) ✓</span>` : ''}
+        </div>
+        ${deduced.bridges.length ? `
+          <div style="font-size:12.5px;margin-bottom:6px">
+            <span>Cầu Nối Tương Sinh: </span>
+            ${deduced.bridges.map((br) => `<b>${heTen(br.from)}</b> ➔ <span class="vk-ok" style="font-weight:bold;text-decoration:underline">${heTen(br.bridge)}</span> ➔ <b>${heTen(br.to)}</b>`).join(' &bull; ')}
+          </div>
+        ` : ''}
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span style="color:var(--bad)">Đã khóa hệ tương khắc: </span>
+          ${deduced.forbiddenRoots.map((h) => `<span class="vk-pill" style="margin:1px;background:rgba(248,113,113,0.15);color:var(--bad);border:1px solid rgba(248,113,113,0.3)">🚫 ${heTen(h)}</span>`).join(' ')}
+          <span class="vk-mu" style="font-size:11.5px">(Triệt tiêu 100% điểm nghịch hệ)</span>
+        </div>
+      `;
+    } else if (deduced.baseRoots.length >= 3) {
+      analysisHtml = `
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span>Đa Hệ Bản Mệnh: </span><b style="color:var(--acc)">${deduced.baseRoots.map(heTen).join(' - ')}</b>
+          <span class="vk-ok">· Chuỗi tuần hoàn ngũ hành</span>
+        </div>
+      `;
     } else {
-      bridgeHtml = '<span class="vk-mu">Đã đầy đủ chuỗi hệ (Tam Linh Căn / Ngũ Hành)</span>';
+      analysisHtml = `
+        <div style="font-size:12.5px;margin-bottom:6px">
+          <span>Phàm Thể Tự Do: </span><b style="color:var(--acc)">Không bị giới hạn bởi linh căn</b>
+          <span class="vk-mu">· Quét toàn bộ kho game để chọn combo tương sinh mạnh nhất</span>
+        </div>
+      `;
     }
 
     const allHeHtml = deduced.allElements.map((h) => `<span class="vk-pill" style="margin:2px;background:var(--bg3);border:1px solid var(--line)">${heTen(h)}</span>`).join('');
+
+    const currentLcKey = deduced.baseHe.join('-');
+    const currentLcName = deduced.baseHe.map(heTen).join(' - ') || 'Phàm Căn';
+    const res = S.bisResult;
+
+    let outdatedHtml = '';
+    if (res && res.lcKey !== undefined && res.lcKey !== currentLcKey) {
+      outdatedHtml = `
+        <div class="vk-card" style="border-left:4px solid var(--warn);background:rgba(251,191,36,0.1);margin-bottom:12px">
+          <b style="color:var(--warn)">⚠️ Lưu ý: Kết quả hiển thị bên dưới thuộc Linh Căn của kiếp trước (${esc(res.lcText || res.lcKey)}).</b>
+          <div class="vk-mu" style="font-size:12px;margin-top:4px">Linh Căn hiện tại của kiếp này là <b>${esc(currentLcName)}</b>. Hãy bấm <b>[⚡ Bắt Đầu Tính Toán]</b> bên dưới để quét toàn bộ game data và thiết lập cấu hình chuẩn nhất cho kiếp này!</div>
+        </div>
+      `;
+    }
 
     let progressHtml = '';
     if (S.bisRunning) {
@@ -7345,7 +7623,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     }
 
     let resultHtml = '';
-    const res = S.bisResult;
     if (res && res.manh) {
       const ef = res.evalFinal;
       const R = ef.R, P = ef.P;
@@ -7381,7 +7658,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
       let huntingRows = '';
       const checklistTextLines = [];
-      checklistTextLines.push(`=== CẨM NANG SĂN ĐỒ LATE GAME (${realmName(res.targetRealm)} - ${res.mode === 'danh' ? 'Thuần Sát Thương' : res.mode === 'tu' ? 'Tu Luyện' : 'Công Thủ Toàn Diện'}) ===`);
+      checklistTextLines.push(`=== CẨM NANG SĂN ĐỒ LATE GAME CHO LINH CĂN ${currentLcName.toUpperCase()} (${realmName(res.targetRealm)} - ${res.mode === 'danh' ? 'Thuần Sát Thương' : res.mode === 'tu' ? 'Tu Luyện' : 'Công Thủ Toàn Diện'}) ===`);
 
       res.manh.forEach((m, idx) => {
         const it = c.items.get(m.item);
@@ -7433,12 +7710,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       resultHtml = `
         <div class="vk-card" style="margin-top:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-            <h3 style="margin:0">🏆 Ma Trận Kinh Mạch Tối Thượng (${realmName(res.targetRealm)})</h3>
+            <h3 style="margin:0">🏆 Ma Trận Kinh Mạch Tối Thượng (${realmName(res.targetRealm)} - ${esc(res.lcText || currentLcName)})</h3>
             <button class="vk-btn sec" id="bis-copy-list" style="font-size:12px;padding:4px 10px">📋 Copy Danh Sách Săn Đồ</button>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0;background:var(--bg2);padding:10px;border-radius:6px;border:1px solid var(--line)">
-            <div><span class="vk-mu" style="font-size:12px">Quái ${realmName(res.targetRealm)} Thắng:</span><br><b class="vk-ok" style="font-size:15px">${ef.wins}/5</b></div>
+            <div><span class="vk-mu" style="font-size:12px">Quái ${realmName(res.targetRealm)} Thắng:</span><br><b class="vk-ok" style="font-size:15px">${ef.wins}/3</b></div>
             <div><span class="vk-mu" style="font-size:12px">Tổng Uy Lực:</span><br><b style="font-size:15px">${totalChieuUy}</b></div>
             <div><span class="vk-mu" style="font-size:12px">Hồi Linh Lực:</span><br><b style="font-size:15px">+${P.linhLucMoiLuot || 0}/hiệp</b></div>
             <div><span class="vk-mu" style="font-size:12px">Tốc Độ Di Chuyển:</span><br><b style="font-size:15px">+${R.biDong.toc_do || 0}%</b></div>
@@ -7449,7 +7726,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           <div style="margin:14px 0 6px">
             <b>Sơ Đồ Kinh Mạch Tối Ưu:</b>
-            <div class="vk-mu" style="font-size:12px;margin-bottom:6px">Các ô màu đã được giả định tẩy tủy tương thích 100% với từng món đặt lên.</div>
+            <div class="vk-mu" style="font-size:12px;margin-bottom:6px">Các ô màu đã được giả định tẩy tủy tương thích 100% với từng món đặt lên theo Linh Căn.</div>
             <div id="bis-canvas-box" style="overflow-x:auto;text-align:center;background:var(--bg3);padding:10px;border-radius:6px;border:1px solid var(--line)"></div>
           </div>
 
@@ -7485,18 +7762,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <div class="vk-card">
         <h2 style="margin:0 0 6px;color:var(--acc);font-size:16px">🌌 Biệt Đội Late Game · Kinh Mạch Tối Thượng (BIS & Săn Đồ)</h2>
         <div class="vk-mu" style="font-size:12.5px;line-height:1.45;margin-bottom:10px">
-          Tự động phân tích <b>Linh Căn</b> của kiếp này, tự suy diễn chuỗi <b>Ngũ Hành Tương Sinh</b> & cầu nối hệ trực tiếp. Giả định <b>full lượt tẩy tủy cho tất cả các ô</b> late game (đạt 100% độ hợp hệ, 0 điểm nghịch) để tính toán cấu hình kinh mạch mạnh nhất và lập <b>Cẩm nang săn đồ</b> cho bạn đi gom!
+          Tự động phân tích <b>Linh Căn hiện tại của kiếp này</b> (${esc(currentLcName)}), quét toàn bộ kho dữ liệu game (tất cả công pháp & pháp khí), phân tích chuỗi <b>Ngũ Hành Tương Sinh</b> tương thích và loại trừ triệt để các hệ tương khắc. Giả định <b>full lượt tẩy tủy cho tất cả các ô</b> late game (đạt 100% độ hợp hệ, 0 điểm nghịch) để tạo cấu hình kinh mạch mạnh nhất và lập <b>Cẩm nang săn đồ</b> chi tiết!
         </div>
 
         <div style="background:var(--bg2);padding:10px;border-radius:6px;border:1px solid var(--line);margin-bottom:12px">
           <div style="margin-bottom:6px">
-            <span>Linh Căn Hiện Tại: </span>
-            <b class="vk-ok" style="font-size:14px">${deduced.baseHe.map(heTen).join(' - ') || 'Phàm Căn'}</b>
+            <span>Linh Căn Hiện Tại Của Kiếp Này: </span>
+            <b class="vk-ok" style="font-size:14px">${esc(currentLcName)}</b>
             <span class="vk-mu">(${({ don: 'Đơn Linh Căn', song: 'Song Linh Căn', tam: 'Tam Linh Căn', tu: 'Tứ Linh Căn', hon_don: 'Hỗn Độn', thien: 'Thiên Linh Căn', bien_di: 'Dị Linh Căn' })[deduced.lcPham] || deduced.lcPham || 'Thường'})</span>
           </div>
-          <div style="font-size:12.5px;margin-bottom:6px">
-            <span>Cầu Nối Tương Sinh: </span>${bridgeHtml}
-          </div>
+          ${analysisHtml}
           <div style="font-size:12.5px">
             <span style="display:inline-block;margin-bottom:4px">Tất Cả Hệ Khai Phóng (+ Vô Sắc & Dị Căn):</span><br>
             <div style="display:flex;flex-wrap:wrap;gap:2px">${allHeHtml}</div>
@@ -7523,11 +7798,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         </div>
 
         <button class="vk-btn" id="bis-btn-run" style="width:100%;font-size:14px;padding:8px" ${S.bisRunning ? 'disabled' : ''}>
-          ${S.bisRunning ? '⏳ Đang Giải Ma Trận...' : '⚡ Bắt Đầu Tính Toán Kinh Mạch Tối Thượng'}
+          ${S.bisRunning ? '⏳ Đang Quét Dữ Liệu & Giải Ma Trận...' : '⚡ Bắt Đầu Tính Toán Kinh Mạch Tối Thượng'}
         </button>
       </div>
 
       ${progressHtml}
+      ${outdatedHtml}
       ${resultHtml}
     `;
 
@@ -7578,7 +7854,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         if (S.bisRunning) return;
         S.bisRunning = true;
         S.bisPct = 0;
-        S.bisMsg = 'Bắt đầu khởi tạo dữ liệu...';
+        S.bisMsg = 'Bắt đầu quét toàn bộ data game theo Linh Căn ' + currentLcName + '...';
         render();
 
         try {
@@ -7593,9 +7869,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ...out,
             targetRealm,
             mode,
+            lcKey: currentLcKey,
+            lcText: currentLcName,
             date: new Date().toLocaleTimeString('vi-VN')
           };
-          UI.notify('🎉 Đã giải xong Ma Trận Late Game & Cẩm Nang Săn Đồ!');
+          UI.notify('🎉 Đã giải xong Ma Trận Late Game & Cẩm Nang Săn Đồ cho Linh Căn ' + currentLcName + '!');
         } catch (err) {
           console.error(err);
           UI.notify('❌ Lỗi tính toán: ' + (err && err.message || err));
@@ -7803,7 +8081,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.1.8 · Ghi Nhận Số Trận & Dừng Đúng Hạn Khi Tự Tốc Chiến', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.2.0 · Biệt Đội Late Game Tối Ưu Toàn Diện Theo Linh Căn Hiện Tại', d: '06/11/2026', now: true, pts: [
+                '<b>Tự Động Quét Theo Linh Căn Của Kiếp Đang Chơi:</b> Nhận diện chính xác 100% Linh Căn hiện tại của nhân vật (Đơn Linh Căn, Song Linh Căn, Tam/Tứ/Ngũ Linh Căn, Dị Linh Căn Lôi/Phong/Băng/Ám hay Phàm Căn) để quét toàn bộ kho dữ liệu game, không còn bị bó hẹp trong hệ Kim - Thổ.',
+                '<b>Phân Tích Tương Sinh & Khóa Chặt Tương Khắc Mọi Hệ:</b> Tự động suy diễn hệ Bản Mệnh, các hệ Tương Sinh hỗ trợ (Mẹ dưỡng & Con trợ) cùng các nhánh dị căn tương ứng; đồng thời khóa chặt và loại trừ triệt để các hệ tương khắc để đảm bảo ma trận đạt 0 điểm nghịch hệ.',
+                '<b>Thuật Toán Tham Lam Tẩy Tủy Thông Minh (bisGreedy):</b> Khởi tạo thế cờ trực tiếp từ Đan Điền qua hệ thống tâm pháp chuẩn tẩy tủy, đảm bảo mạch nối thông suốt 100% trước khi đưa vào giải thuật luyện kim mô phỏng (Simulated Annealing) và leo đồi (Hill Climbing).',
+                '<b>Cân Bằng Tâm Pháp & Thần Binh Trong Pool:</b> Tự động tuyển chọn cân đối giữa top Công Pháp dẫn truyền linh lực và top Pháp Khí xuất chiêu uy lực của đúng hệ Linh Căn, tối ưu hóa toàn diện cho cả 3 chế độ: Thuần Sát Thương, Tu Luyện & Bứt Tốc, và Công Thủ Toàn Diện.',
+                '<b>Cảnh Báo Lệch Linh Căn Khi Sang Kiếp Mới:</b> Tự động phát hiện khi người chơi chuyển kiếp hoặc đổi Linh Căn khác so với kết quả cũ, hiển thị cảnh báo trực quan để người chơi dễ dàng bấm tính toán lại.'
+            ] },
+            { t: 'Phiên Bản 7.1.8 · Ghi Nhận Số Trận & Dừng Đúng Hạn Khi Tự Tốc Chiến', d: '06/11/2026', now: false, pts: [
                 '<b>Ghi nhận chuẩn xác mọi trận đấu:</b> Khi tính năng Tự Tốc Chiến trong game được kích hoạt, game tự động giải quyết trận đấu ngay trong lựa chọn mà không mở màn hình giao chiến. Auto Săn Yêu phiên bản 7.1.8 đã theo dõi và ghi nhận đầy đủ số trận thắng này vào bộ đếm trận.',
                 '<b>Sửa lỗi hiển thị "Số Trận Đã Đánh: 0 (thắng 0)":</b> Khắc phục triệt để hiện tượng đã đánh qua rất nhiều quái nhưng số trận đã đánh vẫn kẹt ở 0.',
                 '<b>Chuẩn hóa điều kiện dừng theo số trận:</b> Cài đặt "Dừng sau số trận" giờ đây hoạt động chính xác tuyệt đối ngay cả khi game bật tính năng Tự Tốc Chiến.',
