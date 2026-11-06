@@ -243,10 +243,18 @@ Mỗi khi web game ra bản cập nhật mới, người dùng sẽ tải gói t
 ### Bước 5: Cập nhật phiên bản Tool & Phát hành (Tự động Update trên Tampermonkey)
 
 > [!IMPORTANT]
-> **QUY TẮC PHIÊN BẢN & COMMIT (BẮT BUỘC TUÂN THỦ):**
-> Mỗi lần sửa bất kỳ nội dung nào trong file script `van_kiep_tro_ly_user.js` (dù là sửa 1 dòng code, fix bug nhỏ hay thêm tính năng mới), nếu kiểm tra git (`git status` / `git diff`) thấy file có thay đổi thì **BẮT BUỘC coi đó là 1 bản cập nhật mới**:
-> 1. **Tăng số phiên bản:** Nâng `@version` trong UserScript header và `TOOL_VER` trong mã nguồn (ví dụ: `7.0.4` → `7.0.5`).
+> **QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER) & COMMIT (BẮT BUỘC TUÂN THỦ):**
+> Mỗi lần sửa bất kỳ nội dung nào trong file script `van_kiep_tro_ly_user.js`, nếu kiểm tra git (`git status` / `git diff`) thấy file có thay đổi thì **BẮT BUỘC coi đó là 1 bản cập nhật mới** và tuân thủ chặt chẽ cấp độ SemVer:
+>
+> 1. **Nâng PATCH (`x.y.Z` $\rightarrow$ `x.y.Z+1`):** Áp dụng khi **Enhance** (tối ưu hóa, cải thiện tính năng có sẵn, tinh chỉnh giao diện/hiệu năng, nâng cấp thuật toán) hoặc **Sửa Bug** (sửa lỗi logic, sửa hiển thị, xử lý ngoại lệ, tương thích API game). Ví dụ: `7.6.1` $\rightarrow$ `7.6.2`.
+> 2. **Nâng MINOR (`x.Y.0` $\rightarrow$ `x.Y+1.0`):** Áp dụng khi bổ sung **Chức Năng Mới (Feature)** hoàn toàn (thêm Tab mới, Module mới, tính năng lớn chưa từng có). Khi nâng Minor, reset Patch về `0`. Ví dụ: `7.6.2` $\rightarrow$ `7.7.0`.
+> 3. **Nâng MAJOR (`X.0.0` $\rightarrow$ `X+1.0.0`):** **CHỈ NÂNG KHI NGƯỜI DÙNG YÊU CẦU TRỰC TIẾP** (hoặc breaking changes lớn về kiến trúc do người dùng chỉ định). Reset Minor và Patch về `0.0`. Ví dụ: `7.7.0` $\rightarrow$ `8.0.0`.
+>
+> **Các bước thực hiện:**
+> 1. **Tăng số phiên bản:** Nâng `@version` trong UserScript header, tiêu đề comment và `TOOL_VER` trong mã nguồn.
 > 2. **Thêm mục vào Nhật Ký Cập Nhật:** Bổ sung ngay 1 entry lên ĐẦU mảng `LOG` trong module `NhatKy` mô tả ngắn gọn thay đổi vừa làm, đặt `now: true` (và chuyển bản cũ thành `now: false`).
+> 3. **Kiểm tra cú pháp:** Chạy `node -c .\van_kiep_tro_ly_user.js` đạt code 0.
+> 4. **Commit & Push:** Đẩy lên branch `main`.
 > *Lý do:* Tampermonkey chỉ so sánh chuỗi `@version`. Nếu bạn push code lên GitHub mà không tăng `@version`, Tampermonkey sẽ bỏ qua và KHÔNG kích hoạt cập nhật tự động cho người dùng.
 
 * **Cơ chế Auto-Update của Tampermonkey:**
