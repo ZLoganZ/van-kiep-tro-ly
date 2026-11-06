@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.9.2
+// @version      7.10.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.9.2";
+      var TOOL_VER = "7.10.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7376,6 +7376,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           tru_vat: "Vật trữ đồ",
           di_hoa: "Dị hỏa",
           luyen_che: "Dụng cụ luyện chế",
+          tran_ban: "Trận bàn",
+          tran_van: "Trận văn",
         };
         const CHI_SO_VI = {
           than_thuc: "thần thức",
@@ -10706,6 +10708,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           di_hoa: "Dị hỏa",
           phuong_tien: "Phương tiện",
           dung_cu: "Dụng cụ",
+          tran_ban: "Trận bàn",
+          tran_van: "Trận văn",
           khac: "Khác",
         };
         const glutTier = (v, held) =>
@@ -11221,6 +11225,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           nguyen_lieu: "Nguyên liệu",
           phu_luc: "Phù",
           phuong_tien: "Đi lại",
+          tran_ban: "Trận bàn",
+          tran_van: "Trận văn",
         };
         async function scanShops(maxY, prog) {
           const K = S.core,
@@ -12346,6 +12352,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ["van.doc", "Độc", "Trúng độc"],
             ["van.han", "Hàn", "Hàn khí"],
             ["van.huyet", "Huyết", "Xuất huyết"],
+            ["van.tuyet_hoi", "Tuyệt Hồi", "Tuyệt hồi"],
           ];
           const he = [
             ["van.nhiem_kim", "Nhiễm Kim", "Kim"],
@@ -12353,6 +12360,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ["van.nhiem_thuy", "Nhiễm Thủy", "Thủy"],
             ["van.nhiem_hoa", "Nhiễm Hỏa", "Hỏa"],
             ["van.nhiem_tho", "Nhiễm Thổ", "Thổ"],
+            ["van.nhiem_loi", "Nhiễm Lôi", "Lôi"],
+            ["van.nhiem_bang", "Nhiễm Băng", "Băng"],
+            ["van.nhiem_phong", "Nhiễm Phong", "Phong"],
+            ["van.nhiem_am", "Nhiễm Ám", "Ám"],
           ];
           const R = [
             {
@@ -20220,6 +20231,28 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
+          // 4B. TỰ ĐỘNG BÀY TRẬN BÀN CHIẾN ĐẤU (Tactical Formations - bay_tran)
+          // Khi đối đầu Boss, Tinh Anh hoặc khi máu dưới 65%, tự động kích hoạt Trận Bàn trong túi
+          if (
+            ta.tui &&
+            (isBossOrElite || hpRatio < 0.65) &&
+            cfg.autoFormation !== false
+          ) {
+            for (const [id, count] of Object.entries(ta.tui)) {
+              if (!count || count <= 0 || failedActions.has("bay_tran:" + id))
+                continue;
+              const it = Cc.items && Cc.items.get(id);
+              if (!it || it.loai !== "tran_ban" || !it.tran_phap) continue;
+              if (S.core && S.core.formationBlock) {
+                try {
+                  if (S.core.formationBlock(tran, Cc, it.id) !== undefined)
+                    continue;
+                } catch (e) {}
+              }
+              return { loai: "bay_tran", item: it.id };
+            }
+          }
+
           // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection - Toàn Diện 100% Không Bỏ Chiêu)
           const skills = ta.chieu || [];
           const curRound = tran.hiep || 1;
@@ -20462,6 +20495,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (!r.ok) {
             if (act.loai === "chieu") failedActions.add("chieu:" + act.id);
             else if (act.loai === "dan") failedActions.add("dan:" + act.item);
+            else if (act.loai === "bay_tran")
+              failedActions.add("bay_tran:" + act.item);
             else if (act.loai === "danh_thuong")
               failedActions.add("danh_thuong");
             else if (act.loai === "muc_tieu")
@@ -20540,6 +20575,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (!r.ok) {
               if (act.loai === "chieu") failed.add("chieu:" + act.id);
               else if (act.loai === "dan") failed.add("dan:" + act.item);
+              else if (act.loai === "bay_tran")
+                failed.add("bay_tran:" + act.item);
               else if (act.loai === "danh_thuong") failed.add("danh_thuong");
 
               if (
@@ -27596,9 +27633,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.9.2 · Khắc Phục Báo Sai Dị Bảo Sau Sự Kiện & Chuẩn Hóa Quét Map",
+            t: "Phiên Bản 7.10.0 · Thích Ứng Game Update (Trận Bàn, Bản Mệnh Văn Mới & Đan Mạch)",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Cập Nhật Bản Mệnh Văn Mới (5 Khắc Văn Mới):</b> Bổ sung trọn vẹn văn Tuyệt Hồi (<code>van.tuyet_hoi</code> - hiệu ứng decay giảm hồi phục) cùng 4 văn Nhiễm hệ nguyên tố mới: Nhiễm Lôi (<code>van.nhiem_loi</code>), Nhiễm Băng (<code>van.nhiem_bang</code>), Nhiễm Phong (<code>van.nhiem_phong</code>) và Nhiễm Ám (<code>van.nhiem_am</code>). Hoàn thiện đầy đủ 9 hệ linh căn cho hệ thống Bản Mệnh Pháp Bảo.",
+              "<b>Hệ Thống Nghề Thứ 4 & Phân Loại Trận Bàn (Trận Pháp):</b> Tích hợp đầy đủ danh mục Trận Bàn (<code>tran_ban</code>) và Trận Văn (<code>tran_van</code>) vào từ điển vật phẩm, bộ lọc chợ, kho đồ và hệ thống luyện chế nghề Trận Pháp.",
+              "<b>Hỗ Trợ Bày Trận Trong Chiến Đấu (Combat AI - bay_tran):</b> Nâng cấp Siêu AI VIP trong giao chiến tự động nhận diện và kích hoạt Bày Trận Bàn khi đối đầu Boss, Tinh Anh hoặc khi khí huyết tụt thấp, gia tăng vượt bậc khả năng phòng hộ và sát thương.",
+              "<b>Cơ Chế Đan Mạch & tierSlack Mới:</b> Thích ứng cơ chế cân bằng mới của game cho phép dùng đan dược thông mạch / chữa tổn (Thiển Mạch Đan, Quán Mạch Đan, Tái Mạch Cao, Ngọc Tủy Cao, Tử Phủ Linh Quả) vượt cảnh giới cũ; tương thích tuyệt đối 100% với phiên bản game build mới (57bad5c9).",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.9.2 · Khắc Phục Báo Sai Dị Bảo Sau Sự Kiện & Chuẩn Hóa Quét Map",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Loại Bỏ Báo Động Dị Bảo Ảo (Ghost Alert Fix):</b> Gỡ bỏ việc quét danh sách tĩnh trong <code>run.noiChon</code>; chuẩn hóa quét sự kiện Dị Bảo thực tế qua <code>run.nodes</code> (các node xuất thế thực thụ) kết hợp kiểm tra hồi chiêu 120 năm trong lịch sử (<code>run.history</code>) và cờ hoàn tất (<code>flags</code>). Chấm dứt hoàn toàn tình trạng sau khi qua sự kiện (dù có hay không nhận được Dị Bảo) tool vẫn liên tục báo có bảo vật tại khu di tích.",
               "<b>Chính Xác Hóa Thông Báo Đoạt Bảo:</b> Kiểm tra nghiêm ngặt túi đồ và thuộc tính nhân vật sau khi hoàn tất sự kiện (<code>checkOwnedRelic</code>); chỉ chúc mừng đoạt bảo khi thực sự nhận được Dị Bảo, tránh gây hiểu lầm cho người chơi khi sự kiện chỉ vừa kết thúc mà chưa đủ điều kiện nhận vật phẩm.",
