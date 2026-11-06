@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.10.2
+// @version      7.10.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.10.2";
+      var TOOL_VER = "7.10.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6996,6 +6996,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [5, 5],
               hc: 120,
               dia: "U Hồn Điện",
+              marker: "azgaar:marker:103",
               p: 0.07,
               bv: "Hạt Hoàng Thủ Lăng",
               bvcg: 5,
@@ -7009,6 +7010,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [5, 5],
               hc: 120,
               dia: "Kiếm Trạch",
+              marker: "hoang:394",
               p: 0.07,
               bv: "Vạn Kiếm Oán Hồn",
               bvcg: 5,
@@ -7022,6 +7024,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Tiên Vân Điện",
+              marker: "azgaar:marker:102",
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7035,6 +7038,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [5, 5],
               hc: 120,
               dia: "Yêu Phong Mộ",
+              marker: "azgaar:marker:34",
               p: 0.07,
               bv: "Hổ Hoàng Tàn Hồn",
               bvcg: 5,
@@ -7048,6 +7052,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [5, 5],
               hc: 120,
               dia: null,
+              marker: null,
               p: 0.07,
               bv: "Giao Hoàng",
               bvcg: 5,
@@ -7061,6 +7066,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [5, 5],
               hc: 120,
               dia: "Kiếm Đài",
+              marker: "azgaar:marker:35",
               p: 0.07,
               bv: "Đoạn Thiên Chiến Hồn",
               bvcg: 5,
@@ -7074,6 +7080,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: null,
               hc: 120,
               dia: null,
+              marker: null,
               p: 0.07,
               bv: "Ngũ Tổ Tàn Trận",
               bvcg: 5,
@@ -7087,6 +7094,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: null,
               hc: 120,
               dia: null,
+              marker: null,
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7100,6 +7108,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Hồn Tháp",
+              marker: "azgaar:marker:39",
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7113,6 +7122,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "U Điện",
+              marker: "azgaar:marker:40",
               p: 0.07,
               bv: "U Minh Quỷ Mẫu",
               bvcg: 4,
@@ -7126,6 +7136,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Lan Đài",
+              marker: "azgaar:marker:141",
               p: 0.07,
               bv: "Cổ Chiến Khôi Lỗi",
               bvcg: 5,
@@ -7139,6 +7150,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Tàn Phong",
+              marker: "hoang:291",
               p: 0.07,
               bv: "Thái Cổ Lôi Linh",
               bvcg: 5,
@@ -7152,6 +7164,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Vạn Đan Trủng",
+              marker: "azgaar:marker:101",
               p: 0.07,
               bv: "Hạn Bạt",
               bvcg: 4,
@@ -7165,6 +7178,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Tuyền Phong",
+              marker: "hoang:286",
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7178,6 +7192,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Đan Cốc",
+              marker: "hoang:204",
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7191,6 +7206,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Xích Trủng",
+              marker: "azgaar:marker:94",
               p: 0.07,
               bv: "Âm Hỏa Hồn Vương",
               bvcg: 5,
@@ -7204,6 +7220,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Vân Sơn",
+              marker: "hoang:262",
               p: 0.07,
               bv: "Thái Nhạc Hùng",
               bvcg: 5,
@@ -7217,6 +7234,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Kim Đao Điện",
+              marker: "azgaar:marker:36",
               p: 0.03,
               bv: null,
               bvcg: null,
@@ -7230,6 +7248,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               gate: [4, 5],
               hc: 120,
               dia: "Băng Hồn Trủng",
+              marker: "azgaar:marker:90",
               p: 0.07,
               bv: "Vạn Oán Quỷ",
               bvcg: 5,
@@ -7451,6 +7470,41 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return "Slot " + slot;
         }
 
+        // Dò tìm ID slot từ marker hoặc tên địa danh
+        function findSlotByDiaDanh(diaDanhId, diaName, c) {
+          try {
+            const W = (c && c.world) || (G().env && G().env.world);
+            if (!W || !Array.isArray(W.slots)) return null;
+            if (diaDanhId) {
+              const byMarker = W.slots.find(
+                (s) => s && String(s.dia_danh) === String(diaDanhId),
+              );
+              if (byMarker && byMarker.id != null) return String(byMarker.id);
+            }
+            if (diaName) {
+              const byName = W.slots.find((s) => {
+                if (!s) return false;
+                if (typeof W.info === "function") {
+                  const inf = W.info(s.id);
+                  if (inf && inf.diaDanh && inf.diaDanh.ten === diaName) return true;
+                  if (inf && inf.ten === diaName) return true;
+                }
+                if (s.dia_danh && typeof W.diaDanh === "function") {
+                  const dd = W.diaDanh(s.dia_danh);
+                  if (dd && dd.ten === diaName) return true;
+                }
+                if (s.dia_danh && W.diaDanhById && typeof W.diaDanhById.get === "function") {
+                  const dd = W.diaDanhById.get(s.dia_danh);
+                  if (dd && dd.ten === diaName) return true;
+                }
+                return false;
+              });
+              if (byName && byName.id != null) return String(byName.id);
+            }
+          } catch (e) {}
+          return null;
+        }
+
         // Kiểm tra xem nhân vật đã sở hữu Dị Bảo (trong túi đồ, kinh mạch, trang bị, hoặc bảo lục luân hồi) chưa
         function checkOwnedRelic(id, run, meta) {
           if (!id) return false;
@@ -7477,8 +7531,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return false;
         }
 
-        // Quét Dị Bảo thực tế đang nở trên thế giới (run.nodes, theGioi.dangDien, hoặc placeActivities tại nơi đang đứng)
-        // Tuyệt đối không quét run.noiChon vì đó là danh sách tĩnh thường trú của nơi chốn chứ không phải node xuất thế thật.
+        // Quét Dị Bảo thực tế đang nở trên thế giới (run.nodes, di tích run.noiChon, theGioi.dangDien, hoặc placeActivities)
         function scanMapActiveDiBao(run, c) {
           const map = new Map();
           if (!run) return map;
@@ -7497,13 +7550,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const ev = DIBAO.ev.find((x) => x.id === n.encounter);
               if (!ev) continue;
 
-              // Kiểm tra xem sự kiện này đã hoàn thành hoặc đang hồi chiêu trong kiếp này chưa
+              // Kiểm tra xem đã sở hữu món đồ này chưa
+              if (checkOwnedRelic(ev.relic, run)) continue;
+              const relicBare = ev.relic.replace(/^item\./, "");
+              if (
+                run.flags &&
+                (run.flags["di_bao_xong_" + relicBare] ||
+                  run.flags["di_bao_xong_" + ev.id])
+              )
+                continue;
+
+              // Kiểm tra xem sự kiện này đang trong thời gian hồi chiêu kiếp này không
               if (run.history && run.history[ev.id] && nam != null) {
                 const h = run.history[ev.id];
                 const hc = ev.hc || 120;
                 if (nam - h.namCuoi < hc) continue;
               }
-              if (run.flags && run.flags["di_bao_xong_" + ev.id]) continue;
 
               const slot =
                 n.slot != null
@@ -7522,7 +7584,67 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 2. Quét từ theGioi.dangDien (thế cục thế giới đang diễn ra)
+          // 2. Quét từ run.noiChon (tất cả các khu di tích, sơn môn có sự kiện Dị Bảo đang xuất thế)
+          if (run.noiChon) {
+            for (const [slotKey, nc] of Object.entries(run.noiChon)) {
+              if (!nc) continue;
+              const allPlaceEncs = [
+                ...(Array.isArray(nc.suKien) ? nc.suKien : []),
+                ...(Array.isArray(nc.contextual) ? nc.contextual : []),
+                ...(Array.isArray(nc.standing) ? nc.standing : []),
+              ];
+              if (!allPlaceEncs.length) continue;
+
+              for (const encId of allPlaceEncs) {
+                if (!encId || map.has(encId)) continue;
+                const ev = DIBAO.ev.find((x) => x.id === encId);
+                if (!ev) continue;
+
+                // Kiểm tra đã sở hữu món đồ chưa
+                if (checkOwnedRelic(ev.relic, run)) continue;
+
+                // Kiểm tra cờ hoàn thành
+                const relicBare = ev.relic.replace(/^item\./, "");
+                if (
+                  run.flags &&
+                  (run.flags["di_bao_xong_" + relicBare] ||
+                    run.flags["di_bao_xong_" + ev.id])
+                )
+                  continue;
+
+                // Kiểm tra hồi chiêu lịch sử
+                if (run.history && run.history[ev.id] && nam != null) {
+                  const h = run.history[ev.id];
+                  const hc = ev.hc || 120;
+                  if (nam - h.namCuoi < hc) continue;
+                }
+
+                // Kiểm tra hạn thời gian biến mất (mặc định 5 năm từ namLamMoi)
+                let remYears = undefined;
+                if (nc.namLamMoi !== undefined && nam != null) {
+                  const elapsed = nam - nc.namLamMoi;
+                  if (elapsed >= 5) continue; // Đã quá 5 năm (hết hạn)
+                  remYears = Math.max(0, 5 - elapsed);
+                }
+
+                let slot = slotKey;
+                const resolved = findSlotByDiaDanh(ev.marker, ev.dia, c);
+                if (resolved != null) slot = resolved;
+
+                map.set(ev.id, {
+                  encId: ev.id,
+                  slot,
+                  hetHanNam:
+                    remYears != null && nam != null ? nam + remYears : undefined,
+                  vars: nc.vars,
+                  source: "noiChon",
+                  ev,
+                });
+              }
+            }
+          }
+
+          // 3. Quét từ theGioi.dangDien (thế cục thế giới đang diễn ra)
           if (run.theGioi && Array.isArray(run.theGioi.dangDien)) {
             for (const dd of run.theGioi.dangDien) {
               if (
@@ -7542,6 +7664,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     if (!encId || map.has(encId)) continue;
                     const ev = DIBAO.ev.find((x) => x.id === encId);
                     if (ev) {
+                      if (checkOwnedRelic(ev.relic, run)) continue;
+                      const relicBare = ev.relic.replace(/^item\./, "");
+                      if (
+                        run.flags &&
+                        (run.flags["di_bao_xong_" + relicBare] ||
+                          run.flags["di_bao_xong_" + ev.id])
+                      )
+                        continue;
                       if (run.history && run.history[ev.id] && nam != null) {
                         const h = run.history[ev.id];
                         const hc = ev.hc || 120;
@@ -7561,7 +7691,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 3. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
+          // 4. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
           try {
             const director = TT.core && TT.core["encounter/director"];
             if (
@@ -7583,14 +7713,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     if (a.lockedReason) continue;
                     const ev = DIBAO.ev.find((x) => x.id === a.id);
                     if (ev) {
+                      if (checkOwnedRelic(ev.relic, run)) continue;
+                      const relicBare = ev.relic.replace(/^item\./, "");
+                      if (
+                        run.flags &&
+                        (run.flags["di_bao_xong_" + relicBare] ||
+                          run.flags["di_bao_xong_" + ev.id])
+                      )
+                        continue;
                       if (run.history && run.history[ev.id] && nam != null) {
                         const h = run.history[ev.id];
                         const hc = ev.hc || 120;
                         if (nam - h.namCuoi < hc) continue;
                       }
+                      let slot = curSlot;
+                      const resolved = findSlotByDiaDanh(ev.marker, ev.dia, c);
+                      if (resolved != null) slot = resolved;
+
                       map.set(ev.id, {
                         encId: ev.id,
-                        slot: curSlot,
+                        slot,
                         hetHanNam: undefined,
                         source: "placeActivity",
                         ev,
@@ -9080,19 +9222,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const canTele = checkCanTeleport(r.node.slot);
               const walkRisk =
                 r.nodeLeft != null && isFinite(y) && r.nodeLeft < y;
+              const isHere =
+                run &&
+                (String(run.viTri) === String(r.node.slot) ||
+                  String(run.oNoi) === String(r.node.slot));
+              const isInside = run && String(run.oNoi) === String(r.node.slot);
               return `
               <div style="background:var(--bg3);border:1px solid rgba(255,51,102,0.4);border-radius:6px;padding:8px;margin-bottom:6px">
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;flex-wrap:wrap">
                   <div>
                     <b style="font-size:14px;color:var(--acc)">👑 ${esc(r.ten)}</b>
                     <span class="vk-mu" style="font-size:12px"> · Sự kiện «${esc(r.e.ten)}»</span><br>
-                    <span style="font-size:12px" class="vk-mu">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> (Slot ${r.node.slot}) · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đường đi: <b>${safeYrs(y)}</b></span>
+                    <span style="font-size:12px" class="vk-mu">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> (Slot ${r.node.slot}) · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đường đi: <b>${isHere ? "Ngay đây ✓" : safeYrs(y)}</b></span>
                     ${walkRisk ? `<div class="vk-bad" style="font-size:11.5px;margin-top:2px">⚠️ Đi bộ (${num(y)} năm) sẽ quá hạn sự kiện (${r.nodeLeft} năm)! Hãy dùng truyền tống phù/trận.</div>` : ""}
                   </div>
                   <div style="display:flex;gap:4px;align-items:center">
                     <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.4)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn</button>
-                    ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(139,92,246,0.4)">⚡ Truyền Tống Ngay</button>` : ""}
-                    <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                    ${
+                      isHere
+                        ? `<button class="vk-btn db-btn-enter-act" data-slot="${esc(r.node.slot)}" data-enc="${esc(r.node.encId)}" style="background:#10b981;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(16,185,129,0.4)">🚪 ${isInside ? "Vào Sự Kiện Ngay" : "Tiến Vào Nơi Chốn"}</button>`
+                        : `
+                      ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(139,92,246,0.4)">⚡ Truyền Tống Ngay</button>` : ""}
+                      <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 10px;font-size:12px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(255,51,102,0.4)">🚀 Bay Đến Ngay</button>
+                    `
+                    }
                   </div>
                 </div>
               </div>
@@ -9284,13 +9437,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     } catch (err) {}
                   }
                   const canTele = checkCanTeleport(r.node.slot);
+                  const isHere =
+                    run &&
+                    (String(run.viTri) === String(r.node.slot) ||
+                      String(run.oNoi) === String(r.node.slot));
+                  const isInside =
+                    run && String(run.oNoi) === String(r.node.slot);
                   travelBox = `
             <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
-              <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đi: <b>${safeYrs(y)}</b></span>
+              <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đi: <b>${isHere ? "Ngay đây ✓" : safeYrs(y)}</b></span>
               <div style="display:flex;gap:4px;align-items:center">
                 <button type="button" class="vk-btn mini db-btn-hunt-nav" data-relic="${esc(r.id)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 6px rgba(255,51,102,0.3)" title="Chọn mục tiêu này và chuyển sang Auto Săn Dị Bảo">🎯 Săn Món Này</button>
-                ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">⚡ Truyền Tống Ngay</button>` : ""}
-                <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
+                ${
+                  isHere
+                    ? `<button class="vk-btn db-btn-enter-act" data-slot="${esc(r.node.slot)}" data-enc="${esc(r.node.encId)}" style="background:#10b981;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer;box-shadow:0 0 8px rgba(16,185,129,0.4)">🚪 ${isInside ? "Vào Sự Kiện Ngay" : "Tiến Vào Nơi Chốn"}</button>`
+                    : `
+                  ${canTele ? `<button class="vk-btn do-btn-teleport" data-slot="${esc(r.node.slot)}" style="background:#8b5cf6;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">⚡ Truyền Tống Ngay</button>` : ""}
+                  <button class="vk-btn do-btn-travel" data-slot="${esc(r.node.slot)}" data-name="${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}" style="background:#ff3366;color:#fff;font-weight:bold;padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer">🚀 Bay Đến Ngay</button>
+                `
+                }
               </div>
             </div>
           `;
@@ -9501,6 +9666,34 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ev.stopPropagation();
               S.tab = "asdb";
               render();
+              return;
+            }
+
+            const enterActBtn =
+              ev.target.closest && ev.target.closest(".db-btn-enter-act");
+            if (enterActBtn) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const slot = enterActBtn.dataset.slot;
+              const encId = enterActBtn.dataset.enc;
+              const g = G();
+              enterActBtn.disabled = true;
+              enterActBtn.textContent = "⏳ Đang vào...";
+              if (slot) {
+                try {
+                  if (typeof g.enterNode === "function") g.enterNode(slot);
+                  else if (typeof g.enterPlace === "function") g.enterPlace(slot);
+                } catch (e) {}
+              }
+              setTimeout(() => {
+                try {
+                  if (encId) {
+                    if (typeof g.chooseActivity === "function") g.chooseActivity(encId);
+                    else if (typeof g.doAction === "function") g.doAction(encId);
+                  }
+                } catch (e) {}
+                draw();
+              }, 250);
               return;
             }
 
@@ -21121,7 +21314,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               );
               if (claim) return claim;
               const test = nonThoat.find((c) =>
-                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai|xem|khám phá|bước vào|quan sát|tiến đến|tiến lại|đến gần|dò tìm|tìm kiếm|xem xét/i.test(
+                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai|xem|khám phá|bước vào|quan sát|tiến đến|tiến lại|đến gần|dò tìm|tìm kiếm|xem xét|nhìn|nhìn thẳng|chiêm ngưỡng|soi/i.test(
                   c.text,
                 ),
               );
@@ -22748,17 +22941,106 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           // Chế độ Cắm Trại & Bế Quan Chờ Dị Bảo (camp):
-          // Kiểm tra xem vị trí hiện tại có bế quan được không:
+          // 8.1. Xác định địa điểm cắm trại tối ưu nhất từ danh sách mục tiêu
+          let targetCampSlot = null;
+          let targetCampName = null;
+          let targetCampRelic = null;
+
+          if (pity.topCamping && pity.topCamping.length > 0) {
+            for (const cp of pity.topCamping) {
+              if (cp.e && (cp.e.marker || cp.e.dia)) {
+                const s = findSlotByDiaDanh(cp.e.marker, cp.e.dia, c);
+                if (s != null) {
+                  targetCampSlot = String(s);
+                  targetCampName = cp.e.dia;
+                  targetCampRelic = cp.e;
+                  break;
+                }
+              }
+            }
+          }
+
+          const curSlot = run.viTri != null ? String(run.viTri) : "";
+
+          // 8.2. Nếu có địa danh đón đầu cụ thể và chưa có mặt tại đó:
+          if (targetCampSlot && curSlot !== targetCampSlot) {
+            st.phaseDesc = `Di chuyển tới ${targetCampName} đón đầu Dị Bảo`;
+            st.targetTitle = `Đón đầu: ${targetCampName}`;
+
+            // Ưu tiên truyền tống nếu được bật
+            if (cfg.dungTruyenTong !== false && checkCanTeleport(targetCampSlot)) {
+              auLog(
+                `⚡ Phát hiện truyền tống! Truyền tống tức thì tới ${targetCampName} (Slot ${targetCampSlot}) để cắm trại đón đầu...`,
+                "vk-ok",
+              );
+              const resTele = smartTeleportTo(targetCampSlot);
+              if (resTele.ok) {
+                auLog(`⚡ Truyền tống thành công tới ${targetCampName}!`, "vk-ok");
+                return null;
+              }
+            }
+
+            auLog(
+              `🚀 Di chuyển tới địa danh đón đầu ${targetCampName} (Slot ${targetCampSlot}) để cắm trại chờ Dị Bảo nở...`,
+              "vk-ok",
+            );
+            const rTrav = auCall(() => g.travelTo(targetCampSlot));
+            const rAfterTrav = G().state && G().state.run;
+            if (
+              !rTrav.ok ||
+              (rAfterTrav &&
+                String(rAfterTrav.viTri) !== targetCampSlot &&
+                !rAfterTrav.active &&
+                !rAfterTrav.tran &&
+                !rAfterTrav.bienCo)
+            ) {
+              if (++st.tried >= 3) {
+                auLog(
+                  `⚠️ Không thể di chuyển tới ${targetCampName}: ${rTrav.err || "đường bị chặn"}. Chuyển sang tìm chỗ bế quan an toàn quanh đây...`,
+                  "vk-bad",
+                );
+                targetCampSlot = null; // Bị kẹt đường, fallback sang bế quan thông thường
+              } else {
+                return null;
+              }
+            } else {
+              st.tried = 0;
+              return null;
+            }
+          }
+
+          // 8.3. Nếu đã tới địa danh đón đầu, kiểm tra xem đã tiến vào node (oNoi) chưa:
+          if (
+            targetCampSlot &&
+            curSlot === targetCampSlot &&
+            String(run.oNoi) !== targetCampSlot
+          ) {
+            auLog(
+              `Đã có mặt tại ${targetCampName} (Slot ${targetCampSlot}). Tiến vào nơi chốn để kích hoạt Đạo Diễn...`,
+              "vk-ok",
+            );
+            const rEnter = auCall(() => {
+              if (typeof g.enterNode === "function") g.enterNode(targetCampSlot);
+              else if (typeof g.enterPlace === "function")
+                g.enterPlace(targetCampSlot);
+            });
+            st.tried = 0;
+            return null;
+          }
+
+          // 8.4. Kiểm tra xem chỗ hiện tại có bế quan được không
           let hereInfo = null;
           try {
             if (K && K.chuanBiBeQuan) hereInfo = K.chuanBiBeQuan(c);
           } catch (e) {}
 
           const canRetreatHere =
-            hereInfo && !hereInfo.chan && hereInfo.tuViNam > 0;
+            hereInfo &&
+            !hereInfo.chan &&
+            (hereInfo.tuViNam > 0 || (hereInfo.moc && hereInfo.moc.length > 0));
 
           if (!canRetreatHere) {
-            // Chỗ đang đứng không bế quan được (hoang dã, di tích...) -> Di chuyển tới chỗ bế quan an toàn gần nhất
+            // Chỗ đang đứng không bế quan được (bị cấm cản hoặc lỗi cấm chế) -> Di chuyển tới chỗ bế quan an toàn gần nhất
             st.phaseDesc = "Tìm chỗ bế quan an toàn chờ Dị Bảo";
             st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
             const spots = await scanRetreat(c, 5, null);
@@ -22766,13 +23048,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return {
                 stop:
                   "Không tìm thấy địa điểm bế quan an toàn quanh đây để chờ Dị Bảo (" +
-                  ((hereInfo && hereInfo.chan) || "không có linh khí") +
+                  ((hereInfo && hereInfo.chan) || "không bế quan được") +
                   "). Hãy di chuyển tới Động Phủ, Môn Phái hoặc Tĩnh Thất rồi chạy lại.",
               };
             }
             const bestSpot = spots[0];
             auLog(
-              `Chỗ hiện tại không có linh khí để bế quan. Di chuyển tới ${bestSpot.info.ten || "chỗ bế quan"} (${bestSpot.y.toFixed(1)} năm đường) để bế quan chờ Dị Bảo nở...`,
+              `Chỗ hiện tại không bế quan được (${(hereInfo && hereInfo.chan) || "không hợp lệ"}). Di chuyển tới ${bestSpot.info.ten || "chỗ bế quan"} (${bestSpot.y.toFixed(1)} năm đường) để bế quan...`,
               "vk-mu",
             );
             const rGo = auCall(() => g.travelTo(String(bestSpot.slot)));
@@ -22787,7 +23069,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return null;
           }
 
-          // Đã đứng tại chỗ bế quan hợp lệ (Động phủ, Môn phái, Tĩnh thất...):
+          // 8.5. Đã ở chỗ bế quan hợp lệ (Tại đúng di tích cắm trại hoặc động phủ/môn phái):
           const maxCanSit = Math.floor(life - minTho);
           if (maxCanSit <= 0) {
             return {
@@ -22799,27 +23081,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 " năm). Dừng bế quan để bảo toàn tính mạng!",
             };
           }
-          const sitYears = pity.waitYears >= 450 ? 1 : Math.min(2, maxCanSit);
-          if (sitYears <= 0) {
-            return {
-              stop:
-                "Thọ nguyên chỉ còn " +
-                Math.floor(life) +
-                " năm (dưới ngưỡng an toàn " +
-                minTho +
-                " năm). Dừng bế quan để bảo toàn tính mạng!",
-            };
-          }
 
-          const topCampDesc =
-            pity.topCamping && pity.topCamping.length
+          let sitYears = pity.waitYears >= 450 ? 1 : Math.min(2, maxCanSit);
+          if (hereInfo && Array.isArray(hereInfo.moc) && hereInfo.moc.length > 0) {
+            const maxMoc = hereInfo.moc[hereInfo.moc.length - 1];
+            if (maxMoc < sitYears) sitYears = maxMoc;
+          }
+          if (sitYears <= 0) sitYears = 1;
+
+          const topCampDesc = targetCampName
+            ? ` · Đang cắm trại tại: ${targetCampName}`
+            : pity.topCamping && pity.topCamping.length
               ? ` · Đón đầu: ${pity.topCamping[0].e.dia}`
               : "";
-          st.phaseDesc = `Bế quan chờ Dị Bảo (Pity: ${pity.waitYears}/500n · ×${pity.mult}${topCampDesc})`;
+          st.phaseDesc = `Bế quan cắm trại chờ Dị Bảo (Pity: ${pity.waitYears}/500n · ×${pity.mult}${topCampDesc})`;
           st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
 
           auLog(
-            `Bế quan ${sitYears} năm tại ${hereInfo.ten || "đây"} (Pity: ${pity.waitYears}/500 năm · Trọng số ×${pity.mult}${topCampDesc}) để tăng tu vi & chờ Dị Bảo nở...`,
+            `Bế quan ${sitYears} năm tại ${hereInfo.ten || targetCampName || "ngoài trời"} (Pity: ${pity.waitYears}/500 năm · Trọng số ×${pity.mult}${topCampDesc}) để tăng tu vi & chờ Dị Bảo nở...`,
             "vk-mu",
           );
 
@@ -27733,9 +28012,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.10.2 · Đồng Bộ Tùy Chọn Tha Mạng & Buông Tha Vào Tab Auto Tu Luyện (atl)",
+            t: "Phiên Bản 7.10.3 · Đột Phá Auto Săn Dị Bảo (Cắm Trại Đích Danh & Quét Toàn Diện Di Tích)",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Cơ Chế Cắm Trại Đích Danh Di Tích (Camping Strategy):</b> Khi chưa có Dị Bảo nở, Auto Săn Dị Bảo sẽ tự động truyền tống / bay thẳng tới vị trí di tích của Dị Bảo mục tiêu (Tiên Vân Điện cho Tam Sinh Thạch, Kiếm Trạch cho Bất Chiết Kiếm, Lan Đài cho Càn Khôn Giới...), tiến vào nơi chốn và bế quan 'ngoài trời' ngay tại chỗ. Điều này trực tiếp kích hoạt hàm Đạo Diễn (<code>refreshPlaceEncounters</code>) của game engine tại mỗi chu kỳ năm, đẩy xác suất rút trúng sự kiện xuất thế lên tối đa (100% khi Pity ≥ 500) thay vì bế quan thụ động ở động phủ.",
+              "<b>Quét Toàn Diện & Chuẩn Xác Di Tích (run.noiChon Scanner):</b> Khôi phục và nâng cấp bộ quét <code>run.noiChon</code> bao quát toàn bộ 16 Dị Bảo di tích kết hợp kiểm tra thời hạn 5 năm (<code>namLamMoi</code>), cờ hoàn tất (<code>flags</code>), hồi chiêu 120 năm (<code>history</code>) và túi đồ (<code>checkOwnedRelic</code>). Chấm dứt triệt để tình trạng sự kiện Dị Bảo đã xuất hiện tại di tích nhưng Tool không nhận diện được.",
+              "<b>Nút Tác Vụ 'Tiến Vào Nơi Chốn / Sự Kiện Ngay':</b> Bổ sung nút bấm tương tác trực quan ngay trên thẻ Dị Bảo và thanh thông báo Radar khi người chơi đã có mặt tại di tích, cho phép 1-click lập tức tiến vào sự kiện đoạt bảo mà không cần thao tác thủ công rườm rà.",
+              "<b>Tối Ưu AI Lựa Chọn Phản Ứng:</b> Bổ sung các từ khóa khảo nghiệm ('nhìn thẳng', 'chiêm ngưỡng', 'soi'...) giúp AI tự động vượt qua các thử thách thuần kiểm định như «Đá ba mặt» (Tam Sinh Thạch) một cách hoàn hảo.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.10.2 · Đồng Bộ Tùy Chọn Tha Mạng & Buông Tha Vào Tab Auto Tu Luyện (atl)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Đồng Bộ Vào Tab Auto Tu Luyện & Đột Phá (atl):</b> Bổ sung 2 công tắc tùy chọn <i>«Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri)»</i> và <i>«Buông Tha Kẻ Tháo Chạy (enemy_escape)»</i> trực tiếp vào giao diện Tab Auto Tu Luyện; giải quyết triệt để vấn đề bị ngắt ngang khi bế quan tu luyện gặp kẻ trộm cắp / đột kích động phủ.",
               "<b>Hoàn Thiện Tùy Chọn Cho Auto Săn Dị Bảo (asdb):</b> Bổ sung công tắc Buông Tha Kẻ Tháo Chạy vào Tab Auto Săn Dị Bảo, đảm bảo người chơi có thể tùy biến xử trí độc lập ở từng chế độ Auto.",
