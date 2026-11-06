@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.10.0
+// @version      7.10.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.10.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.10.0";
+      var TOOL_VER = "7.10.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -19492,6 +19492,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             autoNormalAttack: true,
             comboSequence: true,
             useBurstPill: true,
+            autoThaMang: true,
+            autoEnemyEscape: true,
           },
           sdb: {
             uuTienTheoHon: true,
@@ -19499,6 +19501,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             dungTruyenTong: true,
             minWinRate: 70,
             danhAi: true,
+            autoThaMang: true,
             sanMoiDiBaoXuatThe: true,
             cheDoCho: "camp",
             minTho: 15,
@@ -19731,6 +19734,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           if (typeof AU.cfg.sdb.sanMoiDiBaoXuatThe !== "boolean") {
             AU.cfg.sdb.sanMoiDiBaoXuatThe = true;
+          }
+          if (typeof AU.cfg.tc.autoThaMang !== "boolean") {
+            AU.cfg.tc.autoThaMang = true;
+          }
+          if (typeof AU.cfg.tc.autoEnemyEscape !== "boolean") {
+            AU.cfg.tc.autoEnemyEscape = true;
+          }
+          if (typeof AU.cfg.sdb.autoThaMang !== "boolean") {
+            AU.cfg.sdb.autoThaMang = true;
           }
         }
         function auSave() {
@@ -20861,13 +20873,65 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
               return "ok";
             }
-            if (a.waiting)
+            if (a.waiting) {
+              const wKind = a.waiting.kind || a.waiting;
+              if (wKind === "xu_tri") {
+                const cfgTc = (AU && AU.cfg && AU.cfg.tc) || {};
+                const cfgSdb = (AU && AU.cfg && AU.cfg.sdb) || {};
+                const allowTha = opt.sdb
+                  ? cfgSdb.autoThaMang !== false
+                  : cfgTc.autoThaMang !== false;
+                if (allowTha) {
+                  let xuTriList = [];
+                  try {
+                    if (typeof g.cachXuTri === "function") xuTriList = g.cachXuTri();
+                  } catch (e) {}
+                  const canTha =
+                    !xuTriList.length || xuTriList.some((x) => x.id === "tha");
+                  if (canTha) {
+                    const rTha = auCall(() => {
+                      if (typeof g.xuTri === "function") g.xuTri("tha");
+                    });
+                    if (!rTha.ok) {
+                      return { stop: "Không thực hiện tha mạng được: " + rTha.err };
+                    }
+                    auLog(
+                      "🤝 Đối thủ bại trận: Tự động chọn «Tha Mạng» (lưu cho một đường sống).",
+                      "vk-ok",
+                    );
+                    return "ok";
+                  }
+                }
+              } else if (wKind === "enemy_escape") {
+                const cfgTc = (AU && AU.cfg && AU.cfg.tc) || {};
+                if (cfgTc.autoEnemyEscape !== false) {
+                  let pursuitOpts = [];
+                  try {
+                    if (typeof g.pursuitOptions === "function") pursuitOpts = g.pursuitOptions();
+                  } catch (e) {}
+                  const relOpt =
+                    pursuitOpts.find((o) => o.id === "release") ||
+                    pursuitOpts.find((o) => o.id !== "chase");
+                  const choiceId = relOpt ? relOpt.id : "release";
+                  const rPursuit = auCall(() => {
+                    if (typeof g.choosePursuit === "function") g.choosePursuit(choiceId);
+                  });
+                  if (rPursuit.ok) {
+                    auLog(
+                      "🏃 Kẻ địch tháo chạy: Tự động chọn «Buông Tha / Bỏ Qua» để tiếp tục hành trình.",
+                      "vk-mu",
+                    );
+                    return "ok";
+                  }
+                }
+              }
               return {
                 stop:
                   "Có việc đang chờ bạn quyết định (" +
-                  a.waiting.kind +
+                  wKind +
                   "). Xử lý trong game rồi bấm chạy lại.",
               };
+            }
             const v = g.encounterView();
             if (!v)
               return {
@@ -23608,6 +23672,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.autoNormalAttack = ck("au-tc-normal-attack", c.autoNormalAttack);
             c.comboSequence = ck("au-tc-combo", c.comboSequence);
             c.useBurstPill = ck("au-tc-burst-pill", c.useBurstPill !== false);
+            c.autoThaMang = ck("au-tc-auto-tha", c.autoThaMang !== false);
+            c.autoEnemyEscape = ck("au-tc-enemy-escape", c.autoEnemyEscape !== false);
             auSave();
             return;
           }
@@ -23656,6 +23722,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.boQuaDaCo = ck("au-sdb-boda", c.boQuaDaCo !== false);
             c.dungTruyenTong = ck("au-sdb-tele", c.dungTruyenTong !== false);
             c.danhAi = ck("au-sdb-danh-ai", c.danhAi !== false);
+            c.autoThaMang = ck("au-sdb-auto-tha", c.autoThaMang !== false);
             c.sanMoiDiBaoXuatThe = ck("au-sdb-san-moi", c.sanMoiDiBaoXuatThe !== false);
             c.minWinRate = num0("au-sdb-winrate", 10, 100, c.minWinRate || 70);
             c.cheDoCho = sel("au-sdb-chedo", c.cheDoCho || "camp");
@@ -24758,6 +24825,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-shield" ${c.smartShield !== false ? "checked" : ""}> <b>Dự Báo Phòng Ngự:</b> Dựng Hộ Thuẫn / Bùa Kim Cương trước khi boss tung đại chiêu</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-cc" ${c.smartCc !== false ? "checked" : ""}> <b>Khống Chế Ngắt Chiêu:</b> Ưu tiên tung choáng / định thân khi địch chuẩn bị đòn nộ</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? "checked" : ""}> <b>Chuỗi Combo Chuẩn:</b> Buff bộc phát → Quyền Cước / Phá giáp → Chiêu Khắc Hệ Ngũ Hành → Dứt điểm</label>
+      <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
+      <div style="font-weight:700;margin:6px 0;color:var(--acc)">🤝 Xử Trí Hậu Chiến & Kẻ Tháo Chạy (xu_tri & enemy_escape)</div>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự động chọn «Tha Mạng» khi đối thủ quy phục hoặc bắt được kẻ đột kích động phủ, tránh bị dừng Auto</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-enemy-escape" ${c.autoEnemyEscape !== false ? "checked" : ""}> <b>Buông Tha Kẻ Tháo Chạy (enemy_escape):</b> Tự động chọn «Buông Tha / Bỏ Qua» (nhặt nửa chiến lợi phẩm) khi kẻ địch tháo chạy, không dừng Auto</label>
       <button class="vk-btn" id="au-tc-save" style="margin-top:10px;width:100%">Lưu Cấu Hình Tác Chiến</button>
     </div>`;
           body.querySelectorAll("input,select").forEach((el) => {
@@ -24840,6 +24911,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-boda" ${c.boQuaDaCo !== false ? "checked" : ""}> Tự động bỏ qua các món Dị Bảo đã sở hữu trong kiếp</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-tele" ${c.dungTruyenTong !== false ? "checked" : ""}> <b>Ưu Tiên Truyền Tống Trận / Phù Truyền Tống (0 Năm Tuổi Thọ)</b></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-danh-ai" ${c.danhAi !== false ? "checked" : ""}> <b>Tự Đánh AI Khi Không Cho Tốc Chiến</b> (Dùng Siêu AI VIP hạ Hộ Vệ)</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự tha mạng cho kẻ bại trận / đột kích động phủ khi bế quan, tránh bị dừng Auto</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-san-moi" ${c.sanMoiDiBaoXuatThe !== false ? "checked" : ""}> <b style="color:var(--acc)">Ưu Tiên Săn Mọi Dị Bảo Xuất Thế Trên Map</b> <span class="vk-mu" style="font-size:11.5px">(Ngắt bế quan đoạt bảo ngay khi có bất kỳ Dị Bảo nào nở trên map)</span></label>
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
 
@@ -27633,9 +27705,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.10.0 · Thích Ứng Game Update (Trận Bàn, Bản Mệnh Văn Mới & Đan Mạch)",
+            t: "Phiên Bản 7.10.1 · Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri) & Buông Tha Kẻ Tháo Chạy",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Bổ sung tùy chọn thông minh tự động chọn «Tha Mạng» (lưu cho một đường sống) khi đánh bại kẻ khiêu chiến, trộm cắp đột kích động phủ hoặc đối thủ bại trận xuất hiện bảng xử trí. Giải quyết triệt để lỗi gián đoạn <i>'Có việc đang chờ bạn quyết định (xu_tri)'</i> khi đang bế quan cắm trại hoặc auto chiến đấu.",
+              "<b>Tự Động Buông Tha Kẻ Tháo Chạy (enemy_escape):</b> Tự động chọn «Buông Tha / Bỏ Qua» (nhặt nửa chiến lợi phẩm) khi kẻ địch bỏ chạy mà người chơi không muốn rượt đuổi, giúp quy trình Auto diễn ra hoàn toàn tự động, liền mạch 100%.",
+              "<b>Tích Hợp Tùy Chọn Cấu Hình Độc Lập:</b> Cung cấp các công tắc bật/tắt trực quan trong cả tab <b>Auto Săn Dị Bảo (asdb)</b> và tab <b>Siêu AI Tác Chiến VIP (atc)</b>, mặc định luôn bật sẵn để tối ưu trải nghiệm rảnh tay.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.10.0 · Thích Ứng Game Update (Trận Bàn, Bản Mệnh Văn Mới & Đan Mạch)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Cập Nhật Bản Mệnh Văn Mới (5 Khắc Văn Mới):</b> Bổ sung trọn vẹn văn Tuyệt Hồi (<code>van.tuyet_hoi</code> - hiệu ứng decay giảm hồi phục) cùng 4 văn Nhiễm hệ nguyên tố mới: Nhiễm Lôi (<code>van.nhiem_loi</code>), Nhiễm Băng (<code>van.nhiem_bang</code>), Nhiễm Phong (<code>van.nhiem_phong</code>) và Nhiễm Ám (<code>van.nhiem_am</code>). Hoàn thiện đầy đủ 9 hệ linh căn cho hệ thống Bản Mệnh Pháp Bảo.",
               "<b>Hệ Thống Nghề Thứ 4 & Phân Loại Trận Bàn (Trận Pháp):</b> Tích hợp đầy đủ danh mục Trận Bàn (<code>tran_ban</code>) và Trận Văn (<code>tran_van</code>) vào từ điển vật phẩm, bộ lọc chợ, kho đồ và hệ thống luyện chế nghề Trận Pháp.",
