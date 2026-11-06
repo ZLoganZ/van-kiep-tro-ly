@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.4.0
-// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý & Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
+// @version      7.5.0
+// @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý & Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
 // @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.4.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.5.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.4.0';
+  var TOOL_VER = '7.5.0';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5702,22 +5702,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     t.push('Ô ' + heTen(gocHe(h)) + ' dùng được: ' + oDungDuoc(gocHe(h)).map(heTen).join(', ') + ' (đúng hệ ×1 > cùng gốc ×0,5; tương sinh với ô game không tính).');
     return t;
   }
-  // Thẻ "Kinh mạch · <hướng build>" trong tab Hướng build
-  function kmCard(b, nv) {
-    const M = tcMap(), cur = String(nv.theChat || 'the_chat.pham_the'), Cc = C();
-    const hop = (BUILD_TC[b.k] || []).filter((k) => M[k]), tranh = (BUILD_TC_TRANH[b.k] || []).filter((k) => M[k]);
-    const line = (k, tag) => { const t = M[k], sh = tcShape(t); return `<li>${esc(t.icon || '')} <b>${esc(t.ten)}</b>${k === cur ? ' <span class=\"vk-ok\" style=\"font-size:12px\">đang dùng</span>' : ''}${tag ? ' <span class=\"vk-mu\" style=\"font-size:12px\">' + esc(tag) + '</span>' : ''}<br><span class=\"vk-mu\" style=\"font-size:12px\">${esc(tcBuff(t))}${sh.o ? ` · ${sh.o} ô dùng được · ${sh.huyet} huyệt khiếu` : ''}</span></li>`; };
-    let onKm = 0, inBag = 0;
-    for (const m of nv.kinhMach.manh) { const it = Cc.items.get(m.item); if (it && buildMatch(b, it)) onKm++; }
-    for (const [id, n] of Object.entries(nv.tuiDo)) { const it = Cc.items.get(id); if (n > 0 && it && (it.loai === 'cong_phap' || it.loai === 'phap_khi') && buildMatch(b, it)) inBag++; }
-    return `<div class=\"vk-card\"><h3>Kinh mạch · ${esc(b.ten)}</h3>
-      <div class=\"vk-mu\" style=\"font-size:13px\">Đang xếp: <b>${onKm}/${nv.kinhMach.manh.length}</b> món trên kinh mạch thuộc hướng này · <b>${inBag}</b> món trong túi.</div>
-      ${hop.length ? `<div style=\"margin-top:8px\"><b>Thể chất hợp</b> <span class=\"vk-mu\" style=\"font-size:12px\">(đọc từ dữ liệu game)</span><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${hop.map((k) => line(k)).join('')}</ul></div>` : '<div class=\"vk-mu\" style=\"font-size:13px;margin-top:8px\">Hướng này không đòi thể chất đặc thù: thể chất nào cũng chơi được, dồn vào đồ và cách xếp.</div>'}
-      ${tranh.length ? `<div style=\"margin-top:8px\"><b>Nên tránh</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${tranh.map((k) => line(k, 'phản phệ ' + tcPP(k))).join('')}</ul></div>` : ''}
-      ${tranh.includes(cur) ? '<div style=\"color:#b45309;font-size:13px;margin-top:6px\">⚠️ Thể chất hiện tại của bạn thuộc nhóm nên tránh với hướng này.</div>' : ''}
-      <div style=\"margin-top:8px\"><b>Cách xếp lên kinh mạch</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${kmTips(b).map((x) => `<li>${resolveTC(x)}</li>`).join('')}</ul></div>${planHtml(b)}${oHopHtml(b)}</div>`;
-  }
-
   function buildMatch(b, it) {
     if (b.elem) return (it.he || []).includes(b.elem);
     return schoolsOf(it).includes(b.k);
@@ -5736,21 +5720,107 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   const GROUP_TEN = { liemtuc: 'Công pháp Liễm Tức (giấu ma khí khi vào đất chính đạo)', tam: 'Tâm pháp (đặt cho thông, cộng tu luyện/chỉ số)', ngulinh: 'Công pháp ngự linh (mở ô linh vật)', cong: 'Chiêu công', kc: 'Chiêu khống chế', thu: 'Chiêu thủ / hồi', bd: 'Pháp bảo bị động', trung: 'Trứng linh thú', dopho: 'Đồ phổ khôi lỗi', tran: 'Trận bàn', phu: 'Phù lục', dihoa: 'Dị hỏa (trang bị)', dungcu: 'Dụng cụ nghề' };
   const BUILD_EXTRA = { ngu_thu: ['trung'], khoi_loi: ['dopho'], ma: ['tran'], quy: ['tran'] };
 
-
+  // ═════════════════════════ ĐÁNH GIÁ TƯƠNG THÍCH HƯỚNG BUILD (v7.5.0 TOÀN DIỆN) ═════════════════════════
+  // Phân tích sâu: Linh căn bản mệnh, Ngũ hành Tương sinh (Mẹ dưỡng / Con trợ), Tương khắc cảnh báo,
+  // Thể chất phù trợ vs Phản phệ, Kho đồ trong túi & bảo vật phẩm cao / trấn phái, Xếp hạng chuẩn S/A/B/C/D.
   function buildFit(b, nv, R0) {
-    const Cc = C(); let s = 0; const why = [];
-    let onKm = 0, inBag = 0;
-    for (const m of nv.kinhMach.manh) { const it = Cc.items.get(m.item); if (it && buildMatch(b, it)) onKm++; }
-    for (const [id, n] of Object.entries(nv.tuiDo)) { const it = Cc.items.get(id); if (n > 0 && it && (it.loai === 'cong_phap' || it.loai === 'phap_khi') && buildMatch(b, it)) inBag++; }
-    if (onKm) { s += 3 * onKm; why.push(`${onKm} món đang trên kinh mạch`); }
-    if (inBag) { s += inBag; why.push(`${inBag} món trong túi`); }
+    const Cc = C(); let s = 0; const why = [], pros = [], cons = [];
+    let onKm = 0, inBag = 0, highTierBag = 0;
+    for (const m of (nv.kinhMach && nv.kinhMach.manh) || []) { const it = Cc.items.get(m.item); if (it && buildMatch(b, it)) onKm++; }
+    for (const [id, n] of Object.entries(nv.tuiDo || {})) {
+      const it = Cc.items.get(id);
+      if (n > 0 && it && (it.loai === 'cong_phap' || it.loai === 'phap_khi') && buildMatch(b, it)) {
+        inBag++;
+        if ((it.pham_cap || 1) >= 4 || it.tran_phai) highTierBag++;
+      }
+    }
+    if (onKm) { s += 4 * onKm; why.push(`${onKm} món trên kinh mạch`); }
+    if (inBag) { s += 1.5 * inBag; why.push(`${inBag} món trong túi`); }
+    if (highTierBag) { s += 3.5 * highTierBag; pros.push(`${highTierBag} bảo vật phẩm cao/trấn phái`); }
+
+    // 1. Linh căn tương tác (Bản mệnh / Tương sinh / Tương khắc)
     const lc = (nv.linhCan && nv.linhCan.he) || [];
-    const hm = b.he.filter((h) => lc.includes(h)); if (hm.length) { s += 4 * hm.length; why.push('hợp linh căn ' + hm.map(heTen).join('/')); }
+    const bElems = b.he || (b.elem ? [b.elem] : []);
+    const banMenh = bElems.filter((h) => lc.includes(h));
+    if (banMenh.length) {
+      s += 7 * banMenh.length;
+      why.push('bản mệnh ' + banMenh.map(heTen).join('/'));
+      pros.push('Linh căn bản mệnh ' + banMenh.map(heTen).join('/') + ' (ô đúng màu ×1,3 uy lực)');
+    }
+
+    bElems.forEach((bh) => {
+      const g = gocHe(bh), me = sinhBoi(g), con = sinhRa(g);
+      if (me && lc.includes(me) && !banMenh.includes(bh)) {
+        s += 3.5;
+        why.push(heTen(me) + ' sinh ' + heTen(bh) + ' (Mẹ dưỡng)');
+        pros.push('Linh căn ' + heTen(me) + ' tương sinh ' + heTen(bh) + ' (+15% cặp nối)');
+      }
+      if (con && lc.includes(con) && !banMenh.includes(bh)) {
+        s += 2;
+        why.push(heTen(bh) + ' sinh ' + heTen(con) + ' (Con trợ)');
+      }
+    });
+
+    bElems.forEach((bh) => {
+      const g = gocHe(bh), kh = khacBoi(g);
+      if (kh && lc.includes(kh) && !banMenh.includes(bh)) {
+        s -= 4;
+        cons.push('Khắc hệ: ' + heTen(kh) + ' khắc ' + heTen(bh) + ' (−15% nếu kề nhau)');
+      }
+    });
+
+    // 2. Thể chất phù hợp & phản phệ
     const tc = String(nv.theChat || '');
-    if ((BUILD_TC[b.k] || []).some((x) => tc.includes(x.replace('the_chat.', '')))) { s += 8; why.push('thể chất hợp'); }
+    const hopTC = (BUILD_TC[b.k] || []).filter((x) => tc.includes(x.replace('the_chat.', '')));
+    if (hopTC.length) {
+      s += 10;
+      why.push('thể chất đắc đạo');
+      pros.push('Thể chất ' + hopTC.map(tcTen).join(', ') + ' kích hoạt tiềm năng tối đa');
+    }
     const trTC = (BUILD_TC_TRANH[b.k] || []).find((x) => tc.includes(x.replace('the_chat.', '')));
-    if (trTC) { s -= 6; why.push(tcTen(trTC) + ' phản phệ tà công ' + tcPP(trTC)); }
-    return { s, why };
+    if (trTC) {
+      s -= 8;
+      why.push(tcTen(trTC) + ' phản phệ');
+      cons.push(tcTen(trTC) + ' phản phệ tà công ' + tcPP(trTC));
+    }
+
+    // 3. Đạo cơ (Chính vs Tà)
+    const isTa = HB_TA.includes(b.k);
+    const isChinhDao = nv.daoCo && nv.daoCo.loai === 'chinh';
+    if (isTa && isChinhDao) {
+      s -= 3;
+      cons.push('Đạo cơ Chính Đạo: cần giữ ≥1/3 mảnh tà nhiều năm để đổi sang tà');
+    }
+
+    // 4. Xếp hạng (Tier)
+    let tier = 'C', badge = 'Khả Dụng (C)', color = '#94a3b8';
+    if (s >= 18) { tier = 'S'; badge = '⭐ Thiên Đạo Hợp Nhất (S)'; color = '#f59e0b'; }
+    else if (s >= 10) { tier = 'A'; badge = '🌿 Đại Đạo Tương Sinh (A)'; color = '#22c55e'; }
+    else if (s >= 4) { tier = 'B'; badge = '🔷 Tương Hợp (B)'; color = '#3b82f6'; }
+    else if (s < 0) { tier = 'D'; badge = '⚠️ Xung Khắc / Nghịch Mệnh (D)'; color = '#ef4444'; }
+
+    return { s, why, pros, cons, tier, badge, color, onKm, inBag, highTierBag };
+  }
+
+  // Thẻ "Kinh mạch · <hướng build>" trong tab Hướng build
+  function kmCard(b, nv) {
+    const M = tcMap(), cur = String(nv.theChat || 'the_chat.pham_the'), Cc = C();
+    const hop = (BUILD_TC[b.k] || []).filter((k) => M[k]), tranh = (BUILD_TC_TRANH[b.k] || []).filter((k) => M[k]);
+    const line = (k, tag) => { const t = M[k], sh = tcShape(t); return `<li>${esc(t.icon || '')} <b>${esc(t.ten)}</b>${k === cur ? ' <span class=\"vk-ok\" style=\"font-size:12px\">đang dùng</span>' : ''}${tag ? ' <span class=\"vk-mu\" style=\"font-size:12px\">' + esc(tag) + '</span>' : ''}<br><span class=\"vk-mu\" style=\"font-size:12px\">${esc(tcBuff(t))}${sh.o ? ` · ${sh.o} ô dùng được · ${sh.huyet} huyệt khiếu` : ''}</span></li>`; };
+    const fit = buildFit(b, nv, nv.canhGioi || 0);
+
+    return `<div class=\"vk-card\"><h3>Kinh mạch · ${esc(b.ten)}</h3>
+      <div style=\"display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap\">
+        <span style=\"display:inline-block;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12.5px;background:${fit.color}22;color:${fit.color};border:1px solid ${fit.color}66\">${fit.badge}</span>
+        <span class=\"vk-mu\" style=\"font-size:13px\">Điểm tương thích: <b>${fit.s > 0 ? '+' : ''}${Math.round(fit.s)}đ</b></span>
+      </div>
+      <div class=\"vk-mu\" style=\"font-size:13px\">Đang xếp: <b>${fit.onKm}/${nv.kinhMach.manh.length}</b> món trên kinh mạch thuộc hướng này · <b>${fit.inBag}</b> món trong túi${fit.highTierBag ? ` (có <b style=\"color:#f59e0b\">${fit.highTierBag}</b> món phẩm cao/trấn phái)` : ''}.</div>
+      ${fit.pros.length ? `<div style=\"margin-top:6px;font-size:13px;color:#22c55e\"><b>🌿 Thế mạnh:</b> ${esc(fit.pros.join(' · '))}</div>` : ''}
+      ${fit.cons.length ? `<div style=\"margin-top:4px;font-size:13px;color:#ef4444\"><b>⚠️ Lưu ý:</b> ${esc(fit.cons.join(' · '))}</div>` : ''}
+      ${hop.length ? `<div style=\"margin-top:8px\"><b>Thể chất hợp</b> <span class=\"vk-mu\" style=\"font-size:12px\">(đọc từ dữ liệu game)</span><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${hop.map((k) => line(k)).join('')}</ul></div>` : '<div class=\"vk-mu\" style=\"font-size:13px;margin-top:8px\">Hướng này không đòi thể chất đặc thù: thể chất nào cũng chơi được, dồn vào đồ và cách xếp.</div>'}
+      ${tranh.length ? `<div style=\"margin-top:8px\"><b>Nên tránh</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${tranh.map((k) => line(k, 'phản phệ ' + tcPP(k))).join('')}</ul></div>` : ''}
+      ${tranh.includes(cur) ? '<div style=\"color:#b45309;font-size:13px;margin-top:6px\">⚠️ Thể chất hiện tại của bạn thuộc nhóm nên tránh với hướng này.</div>' : ''}
+      <div style=\"margin-top:8px\"><b>Cách xếp lên kinh mạch</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${kmTips(b).map((x) => `<li>${resolveTC(x)}</li>`).join('')}</ul></div>${planHtml(b)}${oHopHtml(b)}</div>`;
   }
 
   // ═════════════════════════ HƯỚNG BUILD 6.9.0 ═════════════════════════
@@ -5763,6 +5833,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   const HB_RATIO = { '55': ['5 : 5 (Chuẩn)', 0.5], '64': ['6 : 4 (Nghiêng Tâm Pháp)', 0.6], '46': ['4 : 6 (Nghiêng Chiến Pháp)', 0.4], '0': ['Không Ép Tỉ Lệ', null] };
   const HB_MODE = { bal: 'Cân Bằng (Đánh + Tu Luyện)', danh: 'Ưu Tiên Đánh Nhau', tu: 'Ưu Tiên Tu Luyện / Đột Phá' };
   const HB_ITERS = [[800, 'Nhanh'], [1500, 'Vừa'], [3000, 'Kỹ (Lâu)']];
+  const HB_PRESETS = [
+    { id: 'all', name: '🎯 Tự Do / Mặc Định', desc: 'Cân bằng theo thiết lập cá nhân & hệ số game', mode: 'bal', ratio: '55', dt: '' },
+    { id: 'burst', name: '⚡ Bạo Sát Thần Tốc', desc: 'Dồn uy lực công kích, phá giáp, bộc phát sát thương hạ gục nhanh', mode: 'danh', ratio: '46', dt: 'ef.sunder' },
+    { id: 'tank', name: '🛡️ Bất Hoại Hộ Thể', desc: 'Dày hộ thể, khí huyết, hồi máu, thủ hộ trường sinh phản kích', mode: 'danh', ratio: '55', dt: 'ho_the' },
+    { id: 'speed', name: '🚀 Tốc Tu Đột Phá', desc: 'Tối đa tốc độ tu luyện, tỉ lệ đột phá, bế quan nhanh và kháng tâm ma', mode: 'tu', ratio: '64', dt: 'toc_do' },
+    { id: 'control', name: '❄️ Khống Chế Phong Tỏa', desc: 'Đóng băng, choáng, giảm tốc độ, khóa chết lượt hành động của địch', mode: 'danh', ratio: '55', dt: 'dg.khong_che' },
+    { id: 'drain', name: '🩸 Ma Đạo Hút Huyết', desc: 'Tối đa ma niệm, hút máu liên tục, bồi đắp độc và tà công ma hóa', mode: 'danh', ratio: '55', dt: 'ma_hoa' },
+  ];
   const HB_RATIO_W = 22;   // điểm trừ cho mỗi ô lệch khỏi tỉ lệ (1 trận mẫu thắng thêm ≈ 11 điểm)
   const HB_MIN_ITEMS = 10;   // hướng có ít hơn số món này (hoặc không có tâm pháp / không có chiêu) không đủ đồ để xếp kinh mạch
   const HB_TA = ['ma', 'doc', 'hop_hoan', 'thi', 'quy'];
@@ -5838,7 +5916,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
 
   // ── 2) Chọn đồ theo hướng, cảnh giới, phẩm, nguyên tố, đặc tính
-  function hbMatch(b, it) {
+  function hbMatch(b, it, fallback) {
     const sch = schoolsOf(it), isTa = sch.some((s) => HB_TA.includes(s)) || (it.tag || []).includes('nghich'), taB = b.nhom === 'Tà đạo';
     if (!taB && (isTa || (it.tag || []).includes('liem_tuc'))) return null;   // mảnh tà làm lưới ngả tà: hướng chính đạo không lấy
     const fam = buildMatch(b, it), hs = it.he || [];
@@ -5847,14 +5925,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       if (fam) w = 2.2;
       else {
         const parent = sinhBoi(b.elem), child = sinhRa(b.elem);
-        if (parent && hs.some((h) => gocHe(h) === parent)) w = 1.1;
-        else if (child && hs.some((h) => gocHe(h) === child)) w = 0.9;
-        else if (!hs.length || hs.every((h) => h === 'vo_sac')) w = 0.7;
+        if (parent && hs.some((h) => gocHe(h) === parent)) w = 1.2;
+        else if (child && hs.some((h) => gocHe(h) === child)) w = 0.95;
+        else if (!hs.length || hs.every((h) => h === 'vo_sac')) w = 0.75;
+        else if (fallback) w = 0.35;
         else return null;
       }
     } else {
       w = fam ? 2.2 : (sch.length && !sch.includes(b.k) ? 0.45 : 1);
       if ((b.he || []).some((h) => hs.includes(h))) w *= 1.25;
+      if (!fam && fallback && w < 0.5) w = 0.5;
     }
     return { w, fam };
   }
@@ -5870,19 +5950,39 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     try { const K = S.core; if (K && K.skillCap && K.spellPower) { const base = K.spellPower(R, (F && F.st) || 0), nxt = K.spellPower(R + 1, 0), hb = K.skillCap(it); if (base > 0 && hb !== Infinity && hb > 0) { capF = Math.min(1, hb / base); if (Number.isFinite(nxt) && Math.abs(hb - nxt) < 1e-6 * Math.max(1, nxt)) tier = 1.12; } } } catch (e) { capF = 1; tier = 1; }
     if (ch) v += (40 * (ch.uy || 0) * (ch.dang === 'cong' ? 1 : ch.dang === 'khong_che' ? 0.8 : 0.65) + 6 * (ch.effects || []).length) * Math.max(0.05, capF) + 4 * (it.pham_cap || 1);
     v *= fit * w * tier;
+
+    // Trọng số theo Meta Preset
+    const pre = F && F.preset;
+    if (pre === 'burst') {
+      if (ch && ch.dang === 'cong') v *= 1.75;
+      if (ch && (ch.effects || []).some((e) => ['sunder', 'bleed', 'burn', 'empower'].includes(e.kind))) v *= 1.45;
+    } else if (pre === 'tank') {
+      if (bd.ho_the || bd.khi_huyet) v *= 1.85;
+      if (ch && (ch.dang === 'thu' || ch.dang === 'hoi_phuc')) v *= 1.75;
+    } else if (pre === 'speed') {
+      if (bd.toc_do || bd.dot_pha) v *= 2.2;
+      if (bd.khang_tam_ma || it.linh_luc) v *= 1.5;
+    } else if (pre === 'control') {
+      if (ch && ch.dang === 'khong_che') v *= 2.1;
+      if (ch && (ch.effects || []).some((e) => ['chill', 'haste'].includes(e.kind))) v *= 1.6;
+    } else if (pre === 'drain') {
+      if ((ch && ch.ma_hoa) || (ch && (ch.effects || []).some((e) => ['poison', 'bleed'].includes(e.kind)))) v *= 1.9;
+    }
+
     if (F.dt && hbTraits(it).has(F.dt)) v *= 3;
     return v;
   }
   function hbSelect(b, R, F, nvReal) {
     const all = [], skip = { realm: 0, pham: 0, he: 0, huong: 0, own: 0 }, traits = new Map();
+    const isOwn = F.src === 'own';
     for (const it of C().items.values()) {
       if (!isKmItem(it) || it.theo_kiep) continue;
       if ((it.canh_gioi ?? 0) > R) { skip.realm++; continue; }
       const ph = it.pham_cap || 1; if (ph < F.phMin || ph > F.phMax) { skip.pham++; continue; }
       if (!hbHeOK(it, F)) { skip.he++; continue; }
       const have = (nvReal.tuiDo[it.id] || 0) > 0;
-      if (F.src === 'own' && !have) { skip.own++; continue; }
-      const m = hbMatch(b, it); if (!m) { skip.huong++; continue; }
+      if (isOwn && !have) { skip.own++; continue; }
+      const m = hbMatch(b, it, isOwn); if (!m) { skip.huong++; continue; }
       const cls = hbCls(it), cells = hbCells(it) || 1, val = hbVal(it, R, m.w, F);
       for (const tr of hbTraits(it)) traits.set(tr, (traits.get(tr) || 0) + 1);
       all.push({ it, cls, cells, val, dens: val / cells, fam: m.fam, have });
@@ -5977,7 +6077,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   function hbItemRow(it) {
     const nv = nvNow(), own = (nv.tuiDo[it.id] > 0) || nv.kinhMach.manh.some((m) => m.item === it.id);
     const src = sourceNote(it), where = (typeof whereToGet === 'function') ? whereToGet(it.id) : '';
-    return `<tr><td><b>${esc(it.ten)}</b>${own ? ' <span class="vk-ok" style="font-size:12px">có</span>' : ''}${lnTag(it)}<br><span class="vk-mu" style="font-size:12px">${HB_CLS[hbCls(it)]} · ${HB_ACT[hbCls(it)]} · ${hbCells(it)} ô · ${it.he && it.he.length ? esc(it.he.map(heTen).join('/')) + ' · ' : ''}${HB_PH[(it.pham_cap || 1) - 1] || ''} · từ ${esc(realmName(it.canh_gioi ?? 0))}</span><br><span style="font-size:13px">${itemFull(it)}</span>${src.length ? `<br><span class="vk-mu" style="font-size:12px">${esc(src.join(' · '))}</span>` : ''}${where && !own ? `<br><span class="vk-mu" style="font-size:12px">Có ở: ${where}</span>` : ''}</td><td style="white-space:nowrap">${it.gia ? '~' + it.gia : '—'}</td></tr>`;
+    return `<tr><td><b>${esc(it.ten)}</b>${own ? ' <span class="vk-ok" style="font-size:12px">có</span>' : ''}${lnTag(it)} <button class="vk-btn sec hb-tc-btn" data-id="${esc(it.id)}" style="padding:1px 6px;font-size:11px;margin-left:4px;cursor:pointer">🔍 Tra Cứu</button><br><span class="vk-mu" style="font-size:12px">${HB_CLS[hbCls(it)]} · ${HB_ACT[hbCls(it)]} · ${hbCells(it)} ô · ${it.he && it.he.length ? esc(it.he.map(heTen).join('/')) + ' · ' : ''}${HB_PH[(it.pham_cap || 1) - 1] || ''} · từ ${esc(realmName(it.canh_gioi ?? 0))}</span><br><span style="font-size:13px">${itemFull(it)}</span>${src.length ? `<br><span class="vk-mu" style="font-size:12px">${esc(src.join(' · '))}</span>` : ''}${where && !own ? `<br><span class="vk-mu" style="font-size:12px">Có ở: ${where}</span>` : ''}</td><td style="white-space:nowrap">${it.gia ? '~' + it.gia : '—'}</td></tr>`;
   }
   const hbBar = (tam, chien) => { const tot = tam + chien, a = tot ? Math.round(100 * tam / tot) : 0; return `<div style="display:flex;height:16px;border-radius:8px;overflow:hidden;border:1px solid var(--line,#999);margin:4px 0"><div style="width:${a}%;background:#3f8f4a"></div><div style="flex:1;background:#c0392b"></div></div><div class="vk-mu" style="font-size:12px">Tâm Pháp <b>${tam}</b> ô (${a}%) · Chiến Pháp <b>${chien}</b> ô (${tot ? 100 - a : 0}%)</div>`; };
   function hbScanHtml(b, F, sel, plan, rt) {
@@ -5998,17 +6098,174 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <details style="margin-top:6px"><summary><b>Kỹ Năng Bị Động Trong Kế Hoạch (${pas.length})</b></summary><ul style="margin:6px 0 0;padding-left:18px;font-size:13px">${pas.map(line).join('') || '<li class="vk-mu">Không có.</li>'}</ul></details>
       <div class="vk-mu" style="font-size:12px;margin-top:6px">Đã bỏ qua: ${sk.realm} món quá cảnh giới · ${sk.pham} món ngoài khoảng phẩm · ${sk.he} món lệch nguyên tố · ${sk.huong} món khác hướng hoặc mảnh tà · ${sk.own} món chưa có trong túi.</div></div>`;
   }
+
+  // ── Lộ trình tìm đồ còn thiếu cho build (quét từ data game)
+  function hbItemSourceInfo(it) {
+    const out = { drops: [], shops: [], sect: null, craft: null, terrain: [] };
+    const Cc = C();
+    try {
+      const X = tcBuild();
+      if (X && X.drops) {
+        const bestDrops = new Map();
+        for (const d of X.drops.get(it.id) || []) {
+          const p = tcDropP(d, it), cur = bestDrops.get(d.mon.id);
+          if (!cur || p > cur.p) bestDrops.set(d.mon.id, { d, p });
+        }
+        out.drops = [...bestDrops.values()].sort((a, b) => b.p - a.p).slice(0, 3).map(({ d, p }) => ({
+          name: d.mon.name,
+          id: d.mon.id,
+          realm: realmName(d.mon.e.canh_gioi ?? 0),
+          rank: TC_MUC[d.mon.e.muc] || d.mon.e.muc || 'Thường',
+          chance: tcChance(p),
+        }));
+      }
+
+      try {
+        const c = ctx();
+        const e = [...S.core.hangTong(c, 'cong_phap'), ...S.core.hangTong(c, 'phap_khi')].find((x) => x.id === it.id);
+        if (e) out.sect = { cost: e.gia, name: 'Tàng Kinh Các Tông Môn' };
+      } catch (e) {}
+
+      if (S.cho) {
+        const r = S.cho.cheapest.get(it.id);
+        if (r) out.shops.push({ noi: r.noi, price: Math.round(r.price) });
+      }
+      if (X && X.evItem) {
+        const evs = X.evItem.get(it.id);
+        if (evs) {
+          for (const [eid, role] of evs) {
+            if (role === 'ban') {
+              const def = Cc.encounters.get(eid);
+              if (def && def.ten) out.shops.push({ noi: tcWord(def.ten), price: it.gia || '~' });
+            }
+          }
+        }
+      }
+
+      if (X && X.recOut) {
+        const rec = X.recOut.get(it.id);
+        if (rec && rec.length) {
+          const r = rec[0];
+          out.craft = {
+            nghe: TC_NGHE[r.nghe] || r.nghe,
+            ten: tcClean(r.ten),
+            need: (r.chu || []).map((c) => tcItemName(c.id) + ' ×' + (c.so ?? 1)).join(', '),
+          };
+        }
+      }
+
+      if (it.dia_hinh && it.dia_hinh.length) {
+        out.terrain = it.dia_hinh.map((d) => TC_DH[d] || tcWord(d));
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  function hbMissingRoadmapHtml(miss) {
+    const rows = miss.map((it) => {
+      const srcInfo = hbItemSourceInfo(it);
+      const sources = [];
+      if (srcInfo.drops.length) {
+        sources.push(`<b>Quái rơi:</b> ${srcInfo.drops.map((d) => `<a class="tc-lk" data-k="q" data-id="${esc(d.id)}">${esc(d.name)}</a> <span class="vk-mu">(${d.realm} · ${d.rank} · ${d.chance})</span>`).join(', ')}`);
+      }
+      if (srcInfo.sect) {
+        sources.push(`<b>Tông môn:</b> ${esc(srcInfo.sect.name)} (~${srcInfo.sect.cost} cống hiến)`);
+      }
+      if (srcInfo.shops.length) {
+        sources.push(`<b>Tiệm / Chợ:</b> ${srcInfo.shops.slice(0, 2).map((s) => `${esc(s.noi)} (~${s.price} lt)`).join(', ')}`);
+      }
+      if (srcInfo.craft) {
+        sources.push(`<b>${esc(srcInfo.craft.nghe)}:</b> ${esc(srcInfo.craft.ten)} (cần ${esc(srcInfo.craft.need)})`);
+      }
+      if (srcInfo.terrain.length) {
+        sources.push(`<b>Địa hình:</b> ${esc(srcInfo.terrain.join(', '))}`);
+      }
+      const note = sourceNote(it);
+      if (note.length && !sources.length) sources.push(esc(note.join(' · ')));
+      if (!sources.length) sources.push('<span class="vk-mu">Chưa ghi nhận nguồn trực tiếp trong bản game này</span>');
+
+      const isKey = (it.pham_cap || 1) >= 4 || it.tran_phai || it.chieu;
+      return `<tr>
+        <td><b>${esc(it.ten)}</b>${isKey ? ' <span class="vk-ok" style="font-size:11px">Trọng Yếu</span>' : ''}</td>
+        <td><span class="vk-mu" style="font-size:12px">${HB_CLS[hbCls(it)]} · ${HB_PH[(it.pham_cap || 1) - 1] || ''} · ${(it.he || []).map(heTen).join('/') || 'Vô Sắc'}</span></td>
+        <td style="font-size:12.5px">${sources.join('<br>')}</td>
+        <td style="white-space:nowrap"><button class="vk-btn sec hb-tc-btn" data-id="${esc(it.id)}" style="padding:2px 7px;font-size:11.5px">🔍 Tra Cứu</button></td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px;margin:8px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <b style="color:#d97706;font-size:13.5px">⚠️ Còn thiếu ${miss.length} món chưa có trong túi để hoàn thiện build lý tưởng:</b>
+        <button class="vk-btn" id="hb-fallback-btn" style="font-size:12.5px;padding:5px 12px;background:linear-gradient(135deg, #10b981, #059669)">🔄 Lấy Đồ Trong Túi Thay Thế & Áp Dụng Ngay</button>
+      </div>
+      <div class="vk-mu" style="font-size:12px;margin:4px 0 8px">Bấm nút xanh ở trên để Tool tự động chọn những món tốt nhất đang có trong túi thay cho món thiếu và tạo bản có thể bấm Áp Dụng được ngay; hoặc đi săn/mua các món theo lộ trình bên dưới:</div>
+      <table class="vk-t" style="margin-top:6px">
+        <tr><th>Món Thiếu</th><th>Phẩm · Loại</th><th>Nguồn Thu Thập Chi Tiết</th><th>Thao Tác</th></tr>
+        ${rows}
+      </table>
+    </div>`;
+  }
+
+  // ── So sánh chỉ số trước và sau khi lên build mới
+  function hbCompareHtml(nvReal, F, res) {
+    let cur = null;
+    try { cur = evalCurrent(nvReal, F.mode); } catch (e) { cur = null; }
+    if (!cur) return '';
+    const diff = (a, b, isPct, rev) => {
+      const d = b - a;
+      if (Math.abs(d) < 0.001) return `<span class="vk-mu">0</span>`;
+      const good = rev ? d < 0 : d > 0;
+      const sign = d > 0 ? '+' : '';
+      const str = isPct ? pct(d, 1) : num(d, 1);
+      return `<span class="${good ? 'vk-ok' : 'vk-bad'}">(${sign}${str})</span>`;
+    };
+
+    const curTocDo = cur.R.biDong.toc_do || 0, newTocDo = res.R.biDong.toc_do || 0;
+    const curDotPha = cur.R.biDong.dot_pha || 0, newDotPha = res.R.biDong.dot_pha || 0;
+    const curHp = cur.P.khiHuyetToiDa || 0, newHp = res.P.khiHuyetToiDa || 0;
+    const curRegen = cur.P.linhLucMoiLuot || 0, newRegen = res.P.linhLucMoiLuot || 0;
+    const curNghich = cur.R.diemNghich || 0, newNghich = res.R.diemNghich || 0;
+
+    const curSkills = (cur.P.chieu || []).filter((x) => x.dang !== undefined).map((x) => `${esc(x.ten)} (${Math.round(x.uy)})`).join(', ') || '—';
+    const newSkills = (res.P.chieu || []).filter((x) => x.dang !== undefined).map((x) => `${esc(x.ten)} (${Math.round(x.uy)})`).join(', ') || '—';
+
+    return `
+    <div class="vk-card" style="margin-top:8px">
+      <h3>So Sánh Chỉ Số: Đang Xếp vs Build Mới</h3>
+      <table class="vk-t">
+        <tr><th>Chỉ Số</th><th>Đang Xếp Trên Người</th><th>Sau Khi Lên Build Mới</th><th>Chênh Lệch</th></tr>
+        <tr><td>Thắng trận mẫu (9 quái)</td><td>${cur.wins}/${cur.n}</td><td><b>${res.wins}/${res.n}</b></td><td>${cur.wins === res.wins ? '—' : (res.wins > cur.wins ? `<span class="vk-ok">+${res.wins - cur.wins} thắng</span>` : `<span class="vk-bad">−${cur.wins - res.wins} thắng</span>`)}</td></tr>
+        <tr><td>Tốc độ tu luyện</td><td>+${pct(curTocDo)}</td><td><b>+${pct(newTocDo)}</b></td><td>${diff(curTocDo, newTocDo, true)}</td></tr>
+        <tr><td>Tỉ lệ đột phá</td><td>+${pct(curDotPha, 1)}</td><td><b>+${pct(newDotPha, 1)}</b></td><td>${diff(curDotPha, newDotPha, true)}</td></tr>
+        <tr><td>Khí huyết tối đa</td><td>${Math.round(curHp)}</td><td><b>${Math.round(newHp)}</b></td><td>${diff(curHp, newHp, false)}</td></tr>
+        <tr><td>Linh lực hồi / lượt</td><td>${num(curRegen)}</td><td><b>${num(newRegen)}</b></td><td>${diff(curRegen, newRegen, false)}</td></tr>
+        <tr><td>Điểm nghịch (Tà / Lệch ô)</td><td>${curNghich}</td><td><b>${newNghich}</b></td><td>${diff(curNghich, newNghich, false, true)}</td></tr>
+      </table>
+      <div style="font-size:12.5px;margin-top:6px;line-height:1.5">
+        <div><b>Chiêu thức hiện tại:</b> <span class="vk-mu">${curSkills}</span></div>
+        <div style="margin-top:2px"><b>Chiêu thức build mới:</b> <span class="vk-ok">${newSkills}</span></div>
+      </div>
+    </div>`;
+  }
+
   function hbResultHtml(b, F, r) {
     const { nvH, res, plan } = r, c = C(), nvReal = nvNow();
     const sh = hbShareOf(nvH, res.manh), used = res.manh.map((m) => c.items.get(m.item)).filter(Boolean);
     const miss = used.filter((it) => !((nvReal.tuiDo[it.id] || 0) > 0));
     const grp = ['tam', 'dau', 'pk', 'bv'].map((k) => { const a = used.filter((it) => hbCls(it) === k); return a.length ? `<div style="margin-top:8px"><b>${HB_CLS[k]} (${HB_ACT[k]})</b><table class="vk-t">${a.map(hbItemRow).join('')}</table></div>` : ''; }).join('');
-    return `<div class="vk-ok" style="margin:6px 0">Kinh mạch ${esc(realmName(F.R))} theo hướng ${esc(b.ten)}:</div>
+    const curPre = HB_PRESETS.find((p) => p.id === (F.preset || 'all')) || HB_PRESETS[0];
+
+    return `<div class="vk-ok" style="margin:6px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span>Kinh mạch <b>${esc(realmName(F.R))}</b> theo hướng <b>${esc(b.ten)}</b> · Preset: <b>${esc(curPre.name)}</b></span>
+        <button class="vk-btn sec" id="hb-copy" style="padding:3px 9px;font-size:12px;cursor:pointer">📋 Sao Chép Cách Xếp</button>
+      </div>
       ${hbBar(sh.tam, sh.chien)}
       <div class="vk-mu" style="font-size:12px">Chi tiết ô: Tâm Pháp ${sh.tam} · Đấu Pháp ${sh.dau} · Pháp Khí ${sh.pk} · Bảo Vật ${sh.bv}.</div>
-      <div style="font-size:14px;margin:6px 0">Thắng ${res.wins}/${res.n} trận mẫu · tu luyện +${pct(res.R.biDong.toc_do || 0)} · đột phá +${pct(res.R.biDong.dot_pha || 0, 1)} · linh lực hồi ${num(res.P ? res.P.linhLucMoiLuot || 0 : 0)}/lượt · điểm nghịch ${res.R.diemNghich || 0}</div>
+      <div style="font-size:14px;margin:6px 0">Thắng <b>${res.wins}/${res.n}</b> trận mẫu · Tu luyện +${pct(res.R.biDong.toc_do || 0)} · Đột phá +${pct(res.R.biDong.dot_pha || 0, 1)} · Linh lực hồi ${num(res.P ? res.P.linhLucMoiLuot || 0 : 0)}/lượt · Điểm nghịch ${res.R.diemNghich || 0}</div>
+      ${hbCompareHtml(nvReal, F, res)}
       ${drawGrid(nvH, res.manh)}
-      ${miss.length ? `<div style="color:#b45309;font-size:13px;margin-top:6px">Còn thiếu ${miss.length} món chưa có trong túi: ${miss.map((it) => '<b>' + esc(it.ten) + '</b>').join(', ')}. Nút áp dụng chỉ mở khi đủ đồ.</div>` : '<div style="margin-top:8px"><button class="vk-btn" id="hb-apply">Áp dụng vào game</button></div>'}
+      ${miss.length ? hbMissingRoadmapHtml(miss) : '<div style="margin:10px 0"><button class="vk-btn" id="hb-apply" style="font-size:14px;padding:8px 18px;background:linear-gradient(135deg, #10b981, #059669)">✅ Áp Dụng Vào Game Ngay</button></div>'}
       ${grp}${pieceTable(res.R)}
       <div class="vk-mu" style="font-size:12px;margin-top:6px">Trận mẫu: 9 loại quái cùng cảnh giới, tiểu cảnh giới quanh mức đã chọn. Chỉ số nhân vật (căn cốt, ngộ tính…) lấy theo nhân vật hiện tại nên kết quả ở cảnh giới cao hơn chỉ là ước lượng. Sức mỗi món tính ở mức Lĩnh Ngộ đã đầy.</div>`;
   }
@@ -6033,7 +6290,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     let known = null; try { known = JSON.parse(localStorage.getItem('vkx_hb_scan') || 'null'); } catch (e) { known = null; }
     const newItems = known && known.sig !== sig && Number.isFinite(known.n) ? Cc.items.size - known.n : 0;
     try { localStorage.setItem('vkx_hb_scan', JSON.stringify({ sig, n: Cc.items.size })); } catch (e) { /* bỏ qua */ }
-    const F = S.bld = Object.assign({ R: cur, st: nv.tieuCanhGioi || 0, phMin: 1, phMax: 8, he: '', vo: true, dt: '', src: 'game', assume: true }, S.bld || {});
+    const F = S.bld = Object.assign({ R: cur, st: nv.tieuCanhGioi || 0, phMin: 1, phMax: 8, he: '', vo: true, dt: '', src: 'game', assume: true, preset: 'all' }, S.bld || {});
     F.R = Math.max(0, Math.min(5, +F.R || 0)); F.st = Math.max(0, Math.min(3, +F.st || 0)); F.phMin = Math.max(1, Math.min(8, +F.phMin || 1)); F.phMax = Math.max(1, Math.min(8, +F.phMax || 8));
     if (F.phMin > F.phMax) { const t = F.phMin; F.phMin = F.phMax; F.phMax = t; }
     const ranked = BUILDS.map((x) => ({ b: x, f: buildFit(x, nv, cur) })).sort((a, c) => c.f.s - a.f.s), top3 = ranked.slice(0, 3);
@@ -6046,17 +6303,45 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const phOpts = (v, pre) => HB_PH.map((t, i) => o(i + 1, v, pre + t)).join('');
     const heOpts = ['kim', 'moc', 'thuy', 'hoa', 'tho', 'loi', 'bang', 'phong', 'am', 'vo_sac'].filter((h) => [...Cc.items.values()].some((it) => isKmItem(it) && (it.he || []).includes(h)));
     const trOpts = [...sel.traits.entries()].sort((x, y) => hbTrLabel(x[0]).localeCompare(hbTrLabel(y[0]), 'vi')).map(([k, n]) => o(k, F.dt, 'Đặc Tính: ' + hbTrLabel(k) + ' (' + n + ')')).join('');
-    const catRows = BUILDS.map((x) => { const s = cat.get(x.k); return `<tr data-hk="${esc(x.k)}" style="cursor:pointer"><td><b>${esc(x.ten)}</b>${x.dyn ? ' <span class="vk-ok" style="font-size:11px">mới</span>' : ''}${x.k === b.k ? ' ●' : ''}<br><span class="vk-mu" style="font-size:11px">${esc(x.nhom)}</span></td><td>${s.n.tam}</td><td>${s.n.dau}</td><td>${s.n.pk}</td><td>${s.n.bv}</td><td>${s.ok.tam}+${s.ok.chien}</td></tr>`; }).join('');
+    const catRows = BUILDS.map((x) => {
+      const s = cat.get(x.k);
+      const fit = buildFit(x, nv, F.R);
+      const owned = fit.onKm + fit.inBag;
+      return `<tr data-hk="${esc(x.k)}" style="cursor:pointer">
+        <td><b>${esc(x.ten)}</b>${x.dyn ? ' <span class="vk-ok" style="font-size:11px">mới</span>' : ''}${x.k === b.k ? ' ●' : ''}<br><span style="color:${fit.color};font-weight:600;font-size:11px">${fit.badge}</span> <span class="vk-mu" style="font-size:11px">(${esc(x.nhom)})</span></td>
+        <td>${s.n.tam}</td>
+        <td>${s.n.dau}</td>
+        <td>${s.n.pk}</td>
+        <td>${s.n.bv}</td>
+        <td><b>${s.ok.tam}+${s.ok.chien}</b></td>
+        <td>${owned > 0 ? `<b class="vk-ok">${owned}</b> <span class="vk-mu" style="font-size:11px">(${fit.onKm} trên mạch, ${fit.inBag} túi)</span>` : '<span class="vk-mu">0</span>'}</td>
+      </tr>`;
+    }).join('');
     const dropNote = HB_DROP.length ? `<div class=\"vk-mu\" style=\"font-size:12px;margin-top:6px\">Đã ẩn ${HB_DROP.length} hướng không đủ đồ để xếp kinh mạch: ${HB_DROP.map((d) => esc(d.ten) + ' (' + esc(d.why) + ')').join('; ')}.</div>` : '';
     const dp = [...Cc.items.values()].filter((it) => it.loai === 'dan_duoc' && it.dot_pha && it.dot_pha.canh_gioi === F.R + 1);
     const steps = (HB_STEPS[b.k] && HB_STEPS[b.k][F.R]) ? `<li><b>${esc(HB_STEPS[b.k][F.R])}</b></li>` : '';
     const slots = (nv.kinhMach.loadouts || [1]).length, moLeft = (nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0, openable = kmOpenable(nv).length;
-    const kbSel = auRow('Hướng Build', `<select class="vk-sel" id="au-km-kb" style="width:210px"><option value="">Không Ép (Theo Hệ Số Game)</option>${groups.map((g) => `<optgroup label="${esc(g)}">${BUILDS.filter((x) => x.nhom === g).map((x) => `<option value="${esc(x.k)}" ${cfg.kb === x.k ? 'selected' : ''}>${esc(x.ten)}${x.k === ranked[0].b.k ? ' ★ Hợp Nhân Vật' : ''}</option>`).join('')}</optgroup>`).join('')}</select>`);
+    const kbSel = auRow('Hướng Build', `<select class="vk-sel" id="au-km-kb" style="width:210px"><option value="">Không Ép (Theo Hệ Số Game)</option>${groups.map((g) => `<optgroup label="${esc(g)}">${BUILDS.filter((x) => x.nhom === g).map((x) => {
+      const fit = buildFit(x, nv, F.R);
+      return `<option value="${esc(x.k)}" ${cfg.kb === x.k ? 'selected' : ''}>${esc(x.ten)} [${fit.tier}] (${fit.s > 0 ? '+' : ''}${Math.round(fit.s)}đ)</option>`;
+    }).join('')}</optgroup>`).join('')}</select>`);
+    const curPreset = HB_PRESETS.find((p) => p.id === (F.preset || 'all')) || HB_PRESETS[0];
+
     body.innerHTML = `
     <div class="vk-card"><h3>Hướng Build · Cài Đặt Chung</h3>
       <div class="vk-mu" style="font-size:13px">Một bộ cài đặt dùng cho Auto Kinh Mạch, xếp từ đồ trong túi và xếp theo cảnh giới bên dưới. Hợp nhân vật nhất lúc này: ${top3.map((x) => `<b>${esc(x.b.ten)}</b>${x.f.why.length ? ' (' + esc(x.f.why.join(', ')) + ')' : ''}`).join(' · ')}</div>
       ${known && known.sig !== sig ? `<div class="vk-ok" style="font-size:12px;margin-top:4px">Đã quét lại dữ liệu game: ${newItems > 0 ? '+' + newItems + ' món mới · ' : ''}${BUILDS.filter((x) => x.dyn).length} hướng do Tool tự thêm.</div>` : ''}
       <div style="margin-top:6px">${kbSel}
+      <div style="margin:8px 0;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:6px;padding:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <b style="font-size:13px">Lối Chơi & Meta Presets</b>
+          <span class="vk-mu" style="font-size:11.5px">1-chạm thiết lập phong cách tối ưu</span>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${HB_PRESETS.map((p) => `<button class="vk-btn ${F.preset === p.id ? '' : 'sec'} hb-preset-btn" data-pid="${p.id}" style="font-size:12px;padding:4px 9px">${esc(p.name)}</button>`).join('')}
+        </div>
+        <div class="vk-mu" style="font-size:12px;margin-top:5px" id="hb-preset-desc">💡 ${esc(curPreset.desc)}</div>
+      </div>
       ${auSel('au-km-ratio', 'Tỉ Lệ Tâm Pháp : Chiến Pháp', Object.entries(HB_RATIO).map(([k, v]) => [k, v[0]]), cfg.ratio)}
       ${auSel('au-km-mode', 'Chế Độ', AU_KM_MODE, cfg.mode)}
       ${auSel('au-km-dir', 'Hướng Xếp', [['', 'Theo Hệ Số Game'], ['tien', 'Tiên Tu · Tương Sinh'], ['ma', 'Ma Tu · Tương Khắc']], cfg.dir)}
@@ -6081,7 +6366,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     <div class="vk-card"><h3>Hướng Build Khả Dụng (Quét Từ Game)</h3>
       <div class="vk-mu" style="font-size:12px">Số món theo nhóm của từng hướng trong dữ liệu game hiện tại. Cột cuối: dùng được ở ${esc(realmName(F.R))} (Tâm Pháp + Chiến Pháp). Chạm một dòng để chọn hướng.</div>
       <details open><summary><b>${BUILDS.length} hướng</b>${BUILDS.some((x) => x.dyn) ? ' · ' + BUILDS.filter((x) => x.dyn).map((x) => esc(x.ten)).join(', ') + ' là hướng mới quét thêm' : ''}</summary>
-      <table class="vk-t"><tr><th>Hướng</th><th>Tâm</th><th>Đấu</th><th>Khí</th><th>Bảo</th><th>Dùng Được</th></tr>${catRows}</table>${dropNote}</details>
+      <table class="vk-t"><tr><th>Hướng Build</th><th>Tâm</th><th>Đấu</th><th>Khí</th><th>Bảo</th><th>Dùng Được</th><th>Đang Có</th></tr>${catRows}</table>${dropNote}</details>
       <button class="vk-btn sec" id="hb-rescan" style="margin-top:6px">Quét Lại Dữ Liệu Game</button></div>
     <div class="vk-card"><h3>${esc(b.ten)} · Cốt Lõi</h3><ul style="margin:0;padding-left:18px;font-size:14px">${b.core.map((x) => `<li>${resolveTC(x)}</li>`).join('')}</ul></div>
     ${kmCard(b, nv)}
@@ -6128,12 +6413,59 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     body.querySelector('#au-run').onclick = () => auStartKm(false);
     body.querySelector('#au-prev').onclick = () => auStartKm(true);
     body.querySelector('#au-stop').onclick = () => auStop('Bạn bấm Dừng');
-    const key = JSON.stringify([b.k, F.R, F.st, F.phMin, F.phMax, F.he, F.dt, F.src, F.ratio, F.mode, F.iters, F.assume, F.vo, cfg.dir, cfg.prio, cfg.bk]);
+
+    body.querySelectorAll('.hb-preset-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const pid = btn.dataset.pid;
+        const pre = HB_PRESETS.find((p) => p.id === pid);
+        if (!pre) return;
+        F.preset = pid;
+        if (pre.mode) { F.mode = pre.mode; cfg.mode = pre.mode; }
+        if (pre.ratio) { F.ratio = pre.ratio; cfg.ratio = pre.ratio; }
+        if (pre.dt !== undefined) { F.dt = pre.dt; }
+        auSave();
+        S.hbRes = null;
+        tabAutoKm();
+      };
+    });
+
+    body.addEventListener('click', (ev) => {
+      const tcBtn = ev.target.closest && ev.target.closest('.hb-tc-btn');
+      if (tcBtn && tcBtn.dataset.id) {
+        ev.preventDefault();
+        tcGo('v', tcBtn.dataset.id);
+        return;
+      }
+      const tcLkEl = ev.target.closest && ev.target.closest('.tc-lk');
+      if (tcLkEl && tcLkEl.dataset.k && tcLkEl.dataset.id) {
+        ev.preventDefault();
+        tcGo(tcLkEl.dataset.k, tcLkEl.dataset.id);
+        return;
+      }
+      const fbBtn = ev.target.closest && ev.target.closest('#hb-fallback-btn');
+      if (fbBtn) {
+        ev.preventDefault();
+        F.src = 'own';
+        const srcSel = body.querySelector('#hb-src');
+        if (srcSel) srcSel.value = 'own';
+        S.hbRes = null;
+        const goBtn = body.querySelector('#hb-go');
+        if (goBtn) goBtn.click();
+        return;
+      }
+    });
+
+    const key = JSON.stringify([b.k, F.R, F.st, F.phMin, F.phMax, F.he, F.dt, F.src, F.ratio, F.mode, F.iters, F.assume, F.vo, cfg.dir, cfg.prio, cfg.bk, F.preset]);
     const showRes = () => {
       const out = body.querySelector('#hb-out'); if (!out || !S.hbRes || S.hbRes.key !== key) return;
       out.innerHTML = hbResultHtml(b, F, S.hbRes.r);
       const ap = out.querySelector('#hb-apply');
       if (ap) ap.onclick = async (e) => { if (kmAutoRunning()) { UI.notify('Auto Kinh Mạch đang chạy, hãy dừng trước.'); return; } e.target.disabled = true; if (await applyManh(S.hbRes.r.res.manh)) await render(); else e.target.disabled = false; };
+      const cp = out.querySelector('#hb-copy');
+      if (cp) cp.onclick = async () => {
+        const ok = await copyText(JSON.stringify({ vktt: 'manh', manh: S.hbRes.r.res.manh.map((m) => ({ item: m.item, x: m.x, y: m.y, xoay: m.xoay })) }));
+        UI.notify(ok ? '📋 Đã chép cách xếp vào clipboard.' : '❌ Không chép được.');
+      };
     };
     showRes();
     body.querySelector('#hb-go').onclick = async (ev) => {
@@ -9416,7 +9748,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.4.0 · Siêu Auto Tác Chiến & Tu Luyện Toàn Năng (Đại Tu Auto Game)', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.5.0 · Đại Tu Hướng Build & Tối Ưu Hóa Kinh Mạch Toàn Diện', d: '06/11/2026', now: true, pts: [
+                '<b>Phân Tích Tương Thích Ngũ Hành & Thể Chất Sâu Sắc (Hệ Thống Rank S/A/B/C/D):</b> Đánh giá toàn diện độ tương thích của từng hướng build dựa trên Linh Căn bản mệnh, Ngũ Hành Tương Sinh (Mẹ Dưỡng +15% / Con Trợ), Tương Khắc nghịch hệ (-15%), Thể Chất đắc đạo và phản phệ tà công, cùng số lượng trang bị phẩm cao/trấn phái đang có trong túi để xếp hạng trực quan.',
+                '<b>Hệ Thống 6 Meta Presets (Lối Chơi Tiên Tu 1-Chạm):</b> Trang bị bộ cấu hình nhanh cho mọi phong cách: ⚡ Bạo Sát Thần Tốc (dồn uy lực, phá giáp, bộc phát DPS), 🛡️ Bất Hoại Hộ Thể (dày khiên, khí huyết, hồi máu trường sinh), 🚀 Tốc Tu Đột Phá (tối đa tốc độ tu luyện, đột phá và kháng tâm ma), ❄️ Khống Chế Phong Tỏa (đóng băng, choáng, khóa lượt địch), 🩸 Ma Đạo Hút Huyết (tối đa ma niệm và hút máu), và 🎯 Tự Do. Tự động tinh chỉnh tỉ lệ ô và trọng số đánh giá món.',
+                '<b>Lộ Trình Thu Thập & Săn Tìm Món Còn Thiếu Chi Tiết:</b> Tự động phát hiện các món chưa có trong túi của build mục tiêu và bóc tách cụ thể: Quái/Boss rơi (kèm cảnh giới, thứ bậc & % tỉ lệ), Tàng Kinh Các tông môn, Cửa hàng/Chợ rẻ nhất, Công thức luyện chế, cùng nút <code>[🔍 Tra Cứu]</code> nhảy thẳng sang tab Vật Phẩm xem chi tiết chỉ trong 1 cú click.',
+                '<b>Giải Pháp Chuyển Tiếp "Tự Động Lấy Đồ Trong Túi Thay Thế & Áp Dụng Ngay":</b> Giải tỏa hoàn toàn nút thắt thiếu đồ: chỉ với 1 click, Tool tự động chọn những món bổ trợ cùng hệ tốt nhất đang có trong túi để lấp đầy ô trống và tạo ngay bộ kinh mạch hợp lệ 100%, cho phép bấm <code>[✅ Áp Dụng Vào Game Ngay]</code> mà không cần chờ farm đủ đồ.',
+                '<b>Bảng So Sánh Chỉ Số Trước & Sau Khi Lên Build Mới:</b> Đo lường chính xác hiệu quả so với bộ kinh mạch nhân vật đang mặc: Tỉ lệ thắng 9 trận mẫu quái cùng cảnh giới, Tốc độ tu luyện (+Δ%), Tỉ lệ đột phá (+Δ%), Khí huyết tối đa, Linh lực hồi mỗi lượt, Điểm nghịch tà/khắc hệ, và danh sách các chiêu thức chủ động mới được kích hoạt.',
+                '<b>Bổ Sung Cột "Đang Có" Trong Danh Sách Hướng & Nút Sao Chép:</b> Giúp người chơi nắm bắt ngay mình đang sở hữu bao nhiêu món (trên mạch + trong túi) của từng phái, kèm nút <code>[📋 Sao Chép Cách Xếp]</code> JSON nhanh chóng.'
+            ] },
+            { t: 'Phiên Bản 7.4.0 · Siêu Auto Tác Chiến & Tu Luyện Toàn Năng (Đại Tu Auto Game)', d: '06/11/2026', now: false, pts: [
                 '<b>Khắc Phục Hoàn Toàn Chế Độ Auto Lỏ Của Game:</b> Thay thế thuật toán tự đánh ngô nghê của game bằng Siêu AI Tác Chiến VIP: dự báo nộ chiêu của địch để chủ động bật khiên đỡ, quản lý dược kháng thông minh chống lãng phí đan quý khi kháng 100%, tự động giải cứu Ngự Linh khi máu &lt; 25%, và luôn tận dụng Quyền Cước (danh_thuong) miễn phí mỗi lượt giúp tăng vọt 25% DPS.',
                 '<b>Nút Nổi Tác Chiến Trực Tiếp Trong Trận ([⚡ Siêu Auto VIP]):</b> Tự động xuất hiện nút điều khiển nổi tinh xảo ngay trên màn hình giao chiến của game. Người chơi chỉ cần bấm 1 chạm để AI đánh thay từng chiêu hoặc tự động đánh liên tục đến khi chiến thắng (áp dụng cho mọi trận: Tháp Vô Nhai Uyên, Đánh Boss Hóa Thần, Lôi Đài, Dị Bảo...).',
                 '<b>Bổ Sung Tab Auto Tu Luyện & Đột Phá (atl):</b> Tự động hóa trọn vẹn chu trình tu tiên mà game hoàn toàn thiếu: Bế Quan (Nhập Định) → Tích Lũy Tu Vi → Đột Phá Xung Kích → Trấn Áp Tâm Ma → Lên Cảnh Giới Tiếp Theo (xuyên suốt từ Luyện Khí đến Hóa Thần / Đại Thừa).',
