@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.7.0
+// @version      7.7.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.7.0';
+  var TOOL_VER = '7.7.1';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -1844,6 +1844,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       } else {
         wait = Math.max(0, nam - (run.namBatDau || 0));
       }
+      wait = Math.max(0, Math.floor(wait));
       eventWaits.push({ e, wait });
       if (wait > maxWait) maxWait = wait;
     }
@@ -1852,6 +1853,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const mult = (1 + (maxWait / 25)).toFixed(1);
     const guaranteed = maxWait >= 500;
 
+    // Tính toán trọng số xuất hiện & xác suất tương đối cho từng sự kiện
+    const guaranteedEvents = eventWaits.filter((x) => x.wait >= 500);
+    if (guaranteedEvents.length > 0) {
+      const sumG = guaranteedEvents.reduce((s, x) => s + ((x.e.p || 0.05) * (1 + x.wait / 25)), 0);
+      eventWaits.forEach((x) => {
+        const m = 1 + (x.wait / 25);
+        x.mult = m;
+        x.weight = (x.e.p || 0.05) * m;
+        if (x.wait >= 500) {
+          x.w = sumG > 0 ? (x.weight / sumG) : (1 / guaranteedEvents.length);
+        } else {
+          x.w = 0;
+        }
+      });
+    } else {
+      const totalWeight = eventWaits.reduce((sum, x) => sum + ((x.e.p || 0.05) * (1 + x.wait / 25)), 0);
+      eventWaits.forEach((x) => {
+        const m = 1 + (x.wait / 25);
+        x.mult = m;
+        x.weight = (x.e.p || 0.05) * m;
+        x.w = totalWeight > 0 ? (x.weight / totalWeight) : (1 / Math.max(1, eventWaits.length));
+      });
+    }
+
     const topCamping = eventWaits
       .filter((x) => x.e.dia)
       .sort((a, b) => {
@@ -1859,7 +1884,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const relB = DIBAO.rel[b.e.relic] || {};
         const bdA = relA.bd === 'Có' ? 1 : 0;
         const bdB = relB.bd === 'Có' ? 1 : 0;
-        return bdB - bdA || b.wait - a.wait;
+        return bdB - bdA || (b.w || 0) - (a.w || 0) || b.wait - a.wait;
       })
       .slice(0, 4);
 
@@ -2264,9 +2289,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   const diaSlot = findDiaSlot(c, cp.e.dia);
                   const isHere = checkIsHere(c, run, cp.e.dia, diaSlot);
                   const relInf = DIBAO.rel[cp.e.relic] || {};
+                  const pctVal = Math.round((cp.w || 0) * 100);
+                  const pctStr = cp.wait >= 500 ? ' · 100% 🔥' : (pctVal > 0 ? ` · ${pctVal}%` : '');
                   return `
                     <div style="background:var(--bg3);padding:4px 8px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:center;gap:6px">
-                      <span>📍 <b>${esc(cp.e.dia)}</b> (${esc(relInf.ten || cp.e.relic)})</span>
+                      <span>📍 <b>${esc(cp.e.dia)}</b> (${esc(relInf.ten || cp.e.relic)}${pctStr})</span>
                       ${isHere ? '<span class="vk-ok" style="font-size:11px">Đang ở đây ✓</span>' : (diaSlot != null ? `<button class="vk-btn do-btn-travel" data-slot="${esc(diaSlot)}" data-name="${esc(cp.e.dia)}" style="padding:2px 6px;font-size:10.5px;margin:0">Đi đến</button>` : '')}
                     </div>
                   `;
@@ -8628,7 +8655,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             html += `<div style="margin-top:6px;font-size:12.5px">🏕️ <b>Top điểm cắm trại đón đầu tốt nhất:</b><ul style="margin:4px 0;padding-left:18px">`;
             pity2.topCamping.slice(0, 3).forEach((cp) => {
               const rel = DIBAO.rel[cp.e.relic] || {};
-              html += `<li><b>${esc(cp.e.dia)}</b> (chờ ${esc(rel.ten || cp.e.relic)} · xác suất ${Math.round(cp.w * 100)}%)</li>`;
+              const pctVal = Math.round((cp.w || 0) * 100);
+              const pctStr = cp.wait >= 500 ? '<b class="vk-ok" style="color:#ef4444">100% 🔥 CHẮC CHẮN NỔ</b>' : `xác suất <b>${pctVal}%</b>`;
+              const waitStr = cp.wait > 0 ? ` (đã tích lũy ${cp.wait} năm · trọng số ×${(cp.mult || 1).toFixed(1)})` : '';
+              html += `<li><b>${esc(cp.e.dia)}</b> (chờ <b>${esc(rel.ten || cp.e.relic)}</b> · ${pctStr}${waitStr})</li>`;
             });
             html += `</ul></div>`;
           }
@@ -9776,7 +9806,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.7.0 · Auto Săn Dị Bảo & Tinh Gọn Trung Tâm Dị Bảo', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.7.1 · Sửa Lỗi Hiển Thị Xác Suất Cắm Trại Dị Bảo (Fix NaN%)', d: '06/11/2026', now: true, pts: [
+                '<b>Sửa Triệt Để Lỗi Hiển Thị Xác Suất NaN%:</b> Bổ sung công thức tính trọng số xuất hiện thực tế (<code>w</code>) và hệ số nhân (<code>mult</code>) cho từng sự kiện theo chuẩn cơ chế Thiên Đạo Bù Dị Bảo (Pity 500 năm), khắc phục hoàn toàn lỗi hiển thị <code>xác suất NaN%</code> khi quét điểm cắm trại.',
+                '<b>Hiển Thị Trực Quan Tiến Trình Chờ & Tỉ Lệ Nổ:</b> Bổ sung chi tiết số năm tích lũy và hệ số nhân trọng số (ví dụ: đã tích lũy 120 năm · trọng số ×5.8), đồng thời tự động đánh dấu mốc 100% 🔥 CHẮC CHẮN NỔ khi vượt ngưỡng bảo hiểm 500 năm.'
+            ] },
+            { t: 'Phiên Bản 7.7.0 · Auto Săn Dị Bảo & Tinh Gọn Trung Tâm Dị Bảo', d: '06/11/2026', now: false, pts: [
                 '<b>Xóa Tab Dò Đồ Quý Bị Thừa (Tinh Gọn Menu Tra Cứu):</b> Loại bỏ hoàn toàn tab Dò Đồ Quý (<code>do</code>) trùng lặp, quy tụ về một tab Dị Bảo (<code>db</code>) toàn diện duy nhất; tự động chuyển hướng người dùng tab cũ sang tab Dị Bảo.',
                 '<b>Ra Mắt Tính Năng Auto Săn Dị Bảo (asdb):</b> Tự động quét toàn bộ 21 Dị Bảo Nghịch Thiên (Cấp 8) trên thế giới. Tự động dùng Trận/Phù Truyền Tống (0 năm tuổi thọ) hoặc bay thẳng tới tọa độ mục tiêu, tiến vào sự kiện, vượt qua bài kiểm định và giao chiến với Hộ Vệ bằng Siêu AI Tác Chiến VIP để đoạt bảo (+5 điểm Luân Hồi/món).',
                 '<b>Cơ Chế Cắm Trại Đón Đầu & Bế Quan Chờ Dị Bảo (Pity Hunter):</b> Khi chưa có Dị Bảo nở trên bản đồ, Auto thông minh di chuyển tới vị trí cắm trại đón đầu tối ưu theo hệ thống Thiên Đạo Bù Dị Bảo (Pity 500 năm), tự động bế quan từng đợt ngắn để tích lũy tu vi đồng thời đẩy trọng số nổ Dị Bảo lên cực đại; lập tức ngắt bế quan để đoạt bảo ngay khi sự kiện xuất hiện.',
