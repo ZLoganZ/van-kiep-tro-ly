@@ -28,6 +28,7 @@ Script hỗ trợ và tự động hóa cho webgame **Vạn Kiếp Tu Tiên** (`
 
 ## 🎮 Hướng Dẫn Sử Dụng
 * Khi vào web game, bấm nút nổi Trợ Lý ở góc màn hình để mở giao diện.
-* Truy cập tab **Tra Cứu → Dò Đồ Quý** để kích hoạt Radar quét đồ Nghịch Thiên (Cấp 8) & Thần Phẩm (Cấp 7) trên bản đồ.
+* Truy cập tab **Tra Cứu → Dị Bảo** để kích hoạt Radar quét Dị Bảo, sự kiện xuất thế và tính toán cắm trại đón đầu.
+* Quản lý Lưu & Nạp Save tại tab **Luân Hồi → Lưu & Nạp Save** (hoặc nút bấm nhanh ở **Nhân Vật → Tổng Quan**) để sao lưu tiến trình và miễn nhiễm hoàn toàn với cơ chế bắt lỗi của Thiên Đạo.
 * Chi tiết phát triển xem file [`DEVELOPMENT_INSTRUCTIONS.md`](DEVELOPMENT_INSTRUCTIONS.md).
 

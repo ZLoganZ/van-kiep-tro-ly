@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.5
+// @version      7.9.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.5";
+      var TOOL_VER = "7.9.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6588,6 +6588,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["lhs", "Mở Khóa"],
           ["lht", "Thành Tựu"],
           ["lhd", "Dự Tính Điểm"],
+          ["sv", "Lưu & Nạp Save"],
           ["tkb", "Thiên Kiêu Bảng"],
           ["nmn", "Nhân Mạch"],
         );
@@ -6598,7 +6599,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["kl", "Kiếm Lời", ["tien", "cho", "ld", "cph", "lbo", "tph", "tt"]],
           ["tc", "Tra Cứu", ["db", "san", "tcv", "tcq", "tcd", "bd"]],
           ["nl", "Ngự Linh", ["nlw", "nlm", "nls", "nlv", "nlc"]],
-          ["lh", "Luân Hồi", ["lhs", "lht", "lhd"]],
+          ["lh", "Luân Hồi", ["lhs", "lht", "lhd", "sv"]],
           ["nm", "Nhân Mạch", ["tkb", "nmn"]],
           [
             "au",
@@ -6689,7 +6690,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               S.abort = false;
               tabThanhTuu();
               return;
-            } // Auto Reroll Tư Chất chạy được cả khi chưa vào kiếp nào
+            }
+            if (S.tab === "sv") {
+              S.abort = false;
+              tabLuuNapSave();
+              return;
+            } // Lưu & Nạp Save chạy được cả khi chưa vào kiếp nào
             if (!S.core) {
               const myTab = S.tab;
               body.innerHTML = `<div class="vk-card">⏳ <span id="vk-pg">Đang chuẩn bị…</span></div>`;
@@ -6734,6 +6740,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 tabTongQuan();
                 tongQuanExtra();
               },
+              sv: tabLuuNapSave,
               dp: tabDotPha2,
               tr: tabTran,
               tkc: tabTKC,
@@ -6858,8 +6865,73 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     </div>
     <div class="vk-card"><h3>Sư môn</h3>${sect}</div>
     <div class="vk-card"><h3>Cơ duyên sắp hết hạn</h3>${dip}</div>
+    <div class="vk-card" style="border-left:3px solid #8b5cf6">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="margin:0;color:#a78bfa">💾 Lưu & Nạp Save (Tránh Thiên Đạo)</h3>
+        <button class="vk-btn sec" id="tq-btn-to-sv" style="padding:3px 10px;font-size:12px;margin:0">Mở Tab Save ➜</button>
+      </div>
+      <div style="font-size:12px;color:var(--mut);margin-bottom:8px">
+        Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc nạp file save mà không lo Thiên Đạo phạt.
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="vk-btn" id="tq-btn-quicksave" style="padding:5px 12px;font-size:12px;background:#3ddc97;color:#05140d">⚡ Quick Save Ngay</button>
+        <button class="vk-btn sec" id="tq-btn-export" style="padding:5px 12px;font-size:12px">💾 Tải File Save (.txt)</button>
+        <button class="vk-btn sec" id="tq-btn-cleantd" style="padding:5px 12px;font-size:12px" title="Xóa toàn bộ bộ nhớ theo dõi của Thiên Đạo">🧹 Tẩy Thiên Đạo</button>
+      </div>
+    </div>
     <div class="vk-card"><h3>Độ mạnh chung</h3><div id="vk-dm" class="vk-mu">Bấm để đánh thử với mọi loại quái cùng cảnh giới.</div><button class="vk-btn" id="vk-dmb">Đánh thử</button></div>
     <div class="vk-mu" style="font-size:12px;text-align:center">Tool ${TOOL_VER} · game ${esc(K.bundle)}</div>`;
+          const tqToSv = body.querySelector("#tq-btn-to-sv");
+          if (tqToSv) {
+            tqToSv.onclick = () => {
+              S.tab = "sv";
+              render();
+            };
+          }
+          const tqQs = body.querySelector("#tq-btn-quicksave");
+          if (tqQs) {
+            tqQs.onclick = () => {
+              const note = prompt(
+                "Nhập ghi chú cho bản lưu nhanh (hoặc để trống):",
+                "",
+              );
+              if (note === null) return;
+              const res = saveQuickSave(note);
+              if (res.ok) {
+                try {
+                  UI.notify(res.msg);
+                } catch (e) {}
+              } else {
+                alert("⚠️ " + res.msg);
+              }
+            };
+          }
+          const tqExp = body.querySelector("#tq-btn-export");
+          if (tqExp) {
+            tqExp.onclick = () => {
+              const exp = doExportSave();
+              if (exp.ok) {
+                downloadSaveFile(exp.data, exp.fileName);
+                try {
+                  UI.notify("💾 Đã tải tệp save: " + exp.fileName);
+                } catch (e) {}
+              } else {
+                alert("⚠️ " + exp.msg);
+              }
+            };
+          }
+          const tqClean = body.querySelector("#tq-btn-cleantd");
+          if (tqClean) {
+            tqClean.onclick = () => {
+              cleanseThienDao();
+              try {
+                UI.notify("🧹 Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo!");
+              } catch (e) {}
+              alert(
+                "🧹 Đã thanh tẩy thành công toàn bộ dữ liệu theo dõi của Thiên Đạo!",
+              );
+            };
+          }
           body.querySelector("#vk-dmb").onclick = async (ev) => {
             ev.target.disabled = true;
             const out = body.querySelector("#vk-dm");
@@ -26600,6 +26672,676 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
         }
 
+        // ── Module Quản Lý Save & Tránh Thiên Đạo (v7.9.0) ──
+        function cleanseThienDao() {
+          try {
+            const cleanMemory = {
+              version: 1,
+              played: 0,
+              lastShown: null,
+              lives: [],
+            };
+            try {
+              localStorage.setItem(
+                "tu-tien:thien-dao:v1",
+                JSON.stringify(cleanMemory),
+              );
+            } catch (e) {}
+
+            const g = G();
+            if (g) {
+              if (g.thienDao && g.thienDao.engine) {
+                g.thienDao.engine.memory = cleanMemory;
+                g.thienDao.engine.life = undefined;
+                g.thienDao.engine.choices = 0;
+                g.thienDao.engine.cancels = 0;
+                g.thienDao.engine.tradeChain = undefined;
+                g.thienDao.engine.transientAt = 0;
+              }
+              if (g.store && typeof g.store.setState === "function") {
+                g.store.setState({
+                  thienDao: undefined,
+                  saveWarning: undefined,
+                  saveLock: undefined,
+                  error: undefined,
+                });
+              }
+              if (typeof g.dismissThienDao === "function") g.dismissThienDao();
+              if (typeof g.dismissSaveWarning === "function")
+                g.dismissSaveWarning();
+            }
+            return true;
+          } catch (err) {
+            console.warn("[VKX] Lỗi cleanseThienDao:", err);
+            return false;
+          }
+        }
+
+        function rerollRunRng(run) {
+          if (!run) return;
+          run.rngKeys = {};
+          run.rng = (Math.random() * 0x100000000) >>> 0;
+          if (typeof run.seed === "string") {
+            const parts = run.seed.split(":");
+            run.seed = parts[0] + ":" + Math.floor(Math.random() * 100000);
+          }
+        }
+
+        function doExportSave() {
+          const g = G();
+          if (!g || !g.state)
+            return { ok: false, msg: "Chưa có dữ liệu trò chơi." };
+
+          const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
+          const meta = clone(g.state.meta);
+          const run = g.state.run ? clone(g.state.run) : undefined;
+
+          let saveStr = "";
+          if (kernelSave && typeof kernelSave.packSave === "function") {
+            try {
+              saveStr = kernelSave.packSave(meta, run);
+            } catch (e) {}
+          }
+
+          if (!saveStr && typeof g.exportSave === "function") {
+            try {
+              saveStr = g.exportSave();
+            } catch (e) {}
+          }
+
+          if (!saveStr) {
+            saveStr = JSON.stringify(
+              {
+                game: "tu-tien",
+                version: 1,
+                luuLuc: new Date().toISOString(),
+                meta,
+                run,
+              },
+              null,
+              2,
+            );
+          }
+
+          const nv = run && run.nhanVat;
+          const name =
+            nv && nv.ten
+              ? nv.ten
+                  .replace(/[^\w\s\u00C0-\u1EF9]/gi, "")
+                  .trim()
+                  .replace(/\s+/g, "_")
+              : "VoDanh";
+          let cgLabel = "ChuaVaoKiep";
+          if (nv) {
+            cgLabel = realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0)
+              .replace(/[^\w\s\u00C0-\u1EF9]/gi, "")
+              .trim()
+              .replace(/\s+/g, "_");
+          }
+          const year = run ? (run.nam || 0) + "Nam" : "Meta";
+          const now = new Date();
+          const dateStr =
+            now.getFullYear() +
+            String(now.getMonth() + 1).padStart(2, "0") +
+            String(now.getDate()).padStart(2, "0") +
+            "_" +
+            String(now.getHours()).padStart(2, "0") +
+            String(now.getMinutes()).padStart(2, "0");
+
+          const fileName = `VanKiep_${name}_${cgLabel}_${year}_${dateStr}.txt`;
+
+          return {
+            ok: true,
+            data: saveStr,
+            fileName,
+            name: (nv && nv.ten) || "Vô Danh",
+            realm: nv
+              ? realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0)
+              : "Ngoài Kiếp",
+            year: run ? run.nam : 0,
+            meta,
+            run,
+          };
+        }
+
+        function doImportSave(saveText, options = {}) {
+          const g = G();
+          if (!g) return { ok: false, msg: "Không tìm thấy giao diện game." };
+
+          const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
+          let unpacked = null;
+
+          if (typeof kernelSave.unpackSave === "function") {
+            try {
+              unpacked = kernelSave.unpackSave(saveText.trim());
+            } catch (e) {}
+          }
+
+          if (!unpacked) {
+            try {
+              const raw = JSON.parse(saveText.trim());
+              if (raw && (raw.game === "tu-tien" || raw.meta)) {
+                unpacked = {
+                  meta: raw.meta || raw,
+                  run: raw.run,
+                };
+              }
+            } catch (e) {}
+          }
+
+          if (!unpacked || !unpacked.meta) {
+            return {
+              ok: false,
+              msg: "Tệp lưu không hợp lệ hoặc bị hỏng định dạng Vạn Kiếp Tu Tiên.",
+            };
+          }
+
+          const meta = unpacked.meta;
+          let run = unpacked.run;
+
+          if (g.state && g.state.meta && g.state.meta.settings) {
+            meta.settings = meta.settings || g.state.meta.settings;
+          }
+          if (g.env && g.env.world && g.env.world.id) {
+            meta.banDo = g.env.world.id;
+          }
+
+          if (options.rerollRng && run) {
+            rerollRunRng(run);
+          }
+
+          if (run && typeof g.prepareRun === "function") {
+            try {
+              run = g.prepareRun(run, true) || run;
+            } catch (e) {}
+          }
+
+          try {
+            if (typeof kernelSave.saveMeta === "function") {
+              kernelSave.saveMeta(g.storage || localStorage, meta);
+            } else {
+              localStorage.setItem("tu-tien:meta", JSON.stringify(meta));
+            }
+
+            if (run) {
+              if (typeof kernelSave.saveRun === "function") {
+                kernelSave.saveRun(g.storage || localStorage, run);
+              } else {
+                localStorage.setItem("tu-tien:run", JSON.stringify(run));
+              }
+            }
+          } catch (err) {
+            console.error("Lỗi khi ghi save vào storage:", err);
+          }
+
+          if (g.store && typeof g.store.setState === "function") {
+            g.store.setState({
+              run: run,
+              meta: meta,
+              summary: undefined,
+              error: undefined,
+              saveWarning: undefined,
+              thienDao: undefined,
+              saveLock: undefined,
+            });
+          }
+
+          if (options.cleanThienDao !== false) {
+            cleanseThienDao();
+          }
+
+          if (g.thienDao && typeof g.thienDao.enter === "function" && run) {
+            try {
+              g.thienDao.enter(run);
+            } catch (e) {}
+          }
+
+          try {
+            if (typeof render === "function") render();
+          } catch (e) {}
+
+          return {
+            ok: true,
+            msg: "Đã nạp file save thành công! Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo.",
+          };
+        }
+
+        function getQuickSaves() {
+          try {
+            const s = localStorage.getItem("vkx_quick_saves");
+            return s ? JSON.parse(s) : [];
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function saveQuickSave(note = "") {
+          const exp = doExportSave();
+          if (!exp.ok) return exp;
+          const list = getQuickSaves();
+          let pName = "Bến Vong Xuyên";
+          try {
+            const c = ctxLite();
+            if (c && exp.run && exp.run.viTri != null) {
+              pName = placeName(c, exp.run.viTri);
+            }
+          } catch (e) {}
+
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")} ${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+          const entry = {
+            id: Date.now(),
+            time: timeStr,
+            name: exp.name || "Vô Danh",
+            realm: exp.realm || "Phàm Nhân",
+            year: exp.run ? exp.run.nam : 0,
+            pName,
+            note:
+              note.trim() ||
+              `Lưu tại ${pName} (Năm ${exp.run ? exp.run.nam : 0})`,
+            data: exp.data,
+          };
+
+          list.unshift(entry);
+          while (list.length > 15) list.pop();
+          try {
+            localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
+          } catch (e) {
+            while (list.length > 5) list.pop();
+            try {
+              localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
+            } catch (e2) {}
+          }
+          return { ok: true, msg: "Đã lưu bản Quick Save thành công!" };
+        }
+
+        function deleteQuickSave(id) {
+          const list = getQuickSaves().filter((x) => x.id !== id);
+          localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
+        }
+
+        function downloadSaveFile(data, fileName) {
+          const blob = new Blob([data], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 100);
+        }
+
+        function copySaveToClipboard(data) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(data);
+          } else {
+            const ta = document.createElement("textarea");
+            ta.value = data;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            return Promise.resolve();
+          }
+        }
+
+        function tabLuuNapSave() {
+          const g = G(),
+            st = g ? g.state : null,
+            run = st ? st.run : null,
+            nv = run ? run.nhanVat : null,
+            meta = st ? st.meta : null;
+
+          let statusHtml = "";
+          if (run && nv) {
+            const isOneLife = !!(
+              g.oneLifeActive ||
+              (run &&
+                run.difficulty &&
+                typeof run.difficulty === "string" &&
+                run.difficulty.includes("tuyet_menh"))
+            );
+            const oneLifeBadge = isOneLife
+              ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Chế Độ Tuyệt Mệnh (Tool Đã Kích Hoạt Bypass Cứu Mạng)</span>`
+              : `<span style="background:rgba(61,220,151,0.18);color:#3ddc97;border:1px solid rgba(61,220,151,0.4);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">Bình Thường</span>`;
+
+            let pName = "Vị trí không rõ";
+            try {
+              const c = ctxLite();
+              if (c && run.viTri != null) pName = placeName(c, run.viTri);
+            } catch (e) {}
+
+            statusHtml = `
+              <div class="vk-row"><span>Nhân Vật</span><b>${esc(nv.ten)}</b></div>
+              <div class="vk-row"><span>Cảnh Giới</span><b>${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0))}</b></div>
+              <div class="vk-row"><span>Tuổi / Năm</span><b>Tuổi ${Math.floor(nv.tuoi || 0)} · Năm ${run.nam || 0}</b></div>
+              <div class="vk-row"><span>Nơi Chốn</span><b>${esc(pName)} (Slot ${run.viTri})</b></div>
+              <div class="vk-row"><span>Chế Độ Chơi</span><b>${oneLifeBadge}</b></div>
+            `;
+          } else {
+            statusHtml = `
+              <div style="font-size:13px;color:var(--mut);padding:6px 0">
+                Hiện tại bạn đang ở ngoài màn hình chính hoặc Bến Vong Xuyên (chưa vào kiếp). Bạn có thể <b>Nạp File Save</b> bên dưới để vào lại kiếp chơi ngay lập tức.
+              </div>
+            `;
+          }
+
+          const qSaves = getQuickSaves();
+          let qSavesHtml = "";
+          if (qSaves.length === 0) {
+            qSavesHtml = `<div class="vk-mu" style="font-size:12.5px;text-align:center;padding:12px 0">Chưa có bản Lưu Nhanh nào. Bấm <b>⚡ Lưu Nhanh (Quick Save)</b> ở trên để tạo một bản dự phòng tức thì.</div>`;
+          } else {
+            qSavesHtml = qSaves
+              .map(
+                (q) => `
+              <div style="background:var(--bg3);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px">
+                  <span style="font-weight:700;color:var(--acc);font-size:13px">🕒 ${esc(q.time)}</span>
+                  <span style="font-size:11.5px;color:var(--acc2);font-weight:600">${esc(q.realm)} · Năm ${q.year}</span>
+                </div>
+                <div style="font-size:12px;color:var(--txt);margin-bottom:6px">
+                  <b>${esc(q.name)}</b> tại <b>${esc(q.pName)}</b> — <span class="vk-mu">${esc(q.note)}</span>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="vk-btn sv-btn-restore-qs" data-id="${q.id}" style="padding:4px 10px;font-size:11.5px;background:#3ddc97;color:#05140d">⚡ Khôi Phục</button>
+                  <button class="vk-btn sec sv-btn-dl-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px">💾 Tải Về</button>
+                  <button class="vk-btn sec sv-btn-copy-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px">📋 Copy</button>
+                  <button class="vk-btn sec sv-btn-del-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px;color:var(--bad)">🗑️ Xóa</button>
+                </div>
+              </div>
+            `,
+              )
+              .join("");
+          }
+
+          body.innerHTML = `
+            <div class="vk-card">
+              <h3>⚡ Nghịch Thiên Cải Mệnh · Lưu & Nạp Save Tránh Thiên Đạo</h3>
+              <div style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-bottom:10px">
+                Sao lưu và khôi phục tiến trình an toàn tuyệt đối: Lưu ra file về máy hoặc tạo điểm snapshot nhanh, <b>hoàn toàn miễn nhiễm với Thiên Đạo</b> (xóa sạch bộ nhớ reload, chống “bước đúng dấu chân cũ”, gỡ bỏ cờ cảnh báo sổ mệnh, giải cứu cả kiếp Tuyệt Mệnh).
+              </div>
+              ${statusHtml}
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <button class="vk-btn" id="sv-btn-quicksave" style="background:#3ddc97;color:#05140d">⚡ Lưu Nhanh (Quick Save)</button>
+                <button class="vk-btn" id="sv-btn-export" style="background:#8b5cf6;color:#fff">💾 Xuất File Save (.txt)</button>
+                <button class="vk-btn sec" id="sv-btn-copy">📋 Copy Mã Save</button>
+                <button class="vk-btn sec" id="sv-btn-clean-td" title="Xóa toàn bộ bộ nhớ Thiên Đạo theo dõi reload">🧹 Thanh Tẩy Thiên Đạo</button>
+              </div>
+            </div>
+
+            <div class="vk-card">
+              <h3>📥 Nạp File Save Vào Game (Tránh Thiên Đạo)</h3>
+              <div style="font-size:12.5px;color:var(--mut);margin-bottom:8px">
+                Chọn tệp save (.txt / .json) từ máy tính hoặc dán trực tiếp mã lưu vào khung:
+              </div>
+              <div style="margin-bottom:8px">
+                <input type="file" id="sv-file-input" accept=".txt,.json" style="font-size:12.5px;color:var(--txt)">
+              </div>
+              <textarea id="sv-text-input" placeholder="Dán mã lưu (#tuTien:... hoặc JSON) tại đây..." style="width:100%;height:70px;box-sizing:border-box;font-size:12px;font-family:monospace;margin-bottom:8px"></textarea>
+
+              <div style="background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:10px">
+                <div style="font-weight:700;font-size:12.5px;color:var(--acc2);margin-bottom:6px">🛡️ Cơ Chế Tránh Thiên Đạo Khi Nạp:</div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:4px">
+                  <input type="checkbox" id="sv-opt-cleantd" checked>
+                  <span><b>Thanh tẩy bộ nhớ Thiên Đạo:</b> Xóa sạch lịch sử theo dõi reload/lặp lại để không bị Thiên Đạo chế giễu</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
+                  <input type="checkbox" id="sv-opt-reroll">
+                  <span><b>Tẩy Thiên Cơ (Đổi Vận Rủi RNG):</b> Làm mới xúc xắc may rủi để Đột Phá / Luyện Chế sau khi nạp không bị lặp lại thất bại cũ</span>
+                </label>
+              </div>
+
+              <button class="vk-btn" id="sv-btn-import" style="background:#ff3366;color:#fff;font-weight:bold;width:100%;padding:10px 14px">
+                ⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)
+              </button>
+            </div>
+
+            <div class="vk-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <h3 style="margin:0">🕒 Danh Sách Bản Lưu Nhanh (${qSaves.length}/15)</h3>
+                ${qSaves.length > 0 ? `<button class="vk-btn sec" id="sv-btn-clear-all-qs" style="padding:2px 8px;font-size:11px;color:var(--bad)">Xóa Tất Cả</button>` : ""}
+              </div>
+              ${qSavesHtml}
+            </div>
+
+            <div class="vk-card">
+              <details>
+                <summary><b>❓ Cơ chế Tránh Thiên Đạo hoạt động thế nào?</b></summary>
+                <div style="font-size:12.5px;color:var(--mut);line-height:1.6;margin-top:8px">
+                  <div>• <b>Thiên Đạo trong game:</b> Game lưu một sổ ghi chép ngầm trong <code>tu-tien:thien-dao:v1</code>. Khi bạn nạp lại save hoặc reload trang để làm lại một sự kiện (Đột Phá, Luyện Chế, Mua Bán) từ 5 lần trở lên, Thiên Đạo sẽ xuất hiện bắt bớ: <i>“Ngươi quay ngược thời gian, nhưng lại bước đúng dấu chân cũ.”</i> hoặc <i>“Sổ mệnh có nét bút lạ…”</i>.</div>
+                  <div>• <b>Vì sao bình thường reload vẫn xịt:</b> Game cố tình khóa kết quả tất định trong <code>rngKeys</code> theo cảnh giới. Nếu lần đầu thất bại, bạn có nạp lại 100 lần thì kết quả vẫn là thất bại.</div>
+                  <div>• <b>Tool giải quyết thế nào:</b></div>
+                  <div style="padding-left:10px">
+                    1. <b>Tẩy sạch bộ nhớ Thiên Đạo:</b> Xóa sạch số lần lặp lại, biến kiếp chơi trở về trạng thái trong sạch tuyệt đối.<br>
+                    2. <b>Tẩy Thiên Cơ:</b> Tự động xóa các khóa RNG thất bại cũ và cấp seed may rủi mới, giúp bạn gieo lại quẻ mới khi đột phá.<br>
+                    3. <b>Bảo toàn Tuyệt Mệnh:</b> Chế độ Tuyệt Mệnh vốn bị game cấm xuất/nạp save; Tool mở khóa hoàn toàn để bạn giữ gìn tiến trình yêu thích.
+                  </div>
+                </div>
+              </details>
+            </div>
+          `;
+
+          const btnQs = body.querySelector("#sv-btn-quicksave");
+          if (btnQs) {
+            btnQs.onclick = () => {
+              const note = prompt(
+                "Nhập ghi chú cho bản lưu nhanh (hoặc để trống):",
+                "",
+              );
+              if (note === null) return;
+              const res = saveQuickSave(note);
+              if (res.ok) {
+                try {
+                  UI.notify(res.msg);
+                } catch (e) {}
+                tabLuuNapSave();
+              } else {
+                alert("⚠️ " + res.msg);
+              }
+            };
+          }
+
+          const btnExp = body.querySelector("#sv-btn-export");
+          if (btnExp) {
+            btnExp.onclick = () => {
+              const exp = doExportSave();
+              if (exp.ok) {
+                downloadSaveFile(exp.data, exp.fileName);
+                try {
+                  UI.notify("💾 Đã tải tệp save: " + exp.fileName);
+                } catch (e) {}
+              } else {
+                alert("⚠️ " + exp.msg);
+              }
+            };
+          }
+
+          const btnCopy = body.querySelector("#sv-btn-copy");
+          if (btnCopy) {
+            btnCopy.onclick = () => {
+              const exp = doExportSave();
+              if (exp.ok) {
+                copySaveToClipboard(exp.data).then(() => {
+                  try {
+                    UI.notify("📋 Đã chép mã save vào Clipboard!");
+                  } catch (e) {}
+                });
+              } else {
+                alert("⚠️ " + exp.msg);
+              }
+            };
+          }
+
+          const btnCleanTd = body.querySelector("#sv-btn-clean-td");
+          if (btnCleanTd) {
+            btnCleanTd.onclick = () => {
+              cleanseThienDao();
+              try {
+                UI.notify("🧹 Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo!");
+              } catch (e) {}
+              alert(
+                "🧹 Đã thanh tẩy thành công toàn bộ dữ liệu theo dõi của Thiên Đạo!",
+              );
+            };
+          }
+
+          const fileInp = body.querySelector("#sv-file-input");
+          const txtInp = body.querySelector("#sv-text-input");
+          if (fileInp && txtInp) {
+            fileInp.onchange = (e) => {
+              const file = e.target.files && e.target.files[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                txtInp.value = evt.target.result;
+                try {
+                  UI.notify(
+                    `📥 Đã nạp nội dung từ tệp "${file.name}" (${file.size} bytes)`,
+                  );
+                } catch (err) {}
+              };
+              reader.readAsText(file);
+            };
+          }
+
+          const btnImport = body.querySelector("#sv-btn-import");
+          if (btnImport && txtInp) {
+            btnImport.onclick = () => {
+              const val = txtInp.value.trim();
+              if (!val) {
+                alert(
+                  "⚠️ Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản!",
+                );
+                return;
+              }
+              const cleanTd = body.querySelector("#sv-opt-cleantd")
+                ? body.querySelector("#sv-opt-cleantd").checked
+                : true;
+              const reroll = body.querySelector("#sv-opt-reroll")
+                ? body.querySelector("#sv-opt-reroll").checked
+                : false;
+
+              if (
+                !confirm(
+                  "Xác nhận nạp file save này vào game? Tiến trình hiện tại sẽ được thay thế bằng bản lưu mới.",
+                )
+              ) {
+                return;
+              }
+
+              btnImport.disabled = true;
+              btnImport.textContent = "⏳ Đang nạp và thanh tẩy Thiên Đạo...";
+
+              setTimeout(() => {
+                const res = doImportSave(val, {
+                  cleanThienDao: cleanTd,
+                  rerollRng: reroll,
+                });
+                btnImport.disabled = false;
+                btnImport.textContent =
+                  "⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)";
+                if (res.ok) {
+                  try {
+                    UI.notify(res.msg);
+                  } catch (e) {}
+                  alert("🎉 " + res.msg);
+                  tabLuuNapSave();
+                } else {
+                  alert("⚠️ " + res.msg);
+                }
+              }, 50);
+            };
+          }
+
+          // Quick save action buttons
+          body.querySelectorAll(".sv-btn-restore-qs").forEach((b) => {
+            b.onclick = () => {
+              const id = Number(b.dataset.id);
+              const q = getQuickSaves().find((x) => x.id === id);
+              if (!q || !q.data) return;
+              const cleanTd = body.querySelector("#sv-opt-cleantd")
+                ? body.querySelector("#sv-opt-cleantd").checked
+                : true;
+              const reroll = body.querySelector("#sv-opt-reroll")
+                ? body.querySelector("#sv-opt-reroll").checked
+                : false;
+
+              if (
+                !confirm(
+                  `Khôi phục về bản Lưu Nhanh lúc ${q.time} (${q.name} - ${q.realm})?`,
+                )
+              )
+                return;
+              const res = doImportSave(q.data, {
+                cleanThienDao: cleanTd,
+                rerollRng: reroll,
+              });
+              if (res.ok) {
+                try {
+                  UI.notify(res.msg);
+                } catch (e) {}
+                alert("🎉 " + res.msg);
+                tabLuuNapSave();
+              } else {
+                alert("⚠️ " + res.msg);
+              }
+            };
+          });
+
+          body.querySelectorAll(".sv-btn-dl-qs").forEach((b) => {
+            b.onclick = () => {
+              const id = Number(b.dataset.id);
+              const q = getQuickSaves().find((x) => x.id === id);
+              if (!q || !q.data) return;
+              downloadSaveFile(
+                q.data,
+                `VanKiep_QuickSave_${q.name}_${q.realm}_Nam${q.year}.txt`,
+              );
+              try {
+                UI.notify("💾 Đã tải bản lưu nhanh!");
+              } catch (e) {}
+            };
+          });
+
+          body.querySelectorAll(".sv-btn-copy-qs").forEach((b) => {
+            b.onclick = () => {
+              const id = Number(b.dataset.id);
+              const q = getQuickSaves().find((x) => x.id === id);
+              if (!q || !q.data) return;
+              copySaveToClipboard(q.data).then(() => {
+                try {
+                  UI.notify("📋 Đã chép mã bản lưu nhanh!");
+                } catch (e) {}
+              });
+            };
+          });
+
+          body.querySelectorAll(".sv-btn-del-qs").forEach((b) => {
+            b.onclick = () => {
+              const id = Number(b.dataset.id);
+              if (!confirm("Xóa bản lưu nhanh này?")) return;
+              deleteQuickSave(id);
+              tabLuuNapSave();
+            };
+          });
+
+          const btnClearAllQs = body.querySelector("#sv-btn-clear-all-qs");
+          if (btnClearAllQs) {
+            btnClearAllQs.onclick = () => {
+              if (
+                !confirm("Bạn có chắc muốn xóa TẤT CẢ các bản Lưu Nhanh không?")
+              )
+                return;
+              localStorage.removeItem("vkx_quick_saves");
+              tabLuuNapSave();
+            };
+          }
+        }
+
         return {
           render: () => render(),
           stop: () => {
@@ -26619,9 +27361,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.5 · Thanh Theo Dõi Dị Bảo Mini & Tự Động Ẩn Alert Khi Tới Nơi",
+            t: "Phiên Bản 7.9.0 · Ra Mắt Bộ Quản Lý Lưu & Nạp Save (Tránh Thiên Đạo)",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Quản Lý Lưu/Nạp Save Toàn Diện (Tab 'sv'):</b> Ra mắt trung tâm quản lý save chuyên nghiệp trong nhóm Luân Hồi và phím tắt nhanh tại Tổng Quan; hỗ trợ xuất/tải file save (.txt) kèm thông tin tên, cảnh giới, năm tu luyện và nạp lại save từ file hoặc dán mã.",
+              "<b>Cơ Chế Tránh Thiên Đạo (Anti-Heaven Tribulation):</b> Tự động thanh tẩy sạch sẽ bộ nhớ theo dõi reload ngầm của game (<code>tu-tien:thien-dao:v1</code>), xóa bỏ cờ cảnh báo sổ mệnh có nét bút lạ (<code>saveWarning</code>), gỡ bỏ hộp thoại bắt bớ/chế giễu của Thiên Đạo.",
+              "<b>Tùy Chọn Tẩy Thiên Cơ (Đổi Vận Rủi RNG):</b> Hỗ trợ xóa sạch các khóa kết quả tất định cũ (<code>rngKeys</code>) và tái tạo seed may rủi khi nạp save, giúp các lần Đột Phá, Luyện Chế sau khi nạp không bị lặp lại chuỗi thất bại cũ (“bước đúng dấu chân cũ”).",
+              "<b>Hệ Thống Quick Save Tức Thì:</b> Lưu trữ tới 15 bản snapshot nhanh ngay trên trình duyệt với đầy đủ ngày giờ, cảnh giới, vị trí, ghi chú; hỗ trợ 1-click Khôi phục, Tải file, Sao chép hoặc Xóa bỏ.",
+              "<b>Mở Khóa Độ Khó Tuyệt Mệnh (One-Life Mode Bypass):</b> Khắc phục rào cản cấm xuất/nạp save của chế độ Tuyệt Mệnh trong game gốc, cho phép lưu và nạp lại an toàn bảo toàn tiến trình của người chơi.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.5 · Thanh Theo Dõi Dị Bảo Mini & Tự Động Ẩn Alert Khi Tới Nơi",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tự Động Ẩn Alert Khi Tới Nơi:</b> Khi người chơi hoặc Auto có mặt tại đúng ô/nơi chốn Dị Bảo xuất thế, hệ thống tự động gỡ bỏ banner thông báo lớn phía dưới để tránh che khuất các nút thao tác sự kiện, kiểm định chỉ số hoặc giao chiến.",
               "<b>Thanh Theo Dõi Mini Tinh Gọn (Live Tracker Pill):</b> Hiển thị thanh trạng thái thu nhỏ gắn ở mép trên màn hình gồm đầy đủ thông tin: Tên Dị Bảo (kèm huy hiệu ⭐ Hồn), vị trí nơi chốn/slot, trạng thái Đang ở đây ✓ và số năm còn lại của sự kiện.",
