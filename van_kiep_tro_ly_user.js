@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.0
+// @version      7.11.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.0";
+      var TOOL_VER = "7.11.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -4955,12 +4955,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             "runeUpgradeChance",
             "tỉ lệ nâng văn thành công",
           ],
-          [
-            "runeLore",
-            "character/natal",
-            "runeLore",
-            "thông tin văn đã ngộ",
-          ],
+          ["runeLore", "character/natal", "runeLore", "thông tin văn đã ngộ"],
           [
             "runeUpgradeBlock",
             "character/natal",
@@ -4997,12 +4992,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             "vungCuaBac",
             "vùng với tới theo bậc đan",
           ],
-          [
-            "oTrongTam",
-            "character/kinh_mach",
-            "oTrongTam",
-            "ô trong tầm đan",
-          ],
+          ["oTrongTam", "character/kinh_mach", "oTrongTam", "ô trong tầm đan"],
           [
             "bountyRealm",
             "world/bounty",
@@ -5184,7 +5174,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             get() {
               try {
                 const o = R["balance/natal"].NATAL_RUNE_VALUE;
-                return o && BM_RUNE_KEYS.every((k) => numArr(o[k], 5) || numArr(o[k], 3))
+                return o &&
+                  BM_RUNE_KEYS.every((k) => numArr(o[k], 5) || numArr(o[k], 3))
                   ? o
                   : undefined;
               } catch (e) {
@@ -5457,10 +5448,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // kiếp cũ chưa có huyetGoc thì dùng huyệt của khuôn) cộng huyệt phụ km.huyetThem. Bản game cũ chỉ tính huyệt phụ khi khuôn có huyệt tự nhiên và
         // không có huyetGoc; luật đó đã bỏ, nên Hoang Cổ Thánh Thể (khuôn không huyệt) nay vẫn nhận huyệt phụ.
         function hySet(g, km) {
-          const base = Array.isArray(km.huyetGoc)
+          if (S.core && S.core.acupointsOf && g && km) {
+            try {
+              const res = S.core.acupointsOf(g, km);
+              if (res instanceof Set) return res;
+              if (Array.isArray(res)) return new Set(res);
+            } catch (e) {}
+          }
+          const base = Array.isArray(km && km.huyetGoc)
             ? km.huyetGoc
-            : (g.huyet || []).flatMap((v, i) => (v ? [i] : []));
-          return new Set([...base, ...(km.huyetThem || [])]);
+            : ((g && g.huyet) || []).flatMap((v, i) => (v ? [i] : []));
+          return new Set([...base, ...((km && km.huyetThem) || [])]);
         }
         function biasCtx(nv0, g) {
           const dir = S.dir || "",
@@ -5665,14 +5663,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return s;
         }
 
+        function kmItemPower(it) {
+          if (!it) return 0;
+          let p = 0;
+          const ph = it.pham_cap || 1;
+          p += ph * 8;
+          if (it.chieu) {
+            const ch = it.chieu;
+            const dmgW =
+              ch.dang === "cong" ? 30 : ch.dang === "khong_che" ? 22 : 16;
+            p += (ch.uy || 0) * dmgW;
+            p += (ch.effects || []).length * 8;
+          }
+          const bd = it.bi_dong || {};
+          p += (bd.toc_do || 0) * 100;
+          p += (bd.dot_pha || 0) * 80;
+          p += (bd.khi_huyet || 0) * 40;
+          p += Math.min(0.3, bd.ho_the || 0) * 35;
+          if (it.linh_luc) p += it.linh_luc * 10;
+          return p;
+        }
+
         function makeEval(nv0, enemies, mode) {
           nv0 = lnPrep(nv0);
           const K = S.core,
             c = C(),
             cache = new Map();
-          const B = biasCtx(nv0, K.luoiKinhMach(c, nv0)),
+          const g0 = K.luoiKinhMach(c, nv0),
+            hy0 = hySet(g0, nv0.kinhMach),
+            B = biasCtx(nv0, g0),
             capX = capCtxOf(nv0),
-            ngW = S.dir === "ma" ? 0.4 : 1;
+            ngW = S.dir === "ma" ? 0.4 : 1,
+            maxHoThe =
+              0.6 +
+              ((nv0.theChat &&
+                nv0.theChat.dac_tinh &&
+                nv0.theChat.dac_tinh.ho_the_tran) ||
+                0);
           return (manh) => {
             const key = manh
               .map((p) => p.key)
@@ -5715,6 +5742,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (mode === "tu" ? 1 : mode === "danh" ? 5 : 4) * ll -
               (minCost && ll < minCost ? 30 : 0) -
               8 * dead;
+
+            // 7.11.1: Tối ưu huyệt đạo: tận dụng tối đa ô huyệt để buff mảnh chủ lực
+            let hyScore = 0;
+            const usedCells = new Set();
+            manh.forEach((p, idx) => {
+              p.cells.forEach((x) => usedCells.add(x));
+              const q = p.cells.filter((x) => hy0.has(x)).length;
+              if (q > 0) {
+                const rm = R.manh && R.manh[idx];
+                if (rm && rm.thong) {
+                  const it = c.items.get(p.m.item);
+                  const pwr = kmItemPower(it);
+                  hyScore += 25 * q + 0.3 * pwr * q;
+                } else {
+                  hyScore -= 40 * q; // chiếm huyệt mà không thông: phạt nặng
+                }
+              }
+            });
+            for (const h of hy0) {
+              if (
+                g0.vung[h] >= 0 &&
+                nv0.kinhMach.trangThai[h] === "thong" &&
+                !usedCells.has(h)
+              ) {
+                hyScore -= 35; // ô huyệt mở được mà bị bỏ trống
+              }
+            }
+
+            // 7.11.1: Khống chế hộ thể: game chỉ lấy tối đa 60% (HO_THE_MAX)
+            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
+            let hoThePenalty = 0;
+            if (curHoThe > maxHoThe) {
+              const excess = curHoThe - maxHoThe;
+              hoThePenalty =
+                200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
+            }
+
             let s;
             // Điểm nghịch: mỗi điểm −3% tỉ lệ đột phá (tối đa −15%), thêm phản phệ trong trận (trận mẫu đã tính).
             if (mode === "tu")
@@ -5735,6 +5799,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 0.2 * thong -
                 10 * ng +
                 llScore;
+            s += hyScore - hoThePenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
             if (S.hbRatio) s -= hbRatioPenalty(manh, R);
             // Xếp Full Ô: thưởng lớn theo số ô được phủ để bộ tìm kiếm ưu tiên lấp đầy lưới.
@@ -5792,7 +5857,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const K = S.core,
             c = C(),
             { cand, g } = buildCandidates(nv0),
-            B = biasCtx(nv0, g);
+            B = biasCtx(nv0, g),
+            hy0 = hySet(g, nv0.kinhMach),
+            maxHoThe =
+              0.6 +
+              ((nv0.theChat &&
+                nv0.theChat.dac_tinh &&
+                nv0.theChat.dac_tinh.ho_the_tran) ||
+                0);
           if (S.hbLite)
             for (const id of Object.keys(cand)) {
               const a = cand[id];
@@ -5819,11 +5891,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   ? [1.5, 3, 2, 1.2]
                   : [1, 12, 8, 1];
             const thongAll = R.manh.every((m) => !m || m.thong);
+
+            // 7.11.1: Huyệt & Hộ Thể trong quick
+            let hyScore = 0;
+            const usedCells = new Set();
+            manh.forEach((p, idx) => {
+              p.cells.forEach((x) => usedCells.add(x));
+              const q = p.cells.filter((x) => hy0.has(x)).length;
+              if (q > 0) {
+                const rm = R.manh && R.manh[idx];
+                if (rm && rm.thong) {
+                  const it = c.items.get(p.m.item);
+                  hyScore += 18 * q + 0.2 * kmItemPower(it) * q;
+                } else {
+                  hyScore -= 25 * q;
+                }
+              }
+            });
+            for (const h of hy0) {
+              if (
+                g.vung[h] >= 0 &&
+                nv0.kinhMach.trangThai[h] === "thong" &&
+                !usedCells.has(h)
+              ) {
+                hyScore -= 20;
+              }
+            }
+            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
+            const hoThePenalty =
+              curHoThe > maxHoThe ? 140 * (curHoThe - maxHoThe) : 0;
+
             return (
               w[0] * R.linhLuc +
               w[1] * toc +
               w[2] * dp +
-              w[3] * uy -
+              w[3] * uy +
+              hyScore -
+              hoThePenalty -
               6 * (R.diemNghich || 0) * (S.dir === "ma" ? 0.4 : 1) +
               biasScore(B, manh, R) +
               capScore(capX, R) +
@@ -5866,6 +5970,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const ev = customEval || makeEval(nv0, enemies, mode);
           const { cand, g } = buildCandidates(nv0);
           const ids = Object.keys(cand).filter((k) => cand[k].length);
+          const hy0 = hySet(g, nv0.kinhMach);
+          const hyOf = (cn) => cn.cells.filter((x) => hy0.has(x)).length;
           let seed = seed0 || 12345;
           const rnd = () => {
             seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -5908,14 +6014,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             });
           const smart = (id, next) => {
             const arr = cand[id];
-            if (rnd() < 0.5) return arr[Math.floor(rnd() * arr.length)];
+            if (rnd() < 0.4) return arr[Math.floor(rnd() * arr.length)];
             const used = new Set();
             next.forEach((p) => p.cells.forEach((x) => used.add(x)));
+            const itSmart = itemsK.get(id);
+            const isHighVal =
+              itSmart && (itSmart.chieu || (itSmart.pham_cap || 1) >= 4);
             let best = null,
               bs = -1e9;
-            for (let k = 0; k < 4; k++) {
+            for (let k = 0; k < 5; k++) {
               const c = arr[Math.floor(rnd() * arr.length)];
-              const sc = affOf(c) + (nearOf(c, used) ? 0.6 : 0) + 0.1 * rnd();
+              const hyCount = hyOf(c);
+              const hyPref =
+                hyCount > 0 ? (isHighVal ? 1.8 * hyCount : 0.4 * hyCount) : 0;
+              const sc =
+                affOf(c) + (nearOf(c, used) ? 0.6 : 0) + hyPref + 0.1 * rnd();
               if (sc > bs) {
                 bs = sc;
                 best = c;
@@ -7605,14 +7718,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (!s) return false;
                 if (typeof W.info === "function") {
                   const inf = W.info(s.id);
-                  if (inf && inf.diaDanh && inf.diaDanh.ten === diaName) return true;
+                  if (inf && inf.diaDanh && inf.diaDanh.ten === diaName)
+                    return true;
                   if (inf && inf.ten === diaName) return true;
                 }
                 if (s.dia_danh && typeof W.diaDanh === "function") {
                   const dd = W.diaDanh(s.dia_danh);
                   if (dd && dd.ten === diaName) return true;
                 }
-                if (s.dia_danh && W.diaDanhById && typeof W.diaDanhById.get === "function") {
+                if (
+                  s.dia_danh &&
+                  W.diaDanhById &&
+                  typeof W.diaDanhById.get === "function"
+                ) {
                   const dd = W.diaDanhById.get(s.dia_danh);
                   if (dd && dd.ten === diaName) return true;
                 }
@@ -7642,8 +7760,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             nv.kinhMach.manh.some((m) => m.item === id)
           )
             return true;
-          if (nv.trangBi && Object.values(nv.trangBi).includes(id))
-            return true;
+          if (nv.trangBi && Object.values(nv.trangBi).includes(id)) return true;
           const sc = scanDiBao([run, meta]);
           if (sc.relics && sc.relics.has(id)) return true;
           if (sc.flags && sc.flags.has(id.replace(/^item\./, ""))) return true;
@@ -7754,7 +7871,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   encId: ev.id,
                   slot,
                   hetHanNam:
-                    remYears != null && nam != null ? nam + remYears : undefined,
+                    remYears != null && nam != null
+                      ? nam + remYears
+                      : undefined,
                   vars: nc.vars,
                   source: "noiChon",
                   ev,
@@ -8893,11 +9012,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const encId = item.encId;
               const slot = item.slot;
               const hetHanNam = item.hetHanNam;
-              if (
-                hetHanNam !== undefined &&
-                nam != null &&
-                hetHanNam <= nam
-              )
+              if (hetHanNam !== undefined && nam != null && hetHanNam <= nam)
                 continue;
 
               const ev = item.ev || DIBAO.ev.find((x) => x.id === encId);
@@ -9801,14 +9916,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (slot) {
                 try {
                   if (typeof g.enterNode === "function") g.enterNode(slot);
-                  else if (typeof g.enterPlace === "function") g.enterPlace(slot);
+                  else if (typeof g.enterPlace === "function")
+                    g.enterPlace(slot);
                 } catch (e) {}
               }
               setTimeout(() => {
                 try {
                   if (encId) {
-                    if (typeof g.chooseActivity === "function") g.chooseActivity(encId);
-                    else if (typeof g.doAction === "function") g.doAction(encId);
+                    if (typeof g.chooseActivity === "function")
+                      g.chooseActivity(encId);
+                    else if (typeof g.doAction === "function")
+                      g.doAction(encId);
                   }
                 } catch (e) {}
                 draw();
@@ -10465,8 +10583,37 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               .filter((x) => x.dang !== undefined)
               .map((x) => `${esc(x.ten)} (${Math.round(x.uy)})`)
               .join(", ");
+          const nv = nvNow(),
+            c = C(),
+            K = S.core,
+            g = K.luoiKinhMach(c, nv),
+            hy = hySet(g, nv.kinhMach),
+            maxHoThe =
+              0.6 +
+              ((nv.theChat &&
+                nv.theChat.dac_tinh &&
+                nv.theChat.dac_tinh.ho_the_tran) ||
+                0);
+          const curHy = (a.R.manh || [])
+            .filter((m) => m && m.thong && m.acupoints > 0)
+            .reduce((x, m) => x + m.acupoints, 0);
+          const newHy = (b.R.manh || [])
+            .filter((m) => m && m.thong && m.acupoints > 0)
+            .reduce((x, m) => x + m.acupoints, 0);
+          const curHt = (a.R.biDong && a.R.biDong.ho_the) || 0,
+            newHt = (b.R.biDong && b.R.biDong.ho_the) || 0;
           const rows = [
             ["Thắng trận mẫu", `${a.wins}/${a.n}`, `${b.wins}/${b.n}`],
+            [
+              "Tận dụng huyệt đạo",
+              `${curHy}/${hy.size} ô`,
+              `${newHy}/${hy.size} ô`,
+            ],
+            [
+              "Hộ thể (giảm sát thương)",
+              `${pct(curHt)}${curHt >= maxHoThe ? " (trần)" : ""}`,
+              `${pct(newHt)}${newHt >= maxHoThe ? " (trần " + Math.round(maxHoThe * 100) + "%)" : "/60%"}`,
+            ],
             [
               "Khí huyết",
               Math.round(a.P.khiHuyetToiDa),
@@ -11220,7 +11367,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 let expGrade = null;
                 if (K.breakthroughGrade) {
                   try {
-                    expGrade = K.breakthroughGrade(ctx(), { dan, thieuDot: td });
+                    expGrade = K.breakthroughGrade(ctx(), {
+                      dan,
+                      thieuDot: td,
+                    });
                   } catch (e) {}
                 }
                 combos.push({ dan, td, tiLe: h.tiLe, h, grade: expGrade });
@@ -11252,7 +11402,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const chan = h0.chan
             ? `<div class="vk-err" style="margin-bottom:8px">Chưa đột phá được: ${esc(typeof h0.chan === "string" ? h0.chan : Array.isArray(h0.chan) ? h0.chan.join("; ") : h0.chan.ten || h0.chan.lyDo || JSON.stringify(h0.chan))}</div>`
             : "";
-          const curExpGrade = best.grade || (K.breakthroughGrade ? (() => { try { return K.breakthroughGrade(ctx(), { dan: [], thieuDot: 0 }); } catch (e) { return null; } })() : null);
+          const curExpGrade =
+            best.grade ||
+            (K.breakthroughGrade
+              ? (() => {
+                  try {
+                    return K.breakthroughGrade(ctx(), { dan: [], thieuDot: 0 });
+                  } catch (e) {
+                    return null;
+                  }
+                })()
+              : null);
           body.innerHTML = `${chan}
     <div class="vk-card"><h3>Lên ${esc(realmName(h0.len))}</h3>
       <div class="vk-row"><span>Đang ở</span><b>${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</b></div>
@@ -12720,7 +12880,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "inner",
               relic: true,
               d: (l, m) =>
-                desc("van.uan_bao", l, m, () => `Bị động và linh lực của món +${bmP(v("uanbao", l))}`),
+                desc(
+                  "van.uan_bao",
+                  l,
+                  m,
+                  () => `Bị động và linh lực của món +${bmP(v("uanbao", l))}`,
+                ),
             },
             ...inner.map(([id, name, st]) => ({
               id,
@@ -12728,8 +12893,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "inner",
               relic: true,
               d: (l, m) =>
-                desc(id, l, m, () =>
-                  `${st} +${String(Math.round(v("inner_stat", l) * 100) / 100).replace(".", ",")} × hệ số phẩm`),
+                desc(
+                  id,
+                  l,
+                  m,
+                  () =>
+                    `${st} +${String(Math.round(v("inner_stat", l) * 100) / 100).replace(".", ",")} × hệ số phẩm`,
+                ),
             })),
             {
               id: "van.liet",
@@ -12745,8 +12915,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "strike",
               atk: true,
               d: (l, m) =>
-                desc("van.phagiap", l, m, () =>
-                  `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`),
+                desc(
+                  "van.phagiap",
+                  l,
+                  m,
+                  () =>
+                    `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`,
+                ),
             },
             {
               id: "van.lienhoan",
@@ -12754,8 +12929,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "strike",
               atk: true,
               d: (l, m) =>
-                desc("van.lienhoan", l, m, () =>
-                  `${bmP(v("lienhoan", l))} đánh thêm một đòn, uy ${bmX(v("echo_ratio", l))}`),
+                desc(
+                  "van.lienhoan",
+                  l,
+                  m,
+                  () =>
+                    `${bmP(v("lienhoan", l))} đánh thêm một đòn, uy ${bmX(v("echo_ratio", l))}`,
+                ),
             },
             {
               id: "van.ho_the",
@@ -12769,8 +12949,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               name: "Kim Chung",
               g: "guard",
               d: (l, m) =>
-                desc("van.kim_chung", l, m, () =>
-                  `Ra chiêu xong dựng thuẫn ${bmP(v("kimchung", l))} khí huyết tối đa, giữ một lượt`),
+                desc(
+                  "van.kim_chung",
+                  l,
+                  m,
+                  () =>
+                    `Ra chiêu xong dựng thuẫn ${bmP(v("kimchung", l))} khí huyết tối đa, giữ một lượt`,
+                ),
             },
             {
               id: "van.hut_huyet",
@@ -12778,15 +12963,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "heal",
               atk: true,
               d: (l, m) =>
-                desc("van.hut_huyet", l, m, () =>
-                  `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`),
+                desc(
+                  "van.hut_huyet",
+                  l,
+                  m,
+                  () =>
+                    `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`,
+                ),
             },
             {
               id: "van.tu_linh",
               name: "Tụ Linh",
               g: "heal",
               d: (l, m) =>
-                desc("van.tu_linh", l, m, () => `Linh lực mỗi lượt +${bmP(v("tulinh", l))}`),
+                desc(
+                  "van.tu_linh",
+                  l,
+                  m,
+                  () => `Linh lực mỗi lượt +${bmP(v("tulinh", l))}`,
+                ),
             },
             ...eff.map(([id, name, lb]) => ({
               id,
@@ -12794,8 +12989,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "effect",
               atk: true,
               d: (l, m) =>
-                desc(id, l, m, () =>
-                  `${bmP(v("effect_chance", l))} gây ${lb}, uy chiêu ${bmX(BM_PN)}`),
+                desc(
+                  id,
+                  l,
+                  m,
+                  () =>
+                    `${bmP(v("effect_chance", l))} gây ${lb}, uy chiêu ${bmX(BM_PN)}`,
+                ),
             })),
             {
               id: "van.troi",
@@ -12803,8 +13003,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "effect",
               atk: true,
               d: (l, m) =>
-                desc("van.troi", l, m, () =>
-                  `${bmP(v("troi", l))} trói địch ${v("troi_turns", l)} lượt, uy chiêu ${bmX(BM_PN)}`),
+                desc(
+                  "van.troi",
+                  l,
+                  m,
+                  () =>
+                    `${bmP(v("troi", l))} trói địch ${v("troi_turns", l)} lượt, uy chiêu ${bmX(BM_PN)}`,
+                ),
             },
             {
               id: "van.phan_anh",
@@ -12812,7 +13017,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "form",
               atk: true,
               d: (l, m) =>
-                desc("van.phan_anh", l, m, () => `Chiêu đơn hóa lan, uy ${bmX(v("phan", l))}`),
+                desc(
+                  "van.phan_anh",
+                  l,
+                  m,
+                  () => `Chiêu đơn hóa lan, uy ${bmX(v("phan", l))}`,
+                ),
             },
             {
               id: "van.van_anh",
@@ -12821,7 +13031,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               atk: true,
               tier: 3,
               d: (l, m) =>
-                desc("van.van_anh", l, m, () => `Chiêu hóa toàn trận, uy ${bmX(v("van", l))}`),
+                desc(
+                  "van.van_anh",
+                  l,
+                  m,
+                  () => `Chiêu hóa toàn trận, uy ${bmX(v("van", l))}`,
+                ),
             },
             {
               id: "van.quy_nhat",
@@ -12829,8 +13044,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "form",
               atk: true,
               d: (l, m) =>
-                desc("van.quy_nhat", l, m, () =>
-                  `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`),
+                desc(
+                  "van.quy_nhat",
+                  l,
+                  m,
+                  () =>
+                    `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`,
+                ),
             },
             ...he.map(([id, name, h]) => ({
               id,
@@ -12838,8 +13058,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               g: "element",
               atk: true,
               d: (l, m) =>
-                desc(id, l, m, () =>
-                  `Nhuộm chiêu sang hệ ${h}${v("nhiem", l) ? `, uy +${bmP(v("nhiem", l))}` : ""}`),
+                desc(
+                  id,
+                  l,
+                  m,
+                  () =>
+                    `Nhuộm chiêu sang hệ ${h}${v("nhiem", l) ? `, uy +${bmP(v("nhiem", l))}` : ""}`,
+                ),
             })),
           ];
           return Object.fromEntries(R.map((r) => [r.id, r]));
@@ -13056,8 +13281,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const damaged = n.damagedUntil && n.damagedUntil > nv.tuoi;
             const inn = n.innate,
               innNext = D.runeLv[inn.level];
-            const isInnMax = K.isRuneMaxed ? K.isRuneMaxed(inn.level) : inn.level >= 4;
-            const isInnHigh = K.isRuneHighTier ? K.isRuneHighTier(inn.level) : (inn.level >= 2 && !isInnMax);
+            const isInnMax = K.isRuneMaxed
+              ? K.isRuneMaxed(inn.level)
+              : inn.level >= 4;
+            const isInnHigh = K.isRuneHighTier
+              ? K.isRuneHighTier(inn.level)
+              : inn.level >= 2 && !isInnMax;
             let innProgress = "";
             if (isInnMax) {
               innProgress = " (tối đa)";
@@ -13081,13 +13310,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               .map(([id, r]) => {
                 const nx = D.runeLv[r.level];
                 const isMut = r.mutant || false;
-                const isMax = K.isRuneMaxed ? K.isRuneMaxed(r.level) : r.level >= 4;
-                const isHigh = K.isRuneHighTier ? K.isRuneHighTier(r.level) : (r.level >= 2 && !isMax);
+                const isMax = K.isRuneMaxed
+                  ? K.isRuneMaxed(r.level)
+                  : r.level >= 4;
+                const isHigh = K.isRuneHighTier
+                  ? K.isRuneHighTier(r.level)
+                  : r.level >= 2 && !isMax;
                 let progress = "";
                 if (isMax) {
                   progress = " (tối đa)";
                 } else if (isHigh) {
-                  const ch = K.runeUpgradeChance ? K.runeUpgradeChance(r) : null;
+                  const ch = K.runeUpgradeChance
+                    ? K.runeUpgradeChance(r)
+                    : null;
                   progress = ch ? ` (tỉ lệ ${pct(ch, 1)})` : " (bậc tỉ lệ)";
                 } else if (nx) {
                   progress = ` (${r.points || 0}/${nx})`;
@@ -17331,12 +17566,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (!(fit > 0)) fit = 0.1;
           const bd = it.bi_dong || {},
             ch = it.chieu;
+          // 7.11.1: Khống chế điểm hộ thể không quá 30% từ 1 món đơn lẻ (tránh dồn thừa trần 60%)
+          const htVal = Math.min(0.3, bd.ho_the || 0);
           let v =
             14 * (it.linh_luc || 0) +
             120 * (bd.toc_do || 0) +
             120 * (bd.dot_pha || 0) +
             50 * (bd.khi_huyet || 0) +
-            50 * (bd.ho_the || 0) +
+            40 * htVal +
             40 * (bd.khang_tam_ma || 0) +
             10 * (bd.an_tuc || 0);
           for (const x of Object.values(bd.chi_so || {})) v += 5 * (+x || 0);
@@ -17388,7 +17625,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             )
               v *= 1.45;
           } else if (pre === "tank") {
-            if (bd.ho_the || bd.khi_huyet) v *= 1.85;
+            if (bd.khi_huyet) v *= 1.8;
+            if (bd.ho_the) v *= 1.35;
             if (ch && (ch.dang === "thu" || ch.dang === "hoi_phuc")) v *= 1.75;
           } else if (pre === "speed") {
             if (bd.toc_do || bd.dot_pha) v *= 2.2;
@@ -17475,10 +17713,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const fill = (arr, budget, first) => {
             const out = [];
             let used = 0;
+            let accHoThe = 0;
             const add = (x) => {
               if (!x || out.includes(x) || used + x.cells > budget) return;
+              const it = x.it;
+              const bd = (it && it.bi_dong) || {};
+              const ht = bd.ho_the || 0;
+              // 7.11.1: Khống chế hộ thể: trần 60%. Nếu đã tích lũy từ 40% hộ thể cơ bản
+              // (mảnh lên kinh mạch còn được nhân hệ số từ huyệt x2+, tương sinh),
+              // món thuần hộ thể (không chiêu công, không tốc độ/đột phá) sẽ không dồn thêm nữa
+              if (
+                ht > 0 &&
+                accHoThe >= 0.4 &&
+                !it.chieu &&
+                !(bd.toc_do > 0 || bd.dot_pha > 0 || (bd.khi_huyet || 0) >= 60)
+              ) {
+                return;
+              }
               out.push(x);
               used += x.cells;
+              if (ht > 0) accHoThe += ht;
             };
             (first || []).forEach(add);
             for (const x of arr) {
@@ -17903,6 +18157,33 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const curNghich = cur.R.diemNghich || 0,
             newNghich = res.R.diemNghich || 0;
 
+          // 7.11.1: Hộ thể & Huyệt đạo
+          const maxHoThe =
+            0.6 +
+            ((nvReal.theChat &&
+              nvReal.theChat.dac_tinh &&
+              nvReal.theChat.dac_tinh.ho_the_tran) ||
+              0);
+          const curHoThe = (cur.R.biDong && cur.R.biDong.ho_the) || 0,
+            newHoThe = (res.R.biDong && res.R.biDong.ho_the) || 0;
+          const K = S.core,
+            c = C(),
+            gReal = K.luoiKinhMach(c, nvReal),
+            hyReal = hySet(gReal, nvReal.kinhMach);
+          const curHyUsed = (cur.R.manh || [])
+            .filter((m) => m && m.thong && m.acupoints > 0)
+            .reduce((a, m) => a + m.acupoints, 0);
+          const newHyUsed = (res.R.manh || [])
+            .filter((m) => m && m.thong && m.acupoints > 0)
+            .reduce((a, m) => a + m.acupoints, 0);
+          const totalHy = hyReal.size;
+
+          const hoTheLabel = (v) => {
+            if (v >= maxHoThe)
+              return `<b>${pct(v)}</b> <span class="vk-mu" style="font-size:11px">(trần ${Math.round(maxHoThe * 100)}%)</span>`;
+            return `<b>${pct(v)}</b> <span class="vk-mu" style="font-size:11px">/${Math.round(maxHoThe * 100)}%</span>`;
+          };
+
           const curSkills =
             (cur.P.chieu || [])
               .filter((x) => x.dang !== undefined)
@@ -17920,6 +18201,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <table class="vk-t">
         <tr><th>Chỉ Số</th><th>Đang Xếp Trên Người</th><th>Sau Khi Lên Build Mới</th><th>Chênh Lệch</th></tr>
         <tr><td>Thắng trận mẫu (9 quái)</td><td>${cur.wins}/${cur.n}</td><td><b>${res.wins}/${res.n}</b></td><td>${cur.wins === res.wins ? "—" : res.wins > cur.wins ? `<span class="vk-ok">+${res.wins - cur.wins} thắng</span>` : `<span class="vk-bad">−${cur.wins - res.wins} thắng</span>`}</td></tr>
+        <tr><td>Tận dụng huyệt đạo</td><td>${curHyUsed}/${totalHy} ô</td><td><b>${newHyUsed}/${totalHy} ô</b></td><td>${newHyUsed >= totalHy && totalHy > 0 ? '<span class="vk-ok">Tận dụng tối đa</span>' : diff(curHyUsed, newHyUsed, false)}</td></tr>
+        <tr><td>Hộ thể (giảm sát thương)</td><td>${hoTheLabel(curHoThe)}</td><td>${hoTheLabel(newHoThe)}</td><td>${newHoThe > maxHoThe ? '<span class="vk-mu">Đạt trần 60%</span>' : diff(curHoThe, newHoThe, true)}</td></tr>
         <tr><td>Tốc độ tu luyện</td><td>+${pct(curTocDo)}</td><td><b>+${pct(newTocDo)}</b></td><td>${diff(curTocDo, newTocDo, true)}</td></tr>
         <tr><td>Tỉ lệ đột phá</td><td>+${pct(curDotPha, 1)}</td><td><b>+${pct(newDotPha, 1)}</b></td><td>${diff(curDotPha, newDotPha, true)}</td></tr>
         <tr><td>Khí huyết tối đa</td><td>${Math.round(curHp)}</td><td><b>${Math.round(newHp)}</b></td><td>${diff(curHp, newHp, false)}</td></tr>
@@ -17958,7 +18241,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       </div>
       ${hbBar(sh.tam, sh.chien)}
       <div class="vk-mu" style="font-size:12px">Chi tiết ô: Tâm Pháp ${sh.tam} · Đấu Pháp ${sh.dau} · Pháp Khí ${sh.pk} · Bảo Vật ${sh.bv}.</div>
-      <div style="font-size:14px;margin:6px 0">Thắng <b>${res.wins}/${res.n}</b> trận mẫu · Tu luyện +${pct(res.R.biDong.toc_do || 0)} · Đột phá +${pct(res.R.biDong.dot_pha || 0, 1)} · Linh lực hồi ${num(res.P ? res.P.linhLucMoiLuot || 0 : 0)}/lượt · Điểm nghịch ${res.R.diemNghich || 0}</div>
+      <div style="font-size:14px;margin:6px 0">Thắng <b>${res.wins}/${res.n}</b> trận mẫu · Tu luyện +${pct(res.R.biDong.toc_do || 0)} · Đột phá +${pct(res.R.biDong.dot_pha || 0, 1)} · Hộ thể <b>${pct(res.R.biDong.ho_the || 0)}</b>${(res.R.biDong.ho_the || 0) >= 0.6 ? " (đạt trần 60%)" : "/60%"} · Huyệt: <b>${(res.R.manh || []).filter((m) => m && m.thong && m.acupoints > 0).reduce((a, m) => a + m.acupoints, 0)}</b> ô · Linh lực hồi ${num(res.P ? res.P.linhLucMoiLuot || 0 : 0)}/lượt · Điểm nghịch ${res.R.diemNghich || 0}</div>
       ${hbCompareHtml(nvReal, F, res)}
       ${drawGrid(nvH, res.manh)}
       ${miss.length ? hbMissingRoadmapHtml(miss) : '<div style="margin:10px 0"><button class="vk-btn" id="hb-apply" style="font-size:14px;padding:8px 18px;background:linear-gradient(135deg, #10b981, #059669)">✅ Áp Dụng Vào Game Ngay</button></div>'}
@@ -21294,7 +21577,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (allowTha) {
                   let xuTriList = [];
                   try {
-                    if (typeof g.cachXuTri === "function") xuTriList = g.cachXuTri();
+                    if (typeof g.cachXuTri === "function")
+                      xuTriList = g.cachXuTri();
                   } catch (e) {}
                   const canTha =
                     !xuTriList.length || xuTriList.some((x) => x.id === "tha");
@@ -21303,7 +21587,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       if (typeof g.xuTri === "function") g.xuTri("tha");
                     });
                     if (!rTha.ok) {
-                      return { stop: "Không thực hiện tha mạng được: " + rTha.err };
+                      return {
+                        stop: "Không thực hiện tha mạng được: " + rTha.err,
+                      };
                     }
                     auLog(
                       "🤝 Đối thủ bại trận: Tự động chọn «Tha Mạng» (lưu cho một đường sống).",
@@ -21324,14 +21610,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (allowEscape) {
                   let pursuitOpts = [];
                   try {
-                    if (typeof g.pursuitOptions === "function") pursuitOpts = g.pursuitOptions();
+                    if (typeof g.pursuitOptions === "function")
+                      pursuitOpts = g.pursuitOptions();
                   } catch (e) {}
                   const relOpt =
                     pursuitOpts.find((o) => o.id === "release") ||
                     pursuitOpts.find((o) => o.id !== "chase");
                   const choiceId = relOpt ? relOpt.id : "release";
                   const rPursuit = auCall(() => {
-                    if (typeof g.choosePursuit === "function") g.choosePursuit(choiceId);
+                    if (typeof g.choosePursuit === "function")
+                      g.choosePursuit(choiceId);
                   });
                   if (rPursuit.ok) {
                     auLog(
@@ -22459,13 +22747,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             let expGrade = null;
             if (S.core && S.core.breakthroughGrade) {
               try {
-                expGrade = S.core.breakthroughGrade(ctx(), { dan: best.dan, thieuDot: best.td });
+                expGrade = S.core.breakthroughGrade(ctx(), {
+                  dan: best.dan,
+                  thieuDot: best.td,
+                });
               } catch (e) {}
             }
             auLog(
               "Bắt đầu xung kích đột phá (Tỉ lệ: " +
                 pct(best.tiLe, 1) +
-                (expGrade ? " · Phẩm dự kiến: " + (GRADE_MAP[expGrade] || expGrade) : "") +
+                (expGrade
+                  ? " · Phẩm dự kiến: " + (GRADE_MAP[expGrade] || expGrade)
+                  : "") +
                 (best.dan.length
                   ? " · Đan: " + best.dan.map(auItemName).join("+")
                   : "") +
@@ -22482,16 +22775,27 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             const outcome = rDotPha.res;
             if (outcome && outcome.result === "tam_ma") {
-              auLog("⚡ Xuất hiện Trận Tâm Ma! Đang nghênh chiến tâm ma...", "vk-warn");
+              auLog(
+                "⚡ Xuất hiện Trận Tâm Ma! Đang nghênh chiến tâm ma...",
+                "vk-warn",
+              );
             }
             if (outcome && outcome.disturbed) {
-              auLog("⚠️ Bị quấy nhiễu giữa lúc xung kích (trừ tỉ lệ)!", "vk-warn");
+              auLog(
+                "⚠️ Bị quấy nhiễu giữa lúc xung kích (trừ tỉ lệ)!",
+                "vk-warn",
+              );
             }
 
             const runAfter = G().state.run;
             if (runAfter.nhanVat.canhGioi > curCg) {
               st.breakouts = (st.breakouts || 0) + 1;
-              const gName = outcome && outcome.grade ? (" (" + (GRADE_MAP[outcome.grade] || outcome.grade) + ")") : (expGrade ? (" (" + (GRADE_MAP[expGrade] || expGrade) + ")") : "");
+              const gName =
+                outcome && outcome.grade
+                  ? " (" + (GRADE_MAP[outcome.grade] || outcome.grade) + ")"
+                  : expGrade
+                    ? " (" + (GRADE_MAP[expGrade] || expGrade) + ")"
+                    : "";
               auLog(
                 "🎉 Đột phá thành công lên " +
                   realmName(runAfter.nhanVat.canhGioi) +
@@ -22966,7 +23270,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     g.enterNode(String(target.slot));
                 });
                 if (!rEnter.ok)
-                  return { stop: "Không tiến vào nơi chốn được: " + rEnter.err };
+                  return {
+                    stop: "Không tiến vào nơi chốn được: " + rEnter.err,
+                  };
 
                 const rAfterEnter = G().state && G().state.run;
                 if (rAfterEnter && (rAfterEnter.active || rAfterEnter.tran)) {
@@ -22985,7 +23291,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               let actId = target.encId;
               try {
                 const director = TT.core && TT.core["encounter/director"];
-                if (director && typeof director.placeActivities === "function") {
+                if (
+                  director &&
+                  typeof director.placeActivities === "function"
+                ) {
                   const acts = director.placeActivities(c, String(target.slot));
                   if (Array.isArray(acts) && acts.length > 0) {
                     const match = acts.find(
@@ -23021,9 +23330,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
 
               // Nếu chưa mở được, thử fallback doAction
-              if (!rAct.ok || (rAfterAct && !rAfterAct.active && !rAfterAct.tran)) {
+              if (
+                !rAct.ok ||
+                (rAfterAct && !rAfterAct.active && !rAfterAct.tran)
+              ) {
                 auCall(() => {
-                  if (typeof g.doAction === "function") g.doAction(target.encId);
+                  if (typeof g.doAction === "function")
+                    g.doAction(target.encId);
                 });
               }
 
@@ -23194,14 +23507,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             st.targetTitle = `Đón đầu: ${targetCampName}`;
 
             // Ưu tiên truyền tống nếu được bật
-            if (cfg.dungTruyenTong !== false && checkCanTeleport(targetCampSlot)) {
+            if (
+              cfg.dungTruyenTong !== false &&
+              checkCanTeleport(targetCampSlot)
+            ) {
               auLog(
                 `⚡ Phát hiện truyền tống! Truyền tống tức thì tới ${targetCampName} (Slot ${targetCampSlot}) để cắm trại đón đầu...`,
                 "vk-ok",
               );
               const resTele = smartTeleportTo(targetCampSlot);
               if (resTele.ok) {
-                auLog(`⚡ Truyền tống thành công tới ${targetCampName}!`, "vk-ok");
+                auLog(
+                  `⚡ Truyền tống thành công tới ${targetCampName}!`,
+                  "vk-ok",
+                );
                 return null;
               }
             }
@@ -23246,7 +23565,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "vk-ok",
             );
             const rEnter = auCall(() => {
-              if (typeof g.enterNode === "function") g.enterNode(targetCampSlot);
+              if (typeof g.enterNode === "function")
+                g.enterNode(targetCampSlot);
               else if (typeof g.enterPlace === "function")
                 g.enterPlace(targetCampSlot);
             });
@@ -23309,7 +23629,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           let sitYears = pity.waitYears >= 450 ? 1 : Math.min(2, maxCanSit);
-          if (hereInfo && Array.isArray(hereInfo.moc) && hereInfo.moc.length > 0) {
+          if (
+            hereInfo &&
+            Array.isArray(hereInfo.moc) &&
+            hereInfo.moc.length > 0
+          ) {
             const maxMoc = hereInfo.moc[hereInfo.moc.length - 1];
             if (maxMoc < sitYears) sitYears = maxMoc;
           }
@@ -24160,7 +24484,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               c.autoBreakBottleneck,
             );
             c.autoThaMang = ck("au-tl-auto-tha", c.autoThaMang !== false);
-            c.autoEnemyEscape = ck("au-tl-enemy-escape", c.autoEnemyEscape !== false);
+            c.autoEnemyEscape = ck(
+              "au-tl-enemy-escape",
+              c.autoEnemyEscape !== false,
+            );
             auSave();
             return;
           }
@@ -24202,7 +24529,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.comboSequence = ck("au-tc-combo", c.comboSequence);
             c.useBurstPill = ck("au-tc-burst-pill", c.useBurstPill !== false);
             c.autoThaMang = ck("au-tc-auto-tha", c.autoThaMang !== false);
-            c.autoEnemyEscape = ck("au-tc-enemy-escape", c.autoEnemyEscape !== false);
+            c.autoEnemyEscape = ck(
+              "au-tc-enemy-escape",
+              c.autoEnemyEscape !== false,
+            );
             auSave();
             return;
           }
@@ -24252,8 +24582,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.dungTruyenTong = ck("au-sdb-tele", c.dungTruyenTong !== false);
             c.danhAi = ck("au-sdb-danh-ai", c.danhAi !== false);
             c.autoThaMang = ck("au-sdb-auto-tha", c.autoThaMang !== false);
-            c.autoEnemyEscape = ck("au-sdb-enemy-escape", c.autoEnemyEscape !== false);
-            c.sanMoiDiBaoXuatThe = ck("au-sdb-san-moi", c.sanMoiDiBaoXuatThe !== false);
+            c.autoEnemyEscape = ck(
+              "au-sdb-enemy-escape",
+              c.autoEnemyEscape !== false,
+            );
+            c.sanMoiDiBaoXuatThe = ck(
+              "au-sdb-san-moi",
+              c.sanMoiDiBaoXuatThe !== false,
+            );
             c.minWinRate = num0("au-sdb-winrate", 10, 100, c.minWinRate || 70);
             c.cheDoCho = sel("au-sdb-chedo", c.cheDoCho || "camp");
             c.minTho = num0("au-sdb-tho", 1, 1000, c.minTho || 15);
@@ -25605,11 +25941,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     const ev = DIBAO.ev.find((x) => x.id === n.encounter);
                     if (!ev) continue;
                     const slot =
-                n.slot != null
-                  ? n.slot
-                  : /^\d+$/.test(slotStr)
-                    ? +slotStr
-                    : slotStr;
+                      n.slot != null
+                        ? n.slot
+                        : /^\d+$/.test(slotStr)
+                          ? +slotStr
+                          : slotStr;
                     const relInf = DIBAO.rel[ev.relic] || {};
                     let y = Infinity;
                     try {
@@ -28238,9 +28574,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.0 · Thích Ứng Game Update (Bản Mệnh Cấp 5, Dị Văn & Dự Báo Phẩm Đột Phá)",
+            t: "Phiên Bản 7.11.1 · Tối Ưu Huyệt Đạo & Khống Chế Hộ Thể Kinh Mạch",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tối Ưu Hóa Phủ Huyệt Đạo (Acupoint Optimization):</b> Thuật toán Auto Kinh Mạch tự động kiểm tra vị trí toàn bộ các huyệt (huyệt gốc đã lệch theo kiếp + huyệt phụ mở thêm qua <code>acupointsOf</code>), chủ động điều hướng đưa các mảnh chủ lực (chiêu công có uy lực lớn, công pháp / pháp khí phẩm cao, bị động cốt lõi) ngự lên huyệt để tối đa hóa hệ số buff ×2.0 ~ ×2.5 của game. Đồng thời áp dụng hình phạt nặng đối với ô huyệt mở được nhưng bị bỏ trống hoặc bị chiếm bởi mảnh rác / mảnh không thông.",
+              "<b>Khống Chế Chỉ Số Hộ Thể Không Vượt Trần 60%:</b> Cơ chế game kẹp trần Hộ Thể tối đa 60% (<code>HO_THE_MAX</code>). Cả bộ đánh giá trạng thái (<code>makeEval / quick</code>), bộ lập kế hoạch build (<code>hbPlan</code>) và hàm định giá (<code>hbVal</code>) nay tự động kẹp trần, phạt điểm lãng phí đối với % hộ thể vượt mức 60%, không dồn thừa các mảnh hộ thể để nhường ô cho sát thương, linh lực, tốc độ tu luyện và tỉ lệ đột phá.",
+              "<b>Hiển Thị Trực Quan So Sánh Huyệt Đạo & Hộ Thể:</b> Bổ sung 2 hàng thông số mới vào bảng So Sánh Chỉ Số (cả trong tab Hướng Build và Bắt Đầu Xếp từ túi): hiển thị rõ số huyệt đã tận dụng (ví dụ: <code>4/4 ô · Tận dụng tối đa</code>) và % Hộ thể đạt được kèm nhãn cảnh báo trần 60% (ví dụ: <code>60% (trần 60%)</code> hoặc <code>55%/60%</code>), giúp người chơi kiểm soát 100% hiệu quả kinh mạch.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.0 · Thích Ứng Game Update (Bản Mệnh Cấp 5, Dị Văn & Dự Báo Phẩm Đột Phá)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Hệ Thống Bản Mệnh & Dị Văn Cấp 5 (Level 0–4):</b> Đồng bộ 100% với bản cập nhật mới của game — nâng trần cấp văn Bản Mệnh lên Cấp 5 (NATAL_RUNE_MAX_LEVEL = 4), hỗ trợ nâng cấp bằng tỉ lệ ở bậc cao (Cấp 4–5), tích hợp xác suất Linh quang, nhận diện và hiển thị Dị Văn (Mutant Rune) kèm mô tả hiệu quả đột biến trực tiếp từ <code>core['character/natalRunes'].describeRune</code>.",
               "<b>Cập Nhật Bảng Chỉ Số Văn & Hằng Số Cân Bằng Mới:</b> Cập nhật mảng giá trị 5 cấp cho toàn bộ 17 loại văn (Nhiễm 5 cấp: 0% → 18%, Chỉ số nội tại 5 cấp: 0.6 → 1.9, Hộ thể 5 cấp: 3% → 16%...), mở rộng cơ chế kiểm tra <code>K.bmRune</code> để nhận diện trọn vẹn mảng 5 phần tử từ game; cập nhật hệ số Dưỡng giai uy lực (0.5) và Tế huyết (uy 2x) theo bản cân bằng mới nhất.",
