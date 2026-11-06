@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.9.1
+// @version      7.9.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.9.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.9.1";
+      var TOOL_VER = "7.9.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -7449,13 +7449,40 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return "Slot " + slot;
         }
 
-        // Quét toàn diện Dị Bảo đang nở trên thế giới: bao gồm run.nodes, run.noiChon (di tích/sơn môn), theGioi.dangDien (thế cục), và placeActivities
+        // Kiểm tra xem nhân vật đã sở hữu Dị Bảo (trong túi đồ, kinh mạch, trang bị, hoặc bảo lục luân hồi) chưa
+        function checkOwnedRelic(id, run, meta) {
+          if (!id) return false;
+          if (!run) {
+            const g = G();
+            run = g && g.state && g.state.run;
+            meta = meta || (g && g.state && g.state.meta);
+          }
+          if (!run) return false;
+          const nv = run.nhanVat;
+          if (!nv) return false;
+          if (nv.tuiDo && nv.tuiDo[id] > 0) return true;
+          if (
+            nv.kinhMach &&
+            nv.kinhMach.manh &&
+            nv.kinhMach.manh.some((m) => m.item === id)
+          )
+            return true;
+          if (nv.trangBi && Object.values(nv.trangBi).includes(id))
+            return true;
+          const sc = scanDiBao([run, meta]);
+          if (sc.relics && sc.relics.has(id)) return true;
+          if (sc.flags && sc.flags.has(id.replace(/^item\./, ""))) return true;
+          return false;
+        }
+
+        // Quét Dị Bảo thực tế đang nở trên thế giới (run.nodes, theGioi.dangDien, hoặc placeActivities tại nơi đang đứng)
+        // Tuyệt đối không quét run.noiChon vì đó là danh sách tĩnh thường trú của nơi chốn chứ không phải node xuất thế thật.
         function scanMapActiveDiBao(run, c) {
           const map = new Map();
           if (!run) return map;
           const nam = typeof run.nam === "number" ? run.nam : null;
 
-          // 1. Quét từ run.nodes (tất cả các node sự kiện trên bản đồ)
+          // 1. Quét từ run.nodes (tất cả các node sự kiện thực tế đang nở trên bản đồ)
           if (run.nodes) {
             for (const [slotStr, n] of Object.entries(run.nodes)) {
               if (!n || !n.encounter) continue;
@@ -7467,6 +7494,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 continue;
               const ev = DIBAO.ev.find((x) => x.id === n.encounter);
               if (!ev) continue;
+
+              // Kiểm tra xem sự kiện này đã hoàn thành hoặc đang hồi chiêu trong kiếp này chưa
+              if (run.history && run.history[ev.id] && nam != null) {
+                const h = run.history[ev.id];
+                const hc = ev.hc || 120;
+                if (nam - h.namCuoi < hc) continue;
+              }
+              if (run.flags && run.flags["di_bao_xong_" + ev.id]) continue;
+
               const slot =
                 n.slot != null
                   ? n.slot
@@ -7484,34 +7520,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 2. Quét từ run.noiChon (các khu di tích, sơn môn, nơi chốn có sự kiện thường trú, sự kiện di tích)
-          if (run.noiChon) {
-            for (const [slotStr, nc] of Object.entries(run.noiChon)) {
-              if (!nc) continue;
-              const slot = /^\d+$/.test(slotStr) ? +slotStr : slotStr;
-              const allEncIds = [
-                ...(Array.isArray(nc.suKien) ? nc.suKien : []),
-                ...(Array.isArray(nc.contextual) ? nc.contextual : []),
-                ...(Array.isArray(nc.standing) ? nc.standing : []),
-              ];
-              for (const encId of allEncIds) {
-                if (!encId || map.has(encId)) continue;
-                const ev = DIBAO.ev.find((x) => x.id === encId);
-                if (ev) {
-                  map.set(ev.id, {
-                    encId: ev.id,
-                    slot,
-                    hetHanNam: undefined,
-                    vars: nc.vars,
-                    source: "noiChon",
-                    ev,
-                  });
-                }
-              }
-            }
-          }
-
-          // 3. Quét từ theGioi.dangDien (sự kiện thế giới / thế cục đang diễn ra)
+          // 2. Quét từ theGioi.dangDien (thế cục thế giới đang diễn ra)
           if (run.theGioi && Array.isArray(run.theGioi.dangDien)) {
             for (const dd of run.theGioi.dangDien) {
               if (
@@ -7531,6 +7540,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     if (!encId || map.has(encId)) continue;
                     const ev = DIBAO.ev.find((x) => x.id === encId);
                     if (ev) {
+                      if (run.history && run.history[ev.id] && nam != null) {
+                        const h = run.history[ev.id];
+                        const hc = ev.hc || 120;
+                        if (nam - h.namCuoi < hc) continue;
+                      }
                       map.set(ev.id, {
                         encId: ev.id,
                         slot,
@@ -7545,7 +7559,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          // 4. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
+          // 3. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
           try {
             const director = TT.core && TT.core["encounter/director"];
             if (
@@ -7564,8 +7578,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (Array.isArray(acts)) {
                   for (const a of acts) {
                     if (!a || !a.id || map.has(a.id)) continue;
+                    if (a.lockedReason) continue;
                     const ev = DIBAO.ev.find((x) => x.id === a.id);
                     if (ev) {
+                      if (run.history && run.history[ev.id] && nam != null) {
+                        const h = run.history[ev.id];
+                        const hc = ev.hc || 120;
+                        if (nam - h.namCuoi < hc) continue;
+                      }
                       map.set(ev.id, {
                         encId: ev.id,
                         slot: curSlot,
@@ -20775,11 +20795,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const r = auCall(() => g.closeEncounter());
               if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
               if (isRelicEv) {
-                st.relicsWon = (st.relicsWon || 0) + 1;
-                auLog(
-                  "🎉 Hoàn tất sự kiện Dị Bảo! Đã đoạt bảo thành công (+5 Điểm Luân Hồi).",
-                  "vk-ok",
-                );
+                const curRun = G().state && G().state.run;
+                const evObj = DIBAO.ev.find((e) => e.id === a.id);
+                const hasRelic = evObj && checkOwnedRelic(evObj.relic, curRun);
+                if (hasRelic) {
+                  st.relicsWon = (st.relicsWon || 0) + 1;
+                  auLog(
+                    "🎉 Hoàn tất sự kiện Dị Bảo! Đã đoạt bảo thành công (+5 Điểm Luân Hồi).",
+                    "vk-ok",
+                  );
+                } else {
+                  auLog(
+                    "Đã kết thúc sự kiện «" +
+                      (a.ten || a.id) +
+                      "» nhưng chưa nhận được Dị Bảo trong lần này.",
+                    "vk-mu",
+                  );
+                }
                 removeDiBaoAlert();
                 removeDiBaoMini();
                 if (st.skipEnc) {
@@ -20960,13 +20992,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const nonThoat = cs.filter((c) => !c.thoat);
             if (nonThoat.length > 0) {
               const claim = nonThoat.find((c) =>
-                /thu nhận|đoạt|nhận lấy|lấy|thu|hái|nhặt|nhổ|rút|nhận/i.test(
+                /thu nhận|đoạt|nhận lấy|lấy|thu|hái|nhặt|nhổ|rút|nhận|gỡ|tháo|lục soát|lục|cầm|lượm|đeo|giữ/i.test(
                   c.text,
                 ),
               );
               if (claim) return claim;
               const test = nonThoat.find((c) =>
-                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai|xem|khám phá|bước vào|quan sát/i.test(
+                /kiểm định|khảo nghiệm|thử thách|dò xét|tiến vào|mở|khai|xem|khám phá|bước vào|quan sát|tiến đến|tiến lại|đến gần|dò tìm|tìm kiếm|xem xét/i.test(
                   c.text,
                 ),
               );
@@ -27564,9 +27596,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.9.1 · Tối Ưu Săn Dị Bảo Di Tích, Chống Kẹt Vòng Lặp & Tăng Tương Phản UI",
+            t: "Phiên Bản 7.9.2 · Khắc Phục Báo Sai Dị Bảo Sau Sự Kiện & Chuẩn Hóa Quét Map",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Loại Bỏ Báo Động Dị Bảo Ảo (Ghost Alert Fix):</b> Gỡ bỏ việc quét danh sách tĩnh trong <code>run.noiChon</code>; chuẩn hóa quét sự kiện Dị Bảo thực tế qua <code>run.nodes</code> (các node xuất thế thực thụ) kết hợp kiểm tra hồi chiêu 120 năm trong lịch sử (<code>run.history</code>) và cờ hoàn tất (<code>flags</code>). Chấm dứt hoàn toàn tình trạng sau khi qua sự kiện (dù có hay không nhận được Dị Bảo) tool vẫn liên tục báo có bảo vật tại khu di tích.",
+              "<b>Chính Xác Hóa Thông Báo Đoạt Bảo:</b> Kiểm tra nghiêm ngặt túi đồ và thuộc tính nhân vật sau khi hoàn tất sự kiện (<code>checkOwnedRelic</code>); chỉ chúc mừng đoạt bảo khi thực sự nhận được Dị Bảo, tránh gây hiểu lầm cho người chơi khi sự kiện chỉ vừa kết thúc mà chưa đủ điều kiện nhận vật phẩm.",
+              "<b>Mở Rộng Từ Khóa Thu Nhận Dị Bảo (Smart Pick):</b> Bổ sung thêm các hành động gỡ, tháo, lục soát, mò, cầm lấy trong sự kiện (như gỡ nhẫn thi cốt Lan Đài) vào ưu tiên lựa chọn của Auto để tối đa hóa cơ hội đoạt bảo.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.9.1 · Tối Ưu Săn Dị Bảo Di Tích, Chống Kẹt Vòng Lặp & Tăng Tương Phản UI",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Quét Toàn Diện Dị Bảo Tại Khu Di Tích (Ruin Events Scanner):</b> Mở rộng động cơ phát hiện Dị Bảo (<code>scanMapActiveDiBao</code>) quét đồng thời từ <code>run.nodes</code>, <code>run.noiChon</code> (các địa danh, di tích có sự kiện thường trú, sự kiện di tích), <code>theGioi.dangDien</code> (thế cục thế giới) và <code>placeActivities</code>; khắc phục triệt để lỗi không săn được và tự động chuyển sang bế quan khi Dị Bảo nở tại khu di tích đang có sự kiện.",
               "<b>Cơ Chế Chống Kẹt Vòng Lặp Khi Chưa Đủ Điều Kiện:</b> Khi tới điểm xuất thế (như Tàn Phong, Kiếm Trạch...) nếu bài kiểm định chưa đạt chỉ số hoặc Hộ Vệ quá mạnh khiến sự kiện phải tạm rút lui, hệ thống tự động ghi nhận số lần thử (<code>encAttempts</code>) và tạm thời bỏ qua để tiếp tục hành trình săn các bảo vật khác, chấm dứt hoàn toàn tình trạng lặp vô tận thông báo tiến vào sự kiện.",
