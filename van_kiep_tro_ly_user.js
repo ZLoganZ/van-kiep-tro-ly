@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.8.3
+// @version      7.8.4
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.8.4
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.8.3";
+      var TOOL_VER = "7.8.4";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -8092,6 +8092,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             t.remYears != null && isFinite(t.y) && t.remYears < t.y
               ? ` <b class="vk-bad">⚠️ Đi bộ (${num(t.y)} năm) > Hạn còn (${t.remYears} năm)!</b>`
               : "";
+          const isSdbRunning =
+            typeof AU !== "undefined" &&
+            AU.run &&
+            AU.run.running &&
+            AU.run.kind === "sdb";
+          const autoStatusHtml = isSdbRunning
+            ? `<div style="font-size:11px;color:#3ddc97;margin-top:2px;font-weight:600">🎯 Auto Săn Dị Bảo đang tự động ngắt bế quan để đoạt bảo...</div>`
+            : "";
 
           alertEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
@@ -8104,6 +8112,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           <div style="font-size:11.5px;color:#bbb;margin-top:2px">
             📍 <b>${esc(t.pName)}</b> (Slot ${t.slot}) · Hạn còn: <b style="color:#f59e0b">${t.remYears != null ? t.remYears + " năm" : "Vô hạn"}</b> · Đường đi: <b>${safeY}</b>${dangerWarn}
           </div>
+          ${autoStatusHtml}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
@@ -19043,6 +19052,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             dungTruyenTong: true,
             minWinRate: 70,
             danhAi: true,
+            sanMoiDiBaoXuatThe: true,
             cheDoCho: "camp",
             minTho: 15,
             maxNam: 100,
@@ -19271,6 +19281,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (typeof AU.cfg.san.danhAi !== "boolean") AU.cfg.san.danhAi = true;
           if (!Array.isArray(AU.cfg.sdb.targetRelics)) {
             AU.cfg.sdb.targetRelics = DIBAO.ev.map((e) => e.relic);
+          }
+          if (typeof AU.cfg.sdb.sanMoiDiBaoXuatThe !== "boolean") {
+            AU.cfg.sdb.sanMoiDiBaoXuatThe = true;
           }
         }
         function auSave() {
@@ -21750,15 +21763,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const selectedRelics = Array.isArray(cfg.targetRelics)
             ? cfg.targetRelics
             : DIBAO.ev.map((e) => e.relic);
-          if (selectedRelics.length === 0) {
+          const allowAllSpawns = cfg.sanMoiDiBaoXuatThe !== false;
+          if (selectedRelics.length === 0 && !allowAllSpawns) {
             return {
-              stop: "Bạn chưa chọn Dị Bảo nào để săn! Hãy vào tab Auto Săn Dị Bảo (asdb) hoặc tab Dị Bảo (db) để tích chọn ít nhất 1 món.",
+              stop: "Bạn chưa chọn Dị Bảo nào để săn! Hãy vào tab Auto Săn Dị Bảo (asdb) hoặc tab Dị Bảo (db) để tích chọn ít nhất 1 món, hoặc bật 'Tự Động Săn Mọi Dị Bảo Xuất Thế'.",
             };
           }
           const targetRelicSet = new Set(selectedRelics);
 
           // 6. Quét các Dị Bảo đang nở trên bản đồ (run.nodes)
           const activeTargets = [];
+          const ignoredTargets = [];
           if (run.nodes) {
             for (const [slotStr, n] of Object.entries(run.nodes)) {
               if (!n || !n.encounter) continue;
@@ -21770,7 +21785,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 continue;
               const ev = DIBAO.ev.find((x) => x.id === n.encounter);
               if (!ev) continue;
-              if (!targetRelicSet.has(ev.relic)) continue;
+              const owned = isOwned(ev.relic);
+              if (cfg.boQuaDaCo !== false && owned) continue;
+
+              const isTarget = targetRelicSet.has(ev.relic);
+              if (!isTarget && !allowAllSpawns) {
+                ignoredTargets.push({ ev, slotStr });
+                continue;
+              }
+
               const slot =
                 n.slot != null
                   ? n.slot
@@ -21781,8 +21804,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 DIBAO.rel[ev.relic] ||
                 (Cc && Cc.items ? Cc.items.get(ev.relic) : null) ||
                 {};
-              const owned = isOwned(ev.relic);
-              if (cfg.boQuaDaCo !== false && owned) continue;
 
               let y = Infinity;
               if (c && K && K.travelYears) {
@@ -21813,6 +21834,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 owned,
                 statChk,
                 sim,
+                isTarget,
                 canTele: checkCanTeleport(slot),
               });
             }
@@ -21821,6 +21843,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           // 7. NẾU CÓ DỊ BẢO ĐANG NỞ TRÊN BẢN ĐỒ:
           if (activeTargets.length > 0) {
             activeTargets.sort((a, b) => {
+              if (a.isTarget && !b.isTarget) return -1;
+              if (!a.isTarget && b.isTarget) return 1;
               if (cfg.uuTienTheoHon !== false) {
                 if (a.isCarry && !b.isCarry) return -1;
                 if (!a.isCarry && b.isCarry) return 1;
@@ -21832,8 +21856,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             const target = activeTargets[0];
             st.target = target;
-            st.targetTitle = `👑 ${target.title} (${target.pName})`;
+            st.targetTitle = `👑 ${target.title} (${target.pName})${target.isTarget ? "" : " [Ngoài DS]"}`;
             st.phaseDesc = `Săn ${target.title}`;
+
+            // Xóa alert nổi nếu có vì Auto đã chủ động tiếp quản
+            removeDiBaoAlert();
+
+            if (!target.isTarget && st.lastLoggedTarget !== target.relic) {
+              st.lastLoggedTarget = target.relic;
+              auLog(
+                `⚡ Dị Bảo xuất thế: «${target.e.ten}» (${target.title}) tại ${target.pName}! Lập tức ngắt bế quan đi đoạt bảo ngay...`,
+                "vk-ok",
+              );
+            }
 
             // Nếu là giao chiến hộ vệ và tỉ lệ thắng quá thấp:
             if (target.sim && target.sim.winRate < (cfg.minWinRate || 70)) {
@@ -21938,6 +21973,33 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
 
             // Chưa có mặt tại slot: Di chuyển hoặc truyền tống
+            // Đảm bảo đóng mọi dialog/encounter/thông báo bế quan cũ trước khi di chuyển
+            const curRun = G().state && G().state.run;
+            if (curRun) {
+              if (
+                curRun.active &&
+                curRun.active.done &&
+                typeof g.closeEncounter === "function"
+              ) {
+                try {
+                  g.closeEncounter();
+                } catch (e) {}
+              }
+              if (curRun.thongBao && typeof g.dongThongBao === "function") {
+                try {
+                  g.dongThongBao();
+                } catch (e) {}
+              }
+              if (
+                curRun.longNotice &&
+                typeof g.closeLongNotice === "function"
+              ) {
+                try {
+                  g.closeLongNotice();
+                } catch (e) {}
+              }
+            }
+
             // 1) Ưu tiên Truyền Tống Trận / Phù nếu bật
             if (cfg.dungTruyenTong !== false && target.canTele) {
               auLog(
@@ -21997,12 +22059,28 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             (e) => !isOwned(e.relic),
           ).length;
           if (unownedCount === 0) {
-            return {
-              stop:
-                targetRelicSet.size < DIBAO.ev.length
-                  ? `🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ ${targetRelicSet.size} Dị Bảo trong danh sách bạn đã chọn!`
-                  : "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 21 Dị Bảo trong game!",
-            };
+            const allUnowned = DIBAO.ev.filter((e) => !isOwned(e.relic)).length;
+            if (allUnowned === 0 || !allowAllSpawns) {
+              return {
+                stop:
+                  targetRelicSet.size < DIBAO.ev.length
+                    ? `🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ ${targetRelicSet.size} Dị Bảo trong danh sách bạn đã chọn!`
+                    : "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 19 Dị Bảo trong game!",
+              };
+            }
+          }
+
+          // Thông báo nếu có Dị Bảo đang nở trên map nhưng bị bỏ qua do người dùng chủ động tắt
+          if (!allowAllSpawns && ignoredTargets.length > 0) {
+            const firstIgn = ignoredTargets[0];
+            const ignRel = DIBAO.rel[firstIgn.ev.relic] || {};
+            if (st.lastIgnoredRelic !== firstIgn.ev.relic) {
+              st.lastIgnoredRelic = firstIgn.ev.relic;
+              auLog(
+                `ℹ️ Đang có Dị Bảo «${firstIgn.ev.ten}» (${ignRel.ten || firstIgn.ev.relic}) tại Slot ${firstIgn.slotStr}, nhưng bỏ qua vì ngoài danh sách chọn (bạn đã tắt 'Săn mọi Dị Bảo').`,
+                "vk-mu",
+              );
+            }
           }
 
           const pity = calcDiBaoPity(run, nv, sc, selectedRelics);
@@ -22054,7 +22132,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           // Đã đứng tại chỗ bế quan hợp lệ (Động phủ, Môn phái, Tĩnh thất...):
-          const sitYears = Math.min(2, Math.max(1, Math.floor(life - minTho)));
+          const maxCanSit = Math.floor(life - minTho);
+          if (maxCanSit <= 0) {
+            return {
+              stop:
+                "Thọ nguyên chỉ còn " +
+                Math.floor(life) +
+                " năm (dưới ngưỡng an toàn " +
+                minTho +
+                " năm). Dừng bế quan để bảo toàn tính mạng!",
+            };
+          }
+          const sitYears = pity.waitYears >= 450 ? 1 : Math.min(2, maxCanSit);
           if (sitYears <= 0) {
             return {
               stop:
@@ -22976,6 +23065,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.boQuaDaCo = ck("au-sdb-boda", c.boQuaDaCo !== false);
             c.dungTruyenTong = ck("au-sdb-tele", c.dungTruyenTong !== false);
             c.danhAi = ck("au-sdb-danh-ai", c.danhAi !== false);
+            c.sanMoiDiBaoXuatThe = ck("au-sdb-san-moi", c.sanMoiDiBaoXuatThe !== false);
             c.minWinRate = num0("au-sdb-winrate", 10, 100, c.minWinRate || 70);
             c.cheDoCho = sel("au-sdb-chedo", c.cheDoCho || "camp");
             c.minTho = num0("au-sdb-tho", 1, 1000, c.minTho || 15);
@@ -24159,6 +24249,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-boda" ${c.boQuaDaCo !== false ? "checked" : ""}> Tự động bỏ qua các món Dị Bảo đã sở hữu trong kiếp</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-tele" ${c.dungTruyenTong !== false ? "checked" : ""}> <b>Ưu Tiên Truyền Tống Trận / Phù Truyền Tống (0 Năm Tuổi Thọ)</b></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-danh-ai" ${c.danhAi !== false ? "checked" : ""}> <b>Tự Đánh AI Khi Không Cho Tốc Chiến</b> (Dùng Siêu AI VIP hạ Hộ Vệ)</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-sdb-san-moi" ${c.sanMoiDiBaoXuatThe !== false ? "checked" : ""}> <b style="color:var(--acc)">Ưu Tiên Săn Mọi Dị Bảo Xuất Thế Trên Map</b> <span class="vk-mu" style="font-size:11.5px">(Ngắt bế quan đoạt bảo ngay khi có bất kỳ Dị Bảo nào nở trên map)</span></label>
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
 
       <!-- Danh sách chọn bảo vật muốn săn -->
@@ -24358,7 +24449,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                         !c.targetRelics ||
                         c.targetRelics.length === 0 ||
                         c.targetRelics.includes(m.ev.relic);
-                      return `<tr><td><b>${esc(m.relInf.ten || m.ev.relic)}</b> ${isTgt ? '<span class="vk-ok" style="font-size:10.5px;font-weight:600">🎯 Mục tiêu</span>' : '<span class="vk-mu" style="font-size:10.5px">○ Bỏ qua</span>'}</td><td>${esc(placeName(c2, m.slot))}</td><td>${m.rem != null ? m.rem + " năm" : "—"}</td><td>${safeYrs(m.y)}</td></tr>`;
+                      const willHunt = isTgt || c.sanMoiDiBaoXuatThe !== false;
+                      const badge = isTgt
+                        ? '<span class="vk-ok" style="font-size:10.5px;font-weight:600">🎯 Mục tiêu</span>'
+                        : willHunt
+                          ? '<span style="color:#3ddc97;font-size:10.5px;font-weight:600">⚡ Săn ngay</span>'
+                          : '<span class="vk-mu" style="font-size:10.5px">○ Bỏ qua</span>';
+                      return `<tr><td><b>${esc(m.relInf.ten || m.ev.relic)}</b> ${badge}</td><td>${esc(placeName(c2, m.slot))}</td><td>${m.rem != null ? m.rem + " năm" : "—"}</td><td>${safeYrs(m.y)}</td></tr>`;
                     })
                     .join("")}</table>`;
                 }
@@ -26283,9 +26380,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.8.3 · Tối Ưu Độ Tương Phản & Hiển Thị Tên Dị Bảo Đã Chọn",
+            t: "Phiên Bản 7.8.4 · Ưu Tiên Săn Dị Bảo Xuất Thế & Ngắt Bế Quan",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Tự Động Ngắt Bế Quan Đi Săn Dị Bảo Xuất Thế:</b> Khắc phục triệt để lỗi khi có thông báo Linh Bảo / Dị Bảo xuất thế nhưng Auto vẫn tiếp tục bế quan; tích hợp cơ chế <code>sanMoiDiBaoXuatThe</code> (mặc định bật) lập tức ưu tiên đoạt bảo bất kỳ món nào nở trên map.",
+              "<b>Đồng Bộ Cảnh Báo Live & Auto Săn Bảo:</b> Tự động liên kết hệ thống phát hiện Live Alert với hàng đợi di chuyển của Auto; tự động đóng banner và dọn dẹp trạng thái chờ bế quan khi chuyển sang pha di chuyển/truyền tống tới vị trí Dị Bảo.",
+              "<b>Tối Ưu Nhịp Bế Quan Khi Chạm Ngưỡng Pity:</b> Khi bảo hiểm Thiên Đạo Bù (Pity) đạt từ 450/500 năm trở lên, Auto tự động giảm bước nhập định về 1 năm để bắt trọn khoảnh khắc Dị Bảo nở với niên hạn tối đa.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.8.3 · Tối Ưu Độ Tương Phản & Hiển Thị Tên Dị Bảo Đã Chọn",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tối Ưu Độ Tương Phản Tên Dị Bảo:</b> Khắc phục triệt để lỗi chữ bị tối/chìm màu đen khi tích chọn trong bộ lọc Auto Săn Dị Bảo; chuyển sang chữ trắng sáng (#ffffff) sắc nét trên nền sáng nhẹ (accent tint) nổi bật.",
               "<b>Hiệu Ứng Trực Quan Mượt Mà:</b> Bổ sung viền phát sáng nhẹ và hiệu ứng chuyển màu êm ái khi tích chọn hoặc chuyển đổi qua các bộ lọc nhanh.",
