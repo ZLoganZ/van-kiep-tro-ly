@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.7.1
+// @version      7.7.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.7.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.7.1";
+      var TOOL_VER = "7.7.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -8507,15 +8507,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         </div>
 
         <!-- Thanh Trạng Thái & Nút Bật Auto Săn Dị Bảo -->
-        <div style="background:var(--bg3);border:1px solid ${AU.run && AU.run.running && AU.run.kind === "sdb" ? "#3ddc97" : "var(--line)"};border-radius:10px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div id="db-auto-box" style="background:var(--bg3);border:1px solid ${AU.run && AU.run.running && AU.run.kind === "sdb" ? "#3ddc97" : "var(--line)"};border-radius:10px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
           <div>
             <div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:16px">🎯</span>
               <b style="font-size:13.5px;color:var(--acc)">Auto Săn Dị Bảo (Tự Động Đoạt Bảo)</b>
-              <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${AU.run && AU.run.running && AU.run.kind === "sdb" ? "rgba(61,220,151,0.2);color:#3ddc97;border:1px solid #3ddc97" : "rgba(255,255,255,0.08);color:var(--mut)"}">${AU.run && AU.run.running && AU.run.kind === "sdb" ? "● ĐANG CHẠY" : "○ TẠM DỪNG"}</span>
+              <span id="db-auto-status-pill" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${AU.run && AU.run.running && AU.run.kind === "sdb" ? "rgba(61,220,151,0.2);color:#3ddc97;border:1px solid #3ddc97" : "rgba(255,255,255,0.08);color:var(--mut)"}">${AU.run && AU.run.running && AU.run.kind === "sdb" ? "● ĐANG CHẠY" : "○ TẠM DỪNG"}</span>
             </div>
-            <div class="vk-mu" style="font-size:12px;margin-top:3px">
-              ${AU.run && AU.run.running && AU.run.kind === "sdb" ? esc(AU.run.targetTitle || "Đang quét bản đồ & cắm trại đón đầu...") : "Tự động truyền tống/bay đến mục tiêu, vào sự kiện, vượt kiểm định & đánh Hộ Vệ."}
+            <div id="db-auto-status-text" class="vk-mu" style="font-size:12px;margin-top:3px">
+              ${AU.run && AU.run.running && AU.run.kind === "sdb" ? esc(AU.run.phaseDesc || AU.run.targetTitle || "Đang quét bản đồ & săn Dị Bảo...") : (AU.run && AU.run.kind === "sdb" && AU.run.msg ? `<span class="vk-bad">Dừng: ${esc(AU.run.msg)}</span>` : "Tự động truyền tống/bay đến mục tiêu, vào sự kiện, vượt kiểm định & đánh Hộ Vệ.")}
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
@@ -20147,7 +20147,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   "). Dừng để bạn tự quyết định trong game.",
                 danger: lv,
               };
-            if (p.duocTocChien) {
+            if (p.duocTocChien && p.thang) {
               const r = auCall(() => g.tocChienTran());
               if (!r.ok) return { stop: "Không Tốc Chiến được: " + r.err };
               st.fights++;
@@ -20156,15 +20156,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               auLog("Tốc Chiến thắng (Trận #" + st.fights + ").", "vk-ok");
               return "ok";
             }
-            if (!p.thang)
-              return {
-                stop:
-                  "Trận " +
-                  m[0] +
-                  " (" +
-                  m[2] +
-                  "): game dự đoán thua nên không cho Tốc Chiến, Auto không tự đánh tay. Dừng để bạn tự đánh trong game.",
-              };
             if (opt.danhAi) {
               const r = auCall(() => g.hanhDongTran({ loai: "giao_chien" }));
               if (!r.ok)
@@ -20174,11 +20165,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   m[0] +
                   " (" +
                   m[2] +
-                  ") không Tốc Chiến được: tự động vào Giao Chiến để đánh AI...",
+                  ") không Tốc Chiến được: tự động vào Giao Chiến để đánh bằng Siêu AI VIP...",
                 "vk-ok",
               );
               return "ok";
             }
+            if (!p.thang)
+              return {
+                stop:
+                  "Trận " +
+                  m[0] +
+                  " (" +
+                  m[2] +
+                  "): game dự đoán thua nên không cho Tốc Chiến, Auto chưa bật Tự Đánh AI. Dừng để bạn tự đánh trong game.",
+              };
             return {
               stop:
                 "Trận " +
@@ -21676,69 +21676,66 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             };
           }
 
+          const pity = calcDiBaoPity(run, nv, sc);
+
           if (cfg.cheDoCho === "stop") {
             return {
-              stop: "Hiện chưa có sự kiện Dị Bảo nào đang nở trên bản đồ. Auto tạm dừng theo cấu hình.",
+              stop: `Hiện chưa có Dị Bảo nào nở trên bản đồ (Pity: ${pity.waitYears}/500 năm). Hãy đổi Chế Độ Chờ sang 'Cắm Trại & Bế Quan Chờ' trong Cấu Hình để Auto tự bế quan trôi năm chờ Dị Bảo nở.`,
             };
           }
 
-          // Chế độ Cắm Trại Đón Đầu & Bế Quan Chờ Dị Bảo (camp):
-          const pity = calcDiBaoPity(run, nv, sc);
-          if (!pity.topCamping || !pity.topCamping.length) {
-            return {
-              stop: "Không tìm thấy địa điểm cắm trại phù hợp (có thể chưa đạt cảnh giới tối thiểu).",
-            };
-          }
+          // Chế độ Cắm Trại & Bế Quan Chờ Dị Bảo (camp):
+          // Kiểm tra xem vị trí hiện tại có bế quan được không:
+          let hereInfo = null;
+          try {
+            if (K && K.chuanBiBeQuan) hereInfo = K.chuanBiBeQuan(c);
+          } catch (e) {}
 
-          const bestCamp = pity.topCamping[0];
-          const diaSlot = findDiaSlot(c, bestCamp.e.dia);
-          const isHere = checkIsHere(c, run, bestCamp.e.dia, diaSlot);
+          const canRetreatHere = hereInfo && !hereInfo.chan && (hereInfo.tuViNam > 0);
 
-          st.phaseDesc = `Cắm trại tại ${bestCamp.e.dia}`;
-          st.camping = bestCamp.e.dia;
-          st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
-
-          // Nếu chưa đứng tại điểm cắm trại đón đầu:
-          if (!isHere && diaSlot != null) {
+          if (!canRetreatHere) {
+            // Chỗ đang đứng không bế quan được (hoang dã, di tích...) -> Di chuyển tới chỗ bế quan an toàn gần nhất
+            st.phaseDesc = "Tìm chỗ bế quan an toàn chờ Dị Bảo";
+            st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
+            const spots = await scanRetreat(c, 5, null);
+            if (!spots || !spots.length) {
+              return {
+                stop: "Không tìm thấy địa điểm bế quan an toàn quanh đây để chờ Dị Bảo (" + ((hereInfo && hereInfo.chan) || "không có linh khí") + "). Hãy di chuyển tới Động Phủ, Môn Phái hoặc Tĩnh Thất rồi chạy lại.",
+              };
+            }
+            const bestSpot = spots[0];
             auLog(
-              `Đang di chuyển tới điểm đón đầu tối ưu «${bestCamp.e.dia}» để cắm trại chờ ${esc(bestCamp.e.ten)}...`,
+              `Chỗ hiện tại không có linh khí để bế quan. Di chuyển tới ${bestSpot.info.ten || 'chỗ bế quan'} (${bestSpot.y.toFixed(1)} năm đường) để bế quan chờ Dị Bảo nở...`,
               "vk-mu",
             );
-            if (cfg.dungTruyenTong !== false && checkCanTeleport(diaSlot)) {
-              const resTele = smartTeleportTo(diaSlot);
-              if (resTele.ok) {
-                auLog(
-                  `⚡ Đã truyền tống tới điểm đón đầu «${bestCamp.e.dia}»!`,
-                  "vk-ok",
-                );
-                return null;
-              }
-            }
-            const rTrav = auCall(() => g.travelTo(String(diaSlot)));
-            if (!rTrav.ok) {
+            const rGo = auCall(() => g.travelTo(String(bestSpot.slot)));
+            if (!rGo.ok) {
               if (++st.tried >= 3)
-                return {
-                  stop: "Không di chuyển tới điểm cắm trại được: " + rTrav.err,
-                };
+                return { stop: "Không di chuyển tới chỗ bế quan được: " + rGo.err };
               return null;
             }
             st.tried = 0;
             return null;
           }
 
-          // Đã đứng tại điểm cắm trại: bế quan ngắn để trôi thời gian và tăng Pity
+          // Đã đứng tại chỗ bế quan hợp lệ (Động phủ, Môn phái, Tĩnh thất...):
+          const sitYears = Math.min(2, Math.max(1, Math.floor(life - minTho)));
+          if (sitYears <= 0) {
+            return {
+              stop: "Thọ nguyên chỉ còn " + Math.floor(life) + " năm (dưới ngưỡng an toàn " + minTho + " năm). Dừng bế quan để bảo toàn tính mạng!",
+            };
+          }
+
+          const topCampDesc = pity.topCamping && pity.topCamping.length ? ` · Đón đầu: ${pity.topCamping[0].e.dia}` : '';
+          st.phaseDesc = `Bế quan chờ Dị Bảo (Pity: ${pity.waitYears}/500n · ×${pity.mult}${topCampDesc})`;
+          st.targetTitle = `Chờ Dị Bảo (Pity: ${pity.waitYears}/500n)`;
+
           auLog(
-            `Đang cắm trại tại «${bestCamp.e.dia}» (Pity: ${pity.waitYears}/500 năm · Trọng số ×${pity.mult}). Bế quan chờ Dị Bảo nở...`,
+            `Bế quan ${sitYears} năm tại ${hereInfo.ten || 'đây'} (Pity: ${pity.waitYears}/500 năm · Trọng số ×${pity.mult}${topCampDesc}) để tăng tu vi & chờ Dị Bảo nở...`,
             "vk-mu",
           );
 
           const namTruoc = run.nam;
-          const sitYears = Math.min(2, Math.max(1, Math.floor(life - minTho)));
-          if (sitYears <= 0)
-            return {
-              stop: "Thọ nguyên không đủ để bế quan tiếp. Dừng để an toàn!",
-            };
-
           const rSit = auCall(() =>
             g.nhapDinh({
               nam: sitYears,
@@ -21748,23 +21745,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }),
           );
           if (!rSit.ok) {
-            if (
-              typeof g.ngoiDoi === "function" &&
-              typeof g.coHenDoi === "function" &&
-              g.coHenDoi(run.viTri)
-            ) {
-              auCall(() => g.ngoiDoi());
-            } else {
-              const near = nearSlots(c, 0.2);
-              if (near.length > 0) {
-                auCall(() => g.travelTo(String(near[0].slot)));
-              } else {
-                return {
-                  stop:
-                    "Nơi cắm trại không hỗ trợ bế quan trôi năm: " + rSit.err,
-                };
-              }
-            }
+            return {
+              stop: "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
+            };
           }
 
           const namSau =
@@ -22797,6 +22780,34 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (!UI.isOpen()) return;
           if (S.tab === "arr") {
             rrPaint();
+            return;
+          }
+          if (S.tab === "db") {
+            const run = AU.run && AU.run.running && AU.run.kind === "sdb";
+            const box = body.querySelector("#db-auto-box");
+            const pill = body.querySelector("#db-auto-status-pill");
+            const txt = body.querySelector("#db-auto-status-text");
+            const btn = body.querySelector("#db-auto-toggle");
+            if (box) box.style.borderColor = run ? "#3ddc97" : "var(--line)";
+            if (pill) {
+              pill.textContent = run ? "● ĐANG CHẠY" : "○ TẠM DỪNG";
+              pill.style.background = run ? "rgba(61,220,151,0.2)" : "rgba(255,255,255,0.08)";
+              pill.style.color = run ? "#3ddc97" : "var(--mut)";
+              pill.style.border = run ? "1px solid #3ddc97" : "1px solid transparent";
+            }
+            if (txt) {
+              if (run) {
+                txt.textContent = AU.run.phaseDesc || AU.run.targetTitle || "Đang quét bản đồ & săn Dị Bảo...";
+              } else if (AU.run && AU.run.kind === "sdb" && AU.run.msg) {
+                txt.innerHTML = `<span class="vk-bad">Dừng: ${esc(AU.run.msg)}</span>`;
+              } else {
+                txt.textContent = "Tự động truyền tống/bay đến mục tiêu, vào sự kiện, vượt kiểm định & đánh Hộ Vệ.";
+              }
+            }
+            if (btn) {
+              btn.textContent = run ? "⏹ Dừng Auto" : "▶ Bắt Đầu Săn";
+              btn.style.background = run ? "#f87171" : "var(--acc)";
+            }
             return;
           }
           const kind =
@@ -25660,9 +25671,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.7.1 · Sửa Lỗi Hiển Thị Xác Suất Cắm Trại Dị Bảo (Fix NaN%)",
+            t: "Phiên Bản 7.7.2 · Đại Tu Động Cơ Auto Săn Dị Bảo, Bế Quan Trôi Năm & Đồng Bộ Tab Dị Bảo",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Triệt Để Lỗi Auto Không Hoạt Động Khi Chờ Dị Bảo:</b> Khắc phục lỗi dừng khựng hoặc kẹt di chuyển khi cắm trại tại các địa danh hoang dã/di tích không có tĩnh thất bế quan (như Kiếm Trạch, U Hồn Điện); Auto giờ đây tự động nhận diện linh khí và chọn nơi bế quan an toàn gần nhất để trôi thời gian (1-2 năm/nhịp), vừa tăng tu vi vừa đẩy Pity Dị Bảo lên cực đại.",
+              "<b>Tự Động Xuất Phát Đoạt Bảo Ngay Khi Dị Bảo Nở:</b> Ngay khi có bất kỳ Dị Bảo nào xuất hiện trên thế giới trong lúc bế quan, Auto tự động ngắt bế quan, lập tức truyền tống hoặc ngự kiếm tới node sự kiện để đoạt bảo.",
+              "<b>Đồng Bộ Trực Tiếp Trạng Thái Lên Tab Dị Bảo:</b> Nút [▶ Bắt Đầu Săn / ⏹ Dừng Auto] và thông điệp trạng thái tại tab Dị Bảo giờ đây được cập nhật thời gian thực qua engine vẽ (auPaint), hiển thị rõ ràng từng hành động và lý do nếu dừng.",
+              "<b>Mở Khóa Siêu AI Tác Chiến Khi Giáp Mặt Hộ Vệ:</b> Cho phép Tự Đánh AI vào thẳng giao chiến kể cả khi dự đoán ban đầu chưa chắc thắng, giải phóng toàn diện sức mạnh của Siêu AI Tác Chiến VIP để hạ gục Hộ Vệ Hóa Thần đoạt bảo.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.7.1 · Sửa Lỗi Hiển Thị Xác Suất Cắm Trại Dị Bảo (Fix NaN%)",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Triệt Để Lỗi Hiển Thị Xác Suất NaN%:</b> Bổ sung công thức tính trọng số xuất hiện thực tế (<code>w</code>) và hệ số nhân (<code>mult</code>) cho từng sự kiện theo chuẩn cơ chế Thiên Đạo Bù Dị Bảo (Pity 500 năm), khắc phục hoàn toàn lỗi hiển thị <code>xác suất NaN%</code> khi quét điểm cắm trại.",
               "<b>Hiển Thị Trực Quan Tiến Trình Chờ & Tỉ Lệ Nổ:</b> Bổ sung chi tiết số năm tích lũy và hệ số nhân trọng số (ví dụ: đã tích lũy 120 năm · trọng số ×5.8), đồng thời tự động đánh dấu mốc 100% 🔥 CHẮC CHẮN NỔ khi vượt ngưỡng bảo hiểm 500 năm.",
