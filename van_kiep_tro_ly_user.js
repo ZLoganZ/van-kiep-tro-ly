@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.5.0
+// @version      7.6.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dò Đồ Quý & Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -24,7 +24,7 @@
   function runTroLy(TT, MOD) {
     (function (TT, MOD) {
   if (gWin.__vkxMerged) { try { gWin.__vkxMerged.open(); } catch (e) {} return; }
-  var TOOL_VER = '7.5.0';
+  var TOOL_VER = '7.6.0';
 var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -634,6 +634,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     ['devourCandidates', 'progress/natal_act', 'devourCandidates', 'ứng viên văn khi nuốt'], ['devourItemError', 'progress/natal_act', 'devourItemError', 'kiểm tra nuốt món'],
     ['innateRuneOf', 'character/natalRunes', 'innateRuneOf', 'văn bẩm sinh của món'],
     ['nextAutomatedAction', 'combat/playerAutomation', 'nextAutomatedAction', 'AI tự đánh trong trận'],
+    ['chanChieu', 'combat/actions', 'chanChieu', 'kiểm tra chiêu dùng được'],
+    ['chanDungDo', 'combat/actions', 'chanDungDo', 'kiểm tra dùng đồ trong trận'],
+    ['estimatePillRestore', 'combat/actions', 'estimatePillRestore', 'ước tính lượng hồi đan dược'],
+    ['pillWasted', 'combat/actions', 'pillWasted', 'kiểm tra lãng phí đan'],
   ];
   // Hằng số bản mệnh: khóa Tool → tên hằng trong core['balance/natal'].
   const BM_CONST = {
@@ -6893,7 +6897,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     km: { mode: 'bal', dir: 'tien', kb: '', prio: true, bk: 5, ratio: '55', iters: 3000, mo: false, moMax: 1, two: false, keep: 'tu', moBo: false, watch: false },
     rr: { pham: ['thien', 'bien_di'], he: [], heMode: 'any', tc: [], join: 'and', max: 3000, toc: 'nhanh', swap: false, lp: false, dl: 'normal', lh: false, lhIds: [], lhKeep: 0 },
     tl: { targetRealm: 5, minSafeRate: 65, minTho: 10, useCultPills: true, useBreakPills: true, autoBeatDemons: true, autoBreakBottleneck: true, toc: 'nhanh' },
-    tc: { autoCombatOverlay: true, autoInCombat: false, healHpThreshold: 35, maxDrugResistance: 70, maxPillGrade: 4, talismanGrade: 4, smartShield: true, smartCc: true, saveFamiliars: true, autoNormalAttack: true, comboSequence: true }
+    tc: { autoCombatOverlay: true, autoInCombat: false, healHpThreshold: 35, spiritThreshold: 20, maxDrugResistance: 70, maxPillGrade: 5, talismanGrade: 5, smartShield: true, smartCc: true, saveFamiliars: true, autoNormalAttack: true, comboSequence: true, useBurstPill: true }
   };
   // Hằng số lấy từ code game; mô tả trên giao diện đọc lại từ đây nên đổi một chỗ là khớp hết.
   let AU_T4 = 3, AU_ZAN = 2; // Săn cạn: tối đa AU_T4 lần mỗi nơi, hồi 1 lần mỗi AU_ZAN năm
@@ -7108,26 +7112,49 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
 
   // ═════════ SIÊU AI TÁC CHIẾN VIP (THAY THẾ AUTO LỎ CỦA GAME) ═════════
-  // Khắc phục triệt để các lỗi của AI game: tính toán xoay tua kỹ năng chuẩn xác, kiểm tra Dược Kháng
-  // trước khi nuốt đan, dự báo nộ chiêu của địch để bật thuẫn, tự động cứu Ngự Linh và luôn tung Quyền Cước miễn phí.
-  function smartCombatAction(tran, Cc, cfg) {
+  // Khắc phục triệt để các lỗi của AI game:
+  // 1. Dùng đan dược chuẩn xác: nhận diện đúng đan hồi huyết (tran.khi_huyet), đan hồi linh lực (tran.linh_luc),
+  //    đan bộc phát (tran.bao_phat), tính đúng dược kháng thực tế và nuốt nhiều viên (so: n) nếu nguy kịch.
+  // 2. Tận dụng triệt để Quyền Cước (danh_thuong): luôn đánh thường mỗi lượt miễn phí 0 linh lực,
+  //    dứt điểm quái yếu không tốn mana, dệt đòn đánh thường mượt mà sau khi kích hoạt buff.
+  // 3. Sửa lỗi nhắm mục tiêu: tự động chuyển mục tiêu khi quái hiện tại chết, không bị kẹt hay bắn trượt.
+  // 4. Dự báo bật bùa hộ thuẫn / bùa trói chuẩn xác (loai: phu_luc).
+  // 5. Kiểm tra chiêu qua S.core.chanChieu hoặc bộ lọc toàn diện để không bao giờ bị lỗi ngắt lượt giữa chừng.
+  function smartCombatAction(tran, Cc, cfg, failedActions) {
     cfg = cfg || (AU && AU.cfg && AU.cfg.tc) || {};
+    failedActions = failedActions || new Set();
     const ta = tran && tran.ta;
     if (!ta) return null;
     const dich = (tran && tran.dich) || [];
     if (!dich.length) return null;
 
-    // 1. CHỌN MỤC TIÊU TỐI ƯU (Targeting)
-    let target = dich.find((d) => d.ma === tran.mucTieu) || dich[0];
-    if (dich.length > 1) {
-      const liveFoes = dich.filter((d) => (d.khiHuyet || 0) > 0);
-      if (liveFoes.length > 1) {
-        // Tìm mục tiêu ít máu nhất có thể dứt điểm ngay
-        const sorted = liveFoes.slice().sort((a, b) => (a.khiHuyet || 0) - (b.khiHuyet || 0));
-        const killable = sorted[0];
-        if (killable && killable.ma !== tran.mucTieu && (killable.khiHuyet || 0) < (target.khiHuyet || 0) * 0.45) {
-          return { loai: 'muc_tieu', ma: killable.ma };
-        }
+    // 1. CHỌN MỤC TIÊU TỐI ƯU (Targeting & Retargeting)
+    const liveFoes = dich.filter((d) => (d.khiHuyet || 0) > 0);
+    if (!liveFoes.length) return { loai: 'ket_luot' };
+
+    let target = liveFoes.find((d) => d.ma === tran.mucTieu);
+    if (!target) {
+      // Mục tiêu cũ đã gục hoặc không hợp lệ -> chuyển ngay sang mục tiêu sống đầu tiên
+      const nextTarget = liveFoes[0];
+      if (nextTarget && !failedActions.has('muc_tieu:' + nextTarget.ma)) {
+        return { loai: 'muc_tieu', ma: nextTarget.ma };
+      }
+      target = nextTarget;
+    }
+
+    // Ước lượng sát thương Quyền Cước (danh_thuong)
+    const burstMult = (ta.bocPhatDen && ta.bocPhatDen >= (tran.hiep || 1)) ? 1.5 : 1.0;
+    const estNormalDmg = Math.max(1, Math.round(0.4 * (ta.bodyPower || ta.spellPower || 10) * burstMult));
+
+    // Nếu có nhiều mục tiêu sống: ưu tiên chuyển sang kết liễu kẻ địch sắp chết bằng đòn thường / chiêu nhẹ
+    if (liveFoes.length > 1) {
+      const killable = liveFoes.find((d) => d.ma !== target.ma && (d.khiHuyet || 0) <= estNormalDmg);
+      if (killable && !failedActions.has('muc_tieu:' + killable.ma)) {
+        return { loai: 'muc_tieu', ma: killable.ma };
+      }
+      const lowest = liveFoes.slice().sort((a, b) => (a.khiHuyet || 0) - (b.khiHuyet || 0))[0];
+      if (lowest && lowest.ma !== target.ma && (lowest.khiHuyet || 0) < (target.khiHuyet || 0) * 0.35 && !failedActions.has('muc_tieu:' + lowest.ma)) {
+        return { loai: 'muc_tieu', ma: lowest.ma };
       }
     }
 
@@ -7136,59 +7163,141 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       for (const fam of tran.familiars) {
         if (fam && (fam.trenSan || !fam.thuHoi) && fam.khiHuyet && fam.khiHuyetToiDa) {
           const petHpRatio = fam.khiHuyet / fam.khiHuyetToiDa;
-          if (petHpRatio < 0.25) {
+          if (petHpRatio < 0.25 && !failedActions.has('thu_hoi:' + fam.id)) {
             return { loai: 'thu_hoi', id: fam.id };
           }
         }
       }
     }
 
-    // 3. CỨU SINH / BÙ MÁU THÔNG MINH (Smart Pill Healing)
+    // 3. CỨU SINH / BÙ MÁU & LINH LỰC THÔNG MINH (Smart Pill & Spirit System)
     const itemsUsed = ta.itemsThisTurn || 0;
-    const canUseItem = itemsUsed < 2;
+    const canUseItem = itemsUsed < 10 && ta.tui;
     const hpRatio = ta.khiHuyet / Math.max(1, ta.khiHuyetToiDa);
     const hpThreshold = (cfg.healHpThreshold != null ? cfg.healHpThreshold : 35) / 100;
-    const maxResist = (cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70) / 100;
-    const curResist = (ta.drugResistTran && ta.drugResistTran['khi_huyet']) || 0;
 
-    if (canUseItem && !ta.danLuotNay && hpRatio < hpThreshold && curResist <= maxResist && ta.tui) {
-      const maxGrade = cfg.maxPillGrade || 4;
+    // Tính Dược Kháng thực tế: % Kháng = (1 - retention^exp) * 100
+    const retention = ta.drugRetention != null ? ta.drugRetention : 0.85;
+    const curResistExp = (ta.drugResistTran && ta.drugResistTran['khi_huyet']) || 0;
+    const curResistPct = Math.round((1 - Math.pow(retention, curResistExp)) * 100);
+    const maxResist = cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70;
+    // Khi máu cực thấp (< 20%), giữ mạng là trên hết, bỏ qua trần dược kháng!
+    const allowHealPill = (hpRatio < 0.20) || (curResistPct <= maxResist);
+
+    // 3A. Nuốt đan hồi phục Khí Huyết (Heal Pill)
+    if (canUseItem && !ta.danLuotNay && hpRatio < hpThreshold && allowHealPill) {
+      const maxGrade = cfg.maxPillGrade || 5;
+      const missingHp = ta.khiHuyetToiDa - ta.khiHuyet;
       let bestPill = null;
+      let bestScore = Infinity;
+      let bestCount = 1;
+
       for (const [id, count] of Object.entries(ta.tui)) {
-        if (!count || count <= 0) continue;
+        if (!count || count <= 0 || failedActions.has('dan:' + id)) continue;
         const it = Cc.items && Cc.items.get(id);
-        if (!it || it.loai !== 'dan_duoc') continue;
+        if (!it || it.loai !== 'dan_duoc' || !it.tran) continue;
+        if (it.tran.bo_chay) continue;
         if (it.pham_cap && it.pham_cap > maxGrade) continue;
-        const isHeal = (it.chieu && /hồi|trị|khí huyết/i.test(it.chieu.ten || '')) ||
-                       /hồi|trị thương|khí huyết/i.test(it.mo_ta || '') ||
-                       (it.tag && it.tag.includes('tri_thuong'));
-        if (isHeal) {
-          const grade = it.pham_cap || 1;
-          if (!bestPill || grade < (bestPill.pham_cap || 1)) {
-            bestPill = it;
-          }
+        if (!(it.tran.khi_huyet && it.tran.khi_huyet > 0)) continue;
+
+        if (S.core && S.core.chanDungDo) {
+          try { if (S.core.chanDungDo(tran, it) !== undefined) continue; } catch (e) {}
+        }
+        if (S.core && S.core.pillWasted) {
+          try { if (S.core.pillWasted(ta, it)) continue; } catch (e) {}
+        }
+
+        let estOne = 0;
+        if (S.core && S.core.estimatePillRestore) {
+          try { estOne = S.core.estimatePillRestore(ta, it).khiHuyet; } catch (e) {}
+        }
+        if (!estOne || estOne <= 0) {
+          const eff = Math.pow(retention, curResistExp);
+          estOne = Math.round(ta.khiHuyetToiDa * it.tran.khi_huyet * eff);
+        }
+        if (estOne <= 0) estOne = 1;
+
+        const neededCount = Math.min(count, Math.max(1, Math.min(3, Math.ceil(missingHp / estOne))));
+        const totalEst = estOne * neededCount;
+        const diff = Math.abs(missingHp - totalEst);
+        const score = diff + (it.pham_cap || 1) * 20;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestPill = it;
+          bestCount = neededCount;
         }
       }
+
       if (bestPill) {
-        return { loai: 'dan', item: bestPill.id, so: 1 };
+        return { loai: 'dan', item: bestPill.id, so: bestCount };
       }
     }
 
-    // 4. DỰ BÁO ĐỠ ĐÒN / DỰNG HỘ THUẪN (Predictive Shielding)
-    if (canUseItem && cfg.smartShield !== false && ta.tui) {
+    // 3B. Nuốt đan hồi Linh Lực khi cạn kiệt (Spirit Pill)
+    const mpRatio = (ta.linhLuc || 0) / Math.max(1, ta.linhLucToiDa || 1);
+    const spiritThreshold = (cfg.spiritThreshold != null ? cfg.spiritThreshold : 20) / 100;
+    if (canUseItem && !ta.danLuotNay && (mpRatio < spiritThreshold || (ta.linhLuc || 0) < 6)) {
+      const maxGrade = cfg.maxPillGrade || 5;
+      let bestSpiritPill = null;
+      for (const [id, count] of Object.entries(ta.tui)) {
+        if (!count || count <= 0 || failedActions.has('dan:' + id)) continue;
+        const it = Cc.items && Cc.items.get(id);
+        if (!it || it.loai !== 'dan_duoc' || !it.tran) continue;
+        if (it.tran.bo_chay) continue;
+        if (it.pham_cap && it.pham_cap > maxGrade) continue;
+        if (!(it.tran.linh_luc && it.tran.linh_luc > 0)) continue;
+
+        if (S.core && S.core.chanDungDo) {
+          try { if (S.core.chanDungDo(tran, it) !== undefined) continue; } catch (e) {}
+        }
+        if (S.core && S.core.pillWasted) {
+          try { if (S.core.pillWasted(ta, it)) continue; } catch (e) {}
+        }
+
+        bestSpiritPill = it;
+        break;
+      }
+      if (bestSpiritPill) {
+        return { loai: 'dan', item: bestSpiritPill.id, so: 1 };
+      }
+    }
+
+    // 3C. Nuốt đan Bộc Phát khi đối đầu Boss / Tinh anh (Burst Pill)
+    const isBossOrElite = liveFoes.some((d) => d.muc === 'boss' || d.muc === 'tinh_anh');
+    if (canUseItem && !ta.danLuotNay && cfg.useBurstPill !== false && isBossOrElite && !ta.bocPhatDen && !ta.bocPhatTuDan) {
+      const maxGrade = cfg.maxPillGrade || 5;
+      let burstPill = null;
+      for (const [id, count] of Object.entries(ta.tui)) {
+        if (!count || count <= 0 || failedActions.has('dan:' + id)) continue;
+        const it = Cc.items && Cc.items.get(id);
+        if (!it || it.loai !== 'dan_duoc' || !it.tran) continue;
+        if (it.pham_cap && it.pham_cap > maxGrade) continue;
+        if (it.tran.bao_phat && it.tran.bao_phat > 0) {
+          burstPill = it;
+          break;
+        }
+      }
+      if (burstPill) {
+        return { loai: 'dan', item: burstPill.id, so: 1 };
+      }
+    }
+
+    // 4. DỰ BÁO ĐỠ ĐÒN / DỰNG HỘ THUẪN PHÙ (Predictive Talisman Shield)
+    if (canUseItem && cfg.smartShield !== false) {
       const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
       const foeIntent = target.yDinh || '';
       const isHeavyAttack = /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich/i.test(foeIntent) ||
                             (target.anTuc === 0 && target.linhLuc && target.linhLuc > 30);
       if (isHeavyAttack && curShield < ta.khiHuyetToiDa * 0.25) {
-        const maxGrade = cfg.talismanGrade || 4;
+        const maxGrade = cfg.talismanGrade || 5;
         let shieldTalisman = null;
         for (const [id, count] of Object.entries(ta.tui)) {
-          if (!count || count <= 0) continue;
+          if (!count || count <= 0 || failedActions.has('dan:' + id)) continue;
           const it = Cc.items && Cc.items.get(id);
-          if (!it || it.loai !== 'phu_chu') continue;
+          if (!it || it.loai !== 'phu_luc' || !it.tran) continue;
           if (it.pham_cap && it.pham_cap > maxGrade) continue;
-          if (/kim cương|hộ thân|hộ thuẫn|bảo mệnh|thuẫn/i.test(it.ten || '') || (it.tag && it.tag.includes('thuẫn'))) {
+          if (it.tran.thuan && it.tran.thuan > 0) {
             shieldTalisman = it;
             break;
           }
@@ -7204,60 +7313,77 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     const curRound = tran.hiep || 1;
     const usableSkills = skills.filter((c) => {
       if (!c || !c.id) return false;
-      if (ta.hoi && ta.hoi[c.id] && ta.hoi[c.id] > curRound) return false;
-      if ((c.phi || 0) > (ta.linhLuc || 0)) return false;
+      if (failedActions.has('chieu:' + c.id)) return false;
+      if (S.core && S.core.chanChieu) {
+        try {
+          if (S.core.chanChieu(tran, c) !== undefined) return false;
+        } catch (e) {}
+      } else {
+        if (ta.hoi && ta.hoi[c.id] && ta.hoi[c.id] > curRound) return false;
+        if ((c.phi || 0) > (ta.linhLuc || 0)) return false;
+        if (c.natal && (ta.natalBrokenUntil || 0) >= curRound) return false;
+        if (c.bloodYears && ta.khiHuyet < ta.khiHuyetToiDa * 0.15) return false;
+        if (c.lenh && (!tran.familiars || !tran.familiars.some((f) => f.trenSan))) return false;
+      }
       return true;
     });
 
-    if (usableSkills.length > 0) {
-      // A. Buff / Hỗ trợ: Nếu chưa bộc phát và có chiêu buff
-      if (cfg.comboSequence !== false) {
-        const buffSkill = usableSkills.find((c) => (c.dang === 'buff' || c.dang === 'ho_tro' || /bộc phát|tăng công|cuồng nộ/i.test(c.ten || '')));
-        if (buffSkill && !ta.bocPhatDen) {
-          return { loai: 'chieu', id: buffSkill.id };
-        }
-      }
-
-      // B. Khống chế ngắt chiêu địch
-      const isImmune = (target.controlImmunity && target.controlImmunity > 0) || (target.mienDen && target.mienDen >= curRound);
-      if (!isImmune && cfg.smartCc !== false) {
-        const ccSkill = usableSkills.find((c) => (c.controlChance && c.controlChance > 0) || (c.controlTurns && c.controlTurns > 0) || /choáng|định thân|trầm mặc|trói/i.test(c.ten || ''));
-        if (ccSkill) {
-          return { loai: 'chieu', id: ccSkill.id };
-        }
-      }
-
-      // C. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
-      if (!tran.natalUsed) {
-        const natalSkill = usableSkills.find((c) => c.natal);
-        if (natalSkill) {
-          return { loai: 'chieu', id: natalSkill.id };
-        }
-      }
-
-      // D. Chiêu Tấn Công Tối Ưu (Khắc hệ & Mana Efficiency)
-      const attackSkills = usableSkills.filter((c) => c.dang === 'cong' || c.uy > 0 || !c.dang);
-      if (attackSkills.length > 0) {
-        const scored = attackSkills.map((c) => {
-          let score = (c.uy || 1);
-          if (c.he && target.he) {
-            try {
-              const heP = S.core && S.core.heSoHe ? S.core.heSoHe(c.he, target) : 1;
-              score *= heP;
-            } catch (e) {}
-          }
-          if ((target.khiHuyet || 0) < 50 && (c.phi || 0) > 15) {
-            score *= 0.5;
-          }
-          return { c, score };
-        });
-        scored.sort((a, b) => b.score - a.score);
-        return { loai: 'chieu', id: scored[0].c.id };
+    // 5A. Buff / Hỗ trợ: Nếu chưa bộc phát và có chiêu buff
+    if (usableSkills.length > 0 && cfg.comboSequence !== false && !ta.bocPhatDen) {
+      const buffSkill = usableSkills.find((c) => (c.dang === 'buff' || c.dang === 'ho_tro' || /bộc phát|tăng công|cuồng nộ/i.test(c.ten || '')));
+      if (buffSkill) {
+        return { loai: 'chieu', id: buffSkill.id };
       }
     }
 
-    // 6. QUYỀN CƯỚC MIỄN PHÍ (Basic Attack - danh_thuong)
-    if (cfg.autoNormalAttack !== false && !ta.daDanhThuong) {
+    // 5B. Khống chế ngắt chiêu địch khi địch chuẩn bị tung đòn nặng
+    const isImmune = (target.controlImmunity && target.controlImmunity > 0) || (target.mienDen && target.mienDen >= curRound);
+    if (!isImmune && cfg.smartCc !== false && usableSkills.length > 0) {
+      const ccSkill = usableSkills.find((c) => (c.controlChance && c.controlChance > 0) || (c.controlTurns && c.controlTurns > 0) || /choáng|định thân|trầm mặc|trói/i.test(c.ten || ''));
+      if (ccSkill) {
+        return { loai: 'chieu', id: ccSkill.id };
+      }
+    }
+
+    // 5C. TẬN DỤNG QUYỀN CƯỚC DỨT ĐIỂM (Normal Attack Finisher)
+    // Nếu địch còn ít máu có thể chết ngay bằng Quyền Cước -> Đánh thường luôn để tiết kiệm 100% mana và giữ chiêu cho hiệp sau!
+    if (cfg.autoNormalAttack !== false && !ta.daDanhThuong && !failedActions.has('danh_thuong')) {
+      if ((target.khiHuyet || 0) <= estNormalDmg) {
+        return { loai: 'danh_thuong' };
+      }
+    }
+
+    // 5D. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
+    if (!tran.natalUsed && usableSkills.length > 0) {
+      const natalSkill = usableSkills.find((c) => c.natal);
+      if (natalSkill) {
+        return { loai: 'chieu', id: natalSkill.id };
+      }
+    }
+
+    // 5E. Chiêu Tấn Công Tối Ưu (Khắc hệ & Mana Efficiency)
+    const attackSkills = usableSkills.filter((c) => c.dang === 'cong' || c.uy > 0 || !c.dang);
+    if (attackSkills.length > 0) {
+      const scored = attackSkills.map((c) => {
+        let score = (c.uy || 1);
+        if (c.he && target.he) {
+          try {
+            const heP = S.core && S.core.heSoHe ? S.core.heSoHe(c.he, target) : 1;
+            score *= heP;
+          } catch (e) {}
+        }
+        if ((target.khiHuyet || 0) < 50 && (c.phi || 0) > 15) {
+          score *= 0.5;
+        }
+        return { c, score };
+      });
+      scored.sort((a, b) => b.score - a.score);
+      return { loai: 'chieu', id: scored[0].c.id };
+    }
+
+    // 6. QUYỀN CƯỚC MIỄN PHÍ MỖI LƯỢT (Basic Attack - danh_thuong)
+    // Sau khi đã tung hết chiêu (hoặc không còn chiêu nào dùng được), luôn vung Quyền Cước trước khi kết lượt
+    if (cfg.autoNormalAttack !== false && !ta.daDanhThuong && !failedActions.has('danh_thuong')) {
       return { loai: 'danh_thuong' };
     }
 
@@ -7266,32 +7392,57 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
   }
 
   // Đánh tự động bằng AI trong trận khi game không cho Tốc Chiến (hoặc do người chơi kích hoạt)
-  function auFightStep() {
+  // singleAction: true nếu người chơi bấm "Đánh 1 Đòn" -> chỉ chạy đúng 1 hành động rồi dừng để quan sát
+  function auFightStep(singleAction) {
     const g = G(), c = C();
     if (!g) return 'idle';
     let tran = g.state.run && g.state.run.tran;
     if (!tran) return 'idle';
     if (tran.ketThuc) return 'ok';
+    if (tran.luot !== 'ta') return 'idle';
 
     const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
     let actionsThisTick = 0;
-    while (tran && !tran.ketThuc && actionsThisTick < 8) {
+    const failedActions = new Set();
+
+    while (tran && !tran.ketThuc && tran.luot === 'ta' && actionsThisTick < 10) {
       actionsThisTick++;
-      let act = smartCombatAction(tran, c, cfg);
+      let act = smartCombatAction(tran, c, cfg, failedActions);
       if (!act) {
-        if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false) {
+        if (tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
           act = { loai: 'danh_thuong' };
         } else {
           act = { loai: 'ket_luot' };
         }
       }
+
       const r = auCall(() => g.hanhDongTran(act));
       tran = g.state.run && g.state.run.tran;
+
       if (!r.ok) {
-        const rKet = auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
-        return rKet.ok ? 'ok' : { stop: 'Lỗi trận đấu: ' + (r.err || rKet.err) };
+        // Ghi nhận hành động lỗi để tránh lặp vô hạn
+        if (act.loai === 'chieu') failedActions.add('chieu:' + act.id);
+        else if (act.loai === 'dan') failedActions.add('dan:' + act.item);
+        else if (act.loai === 'danh_thuong') failedActions.add('danh_thuong');
+        else if (act.loai === 'muc_tieu') failedActions.add('muc_tieu:' + act.ma);
+
+        // Nếu còn quyền cước chưa đánh và lỗi không phải từ quyền cước, thử vung quyền cước trước khi kết lượt
+        if (tran && tran.ta && !tran.ta.daDanhThuong && cfg.autoNormalAttack !== false && !failedActions.has('danh_thuong')) {
+          const rQ = auCall(() => g.hanhDongTran({ loai: 'danh_thuong' }));
+          if (!rQ.ok) failedActions.add('danh_thuong');
+          tran = g.state.run && g.state.run.tran;
+        }
+
+        // Nếu đã thử nhiều lần mà vẫn lỗi hoặc hành động là kết lượt thì kết thúc lượt an toàn
+        if (failedActions.size >= 4 || act.loai === 'ket_luot') {
+          const rKet = auCall(() => g.hanhDongTran({ loai: 'ket_luot' }));
+          return rKet.ok ? 'ok' : { stop: 'Lỗi trận đấu: ' + (r.err || rKet.err) };
+        }
+        continue;
       }
+
       if (!tran || tran.ketThuc) return 'ok';
+      if (singleAction) break;
       if (act.loai === 'ket_luot') break;
     }
     return 'ok';
@@ -7340,7 +7491,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (btnStep) {
       btnStep.onclick = (e) => {
         e.stopPropagation();
-        auFightStep();
+        auFightStep(true);
       };
     }
 
@@ -7350,7 +7501,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         e.stopPropagation();
         combatAutoActive = !combatAutoActive;
         updateCombatOverlay();
-        if (combatAutoActive) auFightStep();
+        if (combatAutoActive) auFightStep(false);
       };
     }
   }
@@ -7360,7 +7511,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     if (combatAutoActive) {
       const g = G(), run = g && g.state && g.state.run;
       if (run && run.tran && run.tran.daGiaoChien && !run.tran.ketThuc && run.tran.luot === 'ta') {
-        auFightStep();
+        auFightStep(false);
       }
     }
   }
@@ -7388,7 +7539,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         if (!opt.danhAi) {
           return { stop: 'Trận đang giao chiến dở. Hãy đánh xong trong game rồi bấm chạy tiếp.' };
         }
-        return auFightStep();
+        return auFightStep(false);
       }
       const p = g.duKienTran();
       if (!p) return { stop: 'Không đọc được dự đoán của trận đang mở. Dừng để bạn tự đánh trong game.' };
@@ -8176,14 +8327,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       c.autoCombatOverlay = ck('au-tc-overlay', c.autoCombatOverlay);
       c.autoInCombat = ck('au-tc-auto-in-combat', c.autoInCombat);
       c.healHpThreshold = num0('au-tc-heal-hp', 10, 80, c.healHpThreshold);
+      c.spiritThreshold = num0('au-tc-spirit-mp', 0, 80, c.spiritThreshold != null ? c.spiritThreshold : 20);
       c.maxDrugResistance = num0('au-tc-max-resist', 20, 95, c.maxDrugResistance);
-      c.maxPillGrade = Math.floor(num0('au-tc-pill-grade', 1, 5, c.maxPillGrade));
-      c.talismanGrade = Math.floor(num0('au-tc-talisman-grade', 1, 5, c.talismanGrade));
+      c.maxPillGrade = Math.floor(num0('au-tc-pill-grade', 1, 8, c.maxPillGrade));
+      c.talismanGrade = Math.floor(num0('au-tc-talisman-grade', 1, 8, c.talismanGrade));
       c.smartShield = ck('au-tc-shield', c.smartShield);
       c.smartCc = ck('au-tc-cc', c.smartCc);
       c.saveFamiliars = ck('au-tc-familiars', c.saveFamiliars);
       c.autoNormalAttack = ck('au-tc-normal-attack', c.autoNormalAttack);
       c.comboSequence = ck('au-tc-combo', c.comboSequence);
+      c.useBurstPill = ck('au-tc-burst-pill', c.useBurstPill !== false);
       auSave(); return;
     }
     if (kind === 'km') {
@@ -8585,18 +8738,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <label style="display:flex;gap:6px;align-items:center;margin:8px 0;font-size:13.5px"><input type="checkbox" id="au-tc-overlay" ${c.autoCombatOverlay !== false ? 'checked' : ''}> <b>Hiển Thị Nút Nổi [⚡ Siêu Auto VIP] Trong Trận Đấu Của Game</b></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-in-combat" ${c.autoInCombat ? 'checked' : ''}> Tự động kích hoạt Siêu Auto ngay khi vừa bước vào trận</label>
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
-      <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚙️ Cứu Sinh & Bảo Vệ Tài Nguyên</div>
+      <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚙️ Cứu Sinh & Bảo Vệ Tài Nguyên (Đan Dược & Bùa)</div>
       ${auFld('au-tc-heal-hp', 'Ngưỡng Máu Tự Nuốt Đan Hồi Phục', c.healHpThreshold, '(% HP)')}
-      ${auFld('au-tc-max-resist', 'Dược Kháng Tối Đa Được Nuốt Đan', c.maxDrugResistance, '(% Kháng — chống lãng phí đan khi kháng 100%)')}
-      ${auFld('au-tc-pill-grade', 'Phẩm Cấp Đan Hồi Phục Tối Đa Được Dùng', c.maxPillGrade, '(1 – 5)')}
-      ${auFld('au-tc-talisman-grade', 'Phẩm Cấp Bùa Chú / Phù Tối Đa Được Dùng', c.talismanGrade, '(1 – 5)')}
+      ${auFld('au-tc-spirit-mp', 'Ngưỡng Linh Lực Tự Nuốt Đan Hồi Mana', c.spiritThreshold != null ? c.spiritThreshold : 20, '(% Linh Lực — tự hồi mana khi cạn kiệt)')}
+      ${auFld('au-tc-max-resist', 'Dược Kháng Tối Đa Được Nuốt Đan', c.maxDrugResistance, '(% Kháng — tự động tính theo hệ số hấp thụ, bỏ qua khi máu < 20%)')}
+      ${auFld('au-tc-pill-grade', 'Phẩm Cấp Đan Dược Tối Đa Được Dùng', c.maxPillGrade, '(1: Phàm → 8: Nghịch Thiên)')}
+      ${auFld('au-tc-talisman-grade', 'Phẩm Cấp Bùa Chú / Phù Tối Đa Được Dùng', c.talismanGrade, '(1: Phàm → 8: Nghịch Thiên)')}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-burst-pill" ${c.useBurstPill !== false ? 'checked' : ''}> <b>Nuốt Đan Bộc Phát (Burst):</b> Tự dùng đan bộc phát x1.5-x2 sát thương khi đánh Boss / Quái Tinh Anh</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-familiars" ${c.saveFamiliars !== false ? 'checked' : ''}> <b>Bảo Vệ Ngự Linh:</b> Tự động thu hồi thú cưng khi máu &lt; 25% và bị nhắm</label>
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
       <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚔️ Chiến Thuật & Xoay Vòng Kỹ Năng (Combo Rotation)</div>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-normal-attack" ${c.autoNormalAttack !== false ? 'checked' : ''}> <b>Luôn Đánh Quyền Cước Mỗi Lượt:</b> Miễn phí 0 linh lực, tăng 25% tổng DPS</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-normal-attack" ${c.autoNormalAttack !== false ? 'checked' : ''}> <b>Luôn Đánh Quyền Cước (danh_thuong) Mỗi Lượt:</b> 0 linh lực, dứt điểm quái yếu không hao mana, tăng 25% tổng DPS</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-shield" ${c.smartShield !== false ? 'checked' : ''}> <b>Dự Báo Phòng Ngự:</b> Dựng Hộ Thuẫn / Bùa Kim Cương trước khi boss tung đại chiêu</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-cc" ${c.smartCc !== false ? 'checked' : ''}> <b>Khống Chế Ngắt Chiêu:</b> Ưu tiên tung choáng / định thân khi địch chuẩn bị đòn nộ</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? 'checked' : ''}> <b>Chuỗi Combo Chuẩn:</b> Buff bộc phát → Phá giáp → Chiêu Khắc Hệ Ngũ Hành → Dứt điểm</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? 'checked' : ''}> <b>Chuỗi Combo Chuẩn:</b> Buff bộc phát → Quyền Cước / Phá giáp → Chiêu Khắc Hệ Ngũ Hành → Dứt điểm</label>
       <button class="vk-btn" id="au-tc-save" style="margin-top:10px;width:100%">Lưu Cấu Hình Tác Chiến</button>
     </div>`;
     body.querySelectorAll('input,select').forEach((el) => {
@@ -9748,7 +9903,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
     var HINT = 'Bản Mod chạy trong game, chỉ gồm phần Trợ Lý; số bản của Trợ Lý (Bản 2.x) được đánh riêng, độc lập với số Phiên Bản của Tool.';
 
     var LOG = [
-            { t: 'Phiên Bản 7.5.0 · Đại Tu Hướng Build & Tối Ưu Hóa Kinh Mạch Toàn Diện', d: '06/11/2026', now: true, pts: [
+            { t: 'Phiên Bản 7.6.0 · Đại Tu Siêu AI Tác Chiến: Sửa Lỗi Đan Dược, Khôi Phục Quyền Cước & Tác Chiến Hoàn Hảo', d: '06/11/2026', now: true, pts: [
+                '<b>Sửa Triệt Để Lỗi Không Dùng Đan Dược (dan_duoc):</b> Bóc tách trực tiếp mã nguồn game mới nhất, thay thế hoàn toàn bộ lọc regex cũ bằng thuộc tính chuẩn xác của lõi game (<code>it.tran.khi_huyet</code> cho đan hồi máu, <code>it.tran.linh_luc</code> cho đan hồi mana, <code>it.tran.bao_phat</code> cho đan tăng sát thương). Kết nối trực tiếp vào các hàm lõi <code>estimatePillRestore</code>, <code>chanDungDo</code>, và <code>pillWasted</code>.',
+                '<b>Tính Đúng Cơ Chế Dược Kháng & Nuốt Nhiều Viên (so: n):</b> Sửa công thức dược kháng lũy thừa thực tế <code>(1 - retention^exp) * 100%</code> thay vì so sánh nhầm số mũ với %, đồng thời tự động vượt trần kháng đan khi máu nguy kịch (&lt; 20%) để bảo toàn tính mạng. Tự động tính toán lượng máu thiếu để nuốt đúng số lượng viên cần thiết (<code>so: n</code>) giúp hồi phục thần tốc trong 1 lượt.',
+                '<b>Khôi Phục Triệt Để Quyền Cước (danh_thuong):</b> Sửa lỗi nghiêm trọng khiến quyền cước bị bỏ quên: sửa cơ chế chọn mục tiêu tự động chuyển sang quái sống khi mục tiêu hiện tại ngã xuống (loại bỏ lỗi "Không còn ai để nhắm" làm ngắt lượt); dệt đòn đánh thường miễn phí 0 linh lực vào đúng thời điểm sau khi buff bộc phát; tích hợp cơ chế <b>Quyền Cước Dứt Điểm</b> (kết liễu ngay quái yếu máu bằng đánh thường để tiết kiệm 100% linh lực và bảo lưu chiêu thức lớn).',
+                '<b>Sửa Lỗi Nút [Đánh 1 Đòn] Trên Thanh Nổi:</b> Nút "Đánh 1 Đòn" giờ đây thực hiện chuẩn xác đúng 1 hành động duy nhất (thay vì xả hết 8 hành động kết lượt như trước), giúp người chơi theo dõi từng nhịp xoay tua kỹ năng trực quan.',
+                '<b>Bổ Sung Cấu Hình Tự Nuốt Đan Hồi Linh Lực & Bộc Phát:</b> Bổ sung tùy chọn ngưỡng linh lực tự cắn đan hồi mana (mặc định 20% hoặc khi &lt; 6 linh lực không đủ ra chiêu) và tự động dùng đan bộc phát x1.5-x2 sát thương khi giáp mặt Boss / Quái Tinh Anh, mở rộng phẩm cấp đan/phù tối đa lên Phẩm 8 (Nghịch Thiên).'
+            ] },
+            { t: 'Phiên Bản 7.5.0 · Đại Tu Hướng Build & Tối Ưu Hóa Kinh Mạch Toàn Diện', d: '06/11/2026', now: false, pts: [
                 '<b>Phân Tích Tương Thích Ngũ Hành & Thể Chất Sâu Sắc (Hệ Thống Rank S/A/B/C/D):</b> Đánh giá toàn diện độ tương thích của từng hướng build dựa trên Linh Căn bản mệnh, Ngũ Hành Tương Sinh (Mẹ Dưỡng +15% / Con Trợ), Tương Khắc nghịch hệ (-15%), Thể Chất đắc đạo và phản phệ tà công, cùng số lượng trang bị phẩm cao/trấn phái đang có trong túi để xếp hạng trực quan.',
                 '<b>Hệ Thống 6 Meta Presets (Lối Chơi Tiên Tu 1-Chạm):</b> Trang bị bộ cấu hình nhanh cho mọi phong cách: ⚡ Bạo Sát Thần Tốc (dồn uy lực, phá giáp, bộc phát DPS), 🛡️ Bất Hoại Hộ Thể (dày khiên, khí huyết, hồi máu trường sinh), 🚀 Tốc Tu Đột Phá (tối đa tốc độ tu luyện, đột phá và kháng tâm ma), ❄️ Khống Chế Phong Tỏa (đóng băng, choáng, khóa lượt địch), 🩸 Ma Đạo Hút Huyết (tối đa ma niệm và hút máu), và 🎯 Tự Do. Tự động tinh chỉnh tỉ lệ ô và trọng số đánh giá món.',
                 '<b>Lộ Trình Thu Thập & Săn Tìm Món Còn Thiếu Chi Tiết:</b> Tự động phát hiện các món chưa có trong túi của build mục tiêu và bóc tách cụ thể: Quái/Boss rơi (kèm cảnh giới, thứ bậc & % tỉ lệ), Tàng Kinh Các tông môn, Cửa hàng/Chợ rẻ nhất, Công thức luyện chế, cùng nút <code>[🔍 Tra Cứu]</code> nhảy thẳng sang tab Vật Phẩm xem chi tiết chỉ trong 1 cú click.',
