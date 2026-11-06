@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.11.1
+// @version      7.11.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.11.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.11.1";
+      var TOOL_VER = "7.11.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -21527,6 +21527,59 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (opt.shopId && a.id === opt.shopId && g.shopView())
               return "idle";
             if (a.done) {
+              let encView = null;
+              try {
+                if (typeof g.encounterView === "function")
+                  encView = g.encounterView();
+              } catch (e) {}
+              const encTen = (encView && encView.ten) || a.ten || a.id;
+              const trans =
+                (encView && encView.transcript) || a.transcript || [];
+              const ketQua = (encView && encView.ketQua) || a.ketQua;
+
+              // Trích xuất kết quả kiểm định & lời kể diễn biến từ transcript của game
+              const resLines = trans.filter((t) => t.kind === "result");
+              if (resLines.length > 0) {
+                const resText = resLines
+                  .map((t) => t.text)
+                  .filter(Boolean)
+                  .join(" · ");
+                if (resText) {
+                  auLog(
+                    "🎲 Kết quả kiểm tra: " + resText,
+                    /thất bại/i.test(resText) ? "vk-warn" : "vk-ok",
+                  );
+                }
+              }
+              const narrateLines = trans.filter((t) => t.kind === "narrate");
+              if (narrateLines.length > 0) {
+                const lastNarrate = narrateLines[narrateLines.length - 1].text;
+                if (lastNarrate) {
+                  auLog("📜 Diễn biến: «" + lastNarrate.trim() + "»", "vk-mu");
+                }
+              } else if (ketQua) {
+                auLog("Kết quả: " + ketQua, "vk-mu");
+              }
+
+              // Cảnh báo tổn thương nếu thương thế tăng lên sau sự kiện
+              const curRunBeforeClose = G().state && G().state.run;
+              const curNv = curRunBeforeClose && curRunBeforeClose.nhanVat;
+              if (
+                curNv &&
+                curNv.thuongThe != null &&
+                st.lastThuongThe != null &&
+                curNv.thuongThe > st.lastThuongThe
+              ) {
+                const ttName =
+                  AU_TT_TEN[Math.min(AU_TT_MAX, curNv.thuongThe)] ||
+                  "Bậc " + curNv.thuongThe;
+                auLog(
+                  `⚠️ Tổn thương: Thương thế tăng lên mức «${ttName}» (${curNv.thuongThe}/${AU_TT_MAX}) do sự kiện gây ra!`,
+                  "vk-err",
+                );
+              }
+              st.lastThuongThe = (curNv && curNv.thuongThe) || 0;
+
               const isRelicEv =
                 opt.sdb &&
                 (a.id.startsWith("ev.di_bao") ||
@@ -21546,7 +21599,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 } else {
                   auLog(
                     "Đã kết thúc sự kiện «" +
-                      (a.ten || a.id) +
+                      encTen +
                       "» nhưng chưa nhận được Dị Bảo trong lần này.",
                     "vk-mu",
                   );
@@ -21752,6 +21805,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 /chiến|đánh/i.test(pick.text)) &&
               !pick.thoat
             );
+            // Ghi nhớ thương thế trước khi thực hiện lựa chọn
+            const curNvBefore = run.nhanVat;
+            st.lastThuongThe = (curNvBefore && curNvBefore.thuongThe) || 0;
+
+            const pickDesc =
+              (pick.text || "Lựa chọn") +
+              (pick.chance ? ` [${pick.chance}]` : "");
+            if (!isFightChoice) {
+              auLog(`» Chọn: «${pickDesc}»...`, "vk-mu");
+            }
             const r = auCall(() => g.choose(pick.index));
             if (!r.ok)
               return { stop: "Không chọn được “" + pick.text + "”: " + r.err };
@@ -23282,6 +23345,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
 
               // 2. Đã ở bên trong node nơi chốn: Kích hoạt sự kiện Dị Bảo
+              st.lastThuongThe = (nv && nv.thuongThe) || 0;
               auLog(
                 `Đã có mặt tại ${target.pName} (Slot ${target.slot}). Tiến vào sự kiện «${target.e.ten}» để đoạt ${target.title}...`,
                 "vk-ok",
@@ -28574,9 +28638,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.11.1 · Tối Ưu Huyệt Đạo & Khống Chế Hộ Thể Kinh Mạch",
+            t: "Phiên Bản 7.11.2 · Minh Bạch Nhật Ký Sự Kiện & Chi Tiết Kết Quả Kiểm Định",
             d: "06/11/2026",
             now: true,
+            pts: [
+              "<b>Trích Xuất Chi Tiết Diễn Biến & Kiểm Định Sự Kiện (Encounter Transcript):</b> Khi tự động giải quyết các sự kiện (đặc biệt là Dị Bảo, kỳ ngộ, thám hiểm), Tool nay tự động ghi nhận lựa chọn đã bấm kèm yêu cầu kiểm tra (ví dụ <code>[Ngộ tính +45]</code>), đồng thời trích xuất trực tiếp kết quả kiểm định (Thành công / Thất bại) và lời kể diễn biến của game (transcript narrate) lên bảng Nhật Ký Tác Vụ.",
+              "<b>Cảnh Báo Biến Động Thương Thế Thời Gian Thực:</b> Tự động phát hiện và cảnh báo tức thì khi nhân vật nhận thương tổn hoặc tăng bậc thương thế (Thương nhẹ / Thương nặng / Trọng thương) sau mỗi sự kiện, giúp đạo hữu nắm bắt chính xác nguyên nhân dẫn đến thương thế mà không cần mở console hay tìm trong nhật ký game.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.11.1 · Tối Ưu Huyệt Đạo & Khống Chế Hộ Thể Kinh Mạch",
+            d: "06/11/2026",
+            now: false,
             pts: [
               "<b>Tối Ưu Hóa Phủ Huyệt Đạo (Acupoint Optimization):</b> Thuật toán Auto Kinh Mạch tự động kiểm tra vị trí toàn bộ các huyệt (huyệt gốc đã lệch theo kiếp + huyệt phụ mở thêm qua <code>acupointsOf</code>), chủ động điều hướng đưa các mảnh chủ lực (chiêu công có uy lực lớn, công pháp / pháp khí phẩm cao, bị động cốt lõi) ngự lên huyệt để tối đa hóa hệ số buff ×2.0 ~ ×2.5 của game. Đồng thời áp dụng hình phạt nặng đối với ô huyệt mở được nhưng bị bỏ trống hoặc bị chiếm bởi mảnh rác / mảnh không thông.",
               "<b>Khống Chế Chỉ Số Hộ Thể Không Vượt Trần 60%:</b> Cơ chế game kẹp trần Hộ Thể tối đa 60% (<code>HO_THE_MAX</code>). Cả bộ đánh giá trạng thái (<code>makeEval / quick</code>), bộ lập kế hoạch build (<code>hbPlan</code>) và hàm định giá (<code>hbVal</code>) nay tự động kẹp trần, phạt điểm lãng phí đối với % hộ thể vượt mức 60%, không dồn thừa các mảnh hộ thể để nhường ô cho sát thương, linh lực, tốc độ tu luyện và tỉ lệ đột phá.",
