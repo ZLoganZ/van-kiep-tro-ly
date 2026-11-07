@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.7
+// @version      7.13.8
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.7
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.8
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.7";
+      var TOOL_VER = "7.13.8";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -20880,14 +20880,53 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           vua: ["Vừa", 40],
           cham: ["Chậm", 120],
         };
+        // ── Tính toán tổng tu vi lũy kế của nhân vật xuyên suốt mọi cảnh giới
+        function calcTotalTuVi(nv) {
+          if (!nv) return 0;
+          let total = 0;
+          try {
+            const K = S.core;
+            const step =
+              K && K.MINOR_REALM_STEP != null ? K.MINOR_REALM_STEP : 0.35;
+            const yuFallback = [20, 40, 130, 800, 2000, 4000];
+            const cgIndex = Number(nv.canhGioi || 0);
+            const tcIndex = Number(nv.tieuCanhGioi || 0);
+
+            for (let r = 0; r < cgIndex; r++) {
+              const cg = K && K.canhGioi ? K.canhGioi(r) : null;
+              const base =
+                cg && cg.tuViMoiTieu ? cg.tuViMoiTieu : yuFallback[r] || 20;
+              for (let t = 0; t <= 3; t++) {
+                total += Math.round(base * (1 + step * t));
+              }
+            }
+            const curCg = K && K.canhGioi ? K.canhGioi(cgIndex) : null;
+            const curBase =
+              curCg && curCg.tuViMoiTieu
+                ? curCg.tuViMoiTieu
+                : yuFallback[cgIndex] || 20;
+            for (let t = 0; t < tcIndex; t++) {
+              total += Math.round(curBase * (1 + step * t));
+            }
+            total += Number(nv.tuVi || 0);
+            if (typeof nv.binhCanh === "number" && nv.binhCanh > 0) {
+              total += nv.binhCanh;
+            }
+          } catch (e) {
+            total = Number((nv && nv.tuVi) || 0);
+          }
+          return total;
+        }
+
         // ── Kiểm tra và phân tích sự kiện tăng tu vi (Kỳ ngộ, Bí cảnh, Di tích...)
         const _tuViEncCache = new Map();
         function encGivesTuVi(encId) {
           if (!encId) return 0;
           if (_tuViEncCache.has(encId)) return _tuViEncCache.get(encId);
           let enc = null;
+          let Cc = null;
           try {
-            const Cc = C();
+            Cc = C();
             enc = Cc && Cc.encounters && Cc.encounters.get(encId);
           } catch (e) {}
           if (!enc) {
@@ -20901,6 +20940,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
               if (Number.isFinite(v) && v > maxTv) maxTv = v;
             }
+            if (obj.start_chain && typeof obj.start_chain === "string" && Cc && Cc.chains) {
+              const chDef = Cc.chains.get(obj.start_chain);
+              if (chDef && chDef.steps) {
+                for (const stp of Object.values(chDef.steps)) {
+                  if (stp && stp.encounter && stp.encounter !== encId) {
+                    const stpTv = encGivesTuVi(stp.encounter);
+                    if (stpTv > maxTv) maxTv = stpTv;
+                  }
+                }
+              }
+            }
             for (const v of Object.values(obj)) {
               if (typeof v === "object") walk(v);
             }
@@ -20910,15 +20960,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return maxTv;
         }
 
-        function findBestTuViChoice(encDef, availableChoices) {
+        function findBestTuViChoice(encDef, availableChoices, activeScene) {
           if (!encDef || !availableChoices || !availableChoices.length)
             return null;
+
+          const nonThoat = availableChoices.filter((c) => !c.thoat);
+          if (!nonThoat.length) return null;
+
+          // 1. Tìm lựa chọn mang lại nhiều tu_vi trực tiếp nhất
           let bestChoice = null;
           let maxTv = 0;
 
-          for (const ch of availableChoices) {
-            if (ch.thoat) continue;
-            const defChoice = encDef.choices && encDef.choices[ch.index];
+          // Nếu đang ở scene cụ thể thì lấy danh sách choices của scene đó
+          const sceneChoices =
+            activeScene && encDef.scenes && encDef.scenes[activeScene]
+              ? encDef.scenes[activeScene].choices
+              : null;
+          const choiceDefs = sceneChoices || encDef.choices || [];
+
+          for (const ch of nonThoat) {
+            const defChoice = choiceDefs[ch.index];
             if (!defChoice) continue;
 
             let chTv = 0;
@@ -20948,25 +21009,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           }
 
-          if (bestChoice) return { choice: bestChoice, tv: maxTv };
-
-          const nonThoat = availableChoices.filter(
-            (c) =>
-              !c.thoat &&
-              !/không|từ chối|lui|quay về|bỏ đi|kiếu|thôi/i.test(c.text || ""),
-          );
-          if (nonThoat.length > 0) {
-            const checkCh = nonThoat.find(
-              (c) =>
-                c.check ||
-                /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh/i.test(
-                  c.text || "",
-                ),
-            );
-            return { choice: checkCh || nonThoat[0], tv: 0 };
+          if (bestChoice && maxTv > 0) {
+            return { choice: bestChoice, tv: maxTv };
           }
 
-          return null;
+          // 2. Nếu chưa có nhánh nào có tu_vi trực tiếp ngay ở bước này (hoặc là bước dẫn tới scene khác):
+          // Ưu tiên các lựa chọn tiến lên / khảo nghiệm / mở / nhận / bế quan / tu luyện
+          const advanceChoice = nonThoat.find((c) => {
+            const txt = c.text || "";
+            return (
+              c.check ||
+              /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh|bước|quan sát|chiêm ngưỡng|soi|xem xét/i.test(
+                txt,
+              )
+            );
+          });
+          if (advanceChoice) return { choice: advanceChoice, tv: 0 };
+
+          // 3. Tránh các lựa chọn bỏ cuộc / rời đi / hẹn dịp khác
+          const activeChoice = nonThoat.find((c) => {
+            const txt = c.text || "";
+            return !/rời|bỏ|thôi|hẹn|không thèm|quay về|trở về|chạy/i.test(txt);
+          });
+
+          return { choice: activeChoice || nonThoat[0], tv: 0 };
         }
 
         function getItemPhaBinhCanh(it) {
@@ -22678,6 +22744,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
         function auPick(v, opt) {
           const cs = (v.choices || []).filter((c) => c.available);
+          if (encGivesTuVi(v.id) > 0) {
+            const encDef = C().encounters && C().encounters.get(v.id);
+            const bestTv = findBestTuViChoice(encDef, cs, v.scene);
+            if (bestTv && bestTv.choice) return bestTv.choice;
+            const nonThoat = cs.filter((c) => !c.thoat);
+            if (nonThoat.length > 0) return nonThoat[0];
+          }
           if (opt.hunt) {
             if (v.id === "ev.san_yeu" || v.id === "ev.truy_tim_yeu") {
               const c = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text));
@@ -22690,11 +22763,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (v.id === "ev.truy_tim_dau_dan") {
               const c = cs.find((x) => !x.thoat);
               if (c) return c;
-            }
-            if (encGivesTuVi(v.id) > 0) {
-              const encDef = C().encounters && C().encounters.get(v.id);
-              const bestTv = findBestTuViChoice(encDef, cs);
-              if (bestTv && bestTv.choice) return bestTv.choice;
             }
           }
           if (opt.sdb) {
@@ -22768,6 +22836,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             msg: "",
             nam0: g.state.run.nam,
             lt0: g.state.run.nhanVat.linhThach,
+            startTotalTuVi:
+              g.state.run.nhanVat && typeof calcTotalTuVi === "function"
+                ? calcTotalTuVi(g.state.run.nhanVat)
+                : 0,
+            tuViGained: 0,
             delay: (AU_TOC[AU.cfg[kind].toc] || AU_TOC.nhanh)[1],
             t0: performance.now(),
             retreatYearsDone: 0,
@@ -23331,61 +23404,65 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const seenEncs = new Set();
           const maxY = cfg.maxY || 3;
 
-          // 1. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
-          try {
-            const director = TT.core && TT.core["encounter/director"];
-            if (
-              director &&
-              typeof director.placeActivities === "function" &&
-              run
-            ) {
-              const curSlot =
-                run.oNoi != null
-                  ? String(run.oNoi)
-                  : run.viTri != null
-                    ? String(run.viTri)
-                    : null;
-              if (curSlot) {
-                const acts = director.placeActivities(c, curSlot);
+          // 1. Lấy danh sách các ô có thể đi tới trong bán kính maxY năm
+          const reachable = new Map();
+          const curSlotKey = run.viTri != null ? String(run.viTri) : null;
+          if (curSlotKey != null) reachable.set(curSlotKey, 0);
+          for (const ns of nearSlots(c, maxY)) {
+            reachable.set(String(ns.slot), ns.y);
+          }
+
+          const director = TT.core && TT.core["encounter/director"];
+
+          // 2. Quét từ director.placeActivities cho tất cả các ô có thể tới
+          if (director && typeof director.placeActivities === "function") {
+            for (const [slotStr, y] of reachable.entries()) {
+              if (
+                st &&
+                st.bad &&
+                (st.bad.has(slotStr) || st.bad.has(+slotStr))
+              )
+                continue;
+              const d = danger(c, slotStr);
+              if (d && !auColorOK(d.id, cfg.mau)) continue;
+
+              try {
+                const acts = director.placeActivities(c, slotStr);
                 if (Array.isArray(acts)) {
                   for (const a of acts) {
                     if (!a || !a.id || a.lockedReason) continue;
+                    const encKey = a.id + "@" + slotStr;
+                    if (seenEncs.has(encKey)) continue;
                     if (
                       st &&
                       st.skipEnc &&
-                      (st.skipEnc.has(a.id) ||
-                        st.skipEnc.has(a.id + "@" + curSlot))
+                      (st.skipEnc.has(a.id) || st.skipEnc.has(encKey))
                     )
                       continue;
                     if (
                       st &&
                       st.encAttempts &&
-                      (st.encAttempts[a.id + "@" + curSlot] || 0) >= 3
+                      (st.encAttempts[encKey] || 0) >= 3
                     )
                       continue;
+
                     const tv = encGivesTuVi(a.id);
                     if (tv <= 0) continue;
-                    seenEncs.add(a.id);
+
+                    seenEncs.add(encKey);
                     out.push({
-                      slot: run.viTri,
-                      y: 0,
+                      slot: /^\d+$/.test(slotStr) ? +slotStr : slotStr,
+                      y,
                       encId: a.id,
                       tv,
                       ten: a.ten || a.id,
                       source: "activity",
-                      d: danger(c, run.viTri),
+                      d,
                     });
                   }
                 }
-              }
+              } catch (e) {}
             }
-          } catch (e) {}
-
-          // 2. Lấy danh sách các ô có thể đi tới trong bán kính maxY năm
-          const reachable = new Map();
-          reachable.set(run.viTri, 0);
-          for (const ns of nearSlots(c, maxY)) {
-            reachable.set(ns.slot, ns.y);
           }
 
           // 3. Quét từ run.nodes (tất cả các node sự kiện thực tế đang nở trên bản đồ)
@@ -23398,40 +23475,61 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 n.hetHanNam <= nam
               )
                 continue;
+
               const encId = n.encounter;
-              if (seenEncs.has(encId)) continue;
+              const encKey = encId + "@" + slotStr;
+              if (seenEncs.has(encKey)) continue;
               if (
                 st &&
                 st.skipEnc &&
-                (st.skipEnc.has(encId) ||
-                  st.skipEnc.has(encId + "@" + slotStr))
+                (st.skipEnc.has(encId) || st.skipEnc.has(encKey))
+              )
+                continue;
+              if (
+                st &&
+                st.encAttempts &&
+                (st.encAttempts[encKey] || 0) >= 3
               )
                 continue;
 
               const tv = encGivesTuVi(encId);
               if (tv <= 0) continue;
 
-              const slot =
-                n.slot != null
-                  ? n.slot
-                  : /^\d+$/.test(slotStr)
-                    ? +slotStr
-                    : slotStr;
-              if (!reachable.has(slot)) continue;
-              if (st && st.bad && st.bad.has(slot)) continue;
+              if (!reachable.has(slotStr)) continue;
+              if (
+                st &&
+                st.bad &&
+                (st.bad.has(slotStr) || st.bad.has(+slotStr))
+              )
+                continue;
 
-              const y = reachable.get(slot);
-              const d = danger(c, slot);
+              const y = reachable.get(slotStr);
+              const d = danger(c, slotStr);
               if (d && !auColorOK(d.id, cfg.mau)) continue;
 
-              // Kiểm tra hồi chiêu lịch sử
-              if (run.history && run.history[encId] && nam != null) {
-                const h = run.history[encId];
-                const hc = 60;
-                if (nam - h.namCuoi < hc) continue;
-              }
+              // Kiểm tra giới hạn lần chạy trong run nếu có
+              try {
+                const Cc = C();
+                const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+                if (encDef && encDef.limits) {
+                  const h = run.history && run.history[encId];
+                  if (h) {
+                    if (
+                      encDef.limits.moi_run &&
+                      (h.lan || 0) >= encDef.limits.moi_run
+                    )
+                      continue;
+                    if (
+                      encDef.limits.hoi_chieu_nam &&
+                      nam != null &&
+                      nam - (h.namCuoi || 0) < encDef.limits.hoi_chieu_nam
+                    )
+                      continue;
+                  }
+                }
+              } catch (e) {}
 
-              seenEncs.add(encId);
+              seenEncs.add(encKey);
               let ten = encId;
               try {
                 const Cc = C();
@@ -23440,7 +23538,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               } catch (e) {}
 
               out.push({
-                slot,
+                slot: /^\d+$/.test(slotStr) ? +slotStr : slotStr,
                 y,
                 encId,
                 tv,
@@ -23453,50 +23551,81 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           // 4. Quét từ run.noiChon (các khu di tích, bí cảnh có sự kiện thường trú hoặc sự kiện kỳ ngộ)
           if (run.noiChon) {
-            for (const [slotKey, nc] of Object.entries(run.noiChon)) {
+            for (const [slotStr, nc] of Object.entries(run.noiChon)) {
               if (!nc) continue;
-              const slot = /^\d+$/.test(slotKey) ? +slotKey : slotKey;
-              if (!reachable.has(slot)) continue;
-              if (st && st.bad && st.bad.has(slot)) continue;
+              if (!reachable.has(slotStr)) continue;
+              if (
+                st &&
+                st.bad &&
+                (st.bad.has(slotStr) || st.bad.has(+slotStr))
+              )
+                continue;
 
-              const d = danger(c, slot);
+              const d = danger(c, slotStr);
               if (d && !auColorOK(d.id, cfg.mau)) continue;
 
+              const y = reachable.get(slotStr);
               const allPlaceEncs = [
                 ...(Array.isArray(nc.suKien) ? nc.suKien : []),
                 ...(Array.isArray(nc.contextual) ? nc.contextual : []),
                 ...(Array.isArray(nc.standing) ? nc.standing : []),
               ];
+
               for (const encId of allPlaceEncs) {
-                if (!encId || seenEncs.has(encId)) continue;
+                if (!encId) continue;
+                const encKey = encId + "@" + slotStr;
+                if (seenEncs.has(encKey)) continue;
                 if (
                   st &&
                   st.skipEnc &&
-                  (st.skipEnc.has(encId) ||
-                    st.skipEnc.has(encId + "@" + slot))
+                  (st.skipEnc.has(encId) || st.skipEnc.has(encKey))
                 )
                   continue;
+                if (
+                  st &&
+                  st.encAttempts &&
+                  (st.encAttempts[encKey] || 0) >= 3
+                )
+                  continue;
+
                 const tv = encGivesTuVi(encId);
                 if (tv <= 0) continue;
 
-                // Kiểm tra hồi chiêu lịch sử
-                if (run.history && run.history[encId] && nam != null) {
-                  const h = run.history[encId];
-                  const hc = 60;
-                  if (nam - h.namCuoi < hc) continue;
-                }
+                // Kiểm tra giới hạn run
+                try {
+                  const Cc = C();
+                  const encDef =
+                    Cc && Cc.encounters && Cc.encounters.get(encId);
+                  if (encDef && encDef.limits) {
+                    const h = run.history && run.history[encId];
+                    if (h) {
+                      if (
+                        encDef.limits.moi_run &&
+                        (h.lan || 0) >= encDef.limits.moi_run
+                      )
+                        continue;
+                      if (
+                        encDef.limits.hoi_chieu_nam &&
+                        nam != null &&
+                        nam - (h.namCuoi || 0) < encDef.limits.hoi_chieu_nam
+                      )
+                        continue;
+                    }
+                  }
+                } catch (e) {}
 
-                seenEncs.add(encId);
+                seenEncs.add(encKey);
                 let ten = encId;
                 try {
                   const Cc = C();
-                  const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+                  const encDef =
+                    Cc && Cc.encounters && Cc.encounters.get(encId);
                   if (encDef && encDef.ten) ten = encDef.ten;
                 } catch (e) {}
 
                 out.push({
-                  slot,
-                  y: reachable.get(slot),
+                  slot: /^\d+$/.test(slotStr) ? +slotStr : slotStr,
+                  y,
                   encId,
                   tv,
                   ten,
@@ -23508,8 +23637,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           return out.sort((a, b) => {
-            const aHere = a.slot === run.viTri || a.slot === run.oNoi;
-            const bHere = b.slot === run.viTri || b.slot === run.oNoi;
+            const aHere =
+              String(a.slot) === String(run.viTri) ||
+              String(a.slot) === String(run.oNoi);
+            const bHere =
+              String(b.slot) === String(run.viTri) ||
+              String(b.slot) === String(run.oNoi);
             if (aHere && !bHere) return -1;
             if (!aHere && bHere) return 1;
             const effA = a.tv / Math.max(0.2, a.y);
@@ -24103,7 +24236,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (tvSpots.length > 0) {
                 const targetTv = tvSpots[0];
                 const isHere =
-                  targetTv.slot === run.viTri || targetTv.slot === run.oNoi;
+                  String(targetTv.slot) === String(run.viTri) ||
+                  String(targetTv.slot) === String(run.oNoi);
 
                 if (isHere) {
                   // Đang ở đúng nơi có sự kiện tăng tu vi
@@ -24119,20 +24253,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     st.skipEnc.add(targetTv.encId);
                     st.skipEnc.add(encKey);
                   } else {
-                    // Nếu chưa vào node thì vào node trước
+                    // Nếu chưa vào nơi chốn thì vào nơi chốn trước để g.chooseActivity không bị lỗi "Không ở nơi chốn nào"
                     if (String(run.oNoi) !== String(targetTv.slot)) {
+                      if (typeof g.enterPlace === "function") {
+                        try {
+                          g.enterPlace(String(targetTv.slot));
+                        } catch (ePlace) {}
+                      }
                       if (typeof g.enterNode === "function") {
-                        auLog(
-                          `Tiến vào nơi chốn để tham gia «${targetTv.ten}»...`,
-                          "vk-ok",
-                        );
-                        g.enterNode(String(targetTv.slot));
-                        const rEnter = G().state && G().state.run;
-                        if (
-                          rEnter &&
-                          (rEnter.active || rEnter.tran || rEnter.bienCo)
-                        )
-                          return null;
+                        try {
+                          g.enterNode(String(targetTv.slot));
+                        } catch (eNode) {}
+                      }
+                      const rEnter = G().state && G().state.run;
+                      if (
+                        rEnter &&
+                        (rEnter.active || rEnter.tran || rEnter.bienCo)
+                      ) {
+                        st.tried = 0;
+                        return null;
                       }
                     }
 
@@ -24142,13 +24281,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       "vk-ok",
                     );
                     let rAct = auCall(() => {
-                      if (typeof g.chooseActivity === "function") {
+                      if (
+                        targetTv.source === "activity" &&
+                        typeof g.chooseActivity === "function"
+                      ) {
                         try {
                           g.chooseActivity(targetTv.encId);
                         } catch (e1) {
                           if (typeof g.doAction === "function")
                             g.doAction(targetTv.encId);
                           else throw e1;
+                        }
+                      } else if (typeof g.chooseActivity === "function") {
+                        try {
+                          g.chooseActivity(targetTv.encId);
+                        } catch (e2) {
+                          if (typeof g.doAction === "function")
+                            g.doAction(targetTv.encId);
+                          else throw e2;
                         }
                       } else if (typeof g.doAction === "function") {
                         g.doAction(targetTv.encId);
@@ -24191,12 +24341,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   const r2 = G().state && G().state.run;
                   if (
                     !r.ok ||
-                    (r2.viTri !== targetTv.slot &&
+                    (String(r2.viTri) !== String(targetTv.slot) &&
                       !r2.active &&
                       !r2.tran &&
                       !r2.bienCo)
                   ) {
                     st.bad.add(targetTv.slot);
+                    st.bad.add(String(targetTv.slot));
                     auLog(
                       `Không thể đi tới ô sự kiện ${targetTv.slot}: ${r.err || "bị chặn"}`,
                       "vk-mu",
@@ -26299,6 +26450,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               AU.cfg.tl.mode === "danh_quai"
                 ? "⚔️ Đánh Quái (Săn Yêu Thú)"
                 : "🧘 Bế Quan (Nhập Định)",
+            ]);
+            // Tính toán tổng lượng tu vi đã tăng trong phiên Auto
+            try {
+              const runNow = G().state && G().state.run;
+              if (
+                runNow &&
+                runNow.nhanVat &&
+                typeof calcTotalTuVi === "function"
+              ) {
+                const nowTotal = calcTotalTuVi(runNow.nhanVat);
+                if (st.startTotalTuVi == null) st.startTotalTuVi = nowTotal;
+                st.tuViGained = Math.max(0, nowTotal - st.startTotalTuVi);
+              }
+            } catch (e) {}
+            rows.push([
+              "Tu Vi Đã Tăng",
+              '<b class="vk-ok" style="color:var(--acc, #10b981)">+' +
+                num(Math.round((st.tuViGained || 0) * 10) / 10) +
+                "</b>",
             ]);
             if (AU.cfg.tl.mode === "danh_quai") {
               rows.push([
@@ -30479,9 +30649,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.7 · Thích Ứng Bản Cập Nhật Trần Dược Kháng & Cân Bằng Đạo Lộ Game",
+            t: "Phiên Bản 7.13.8 · Mở Rộng Dò Tìm Sự Kiện Tu Vi & Bổ Sung Bảng Tu Vi Đã Tăng",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Mở Rộng Quét 100% Hoạt Động & Sự Kiện Tăng Tu Vi:</b> Khắc phục triệt để hạn chế trước đây chỉ quét hoạt động tại ô đang đứng. Thuật toán mới tự động quét toàn bộ hơn 380 sự kiện tăng tu vi (kỳ ngộ, di tích, bí cảnh, đầm lầy, thư viện môn phái...) trong toàn bộ bán kính di chuyển qua <code>placeActivities</code>, <code>run.nodes</code> và <code>run.noiChon</code>.",
+              "<b>Gỡ Bỏ Rào Cản Hồi Chiêu & Sửa Lỗi Điều Hướng Nơi Chốn:</b> Bỏ qua giới hạn hồi chiêu cứng 60 năm lỗi thời, đồng bộ chuẩn xác với cấu hình <code>limits.moi_run</code> và <code>limits.hoi_chieu_nam</code> của game. Tự động gọi <code>enterPlace</code>/<code>enterNode</code> khi đến địa điểm giúp <code>chooseActivity</code> kích hoạt tức thì không bị lỗi 'Không ở nơi chốn nào', đồng thời sửa lỗi so sánh slot ngăn chặn việc đánh dấu nhầm ô sự kiện vào danh sách đen.",
+              "<b>Đưa Lựa Chọn Tu Vi Lên Đầu & Tránh Rút Lui Sớm:</b> Nâng cấp cơ chế ra quyết định <code>auPick</code>, luôn đặt lựa chọn tăng tu vi và vượt khảo nghiệm lên mức ưu tiên cao nhất trong mọi nhánh kịch bản (kể cả sự kiện phân nhánh và chuỗi liên hoàn <code>start_chain</code>), tuyệt đối không bỏ chạy sớm.",
+              "<b>Thêm Dòng 'Tu Vi Đã Tăng' Trong Thống Kê Auto:</b> Tích hợp công thức tính lũy kế tu vi chính xác từ cảnh giới lớn, tiểu cảnh giới, tu vi hiện tại và điểm phá bình cảnh. Hiển thị trực quan theo thời gian thực <b>Tu Vi Đã Tăng: +X</b> giúp đạo hữu dễ dàng theo dõi hiệu quả cày tu vi của Auto."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.7 · Thích Ứng Bản Cập Nhật Trần Dược Kháng & Cân Bằng Đạo Lộ Game",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Đồng Bộ Bản Build Game Mới (index-pyGvwuOa.js & content-AFgvANiO.json):</b> Hoàn tất quy trình kiểm tra 6 bước theo dõi bản cập nhật mới nhất từ nhà phát triển game; kiểm tra 100% các module gọi lõi qua <code>window.tuTien.core</code> bảo đảm tính tương thích và bảo mật Stealth tuyệt đối.",
               "<b>Thích Ứng Cơ Chế Trần Dược Kháng Theo Cảnh Giới (drugUsesPerRealm & drugCapped):</b> Game bổ sung cơ chế giới hạn số viên đan dược thấm trong một cảnh giới ở các Đạo Lộ khắc nghiệt (Nghịch Thiên trần 3 viên/cảnh giới, Tuyệt Mệnh trần 2 viên/cảnh giới). Tool nay tự động kiểm tra trần dược kháng qua <code>drugCapped</code> và <code>realmDrugUses</code>, ngăn chặn hoàn toàn việc spam đan dược đã kháng khi bế quan hoặc cắn đan phá bình cảnh.",
