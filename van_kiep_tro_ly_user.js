@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.8
+// @version      7.14.9
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.8
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.9
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.8";
+      var TOOL_VER = "7.14.9";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -19811,6 +19811,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
           body.querySelectorAll('[id^="au-km-"]').forEach((el) => {
             el.onchange = () => {
+              if (el.id === "au-km-tayo-cg") {
+                cfg.tayO = !!el.checked;
+                const other = body.querySelector("#au-km-tayo");
+                if (other) other.checked = cfg.tayO;
+              } else if (el.id === "au-km-tayo") {
+                cfg.tayO = !!el.checked;
+                const other = body.querySelector("#au-km-tayo-cg");
+                if (other) other.checked = cfg.tayO;
+              }
               const oldKb = cfg.kb;
               auReadCfg("km");
               if (cfg.kb !== oldKb) {
@@ -27108,7 +27117,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const elCg = q("au-km-tayo-cg");
             const elAuto = q("au-km-tayo");
             if (elCg && elAuto) {
-              c.tayO = elCg.checked || elAuto.checked;
+              if (elCg.checked !== c.tayO && elAuto.checked === c.tayO) {
+                c.tayO = elCg.checked;
+              } else if (elAuto.checked !== c.tayO && elCg.checked === c.tayO) {
+                c.tayO = elAuto.checked;
+              } else if (elCg.checked === elAuto.checked) {
+                c.tayO = elCg.checked;
+              } else {
+                c.tayO = elAuto.checked;
+              }
               elCg.checked = c.tayO;
               elAuto.checked = c.tayO;
             } else if (elCg) {
@@ -31507,9 +31524,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.8 · Tối Ưu Cân Bằng Linh Lực & Khắc Phục Bội Thực Chiêu Thức",
+            t: "Phiên Bản 7.14.9 · Sửa Lỗi Không Uncheck Được Tùy Chọn Tự Động Tẩy Ô",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Lỗi Đồng Bộ Checkbox Tẩy Ô:</b> Khắc phục triệt để lỗi xung đột logic khiến người dùng không thể bỏ chọn (uncheck) ô tích <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i>. Trước đây toán tử OR (<code>||</code>) giữa ô tích tại 'Cài Đặt Chung' và 'Auto Kinh Mạch' khiến việc bỏ chọn một bên bị bên kia tự động kích hoạt trở lại.",
+              "<b>Cơ Chế Đồng Bộ Hai Chiều Linh Hoạt:</b> Nay khi đạo hữu tích hoặc bỏ chọn ở bất kỳ vị trí nào ('Cài Đặt Chung' hoặc 'Auto Kinh Mạch'), cả hai ô đều tự động đồng bộ trạng thái ngay lập tức và lưu cấu hình chuẩn xác vào hệ thống."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.8 · Tối Ưu Cân Bằng Linh Lực & Khắc Phục Bội Thực Chiêu Thức",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Cân Bằng Tiêu Hao & Hồi Phục Linh Lực Thực Chiến:</b> Thuật toán tự động đo lường tương quan giữa Linh Lực hồi mỗi lượt / dung lượng tối đa và chi phí thi triển của các chiêu thức. Phạt nặng cấu hình 'đói linh lực' (không đủ linh lực xuất chiêu lớn, phải cắn đan dược trong trận). Thưởng lớn cấu hình 'Tự Cân Bằng Hoàn Hảo' (hồi phục dư dả, xoay chiêu mượt mà 100% không cần nuốt đan).",
               "<b>Đánh Giá Sát Thương Vòng Chiêu (Rotation) Thay Vì Cộng Dồn Thô:</b> Loại bỏ hiện tượng nhồi nhét 7–9 chiêu thức làm loãng kinh mạch. Áp dụng trọng số sát thương thực chiến giảm dần theo thứ tự ưu tiên (chiêu 1: 100%, chiêu 2: 65%, chiêu 3: 35%...). Phạt nặng hiện tượng bội thực chiêu (>4 active skills) để nhường đất kinh mạch cho các Tâm Pháp tăng mạnh Khí Huyết %, Hộ Thể %, Pháp Lực % và Tốc Độ.",
