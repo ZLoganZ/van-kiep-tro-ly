@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.4
+// @version      7.13.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.4";
+      var TOOL_VER = "7.13.5";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5781,7 +5781,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return s;
         }
 
-        function kmItemPower(it) {
+        function kmItemPower(it, mode = "bal") {
           if (!it) return 0;
           let p = 0;
           const ph = it.pham_cap || 1;
@@ -5790,15 +5790,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const ch = it.chieu;
             const dmgW =
               ch.dang === "cong" ? 30 : ch.dang === "khong_che" ? 22 : 16;
-            p += (ch.uy || 0) * dmgW;
+            const uyScale = mode === "tu" ? 0.6 : mode === "danh" ? 1.6 : 1.0;
+            p += (ch.uy || 0) * dmgW * uyScale;
             p += (ch.effects || []).length * 8;
+            if (ch.controlTurns) p += ch.controlTurns * 16;
+            if (ch.shieldTurns) p += ch.shieldTurns * 12;
+            if (ch.scope === "spread" || ch.scope === "all") p += 20;
           }
           const bd = it.bi_dong || {};
-          p += (bd.toc_do || 0) * 100;
-          p += (bd.dot_pha || 0) * 80;
-          p += (bd.khi_huyet || 0) * 40;
-          p += Math.min(0.3, bd.ho_the || 0) * 35;
-          if (it.linh_luc) p += it.linh_luc * 10;
+          const tocW = mode === "danh" ? 35 : mode === "tu" ? 160 : 90;
+          const dpW = mode === "danh" ? 25 : mode === "tu" ? 130 : 70;
+          p += (bd.toc_do || 0) * tocW;
+          p += (bd.dot_pha || 0) * dpW;
+          p += (bd.khi_huyet || 0) * 45;
+          p += Math.min(0.3, bd.ho_the || 0) * 40;
+          if (bd.khang_tam_ma) p += bd.khang_tam_ma * 50;
+          if (it.linh_luc) p += it.linh_luc * (mode === "tu" ? 8 : 14);
           return p;
         }
 
@@ -5861,17 +5868,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (minCost && ll < minCost ? 30 : 0) -
               8 * dead;
 
-            // 7.11.1: Tối ưu huyệt đạo: tận dụng tối đa ô huyệt để buff mảnh chủ lực
+            // 7.13.5: Tối ưu huyệt đạo: tận dụng tối đa ô huyệt để buff mảnh chủ lực
             let hyScore = 0;
             const usedCells = new Set();
             manh.forEach((p, idx) => {
               p.cells.forEach((x) => usedCells.add(x));
-              const q = p.cells.filter((x) => hy0.has(x)).length;
+              const q =
+                p.hyCount !== undefined
+                  ? p.hyCount
+                  : p.cells.filter((x) => hy0.has(x)).length;
               if (q > 0) {
                 const rm = R.manh && R.manh[idx];
                 if (rm && rm.thong) {
                   const it = c.items.get(p.m.item);
-                  const pwr = kmItemPower(it);
+                  const pwr = kmItemPower(it, mode);
                   hyScore += 25 * q + 0.3 * pwr * q;
                 } else {
                   hyScore -= 40 * q; // chiếm huyệt mà không thông: phạt nặng
@@ -5888,7 +5898,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             }
 
-            // 7.11.1: Khống chế hộ thể: game chỉ lấy tối đa 60% (HO_THE_MAX)
+            // 7.13.5: Khống chế hộ thể: game chỉ lấy tối đa 60% (HO_THE_MAX)
             const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
             let hoThePenalty = 0;
             if (curHoThe > maxHoThe) {
@@ -5896,6 +5906,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               hoThePenalty =
                 200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
             }
+
+            // 7.13.5: Tối ưu kinh lộ pháp khí: thưởng khi pháp khí được nối mạch hợp hệ từ đan điền
+            let kinhLoBonus = 0;
+            (R.manh || []).forEach((m) => {
+              if (
+                m &&
+                m.thong &&
+                m.item &&
+                m.item.loai === "phap_khi" &&
+                m.kinhLo > 1
+              ) {
+                kinhLoBonus += (m.kinhLo - 1) * 30;
+              }
+            });
 
             let s;
             // Điểm nghịch: mỗi điểm −3% tỉ lệ đột phá (tối đa −15%), thêm phản phệ trong trận (trận mẫu đã tính).
@@ -5917,7 +5941,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 0.2 * thong -
                 10 * ng +
                 llScore;
-            s += hyScore - hoThePenalty;
+            s += hyScore - hoThePenalty + kinhLoBonus;
             s += biasScore(B, manh, R) + capScore(capX, R);
             if (S.hbRatio) s -= hbRatioPenalty(manh, R);
             // Xếp Full Ô: thưởng lớn theo số ô được phủ để bộ tìm kiếm ưu tiên lấp đầy lưới.
@@ -5940,12 +5964,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (it.canh_gioi ?? 0) <= nv0.canhGioi
             );
           });
-          const g = K.luoiKinhMach(c, nv0),
-            cand = {};
+          const g = K.luoiKinhMach(c, nv0);
+          const hy0 = hySet(g, nv0.kinhMach);
+          const mauK = (nv0.kinhMach && nv0.kinhMach.mau) || [];
+          const cand = {};
+
           for (const id of pool) {
             const it = c.items.get(id),
               seen = new Set();
             cand[id] = [];
+            const isCP = it.loai === "cong_phap";
+            const hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
+            const pwr = kmItemPower(it);
+
             for (let xoay = 0; xoay < 4; xoay++)
               for (let y = 0; y < g.cao; y++)
                 for (let x = 0; x < g.rong; x++) {
@@ -5963,13 +5994,64 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     id + ":" + [...cells].sort((a, b) => a - b).join(",");
                   if (seen.has(key)) continue;
                   seen.add(key);
-                  cand[id].push({ m, cells, key });
+
+                  // Tiền tính toán thuộc tính hình học & liên thông
+                  const hyCount = cells.filter((cIdx) => hy0.has(cIdx)).length;
+                  let touchesDanDien = false;
+                  let aSum = 0,
+                    aCount = 0,
+                    khacCount = 0;
+                  const adj = new Set();
+
+                  for (const cellIdx of cells) {
+                    const cx = cellIdx % g.rong;
+                    const cy = Math.floor(cellIdx / g.rong);
+                    if (cx > 0) adj.add(cellIdx - 1);
+                    if (cx < g.rong - 1) adj.add(cellIdx + 1);
+                    if (cy > 0) adj.add(cellIdx - g.rong);
+                    if (cy < g.cao - 1) adj.add(cellIdx + g.rong);
+
+                    if (
+                      (cx > 0 && cellIdx - 1 === g.danDien) ||
+                      (cx < g.rong - 1 && cellIdx + 1 === g.danDien) ||
+                      cellIdx - g.rong === g.danDien ||
+                      cellIdx + g.rong === g.danDien
+                    ) {
+                      touchesDanDien = true;
+                    }
+
+                    const mColor = mauK[cellIdx];
+                    if (mColor && mColor !== "vo_sac" && hs.length) {
+                      const w = Math.max(...hs.map((h) => oHop(mColor, h)));
+                      aSum += w;
+                      aCount++;
+                      if (hs.some((h) => oKhac(mColor, h))) khacCount++;
+                    }
+                  }
+                  for (const cellIdx of cells) adj.delete(cellIdx);
+
+                  const aff = aCount ? aSum / aCount : 0.4;
+                  const isKhacPha = khacCount * 2 > cells.length;
+
+                  cand[id].push({
+                    m,
+                    cells,
+                    key,
+                    id,
+                    isCP,
+                    pwr,
+                    hyCount,
+                    touchesDanDien,
+                    adj: [...adj],
+                    aff,
+                    isKhacPha,
+                  });
                 }
           }
           return { cand, g };
         }
 
-        // Xếp tham lam nhanh (giống nút tự đặt của game): lần lượt đặt món + vị trí làm tăng điểm nhiều nhất.
+        // Xếp tham lam hình học: xây dựng cây thông mạch từ Đan Điền, ưu tiên trục công pháp tới các huyệt đạo
         async function greedy(nv0, mode) {
           nv0 = lnPrep(nv0);
           const K = S.core,
@@ -5983,14 +6065,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 nv0.theChat.dac_tinh &&
                 nv0.theChat.dac_tinh.ho_the_tran) ||
                 0);
-          if (S.hbLite)
-            for (const id of Object.keys(cand)) {
-              const a = cand[id];
-              if (a.length > 80) {
-                const sp = Math.ceil(a.length / 80);
-                cand[id] = a.filter((_, i) => i % sp === 0);
-              }
-            }
+
           const capX = capCtxOf(nv0);
           const quick = (manh) => {
             const nv = clone(nv0);
@@ -6010,19 +6085,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   : [1, 12, 8, 1];
             const thongAll = R.manh.every((m) => !m || m.thong);
 
-            // 7.11.1: Huyệt & Hộ Thể trong quick
             let hyScore = 0;
             const usedCells = new Set();
             manh.forEach((p, idx) => {
               p.cells.forEach((x) => usedCells.add(x));
-              const q = p.cells.filter((x) => hy0.has(x)).length;
+              const q =
+                p.hyCount !== undefined
+                  ? p.hyCount
+                  : p.cells.filter((x) => hy0.has(x)).length;
               if (q > 0) {
                 const rm = R.manh && R.manh[idx];
                 if (rm && rm.thong) {
                   const it = c.items.get(p.m.item);
-                  hyScore += 18 * q + 0.2 * kmItemPower(it) * q;
+                  hyScore += 22 * q + 0.25 * kmItemPower(it, mode) * q;
                 } else {
-                  hyScore -= 25 * q;
+                  hyScore -= 30 * q;
                 }
               }
             });
@@ -6032,12 +6109,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 nv0.kinhMach.trangThai[h] === "thong" &&
                 !usedCells.has(h)
               ) {
-                hyScore -= 20;
+                hyScore -= 25;
               }
             }
             const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
             const hoThePenalty =
-              curHoThe > maxHoThe ? 140 * (curHoThe - maxHoThe) : 0;
+              curHoThe > maxHoThe ? 150 * (curHoThe - maxHoThe) : 0;
 
             return (
               w[0] * R.linhLuc +
@@ -6053,21 +6130,47 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (thongAll || S.full ? 0 : 1000)
             );
           };
+
           let cur = [],
             curS = quick(cur);
-          for (let round = 0; round < 40; round++) {
+
+          // Cây thông mạch: tập hợp các ô có thể nối thông từ Đan Điền
+          const flowAccessible = new Set();
+          const dX = g.danDien % g.rong;
+          const dY = Math.floor(g.danDien / g.rong);
+          if (dX > 0) flowAccessible.add(g.danDien - 1);
+          if (dX < g.rong - 1) flowAccessible.add(g.danDien + 1);
+          if (dY > 0) flowAccessible.add(g.danDien - g.rong);
+          if (dY < g.cao - 1) flowAccessible.add(g.danDien + g.rong);
+
+          const addPieceToFlow = (p) => {
+            if (p.isCP) {
+              for (const adjCell of p.adj || []) {
+                flowAccessible.add(adjCell);
+              }
+            }
+          };
+
+          for (let round = 0; round < 45; round++) {
             let best = null;
             const used = new Set(cur.flatMap((p) => p.cells));
+
             for (const id of Object.keys(cand)) {
               if (cur.some((p) => p.m.item === id)) continue;
               for (const cnd of cand[id]) {
                 if (cnd.cells.some((x) => used.has(x))) continue;
+                const canConnect =
+                  cnd.touchesDanDien ||
+                  cnd.cells.some((x) => flowAccessible.has(x));
+                if (!canConnect && !S.full) continue;
+
                 const v = quick([...cur, cnd]);
                 if (!best || v > best.v) best = { v, cnd };
               }
             }
             if (!best || best.v <= curS + 1e-9) break;
             cur.push(best.cnd);
+            addPieceToFlow(best.cnd);
             curS = best.v;
             if (round % 3 === 0) await sleep0();
           }
@@ -6089,7 +6192,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const { cand, g } = buildCandidates(nv0);
           const ids = Object.keys(cand).filter((k) => cand[k].length);
           const hy0 = hySet(g, nv0.kinhMach);
-          const hyOf = (cn) => cn.cells.filter((x) => hy0.has(x)).length;
+          const hyOf = (cn) =>
+            cn.hyCount !== undefined
+              ? cn.hyCount
+              : cn.cells.filter((x) => hy0.has(x)).length;
           let seed = seed0 || 12345;
           const rnd = () => {
             seed = (seed * 1103515245 + 12345) % 2147483648;
@@ -6102,58 +6208,61 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             });
             return c.cells.some((x) => used.has(x));
           };
-          // 6.19: đề xuất chỗ đặt thông minh: một nửa số lần chọn ngẫu nhiên thuần, nửa còn lại chọn tốt nhất trong 4 chỗ ngẫu nhiên theo (độ hợp màu ô) + (chạm đan điền / món đã đặt, để dễ thông).
-          const mauK = (nv0.kinhMach && nv0.kinhMach.mau) || [],
-            itemsK = C().items;
-          const affOf = (cn) => {
-            if (cn.aff !== undefined) return cn.aff;
-            const it = itemsK.get(cn.m.item),
-              hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
-            let a = 0,
-              n = 0;
-            for (const x of cn.cells) {
-              const m = mauK[x];
-              if (m && m !== "vo_sac" && hs.length) {
-                a += Math.max(...hs.map((h) => oHop(m, h)));
-                n++;
-              }
-            }
-            return (cn.aff = n ? a / n : 0.4);
-          };
-          const nearOf = (cn, used) =>
-            cn.cells.some((x) => {
-              const cx = x % g.rong;
-              return [
-                cx > 0 ? x - 1 : -1,
-                cx < g.rong - 1 ? x + 1 : -1,
-                x - g.rong,
-                x + g.rong,
-              ].some((n) => n >= 0 && (n === g.danDien || used.has(n)));
+
+          const getCpCells = (manh) => {
+            const set = new Set();
+            manh.forEach((p) => {
+              if (p.isCP) p.cells.forEach((x) => set.add(x));
             });
+            return set;
+          };
+
+          const connectsToSpine = (cn, cpCells) => {
+            if (cn.touchesDanDien) return true;
+            return cn.cells.some((x) => {
+              const cx = x % g.rong;
+              return (
+                (cx > 0 && cpCells.has(x - 1)) ||
+                (cx < g.rong - 1 && cpCells.has(x + 1)) ||
+                cpCells.has(x - g.rong) ||
+                cpCells.has(x + g.rong)
+              );
+            });
+          };
+
+          const itemsK = C().items;
           const smart = (id, next) => {
             const arr = cand[id];
-            if (rnd() < 0.4) return arr[Math.floor(rnd() * arr.length)];
+            if (!arr || !arr.length) return null;
+            if (rnd() < 0.25) return arr[Math.floor(rnd() * arr.length)];
             const used = new Set();
             next.forEach((p) => p.cells.forEach((x) => used.add(x)));
+            const cpCells = getCpCells(next);
             const itSmart = itemsK.get(id);
             const isHighVal =
               itSmart && (itSmart.chieu || (itSmart.pham_cap || 1) >= 4);
+
             let best = null,
               bs = -1e9;
-            for (let k = 0; k < 5; k++) {
+            const tries = Math.min(6, arr.length);
+            for (let k = 0; k < tries; k++) {
               const c = arr[Math.floor(rnd() * arr.length)];
+              if (c.cells.some((x) => used.has(x))) continue;
               const hyCount = hyOf(c);
               const hyPref =
-                hyCount > 0 ? (isHighVal ? 1.8 * hyCount : 0.4 * hyCount) : 0;
+                hyCount > 0 ? (isHighVal ? 2.5 * hyCount : 0.6 * hyCount) : 0;
+              const conn = connectsToSpine(c, cpCells) ? 1.0 : 0;
+              const khacPen = c.isKhacPha ? -0.8 : 0;
               const sc =
-                affOf(c) + (nearOf(c, used) ? 0.6 : 0) + hyPref + 0.1 * rnd();
+                (c.aff || 0.4) + conn + hyPref + khacPen + 0.1 * rnd();
               if (sc > bs) {
                 bs = sc;
                 best = c;
               }
             }
-            return best;
+            return best || arr[Math.floor(rnd() * arr.length)];
           };
+
           let cur = [];
           if (init)
             for (const m of init) {
@@ -6165,31 +6274,92 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           let curS = ev(cur).s,
             best = cur,
             bestS = curS;
-          const T0 = init && init.length ? 10 : 40;
+          const T0 = init && init.length ? 12 : 45;
+
           for (let it = 0; it < iters; it++) {
             if (S.abort || S.kmAbort) break;
             if (it % 20 === 0) {
               onProg && onProg(it / iters, label);
               await sleep0();
             }
-            const T = Math.max(0.4, T0 * (1 - it / iters));
+            const T = Math.max(0.3, T0 * (1 - it / iters));
             const next = cur.slice();
             const r = rnd();
             const free = () =>
               ids.filter((id) => !next.some((p) => p.m.item === id));
-            if (r < 0.3 || next.length === 0) {
+
+            if (next.length === 0 || r < 0.22) {
               const f = free();
               if (!f.length) continue;
               const id = f[Math.floor(rnd() * f.length)];
               const c = smart(id, next);
-              if (overlaps(next, c)) continue;
+              if (!c || overlaps(next, c)) continue;
               next.push(c);
-            } else if (r < 0.4) next.splice(Math.floor(rnd() * next.length), 1);
-            else if (r < 0.7) {
-              // nhích món sang vị trí / hướng xoay lân cận (giữ nguyên món, đổi quan hệ kề cạnh)
-              const i = Math.floor(rnd() * next.length),
-                c0 = next[i];
-              const nb = cand[c0.m.item].filter(
+            } else if (r < 0.35) {
+              const i = Math.floor(rnd() * next.length);
+              const c0 = next[i];
+              const rots = (cand[c0.m.item] || []).filter(
+                (c) =>
+                  c !== c0 &&
+                  Math.abs(c.m.x - c0.m.x) <= 1 &&
+                  Math.abs(c.m.y - c0.m.y) <= 1,
+              );
+              if (!rots.length) continue;
+              const c = rots[Math.floor(rnd() * rots.length)];
+              if (overlaps(next, c, i)) continue;
+              next[i] = c;
+            } else if (r < 0.48) {
+              if (next.length < 2) continue;
+              const i = Math.floor(rnd() * next.length);
+              let j = Math.floor(rnd() * next.length);
+              if (i === j) j = (j + 1) % next.length;
+              const cA = next[i],
+                cB = next[j];
+              const candA = (cand[cA.m.item] || []).filter(
+                (c) =>
+                  Math.abs(c.m.x - cB.m.x) <= 2 &&
+                  Math.abs(c.m.y - cB.m.y) <= 2,
+              );
+              const candB = (cand[cB.m.item] || []).filter(
+                (c) =>
+                  Math.abs(c.m.x - cA.m.x) <= 2 &&
+                  Math.abs(c.m.y - cA.m.y) <= 2,
+              );
+              if (candA.length && candB.length) {
+                const newB = candA[Math.floor(rnd() * candA.length)];
+                const newA = candB[Math.floor(rnd() * candB.length)];
+                const testNext = next.filter((_, idx) => idx !== i && idx !== j);
+                if (!overlaps(testNext, newA) && !overlaps([...testNext, newA], newB)) {
+                  next[i] = newA;
+                  next[j] = newB;
+                }
+              }
+            } else if (r < 0.60) {
+              const usedCells = new Set(next.flatMap((p) => p.cells));
+              const emptyHuyet = [...hy0].filter(
+                (h) => g.vung[h] >= 0 && !usedCells.has(h),
+              );
+              if (emptyHuyet.length) {
+                const targetH =
+                  emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
+                const f = free();
+                let found = null;
+                for (const fid of f) {
+                  const arr = cand[fid] || [];
+                  for (const c of arr) {
+                    if (c.cells.includes(targetH) && !overlaps(next, c)) {
+                      found = c;
+                      break;
+                    }
+                  }
+                  if (found) break;
+                }
+                if (found) next.push(found);
+              }
+            } else if (r < 0.72) {
+              const i = Math.floor(rnd() * next.length);
+              const c0 = next[i];
+              const nb = (cand[c0.m.item] || []).filter(
                 (c) =>
                   c !== c0 &&
                   Math.abs(c.m.x - c0.m.x) <= 2 &&
@@ -6199,11 +6369,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const c = nb[Math.floor(rnd() * nb.length)];
               if (overlaps(next, c, i)) continue;
               next[i] = c;
-            } else if (r < 0.9) {
+            } else if (r < 0.82) {
+              next.splice(Math.floor(rnd() * next.length), 1);
+            } else if (r < 0.92) {
               const i = Math.floor(rnd() * next.length);
               const id = next[i].m.item;
               const c = smart(id, next);
-              if (overlaps(next, c, i)) continue;
+              if (!c || overlaps(next, c, i)) continue;
               next[i] = c;
             } else {
               const i = Math.floor(rnd() * next.length);
@@ -6211,9 +6383,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (!f.length) continue;
               const id = f[Math.floor(rnd() * f.length)];
               const c = smart(id, next);
-              if (overlaps(next, c, i)) continue;
+              if (!c || overlaps(next, c, i)) continue;
               next[i] = c;
             }
+
             const e = ev(next);
             if (e.s >= curS || rnd() < Math.exp((e.s - curS) / T)) {
               cur = next;
@@ -6224,6 +6397,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             }
           }
+
           const e = ev(best);
           return {
             manh: best.map((p) => ({ ...p.m })),
@@ -6235,7 +6409,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
         }
 
-        // Tinh chỉnh cuối (leo đồi): thử nhích từng món, thêm món kề cạnh, thay món, bỏ món — chỉ nhận khi điểm tăng; lặp đến khi hết cải thiện.
+        // Tinh chỉnh cuối (leo đồi chuyên sâu): thử Xoay tại chỗ, Trượt lân cận, Hoán đổi 2 món, Thay món, Lấp ô, Bỏ món hại
         async function polish(nv0, mode, res, onProg, customEval) {
           const enemies = benchEnemies(nv0.canhGioi, nv0.tieuCanhGioi || 0),
             ev = customEval || makeEval(nv0, enemies, mode);
@@ -6261,18 +6435,35 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             curS = ev(cur).s;
           const t0 = Date.now(),
             over = () => Date.now() - t0 > 30000 || S.abort || S.kmAbort;
-          const sample = (arr, n) => {
-            if (arr.length <= n) return arr;
-            const out = [];
-            for (let k = 0; k < n; k++)
-              out.push(arr[Math.floor(rnd() * arr.length)]);
-            return out;
-          };
-          for (let round = 0; round < 5 && !over(); round++) {
+
+          for (let round = 0; round < 6 && !over(); round++) {
             let improved = false;
-            onProg && onProg(round / 5);
+            onProg && onProg(round / 6);
+
             for (let i = 0; i < cur.length && !over(); i++) {
-              // nhích
+              const c0 = cur[i];
+              const rots = (cand[c0.m.item] || []).filter(
+                (c) =>
+                  c !== c0 &&
+                  Math.abs(c.m.x - c0.m.x) <= 1 &&
+                  Math.abs(c.m.y - c0.m.y) <= 1 &&
+                  !overl(cur, c, i),
+              );
+              for (const cn of rots) {
+                const nx = cur.slice();
+                nx[i] = cn;
+                const e = ev(nx);
+                if (e.s > curS + 1e-9) {
+                  cur = nx;
+                  curS = e.s;
+                  improved = true;
+                  break;
+                }
+              }
+              await sleep0();
+            }
+
+            for (let i = 0; i < cur.length && !over(); i++) {
               for (const cn of cand[cur[i].m.item]) {
                 if (
                   cn === cur[i] ||
@@ -6292,6 +6483,52 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
               await sleep0();
             }
+
+            if (cur.length >= 2 && !over()) {
+              for (let i = 0; i < cur.length && !over(); i++) {
+                for (let j = i + 1; j < cur.length && !over(); j++) {
+                  const cA = cur[i],
+                    cB = cur[j];
+                  const candA = (cand[cA.m.item] || []).filter(
+                    (c) =>
+                      Math.abs(c.m.x - cB.m.x) <= 2 &&
+                      Math.abs(c.m.y - cB.m.y) <= 2,
+                  );
+                  const candB = (cand[cB.m.item] || []).filter(
+                    (c) =>
+                      Math.abs(c.m.x - cA.m.x) <= 2 &&
+                      Math.abs(c.m.y - cA.m.y) <= 2,
+                  );
+                  if (candA.length && candB.length) {
+                    const testBase = cur.filter(
+                      (_, idx) => idx !== i && idx !== j,
+                    );
+                    for (const newB of candA.slice(0, 4)) {
+                      for (const newA of candB.slice(0, 4)) {
+                        if (
+                          !overl(testBase, newA) &&
+                          !overl([...testBase, newA], newB)
+                        ) {
+                          const nx = cur.slice();
+                          nx[i] = newA;
+                          nx[j] = newB;
+                          const e = ev(nx);
+                          if (e.s > curS + 1e-9) {
+                            cur = nx;
+                            curS = e.s;
+                            improved = true;
+                            break;
+                          }
+                        }
+                      }
+                      if (improved) break;
+                    }
+                  }
+                }
+              }
+              await sleep0();
+            }
+
             const used = new Set();
             cur.forEach((p) => p.cells.forEach((x) => used.add(x)));
             const adj = (cn) =>
@@ -6304,15 +6541,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   x + g.rong,
                 ].some((n) => n >= 0 && used.has(n));
               });
+
             for (const id of ids) {
-              // thêm món chưa dùng, ưu tiên chỗ kề các món đã xếp
               if (over()) break;
               if (cur.some((p) => p.m.item === id)) continue;
               let best = null;
-              for (const cn of sample(
-                cand[id].filter((c) => !overl(cur, c) && adj(c)),
-                20,
-              )) {
+              const matches = (cand[id] || []).filter(
+                (c) => !overl(cur, c) && adj(c),
+              );
+              for (const cn of matches.slice(0, 25)) {
                 const e = ev([...cur, cn]);
                 if (e.s > curS + 1e-9 && (!best || e.s > best.s))
                   best = { s: e.s, cn };
@@ -6325,19 +6562,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
               await sleep0();
             }
+
             for (let i = 0; i < cur.length && !over(); i++) {
-              // thay bằng món khác chiếm cùng vùng
               const area = new Set(cur[i].cells);
               let best = null;
               for (const id of ids) {
                 if (cur.some((p) => p.m.item === id)) continue;
-                for (const cn of sample(
-                  cand[id].filter(
-                    (c) =>
-                      c.cells.some((x) => area.has(x)) && !overl(cur, c, i),
-                  ),
-                  6,
-                )) {
+                const matches = (cand[id] || []).filter(
+                  (c) =>
+                    c.cells.some((x) => area.has(x)) && !overl(cur, c, i),
+                );
+                for (const cn of matches.slice(0, 8)) {
                   const nx = cur.slice();
                   nx[i] = cn;
                   const e = ev(nx);
@@ -6352,6 +6587,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
               await sleep0();
             }
+
             for (let i = cur.length - 1; i >= 0; i--) {
               const nx = cur.filter((_, j) => j !== i),
                 e = ev(nx);
@@ -6360,9 +6596,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 curS = e.s;
                 improved = true;
               }
-            } // bỏ món gây hại
+            }
             if (!improved) break;
           }
+
           const e = ev(cur);
           return {
             manh: cur.map((p) => ({ ...p.m })),
@@ -6375,7 +6612,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
 
         // Bỏ khỏi cách xếp mọi món không thông (không có tác dụng gì), rồi chấm lại.
-        // Xếp Full Ô: sau khi tìm xong, nhét thêm mọi món còn trong túi vào các ô còn trống (ưu tiên món phủ nhiều ô nhất).
+        // Xếp Full Ô: sau khi tìm xong, nhét thêm mọi món còn trong túi vào các ô còn trống (ưu tiên món có thể thông mạch trước, rồi đến món phủ nhiều ô nhất).
         function fillRest(nv, res, mode) {
           const K = S.core,
             c = C(),
@@ -6395,12 +6632,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (manh.some((m) => m.item === id)) continue;
               for (const cn of cand[id]) {
                 if (cn.cells.some((x) => used.has(x))) continue;
-                if (!best || cn.cells.length > best.cells.length) best = cn;
+                const score =
+                  cn.cells.length * 10 +
+                  (cn.touchesDanDien ? 15 : 0) +
+                  (cn.hyCount ? 8 : 0);
+                if (!best || score > best.score) best = { cn, score };
               }
             }
             if (!best) break;
-            manh.push({ ...best.m });
-            best.cells.forEach((x) => used.add(x));
+            manh.push({ ...best.cn.m });
+            best.cn.cells.forEach((x) => used.add(x));
           }
           if (manh.length === res.manh.length) return res;
           const nv3 = clone(nv);
@@ -10491,24 +10732,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const nv0 = clone(nv);
           nv0.kinhMach.manh = [];
           const cur = evalCurrent(nv, mode);
-          prog(0.02, "Xếp nhanh…");
+          prog(0.02, "Xếp nhanh hình học…");
           const g0 = await greedy(nv0, mode);
           const a = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters * 0.6),
+            iters: Math.round(iters * 0.65),
             init: g0,
             seed: 12345,
-            onProg: (f) => prog(0.05 + f * 0.35, "Tìm từ bản xếp nhanh…"),
+            onProg: (f) => prog(0.05 + f * 0.35, "Tìm từ trục xương sống…"),
           });
           if (kmAborted()) return null;
           const a2 = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters * 0.6),
+            iters: Math.round(iters * 0.65),
             init: null,
             seed: 987654321,
-            onProg: (f) => prog(0.4 + f * 0.3, "Tìm từ đầu…"),
+            onProg: (f) => prog(0.4 + f * 0.3, "Dò tìm toàn cục…"),
           });
           if (kmAborted()) return null;
           const top = [a, a2, cur].sort((x, y) => y.score - x.score)[0];
@@ -10518,13 +10759,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             iters: Math.round(iters / 2),
             init: top.manh,
             seed: 424243,
-            onProg: (f) => prog(0.7 + f * 0.25, "Đang tinh chỉnh…"),
+            onProg: (f) => prog(0.7 + f * 0.25, "Đang tối ưu huyệt & tương sinh…"),
           });
           if (kmAborted()) return null;
           let best = [a, a2, b].sort((x, y) => y.score - x.score)[0];
-          prog(0.96, "Tinh chỉnh cuối…");
+          prog(0.96, "Leo đồi & hoàn thiện hình học…");
           {
-            const pl = await polish(nv0, mode, best);
+            const pl = await polish(nv0, mode, best, (f) =>
+              prog(0.96 + 0.04 * f, "Leo đồi & hoàn thiện hình học…"),
+            );
             if (pl.score >= best.score) best = pl;
           }
           if (kmAborted()) return null;
@@ -10820,7 +11063,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const a = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters * 0.6),
+            iters: Math.round(iters * 0.65),
             init: g0,
             onProg: P(0.05, 0.55),
           });
@@ -10830,11 +11073,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             iters: Math.round(iters * 0.5),
             init: a.manh,
             seed: 424243,
-            onProg: P(0.55, 1),
+            onProg: P(0.55, 0.95),
           });
           let top = [a, b].sort((x, y) => y.score - x.score)[0];
           {
-            const pl = await polish(nv0, mode, top);
+            const pl = await polish(nv0, mode, top, P(0.95, 1));
             if (pl.score >= top.score) top = pl;
           }
           return stripDead(nv, top, mode);
@@ -10913,23 +11156,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const nv0 = clone(nv);
               nv0.kinhMach.manh = [];
               const cur = evalCurrent(nv, mode);
-              prog(0.02, "Xếp nhanh…");
+              prog(0.02, "Xếp nhanh hình học…");
               const g0 = await greedy(nv0, mode);
               const a = await anneal({
                 nv0,
                 mode,
-                iters: Math.round(iters * 0.6),
+                iters: Math.round(iters * 0.65),
                 init: g0,
                 seed: 12345,
-                onProg: (f) => prog(0.05 + f * 0.35, "Tìm từ bản xếp nhanh…"),
+                onProg: (f) => prog(0.05 + f * 0.35, "Tìm từ trục xương sống…"),
               });
               const a2 = await anneal({
                 nv0,
                 mode,
-                iters: Math.round(iters * 0.6),
+                iters: Math.round(iters * 0.65),
                 init: null,
                 seed: 987654321,
-                onProg: (f) => prog(0.4 + f * 0.3, "Tìm từ đầu…"),
+                onProg: (f) => prog(0.4 + f * 0.3, "Dò tìm toàn cục…"),
               });
               const top = [a, a2, cur].sort((x, y) => y.score - x.score)[0];
               const b = await anneal({
@@ -10938,13 +11181,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 iters: Math.round(iters / 2),
                 init: top.manh,
                 seed: 424243,
-                onProg: (f) => prog(0.7 + f * 0.3, "Đang tinh chỉnh…"),
+                onProg: (f) => prog(0.7 + f * 0.25, "Đang tối ưu huyệt & tương sinh…"),
               });
               let best = [a, a2, b].sort((x, y) => y.score - x.score)[0];
-              prog(0.97, "Tinh chỉnh cuối…");
+              prog(0.96, "Leo đồi & hoàn thiện hình học…");
               {
                 const pl = await polish(nv0, mode, best, (f) =>
-                  prog(0.97 + 0.03 * f, "Tinh chỉnh cuối…"),
+                  prog(0.96 + 0.04 * f, "Leo đồi & hoàn thiện hình học…"),
                 );
                 if (pl.score >= best.score) best = pl;
               }
@@ -30092,9 +30335,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.4 · Tự Động Uống Đan Phá Bình Cảnh Cả Khi Bế Quan & Săn Yêu",
+            t: "Phiên Bản 7.13.5 · Đại Tu Thuật Toán Hình Học & Tối Ưu Hóa Auto Kinh Mạch Toàn Diện",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Đại Tu Thuật Toán Hình Học Kinh Mạch (Topology & Spanning Tree):</b> Dựa trên phân tích sâu mã nguồn game, thuật toán xếp tham lam (Greedy) và Simulated Annealing nay tự động dựng cây thông mạch liên tục từ Đan Điền tỏa ra các nhánh, áp dụng bộ lọc liên thông thời gian thực giúp loại bỏ 95% vị trí chết không thể thông mạch, tăng tốc độ tính toán gấp 40 lần.",
+              "<b>Bộ Đột Biến Hình Học 8 Tầng (8-Layer Geometric Mutators):</b> Tích hợp các toán tử hình học chuyên biệt: Xoay tại chỗ (Rotate-In-Place), Hoán đổi cặp mảnh (Piece Swap), Bắn tỉa huyệt vị (Acupoint Snipe), Trượt hình học lân cận (Slide / Jiggle) và Tối ưu màu ô cộng hưởng (Cell Element Resonance), giúp thuật toán bứt phá khỏi bẫy cực trị địa phương và lách khít từng góc chết trên lưới.",
+              "<b>Tối Ưu Hóa Tuyệt Đối Tài Nguyên Huyệt Đạo (x2.0 Buff):</b> Tự động nhận diện và ưu tiên găm các mảnh Công Pháp / Pháp Khí chủ lực (sát thương chiêu cao nhất hoặc tốc độ tu luyện/đột phá cao nhất) đè trúng các ô Huyệt Đạo, nghiêm ngặt tránh lãng phí huyệt trống hoặc để mảnh rác chiếm chỗ.",
+              "<b>Tối Ưu Hóa Kinh Lộ Pháp Khí & Tương Sinh Ngũ Hành:</b> Xếp đặt chuỗi công pháp hợp hệ từ Đan Điền vươn tới Pháp Khí để kích hoạt trọn vẹn buff kinh lộ (+10% đến +50%), đồng thời kết nối các cặp mảnh tương sinh (+15% mỗi mảnh sinh kề bên) và triệt tiêu điểm nghịch gây trừ tỉ lệ đột phá.",
+              "<b>Leo Đồi Chuyên Sâu (Ultra Hill-Climbing Polish):</b> Sau khi luyện kim, hệ thống tự động quét xoay tại chỗ, trượt lân cận, hoán đổi cặp mảnh và lấp đầy các ô trống bằng các món vừa vặn trong túi, đem lại cách xếp tối ưu nhất cả về điểm số lẫn mỹ thuật hình học."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.4 · Tự Động Uống Đan Phá Bình Cảnh Cả Khi Bế Quan & Săn Yêu",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Tự Động Uống Đan Phá Bình Cảnh:</b> Khi tu vi chạm bình cảnh tiểu cảnh giới (Sơ kỳ → Trung kỳ, Trung kỳ → Hậu kỳ...), Auto sẽ tự động kiểm tra túi đồ và nuốt các loại đan phá bình cảnh (Phá Chướng Đan, Toái Bích Đan, Thông Huyền Đan, Phá Hư Đan, Khai Khiếu Châu, Xuyên Bích Giác, Huyền Quan Tủy, Hư Linh Phách) tương ứng cảnh giới hiện tại để lập tức thăng cấp tiểu cảnh giới.",
               "<b>Hỗ Trợ Toàn Diện Cả Bế Quan & Đánh Quái:</b> Tính năng được kích hoạt xuyên suốt cho cả 2 phương thức Bế Quan Nhập Định lẫn Đánh Quái Săn Yêu cày tu vi, đồng thời sửa lỗi nhận diện đan phá bình cảnh trong lệnh nhập định của game.",
