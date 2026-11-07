@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.1
+// @version      7.14.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.1";
+      var TOOL_VER = "7.14.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5999,6 +5999,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
+            // 7.14.2: Thưởng mảnh đúng màu hệ số cao (1.30), phạt nặng mảnh lệch màu (< 1.0)
+            let colorScore = 0;
+            (R.manh || []).forEach((m) => {
+              if (m && m.thong) {
+                if (m.mau >= 1.25) colorScore += 35;
+                else if (m.mau < 1.0) colorScore -= 65 * (1.1 - m.mau);
+              }
+            });
+
             // Phạt mảnh chết (không thông): loại bỏ triệt để hiện tượng xếp sót, xếp rỗng
             const deadPenalty = S.full ? 0 : dead * 85;
 
@@ -6023,7 +6032,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 0.5 * thong -
                 8 * ng +
                 llScore;
-            s += hyScore - hoThePenalty + kinhLoBonus - deadPenalty;
+            s += hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
             if (S.hbRatio) s -= hbRatioPenalty(manh, R);
             if (S.full) s += 20 * manh.reduce((a, p) => a + p.cells.length, 0);
@@ -6058,7 +6067,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
             const pwr = kmItemPower(it);
 
-            for (let xoay = 0; xoay < 4; xoay++)
+            for (let xoay = 0; xoay < 4; xoay++) {
+              let cellElements = null;
+              try {
+                cellElements = K.heTungO ? K.heTungO(it, xoay) : null;
+              } catch (e) {}
               for (let y = 0; y < g.cao; y++)
                 for (let x = 0; x < g.rong; x++) {
                   const m = { item: id, x, y, xoay };
@@ -6079,12 +6092,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   // Tiền tính toán thuộc tính hình học & liên thông
                   const hyCount = cells.filter((cIdx) => hy0.has(cIdx)).length;
                   let touchesDanDien = false;
-                  let aSum = 0,
-                    aCount = 0,
-                    khacCount = 0;
+                  let matchCount = 0,
+                    partialCount = 0,
+                    conflictCount = 0;
                   const adj = new Set();
 
-                  for (const cellIdx of cells) {
+                  for (let i = 0; i < cells.length; i++) {
+                    const cellIdx = cells[i];
                     const cx = cellIdx % g.rong;
                     const cy = Math.floor(cellIdx / g.rong);
                     if (cx > 0) adj.add(cellIdx - 1);
@@ -6101,18 +6115,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       touchesDanDien = true;
                     }
 
-                    const mColor = mauK[cellIdx];
-                    if (mColor && mColor !== "vo_sac" && hs.length) {
-                      const w = Math.max(...hs.map((h) => oHop(mColor, h)));
-                      aSum += w;
-                      aCount++;
-                      if (hs.some((h) => oKhac(mColor, h))) khacCount++;
+                    const mColor = mauK[cellIdx] || "vo_sac";
+                    const pieceHe = cellElements && cellElements[i] ? cellElements[i] : (hs[0] || "vo_sac");
+                    if (pieceHe === "vo_sac") {
+                      if (mColor === "vo_sac") matchCount++;
+                      else partialCount++;
+                    } else if (mColor === pieceHe) {
+                      matchCount++;
+                    } else if (mColor === "vo_sac" || (gocHe(mColor) === gocHe(pieceHe))) {
+                      partialCount++;
+                    } else {
+                      conflictCount++; // Xung đột màu hoàn toàn (ví dụ: Thổ trên Kim, Kim trên Thổ)
                     }
                   }
                   for (const cellIdx of cells) adj.delete(cellIdx);
 
-                  const aff = aCount ? aSum / aCount : 0.4;
-                  const isKhacPha = khacCount * 2 > cells.length;
+                  const aff = cells.length ? (matchCount * 1.0 + partialCount * 0.5) / cells.length : 0.4;
+                  const isKhacPha = conflictCount > 0;
 
                   cand[id].push({
                     m,
@@ -6125,9 +6144,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     touchesDanDien,
                     adj: [...adj],
                     aff,
+                    matchCount,
+                    partialCount,
+                    conflictCount,
                     isKhacPha,
                   });
                 }
+            }
           }
           return { cand, g };
         }
@@ -6209,6 +6232,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
+            // 7.14.2: Phạt cực nặng khi đặt đè lên ô xung đột màu (Thổ lên Kim, Kim lên Thổ)
+            let colorConflictPenalty = 0;
+            manh.forEach((p) => {
+              if (p.conflictCount > 0) {
+                colorConflictPenalty += p.conflictCount * 80;
+              }
+            });
+
             return (
               w[0] * R.linhLuc +
               w[1] * toc +
@@ -6218,6 +6249,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               hyScore +
               kinhLoBonus -
               hoThePenalty -
+              colorConflictPenalty -
               6 * (R.diemNghich || 0) * (S.dir === "ma" ? 0.4 : 1) +
               biasScore(B, manh, R) +
               capScore(capX, R) +
@@ -6245,7 +6277,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
           };
 
-          // Giai đoạn 1: Khóa trục Đan Điền BẮT BUỘC bằng Công Pháp (để thông mạch không bị nghẽn)
+          // Giai đoạn 1: Khóa trục Đan Điền BẮT BUỘC bằng Công Pháp (ưu tiên tuyệt đối đúng màu, cấm lệch hệ)
           const anchorCandidates = [];
           for (const id of Object.keys(cand)) {
             for (const cnd of cand[id]) {
@@ -6255,11 +6287,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             }
           }
-          anchorCandidates.sort((a, b) => b.v - a.v);
+          const cleanAnchors = anchorCandidates.filter((a) => a.cnd.conflictCount === 0);
+          const anchorPool = cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
+          anchorPool.sort((a, b) => b.v - a.v);
 
-          const anchorIdx = altSeed && anchorCandidates.length > 1 ? 1 : 0;
-          if (anchorCandidates.length > 0) {
-            const anchor = anchorCandidates[anchorIdx].cnd;
+          const anchorIdx = altSeed && anchorPool.length > 1 ? 1 : 0;
+          if (anchorPool.length > 0) {
+            const anchor = anchorPool[anchorIdx].cnd;
             cur.push(anchor);
             addPieceToFlow(anchor);
           }
@@ -6280,7 +6314,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (!canConnect && !S.full) continue;
 
                 // Nếu chưa có Công Pháp nào kề Đan Điền, cấm Pháp Khí chẹn cửa
-                if (cur.length === 0 && !cnd.isCP && anchorCandidates.length > 0) continue;
+                if (cur.length === 0 && !cnd.isCP && anchorPool.length > 0) continue;
+
+                // Nếu món này có vị trí hợp lệ không xung đột màu, bỏ qua vị trí xung đột
+                if (
+                  cnd.conflictCount > 0 &&
+                  cand[id].some((c) => c.conflictCount === 0 && !c.cells.some((x) => used.has(x)))
+                ) {
+                  continue;
+                }
 
                 const v = quick([...cur, cnd]);
                 if (!best || v > best.v) best = { v, cnd };
@@ -6386,6 +6428,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const valid = arr.filter((c) => !c.cells.some((x) => used.has(x)));
             if (!valid.length) return null;
 
+            // 7.14.2: Ưu tiên các vị trí không xung đột màu (đúng hệ hoặc vô sắc)
+            const cleanValid = valid.filter((c) => c.conflictCount === 0);
+            const pool = cleanValid.length > 0 ? cleanValid : valid;
+
             const cpCells = getCpCells(next);
             const itSmart = itemsK.get(id);
             const pwr = kmItemPower(itSmart, mode);
@@ -6398,16 +6444,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             let best = null,
               bs = -1e9;
-            const sampleCount = Math.min(24, valid.length);
-            const step = valid.length <= sampleCount ? 1 : Math.floor(valid.length / sampleCount);
+            const sampleCount = Math.min(24, pool.length);
+            const step = pool.length <= sampleCount ? 1 : Math.floor(pool.length / sampleCount);
 
-            for (let k = 0; k < valid.length; k += step) {
-              const c = valid[k];
+            for (let k = 0; k < pool.length; k += step) {
+              const c = pool[k];
               const hyCount = hyOf(c);
               const hyPref =
                 hyCount > 0 ? (isHighVal ? 3.5 * hyCount : 0.8 * hyCount) : 0;
               const conn = connectsToSpine(c, cpCells) ? 3.0 : -2.5;
               const khacPen = c.isKhacPha ? -1.2 : 0;
+              const conflictPen = (c.conflictCount || 0) * 30.0;
+              const matchBonus = (c.matchCount || 0) * 5.0;
 
               // Khảo sát tương sinh / tương khắc thực tế với các mảnh láng giềng đã đặt
               let synBonus = 0;
@@ -6446,7 +6494,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
 
               const sc =
-                (c.aff || 0.4) * 2.0 +
+                (c.aff || 0.4) * 6.0 +
+                matchBonus -
+                conflictPen +
                 conn +
                 hyPref +
                 khacPen +
@@ -6457,7 +6507,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 best = c;
               }
             }
-            return best || valid[Math.floor(rnd() * valid.length)];
+            return best || pool[Math.floor(rnd() * pool.length)];
           };
 
           let cur = [];
@@ -6897,28 +6947,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return { ...evalCurrent(nv3, mode), manh };
         }
         function evalCurrent(nv, mode) {
+          const Kc = S.core,
+            Cc2 = C();
+          const R_real = Kc.tinhKinhMach(nv, Cc2);
+          const P_real = Kc.taoBenTa(nv, Cc2);
+          const speed_real = Kc.tocDoTuLuyen ? Kc.tocDoTuLuyen(nv, Cc2) : null;
+
           const enemies = benchEnemies(nv.canhGioi, nv.tieuCanhGioi || 0);
           const ev = makeEval(
             { ...clone(nv), kinhMach: { ...clone(nv.kinhMach), manh: [] } },
             enemies,
             mode,
           );
-          const Kc = S.core,
-            Cc2 = C(),
-            g2 = Kc.luoiKinhMach(Cc2, nv);
-          const manh = nv.kinhMach.manh.map((m) => ({
+          const g2 = Kc.luoiKinhMach(Cc2, nv);
+          const manh = (nv.kinhMach.manh || []).map((m) => ({
             m,
             key: m.item + ":" + m.x + "," + m.y + "," + m.xoay,
             cells: Kc.oCuaManh(g2, m, Cc2.items.get(m.item)) || [],
           }));
           const e = ev(manh);
+
+          // Tính số trận thắng theo đúng chỉ số thực P_real của nhân vật
+          let realWins = 0;
+          for (const { E } of enemies) {
+            const r = fight(P_real, E);
+            if (r.thang) realWins++;
+          }
+
           return {
             manh: clone(nv.kinhMach.manh),
             score: e.s,
-            wins: e.wins,
+            wins: realWins,
             n: enemies.length,
-            P: e.P,
-            R: e.R,
+            P: P_real,
+            R: R_real,
+            speed: speed_real,
+            simP: e.P,
+            simR: e.R,
           };
         }
 
@@ -11003,8 +11068,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (
             cur.score >= best.score &&
             (S.full || !(cur.R.manh || []).some((m) => m && !m.thong))
-          )
+          ) {
             best = { ...cur, same: true };
+          } else {
+            const nvNew = clone(nv);
+            nvNew.kinhMach.manh = best.manh;
+            const evalNew = evalCurrent(nvNew, mode);
+            best = {
+              ...best,
+              P: evalNew.P,
+              R: evalNew.R,
+              speed: evalNew.speed,
+              wins: evalNew.wins,
+              n: evalNew.n,
+            };
+          }
           prog(1, "Xong");
           return { cur, best };
         }
@@ -11342,6 +11420,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             .reduce((x, m) => x + m.acupoints, 0);
           const curHt = (a.R.biDong && a.R.biDong.ho_the) || 0,
             newHt = (b.R.biDong && b.R.biDong.ho_the) || 0;
+          const curKtm = (a.R.biDong && a.R.biDong.khang_tam_ma) || 0,
+            newKtm = (b.R.biDong && b.R.biDong.khang_tam_ma) || 0;
 
           // ── Tính toán các chỉ số chiến đấu chuyên sâu
           const ctrlRatio =
@@ -11388,7 +11468,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const hpMax = (r && r.P && r.P.khiHuyetToiDa) || 0;
             const shieldCap = Math.round(hpMax * shieldCapRatio);
             return {
-              spellPower: Math.round((r && r.P && r.P.spellPower) || 0),
+              spellPower: Math.round((r && r.P && (r.P.spellPower ?? r.P.phapLuc)) || 0),
               bodyPower:
                 r && r.P && r.P.bodyPower ? Math.round(r.P.bodyPower) : null,
               strongest: strongest
@@ -11416,6 +11496,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             num(skB.spellPower) +
             (skB.bodyPower ? ` (Thể: ${num(skB.bodyPower)})` : "");
 
+          const spdA = a.speed != null ? a.speed : (K && K.tocDoTuLuyen ? K.tocDoTuLuyen(nv, c) : null);
+          let spdB = b.speed;
+          if (spdB == null) {
+            if (b.same) spdB = spdA;
+            else {
+              try {
+                const nvB = clone(nv);
+                nvB.kinhMach.manh = b.manh.map(m => ({ ...m }));
+                spdB = K && K.tocDoTuLuyen ? K.tocDoTuLuyen(nvB, c) : null;
+              } catch (e) { spdB = null; }
+            }
+          }
+          const tuStr = (s, r) =>
+            s != null
+              ? `×${num(s, 2)} (+${pct((r && r.biDong && r.biDong.toc_do) || 0)})`
+              : `+${pct((r && r.biDong && r.biDong.toc_do) || 0)}`;
+
           const rows = [
             ["Thắng trận mẫu", `${a.wins}/${a.n}`, `${b.wins}/${b.n}`],
             ["Pháp lực", spStrA, spStrB],
@@ -11430,38 +11527,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ],
             [
               "Hộ thể (giảm sát thương)",
-              `${pct(curHt)}${curHt >= maxHoThe ? " (trần)" : ""}`,
-              `${pct(newHt)}${newHt >= maxHoThe ? " (trần " + Math.round(maxHoThe * 100) + "%)" : "/60%"}`,
+              `+${pct(curHt)}${curHt >= maxHoThe ? " (trần)" : ""}`,
+              `+${pct(newHt)}${newHt >= maxHoThe ? " (trần " + Math.round(maxHoThe * 100) + "%)" : ""}`,
             ],
             [
               "Khí huyết",
-              Math.round(a.P.khiHuyetToiDa),
-              Math.round(b.P.khiHuyetToiDa),
+              num(Math.round(a.P.khiHuyetToiDa)),
+              num(Math.round(b.P.khiHuyetToiDa)),
             ],
             [
               "Linh lực hồi / lượt",
-              num(a.P.linhLucMoiLuot),
-              num(b.P.linhLucMoiLuot),
+              num(a.P.linhLucMoiLuot ?? a.R.linhLuc),
+              num(b.P.linhLucMoiLuot ?? b.R.linhLuc),
             ],
             [
-              "Linh lực tối đa",
-              num(a.P.linhLucToiDa ?? a.P.linhLucMoiLuot * 3),
-              num(b.P.linhLucToiDa ?? b.P.linhLucMoiLuot * 3),
+              "Linh lực",
+              num(a.R.linhLucToiDa ?? a.P.linhLucToiDa ?? a.P.linhLuc ?? (a.P.linhLucMoiLuot * 3)),
+              num(b.R.linhLucToiDa ?? b.P.linhLucToiDa ?? b.P.linhLuc ?? (b.P.linhLucMoiLuot * 3)),
             ],
             [
               "Chiêu tốn nhiều nhất",
-              num(Math.max(0, ...a.P.chieu.map((x) => x.phi || 0))),
-              num(Math.max(0, ...b.P.chieu.map((x) => x.phi || 0))),
+              num(Math.max(0, ...(a.P.chieu || []).map((x) => x.phi || 0))),
+              num(Math.max(0, ...(b.P.chieu || []).map((x) => x.phi || 0))),
             ],
             [
               "Tu luyện",
-              "+" + pct(a.R.biDong.toc_do || 0),
-              "+" + pct(b.R.biDong.toc_do || 0),
+              tuStr(spdA, a.R),
+              tuStr(spdB, b.R),
             ],
             [
               "Đột phá",
               "+" + pct(a.R.biDong.dot_pha || 0, 1),
               "+" + pct(b.R.biDong.dot_pha || 0, 1),
+            ],
+            [
+              "Kháng tâm ma",
+              "+" + pct(curKtm),
+              "+" + pct(newKtm),
             ],
             ["Điểm nghịch", a.R.diemNghich || 0, b.R.diemNghich || 0],
           ];
@@ -23387,6 +23489,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     for (const r of recolors) {
                       nvSim.kinhMach.mau[r.cell] = r.toHe;
                     }
+                    nvSim.kinhMach.manh = sol.best.manh;
                     const simBest = evalCurrent(nvSim, modes[k]);
                     if (simBest && simBest.score >= sol.best.score) {
                       simBest.recolorPlan = recolors;
@@ -30981,9 +31084,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.1 · Đại Trùng Tu Auto Kinh Mạch Toàn Diện",
+            t: "Phiên Bản 7.14.2 · Chuẩn Hóa 100% Chỉ Số Vận Hành Thực Tế & Khắc Chế Triệt Để Lệch Hệ Mạch",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Chuẩn Hóa Tuyệt Đối Báo Chỉ Số Vận Hành (Đồng Bộ 100% Game):</b> Sửa triệt để lỗi báo chỉ số sai lệch giữa Tool và giao diện game. Thay vì xóa bảng Lĩnh Ngộ (khiến hệ số mảnh bị đội lên ảo), cột 'Đang xếp' nay đọc và tính toán trực tiếp từ trạng thái thực tế của nhân vật (giữ nguyên Lĩnh Ngộ và số năm tu luyện): Linh lực hồi/lượt (57,6), Hộ thể (+47%), Đột phá (+9%), Khí huyết (22.950), Kháng tâm ma (+24%), Linh lực tối đa (172,7), Pháp lực (1.019,4).",
+              "<b>Đồng Bộ Hiển Thị Tốc Độ Tu Luyện:</b> Cột 'Tu luyện' nay hiển thị trực tiếp hệ số vận hành thực tế của game (ví dụ: <code>×3.03 (+251%)</code>) thông qua hàm <code>S.core.tocDoTuLuyen</code>, xóa bỏ hoàn toàn hiểu lầm giữa tốc độ tu vi tổng hợp và dòng bị động mảnh.",
+              "<b>Cấm Tuyệt Đối Lệch Hệ/Đảo Ngược Hệ (Kim Lắp Thổ, Thổ Lắp Kim):</b> Nâng cấp toàn diện cơ chế kiểm tra hệ theo chuẩn <code>WBt</code> của game. Khi mảnh có hệ xung đột với ô kinh mạch (ví dụ công pháp Thổ đè lên mạch Kim hoặc ngược lại):",
+              "&nbsp;&nbsp;• <b>Khóa Đan Điền Chuẩn Hệ:</b> Ở giai đoạn chọn nhánh kết nối Đan Điền, thuật toán bắt buộc chỉ chọn Công Pháp có hệ trùng khớp 100% với ô kề cận Đan Điền, cấm hoàn toàn tình trạng công pháp khác hệ chiếm giữ cửa ngõ.",
+              "&nbsp;&nbsp;• <b>Trừng Phạt Nặng Lệch Màu:</b> Thiết lập mức phạt cực nặng (-80 điểm/ô xung đột trong quick & -30 điểm trong simulated annealing), đồng thời thưởng lớn (+35 điểm) cho các mảnh đạt hệ số màu chuẩn (1.30).",
+              "&nbsp;&nbsp;• <b>Bộ Lọc Vị Trí Khớp Hệ:</b> Tự động ưu tiên 100% các vị trí đúng hệ; chỉ xem xét vị trí khác khi không còn bất kỳ phương án nào phù hợp.",
+              "<b>Cập Nhật Mô Phỏng Bản Mới Thực Tế:</b> Khi tìm thấy cách xếp mới hoặc giữ nguyên cách xếp, các chỉ số dự phóng ở cột 'Bản mới' được tính toán sát thực tế dựa trên Lĩnh Ngộ của nhân vật, không phóng đại số liệu."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.1 · Đại Trùng Tu Auto Kinh Mạch Toàn Diện",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Đại Trùng Tu Thuật Toán Auto Kinh Mạch:</b> Khắc phục triệt để tình trạng xếp lỏ, rời rạc, sót mảnh hoặc không kín ô. Tái thiết toàn bộ quy trình xếp kinh mạch từ gốc rễ: phân chia rành mạch giữa trục xương sống Công Pháp và các nhánh dẫn mạch tới Pháp Khí.",
               "<b>Bảo Vệ Tuyệt Đối Cửa Ngõ Đan Điền (Công Pháp Trunk):</b> Cấm Pháp Khí chẹn cửa Đan Điền trong giai đoạn định hình lưới; bắt buộc dùng Tâm Pháp/Đấu Pháp làm thân cây kết nối trực tiếp với Đan Điền để dòng linh khí thông suốt 100% khắp các ô.",
