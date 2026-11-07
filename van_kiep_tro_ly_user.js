@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.1
+// @version      7.13.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.1";
+      var TOOL_VER = "7.13.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -20326,6 +20326,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             kt: true,
             neHac: true,
             danhAi: true,
+            uuTienSuKienTuVi: true,
           },
           tc: {
             autoCombatOverlay: true,
@@ -20499,6 +20500,94 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           vua: ["Vừa", 40],
           cham: ["Chậm", 120],
         };
+        // ── Kiểm tra và phân tích sự kiện tăng tu vi (Kỳ ngộ, Bí cảnh, Di tích...)
+        const _tuViEncCache = new Map();
+        function encGivesTuVi(encId) {
+          if (!encId) return 0;
+          if (_tuViEncCache.has(encId)) return _tuViEncCache.get(encId);
+          let enc = null;
+          try {
+            const Cc = C();
+            enc = Cc && Cc.encounters && Cc.encounters.get(encId);
+          } catch (e) {}
+          if (!enc) {
+            _tuViEncCache.set(encId, 0);
+            return 0;
+          }
+          let maxTv = 0;
+          function walk(obj) {
+            if (!obj || typeof obj !== "object") return;
+            if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
+              const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
+              if (Number.isFinite(v) && v > maxTv) maxTv = v;
+            }
+            for (const v of Object.values(obj)) {
+              if (typeof v === "object") walk(v);
+            }
+          }
+          walk(enc);
+          _tuViEncCache.set(encId, maxTv);
+          return maxTv;
+        }
+
+        function findBestTuViChoice(encDef, availableChoices) {
+          if (!encDef || !availableChoices || !availableChoices.length)
+            return null;
+          let bestChoice = null;
+          let maxTv = 0;
+
+          for (const ch of availableChoices) {
+            if (ch.thoat) continue;
+            const defChoice = encDef.choices && encDef.choices[ch.index];
+            if (!defChoice) continue;
+
+            let chTv = 0;
+            function checkObj(obj) {
+              if (!obj || typeof obj !== "object") return;
+              if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
+                const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
+                if (Number.isFinite(v) && v > chTv) chTv = v;
+              }
+              for (const v of Object.values(obj)) {
+                if (typeof v === "object") checkObj(v);
+              }
+            }
+            checkObj(defChoice);
+
+            if (
+              defChoice.scene &&
+              encDef.scenes &&
+              encDef.scenes[defChoice.scene]
+            ) {
+              checkObj(encDef.scenes[defChoice.scene]);
+            }
+
+            if (chTv > maxTv) {
+              maxTv = chTv;
+              bestChoice = ch;
+            }
+          }
+
+          if (bestChoice) return { choice: bestChoice, tv: maxTv };
+
+          const nonThoat = availableChoices.filter(
+            (c) =>
+              !c.thoat &&
+              !/không|từ chối|lui|quay về|bỏ đi|kiếu|thôi/i.test(c.text || ""),
+          );
+          if (nonThoat.length > 0) {
+            const checkCh = nonThoat.find(
+              (c) =>
+                c.check ||
+                /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh/i.test(
+                  c.text || "",
+                ),
+            );
+            return { choice: checkCh || nonThoat[0], tv: 0 };
+          }
+
+          return null;
+        }
         const auYield = (() => {
           if (typeof MessageChannel !== "function")
             return () => new Promise((r) => setTimeout(r, 0));
@@ -20611,6 +20700,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           if (AU.cfg.tl.targetSubRealm === undefined) {
             AU.cfg.tl.targetSubRealm = 3;
+          }
+          if (typeof AU.cfg.tl.uuTienSuKienTuVi !== "boolean") {
+            AU.cfg.tl.uuTienSuKienTuVi = true;
           }
           if (o.san) {
             if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined) AU.cfg.tl.maxY = o.san.maxY;
@@ -21868,6 +21960,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   DIBAO.evMap.has(a.id));
               const r = auCall(() => g.closeEncounter());
               if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
+              if (encGivesTuVi(a.id) > 0) {
+                st.tuViEventsDone = (st.tuViEventsDone || 0) + 1;
+                auLog(
+                  "🎉 Hoàn tất sự kiện tăng tu vi «" + encTen + "» thành công!",
+                  "vk-ok",
+                );
+                if (st.skipEnc) st.skipEnc.delete(a.id);
+                if (st.encAttempts) {
+                  delete st.encAttempts[a.id + "@" + run.viTri];
+                  delete st.encAttempts[a.id + "@" + run.oNoi];
+                }
+              }
               if (isRelicEv) {
                 const curRun = G().state && G().state.run;
                 const evObj = DIBAO.evMap.get(a.id);
@@ -22139,6 +22243,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const c = cs.find((x) => !x.thoat);
               if (c) return c;
             }
+            if (encGivesTuVi(v.id) > 0) {
+              const encDef = C().encounters && C().encounters.get(v.id);
+              const bestTv = findBestTuViChoice(encDef, cs);
+              if (bestTv && bestTv.choice) return bestTv.choice;
+            }
           }
           if (opt.sdb) {
             const nonThoat = cs.filter((c) => !c.thoat);
@@ -22205,6 +22314,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             phase: "plan",
             route: null,
             bad: new Set(),
+            skipEnc: new Set(),
+            encAttempts: {},
             tried: 0,
             msg: "",
             nam0: g.state.run.nam,
@@ -22215,6 +22326,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             breakouts: 0,
             breakoutFails: 0,
             relicsWon: 0,
+            tuViEventsDone: 0,
             targetTitle: "",
             phaseDesc: "",
           };
@@ -22760,6 +22872,202 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               a.y - b.y,
           );
         }
+        // Tìm các sự kiện / địa danh / node có thể tăng tu vi xung quanh
+        function auFindTuViSpots(c, cfg, st) {
+          const g = G(),
+            run = c.run,
+            nam = typeof run.nam === "number" ? run.nam : null;
+          const out = [];
+          const seenEncs = new Set();
+          const maxY = cfg.maxY || 3;
+
+          // 1. Quét từ director.placeActivities nếu đang đứng tại nơi chốn
+          try {
+            const director = TT.core && TT.core["encounter/director"];
+            if (
+              director &&
+              typeof director.placeActivities === "function" &&
+              run
+            ) {
+              const curSlot =
+                run.oNoi != null
+                  ? String(run.oNoi)
+                  : run.viTri != null
+                    ? String(run.viTri)
+                    : null;
+              if (curSlot) {
+                const acts = director.placeActivities(c, curSlot);
+                if (Array.isArray(acts)) {
+                  for (const a of acts) {
+                    if (!a || !a.id || a.lockedReason) continue;
+                    if (
+                      st &&
+                      st.skipEnc &&
+                      (st.skipEnc.has(a.id) ||
+                        st.skipEnc.has(a.id + "@" + curSlot))
+                    )
+                      continue;
+                    if (
+                      st &&
+                      st.encAttempts &&
+                      (st.encAttempts[a.id + "@" + curSlot] || 0) >= 3
+                    )
+                      continue;
+                    const tv = encGivesTuVi(a.id);
+                    if (tv <= 0) continue;
+                    seenEncs.add(a.id);
+                    out.push({
+                      slot: run.viTri,
+                      y: 0,
+                      encId: a.id,
+                      tv,
+                      ten: a.ten || a.id,
+                      source: "activity",
+                      d: danger(c, run.viTri),
+                    });
+                  }
+                }
+              }
+            }
+          } catch (e) {}
+
+          // 2. Lấy danh sách các ô có thể đi tới trong bán kính maxY năm
+          const reachable = new Map();
+          reachable.set(run.viTri, 0);
+          for (const ns of nearSlots(c, maxY)) {
+            reachable.set(ns.slot, ns.y);
+          }
+
+          // 3. Quét từ run.nodes (tất cả các node sự kiện thực tế đang nở trên bản đồ)
+          if (run.nodes) {
+            for (const [slotStr, n] of Object.entries(run.nodes)) {
+              if (!n || !n.encounter) continue;
+              if (
+                n.hetHanNam !== undefined &&
+                nam != null &&
+                n.hetHanNam <= nam
+              )
+                continue;
+              const encId = n.encounter;
+              if (seenEncs.has(encId)) continue;
+              if (
+                st &&
+                st.skipEnc &&
+                (st.skipEnc.has(encId) ||
+                  st.skipEnc.has(encId + "@" + slotStr))
+              )
+                continue;
+
+              const tv = encGivesTuVi(encId);
+              if (tv <= 0) continue;
+
+              const slot =
+                n.slot != null
+                  ? n.slot
+                  : /^\d+$/.test(slotStr)
+                    ? +slotStr
+                    : slotStr;
+              if (!reachable.has(slot)) continue;
+              if (st && st.bad && st.bad.has(slot)) continue;
+
+              const y = reachable.get(slot);
+              const d = danger(c, slot);
+              if (d && !auColorOK(d.id, cfg.mau)) continue;
+
+              // Kiểm tra hồi chiêu lịch sử
+              if (run.history && run.history[encId] && nam != null) {
+                const h = run.history[encId];
+                const hc = 60;
+                if (nam - h.namCuoi < hc) continue;
+              }
+
+              seenEncs.add(encId);
+              let ten = encId;
+              try {
+                const Cc = C();
+                const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+                if (encDef && encDef.ten) ten = encDef.ten;
+              } catch (e) {}
+
+              out.push({
+                slot,
+                y,
+                encId,
+                tv,
+                ten,
+                source: "node",
+                d,
+              });
+            }
+          }
+
+          // 4. Quét từ run.noiChon (các khu di tích, bí cảnh có sự kiện thường trú hoặc sự kiện kỳ ngộ)
+          if (run.noiChon) {
+            for (const [slotKey, nc] of Object.entries(run.noiChon)) {
+              if (!nc) continue;
+              const slot = /^\d+$/.test(slotKey) ? +slotKey : slotKey;
+              if (!reachable.has(slot)) continue;
+              if (st && st.bad && st.bad.has(slot)) continue;
+
+              const d = danger(c, slot);
+              if (d && !auColorOK(d.id, cfg.mau)) continue;
+
+              const allPlaceEncs = [
+                ...(Array.isArray(nc.suKien) ? nc.suKien : []),
+                ...(Array.isArray(nc.contextual) ? nc.contextual : []),
+                ...(Array.isArray(nc.standing) ? nc.standing : []),
+              ];
+              for (const encId of allPlaceEncs) {
+                if (!encId || seenEncs.has(encId)) continue;
+                if (
+                  st &&
+                  st.skipEnc &&
+                  (st.skipEnc.has(encId) ||
+                    st.skipEnc.has(encId + "@" + slot))
+                )
+                  continue;
+                const tv = encGivesTuVi(encId);
+                if (tv <= 0) continue;
+
+                // Kiểm tra hồi chiêu lịch sử
+                if (run.history && run.history[encId] && nam != null) {
+                  const h = run.history[encId];
+                  const hc = 60;
+                  if (nam - h.namCuoi < hc) continue;
+                }
+
+                seenEncs.add(encId);
+                let ten = encId;
+                try {
+                  const Cc = C();
+                  const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+                  if (encDef && encDef.ten) ten = encDef.ten;
+                } catch (e) {}
+
+                out.push({
+                  slot,
+                  y: reachable.get(slot),
+                  encId,
+                  tv,
+                  ten,
+                  source: "noiChon",
+                  d,
+                });
+              }
+            }
+          }
+
+          return out.sort((a, b) => {
+            const aHere = a.slot === run.viTri || a.slot === run.oNoi;
+            const bHere = b.slot === run.viTri || b.slot === run.oNoi;
+            if (aHere && !bHere) return -1;
+            if (!aHere && bHere) return 1;
+            const effA = a.tv / Math.max(0.2, a.y);
+            const effB = b.tv / Math.max(0.2, b.y);
+            if (Math.abs(effB - effA) > 0.01) return effB - effA;
+            return a.y - b.y;
+          });
+        }
         // Đếm nơi hoang dã còn lượt săn nhưng bị bỏ vì màu không được tích.
         function auSkipColor(c, cfg, st) {
           let n = 0;
@@ -23279,6 +23587,116 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       Math.round(AU_KT * 100) +
                       "%. Tăng sức hoặc tắt “Kiểm tra sức trước khi chạy” nếu vẫn muốn chạy",
                   };
+              }
+            }
+
+            // 2. Ưu tiên tham gia sự kiện tăng tu vi (kỳ ngộ, bí cảnh, di tích...) nếu bật cấu hình
+            if (cfg.uuTienSuKienTuVi !== false) {
+              const tvSpots = auFindTuViSpots(cLite, cfg, st);
+              if (tvSpots.length > 0) {
+                const targetTv = tvSpots[0];
+                const isHere =
+                  targetTv.slot === run.viTri || targetTv.slot === run.oNoi;
+
+                if (isHere) {
+                  // Đang ở đúng nơi có sự kiện tăng tu vi
+                  const encKey = targetTv.encId + "@" + targetTv.slot;
+                  st.encAttempts = st.encAttempts || {};
+                  st.encAttempts[encKey] = (st.encAttempts[encKey] || 0) + 1;
+                  if (st.encAttempts[encKey] > 3) {
+                    auLog(
+                      `⚠️ Thử mở sự kiện tu vi «${targetTv.ten}» không thành công sau 3 lần, tạm thời bỏ qua...`,
+                      "vk-mu",
+                    );
+                    st.skipEnc = st.skipEnc || new Set();
+                    st.skipEnc.add(targetTv.encId);
+                    st.skipEnc.add(encKey);
+                  } else {
+                    // Nếu chưa vào node thì vào node trước
+                    if (String(run.oNoi) !== String(targetTv.slot)) {
+                      if (typeof g.enterNode === "function") {
+                        auLog(
+                          `Tiến vào nơi chốn để tham gia «${targetTv.ten}»...`,
+                          "vk-ok",
+                        );
+                        g.enterNode(String(targetTv.slot));
+                        const rEnter = G().state && G().state.run;
+                        if (
+                          rEnter &&
+                          (rEnter.active || rEnter.tran || rEnter.bienCo)
+                        )
+                          return null;
+                      }
+                    }
+
+                    // Kích hoạt sự kiện
+                    auLog(
+                      `⚡ Tham gia sự kiện tăng tu vi «${targetTv.ten}» (+${targetTv.tv} tu vi kỳ vọng)...`,
+                      "vk-ok",
+                    );
+                    let rAct = auCall(() => {
+                      if (typeof g.chooseActivity === "function") {
+                        try {
+                          g.chooseActivity(targetTv.encId);
+                        } catch (e1) {
+                          if (typeof g.doAction === "function")
+                            g.doAction(targetTv.encId);
+                          else throw e1;
+                        }
+                      } else if (typeof g.doAction === "function") {
+                        g.doAction(targetTv.encId);
+                      }
+                    });
+
+                    const rAfter = G().state && G().state.run;
+                    if (
+                      rAfter &&
+                      (rAfter.active || rAfter.tran || rAfter.bienCo)
+                    ) {
+                      st.tried = 0;
+                      return null;
+                    }
+
+                    // Fallback doAction nếu chưa mở
+                    if (!rAct.ok || (rAfter && !rAfter.active && !rAfter.tran)) {
+                      auCall(() => {
+                        if (typeof g.doAction === "function")
+                          g.doAction(targetTv.encId);
+                      });
+                    }
+
+                    const rFinal = G().state && G().state.run;
+                    if (
+                      rFinal &&
+                      (rFinal.active || rFinal.tran || rFinal.bienCo)
+                    ) {
+                      st.tried = 0;
+                      return null;
+                    }
+                  }
+                } else {
+                  // Cần di chuyển tới ô có sự kiện tăng tu vi
+                  auLog(
+                    `⚡ Phát hiện sự kiện tu vi «${targetTv.ten}» (+${targetTv.tv} tu vi) cách ${num(targetTv.y)} năm. Đang di chuyển tới...`,
+                    "vk-ok",
+                  );
+                  const r = auCall(() => g.travelTo(String(targetTv.slot)));
+                  const r2 = G().state && G().state.run;
+                  if (
+                    !r.ok ||
+                    (r2.viTri !== targetTv.slot &&
+                      !r2.active &&
+                      !r2.tran &&
+                      !r2.bienCo)
+                  ) {
+                    st.bad.add(targetTv.slot);
+                    auLog(
+                      `Không thể đi tới ô sự kiện ${targetTv.slot}: ${r.err || "bị chặn"}`,
+                      "vk-mu",
+                    );
+                  }
+                  return null;
+                }
               }
             }
 
@@ -25088,6 +25506,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (nh) c.neHac = nh.checked;
             const da = q("au-tl-danh-ai");
             if (da) c.danhAi = da.checked;
+            c.uuTienSuKienTuVi = ck(
+              "au-tl-tu-vi-events",
+              c.uuTienSuKienTuVi !== false,
+            );
             const m = AU_MAU_ID.filter((x) => {
               const el = q("au-tl-mau-" + x);
               return el ? el.checked : (c.mau || []).includes(x);
@@ -25377,6 +25799,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 "Số Trận Đã Đánh",
                 (st.fights || 0) + " (thắng " + (st.wins || 0) + ")",
               ]);
+              if (st.tuViEventsDone) {
+                rows.push(["Sự Kiện Tu Vi Đã Qua", st.tuViEventsDone + " lần"]);
+              }
               if (st.hacSkipped) rows.push(["Số Lần Né Hạc", st.hacSkipped]);
             } else {
               rows.push([
@@ -26339,6 +26764,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc... tự chọn Bỏ Đi khi gặp để không bị trừ Khí Vận)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-danh-ai" ${c.danhAi !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Dùng Siêu AI VIP tự đánh khi game khóa nút Tốc Chiến)</span></span></label>
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-tu-vi-events" ${c.uuTienSuKienTuVi !== false ? "checked" : ""} style="margin-top:3px"><span><b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi (Kỳ Ngộ, Bí Cảnh, Di Tích...)</b> <span class="vk-mu" style="font-size:11px">(Khi phát hiện sự kiện / kỳ ngộ / bí cảnh quanh đây có thể nhận nhiều tu vi, Auto sẽ ưu tiên tới tham gia trước khi săn quái để tu luyện nhanh nhất)</span></span></label>
         <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-kt" ${c.kt ? "checked" : ""}> Kiểm Tra Sức Trước Khi Chạy (thắng chắc từ ${Math.round(AU_KT * 100)}% yêu thú mẫu)</label>
         <button class="vk-btn sec" id="au-tl-chk-hunt" style="margin-top:6px;width:100%">🔍 Xem Sức Đánh & Các Bãi Săn Quanh Đây</button>
         <div id="au-tl-hunt-info" style="margin-top:6px"></div>
@@ -29534,9 +29960,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.1 · Chuẩn Hóa Mục Tiêu Đại Cảnh Giới & Bổ Sung Tùy Chọn Tiểu Cảnh Giới Cho Auto Tu Luyện",
+            t: "Phiên Bản 7.13.2 · Bổ Sung Tùy Chọn Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi Khi Săn Yêu",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi:</b> Trong chế độ Đánh Quái (Săn Yêu Thú) của Auto Tu Luyện, bổ sung tùy chọn tự động quét toàn diện các cơ duyên, kỳ ngộ, bí cảnh, di tích và hoạt động nơi chốn xung quanh có ban tặng tu vi.",
+              "<b>Định Hướng Đỉnh Cao & Đột Phá Thần Tốc:</b> Tự động so sánh và chọn các nhánh khảo nghiệm / quyết định mang lại lượng tu vi cao nhất trong sự kiện (nhận hàng chục đến hàng trăm nghìn tu vi), giúp nhân vật thăng cấp thần tốc hơn việc chỉ đánh quái đơn thuần.",
+              "<b>Thống Kê Tiến Độ Thời Gian Thực:</b> Bổ sung chỉ số <i>«Sự Kiện Tu Vi Đã Qua»</i> ngay trên bảng trạng thái Auto, hiển thị rõ số lần tham gia kỳ ngộ thành công.",
+              "<b>Bảo Toàn An Toàn & Tránh Kẹt:</b> Tích hợp cơ chế tự động ghi nhớ, giới hạn số lần thử (retry limit 3 lần) và tự động bỏ qua các sự kiện vượt quá khả năng để hành trình tu tiên luôn thông suốt."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.1 · Chuẩn Hóa Mục Tiêu Đại Cảnh Giới & Bổ Sung Tùy Chọn Tiểu Cảnh Giới Cho Auto Tu Luyện",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Chuẩn Hóa Danh Sách Đại Cảnh Giới:</b> Sửa triệt để lỗi lệch chỉ số cảnh giới (off-by-one) ở mục chọn cảnh giới đích. Cập nhật đúng thang cảnh giới game: Luyện Khí (1) → Trúc Cơ (2) → Kim Đan (3) → Nguyên Anh (4) → Hóa Thần (5 - Đỉnh Nhân Giới), cùng tùy chọn <i>«♾️ Không Giới Hạn (Farm Liên Tục)»</i>.",
               "<b>Bổ Sung Tùy Chọn Mục Tiêu Tiểu Cảnh Giới:</b> Thêm dropdown chọn chính xác tiểu cảnh giới cần đạt: <i>Bất kỳ, Sơ kỳ, Trung kỳ, Hậu kỳ, Đại viên mãn, hoặc Đại viên mãn (Đầy tu vi 100%)</i>. Giúp các nhân vật ở mọi cảnh giới — đặc biệt là Hóa Thần — có thể tự động bế quan hoặc đánh quái để đạt mốc mong muốn mà không bị dừng sớm.",
