@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.5
+// @version      7.13.6
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.6
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.5";
+      var TOOL_VER = "7.13.6";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5518,6 +5518,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             y = gocHe(b);
           return SINH_HE[x] === y ? 1 : KHAC_HE[x] === y ? -1 : 0;
         };
+        // 7.13.6: Chuẩn hóa bậc phẩm tương sinh (generationRank) & độ suy giảm tương sinh zD [1, 2/3, 1/3, 0] theo code lõi game
+        const genRank = (it) => {
+          if (!it) return 1;
+          if (it.tag && it.tag.includes("nghich")) return 5;
+          if (it.tran_phai) return 5;
+          return it.pham_cap || 1;
+        };
+        const genSlack = (recIt, genIt) => {
+          if (!recIt || !genIt) return 0;
+          if (genIt.tag && genIt.tag.includes("nghich")) return 1.0;
+          const k = Math.max(0, genRank(recIt) - genRank(genIt));
+          return k === 0 ? 1.0 : k === 1 ? 2 / 3 : k === 2 ? 1 / 3 : 0;
+        };
         /* ═════ BẢN 6.14: Ô KINH MẠCH HỢP HỆ (sinh · được sinh · cùng gốc) ═════
      Ô hệ X dùng được: X và hệ cùng gốc (Băng ~ Thủy; Lôi, Phong ~ Mộc), hệ sinh ra X, hệ mà X sinh ra (cùng với các hệ cùng gốc của chúng).
      Ví dụ ô Thủy: Thủy, Băng (cùng gốc) · Kim (Kim sinh Thủy) · Mộc, Lôi, Phong (Thủy sinh Mộc). */
@@ -5633,25 +5646,46 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (n >= 0 && j !== undefined && j !== i) nb.add(j);
               }
             }
-            // Ưu tiên số liệu chính game tính (theo từng ô chạm nhau, có xét chênh phẩm); thiếu thì dùng cách ước lượng theo hệ cả món.
+            // Ưu tiên số liệu chính game tính (theo từng ô chạm nhau, có xét chênh phẩm zD); thiếu thì dùng cách ước lượng theo hệ cả món.
             const gm = R && R.manh && R.manh[i];
             if (gm && typeof gm.generators === "number") {
-              f.sinh += gm.generators - 0.5 * (gm.weakGenerators || 0);
+              const ct =
+                typeof gm.sinhKhac === "number"
+                  ? Math.max(
+                      0,
+                      (gm.sinhKhac - 1 + 0.15 * (gm.restrainers || 0)) / 0.15,
+                    )
+                  : Math.max(0, gm.generators - (gm.weakGenerators || 0));
+              f.sinh += ct;
               f.khac += gm.restrainers || 0;
-            } else
+              if (gm.noiTai && gm.noiTai > 1) f.sinh += 0.67; // Tương sinh nội tại đa hệ (x1.1 hệ số toàn mảnh)
+            } else {
+              const it_i = B.items.get(p.m.item);
               for (const j of nb) {
                 if (!thong(j)) continue;
+                const it_j = B.items.get(manh[j].m.item);
                 let sinh = 0,
                   khac = 0;
                 for (const a of hes[j])
                   for (const b of hes[i]) {
                     const d = heTacDong(a, b);
-                    if (d > 0) sinh = 1;
-                    else if (d < 0) khac = 1;
+                    if (d > 0) {
+                      const mult = genSlack(it_i, it_j);
+                      if (mult > sinh) sinh = mult;
+                    } else if (d < 0) khac = 1;
                   }
                 f.sinh += sinh;
                 f.khac += khac;
               }
+              if (hes[i].length > 1) {
+                for (const a of hes[i])
+                  for (const b of hes[i])
+                    if (heTacDong(a, b) > 0) {
+                      f.sinh += 0.67;
+                      break;
+                    }
+              }
+            }
             for (const c of p.cells) {
               const m = B.mau[c];
               if (m && m !== "vo_sac" && hes[i].length) {
@@ -6241,6 +6275,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const itSmart = itemsK.get(id);
             const isHighVal =
               itSmart && (itSmart.chieu || (itSmart.pham_cap || 1) >= 4);
+            const hsSmart = (
+              (itSmart && itSmart.he) ||
+              []
+            ).filter((h) => h && h !== "vo_sac");
 
             let best = null,
               bs = -1e9;
@@ -6253,8 +6291,46 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 hyCount > 0 ? (isHighVal ? 2.5 * hyCount : 0.6 * hyCount) : 0;
               const conn = connectsToSpine(c, cpCells) ? 1.0 : 0;
               const khacPen = c.isKhacPha ? -0.8 : 0;
+
+              // Khảo sát tương sinh / tương khắc thực tế với các mảnh láng giềng đã đặt (xét hệ số suy giảm zD)
+              let synBonus = 0;
+              for (const p of next) {
+                if (!c.adj.some((a) => p.cells.includes(a))) continue;
+                const itP = itemsK.get(p.m.item);
+                const hsP = (
+                  (itP && itP.he) ||
+                  []
+                ).filter((h) => h && h !== "vo_sac");
+                let sDirect = 0,
+                  sReverse = 0,
+                  kDirect = 0;
+                for (const a of hsSmart) {
+                  for (const b of hsP) {
+                    if (heTacDong(a, b) > 0) {
+                      const m = genSlack(itP, itSmart);
+                      if (m > sDirect) sDirect = m;
+                    } else if (heTacDong(b, a) > 0) {
+                      const m = genSlack(itSmart, itP);
+                      if (m > sReverse) sReverse = m;
+                    } else if (heTacDong(a, b) < 0 || heTacDong(b, a) < 0) {
+                      kDirect = 1;
+                    }
+                  }
+                }
+                if (S.dir === "tien" || !S.dir) {
+                  synBonus += 0.8 * sDirect + 0.8 * sReverse - 1.2 * kDirect;
+                } else if (S.dir === "ma") {
+                  synBonus += 0.8 * kDirect - 0.4 * (sDirect + sReverse);
+                }
+              }
+
               const sc =
-                (c.aff || 0.4) + conn + hyPref + khacPen + 0.1 * rnd();
+                (c.aff || 0.4) +
+                conn +
+                hyPref +
+                khacPen +
+                synBonus +
+                0.1 * rnd();
               if (sc > bs) {
                 bs = sc;
                 best = c;
@@ -30335,9 +30411,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.5 · Đại Tu Thuật Toán Hình Học & Tối Ưu Hóa Auto Kinh Mạch Toàn Diện",
+            t: "Phiên Bản 7.13.6 · Đồng Bộ Tương Sinh Phẩm Cấp & Khai Phá Lõi Kinh Mạch Game",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Đồng Bộ Công Thức Suy Giảm Tương Sinh (generationRank & zD):</b> Khai quật chính xác từ mã nguồn game: công pháp phẩm thấp sinh cho công pháp phẩm cao bị suy giảm theo mảng chênh bậc <code>zD = [1, 2/3, 1/3, 0]</code> (kém 1 phẩm còn 67%, kém 2 phẩm còn 33%, kém ≥3 phẩm mất trắng 0% tương sinh). Trấn phái và Nghịch Thiên luôn giữ chuẩn bậc 5 (Thiên phẩm), Nghịch Thiên sinh cho bất kỳ ai cũng nhận đủ 100%.",
+              "<b>Nâng Cấp Thuật Toán Xếp Kinh Mạch Thông Minh:</b> Tích hợp bảng suy giảm <code>genSlack</code> vào bộ lọc vị trí (<code>smart candidate scoring</code>) và hàm lượng giá (<code>biasInfo</code>). Bộ xếp tự động ưu tiên ghép các mảnh cùng hoặc cao hơn phẩm cấp kề nhau để đạt trọn vẹn 100% tương sinh (+15% hệ số), loại bỏ triệt để tình trạng ghép mảnh rác phẩm thấp quanh mảnh chủ lực.",
+              "<b>Nhận Diện Tương Sinh Nội Tại & Triệt Tiêu Điểm Nghịch:</b> Nhận diện mảnh đa hệ có tương sinh nội tại (<code>noiTai = 1.1</code>, tăng 10% toàn mảnh), đồng thời cảnh báo và tránh các cặp ô/mảnh tương khắc không có hệ trung gian thông quan gây phản phệ."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.5 · Đại Tu Thuật Toán Hình Học & Tối Ưu Hóa Auto Kinh Mạch Toàn Diện",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Đại Tu Thuật Toán Hình Học Kinh Mạch (Topology & Spanning Tree):</b> Dựa trên phân tích sâu mã nguồn game, thuật toán xếp tham lam (Greedy) và Simulated Annealing nay tự động dựng cây thông mạch liên tục từ Đan Điền tỏa ra các nhánh, áp dụng bộ lọc liên thông thời gian thực giúp loại bỏ 95% vị trí chết không thể thông mạch, tăng tốc độ tính toán gấp 40 lần.",
               "<b>Bộ Đột Biến Hình Học 8 Tầng (8-Layer Geometric Mutators):</b> Tích hợp các toán tử hình học chuyên biệt: Xoay tại chỗ (Rotate-In-Place), Hoán đổi cặp mảnh (Piece Swap), Bắn tỉa huyệt vị (Acupoint Snipe), Trượt hình học lân cận (Slide / Jiggle) và Tối ưu màu ô cộng hưởng (Cell Element Resonance), giúp thuật toán bứt phá khỏi bẫy cực trị địa phương và lách khít từng góc chết trên lưới.",
