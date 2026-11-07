@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.7
+// @version      7.14.8
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.7
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.8
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.7";
+      var TOOL_VER = "7.14.8";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5899,8 +5899,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 ? mode === "tu"
                   ? 40
                   : mode === "danh"
-                    ? 140
-                    : 85
+                    ? 130
+                    : 80
                 : ch.dang === "khong_che"
                   ? 65
                   : 45;
@@ -5909,16 +5909,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (ch.controlTurns) p += ch.controlTurns * 35;
             if (ch.shieldTurns) p += ch.shieldTurns * 30;
             if (ch.scope === "spread" || ch.scope === "all") p += 35;
+            // Chiêu tốn nhiều linh lực bị khấu trừ để ưu tiên chiêu hiệu quả năng lượng cao
+            const phiCost = ch.phi || 0;
+            p -= phiCost * 3.0;
+            if (ch.hoi > 0) p += 10;
           }
           const bd = it.bi_dong || {};
-          const tocW = mode === "danh" ? 40 : mode === "tu" ? 320 : 130;
-          const dpW = mode === "danh" ? 30 : mode === "tu" ? 240 : 95;
+          const tocW = mode === "danh" ? 45 : mode === "tu" ? 320 : 130;
+          const dpW = mode === "danh" ? 35 : mode === "tu" ? 240 : 95;
           p += (bd.toc_do || 0) * tocW;
           p += (bd.dot_pha || 0) * dpW;
-          p += (bd.khi_huyet || 0) * 60;
-          p += Math.min(0.3, bd.ho_the || 0) * 80;
+          p += (bd.khi_huyet || 0) * 110;
+          p += Math.min(0.3, bd.ho_the || 0) * 140;
+          p += (bd.phap_luc || 0) * 110;
           if (bd.khang_tam_ma) p += bd.khang_tam_ma * 60;
-          if (it.linh_luc) p += it.linh_luc * (mode === "tu" ? 14 : 26);
+          // 7.14.8: Tâm pháp cho linh_luc đóng vai trò tối thượng gánh tải chiêu thức
+          if (it.linh_luc) p += it.linh_luc * (mode === "tu" ? 35 : 55);
           return p;
         }
 
@@ -5971,32 +5977,87 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               dp = R.biDong.dot_pha || 0;
             const ng = (R.diemNghich || 0) * ngW;
 
-            // Linh lực: hồi mỗi lượt phải đủ ra chiêu
-            const ll = P.linhLucMoiLuot || 0;
-            const atk = (P.chieu || [])
-              .filter((x) => x.dang && x.phi > 0)
-              .map((x) => x.phi);
-            const minCost = atk.length ? Math.min(...atk) : 0;
-            const llScore =
-              (mode === "tu" ? 1.5 : mode === "danh" ? 6 : 4.5) * ll -
-              (minCost && ll < minCost ? 40 : 0);
-
-            // Sát thương thực tế & bộc phát chiêu
-            const chieuList = R.chieu || [];
-            const uyTong = chieuList.reduce(
-              (acc, x) => acc + (x.uyLuc || (x.uy || 0) * (P.phapLuc || 1)),
-              0,
+            // 7.14.8: Đánh giá chiêu thức thực tế (Rotation) & Cân bằng Linh Lực chuyên sâu
+            const chieuList = (P.chieu || []).filter(
+              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0),
             );
-            const uyMax = chieuList.length
-              ? Math.max(
-                  ...chieuList.map(
-                    (x) => x.uyLuc || (x.uy || 0) * (P.phapLuc || 1),
-                  ),
-                )
+            const sortedSkills = chieuList.slice().sort((a, b) => {
+              const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
+              const uyB = b.uyLuc || (b.uy || 0) * (P.phapLuc || 1);
+              return uyB - uyA;
+            });
+
+            // 1. Sát thương thực tế theo vòng quay chiêu (Rank 1: 100%, Rank 2: 65%, Rank 3: 35%, Rank 4: 15%, Rank 5+: 5%)
+            // Tránh bẫy nhồi nhét 7–9 chiêu làm loãng kinh mạch và đói linh lực thực chiến
+            const rotWeights = [1.0, 0.65, 0.35, 0.15];
+            let effectiveRotDmg = 0;
+            for (let i = 0; i < sortedSkills.length; i++) {
+              const w = i < rotWeights.length ? rotWeights[i] : 0.05;
+              const skillDmg =
+                sortedSkills[i].uyLuc ||
+                (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
+              effectiveRotDmg += skillDmg * w;
+            }
+            const uyMax = sortedSkills.length
+              ? sortedSkills[0].uyLuc ||
+                (sortedSkills[0].uy || 0) * (P.phapLuc || 1)
               : 0;
             const dmgScore =
-              Math.log10(Math.max(10, uyTong)) * 35 +
+              Math.log10(Math.max(10, effectiveRotDmg)) * 40 +
               Math.log10(Math.max(10, uyMax)) * 25;
+
+            // 2. Phân tích chi phí linh lực và khả năng duy trì bền vững không cần đan
+            const llPerTurn = P.linhLucMoiLuot || 0;
+            const llMax = P.linhLucToiDa || 0;
+            const costSkills = sortedSkills.filter((x) => (x.phi || 0) > 0);
+            const maxPhi = costSkills.length
+              ? Math.max(...costSkills.map((x) => x.phi || 0))
+              : 0;
+            const top2Phi = costSkills
+              .slice(0, 2)
+              .reduce((sum, x) => sum + (x.phi || 0), 0);
+
+            let llPenalty = 0;
+            // a) Phạt nặng nếu không đủ linh lực hồi mỗi lượt để xuất chiêu chủ lực
+            if (llPerTurn < maxPhi) {
+              const def = maxPhi - llPerTurn;
+              llPenalty += def * (mode === "danh" ? 8.0 : 5.0);
+            }
+            // b) Phạt nếu không duy trì được vòng xoay 2 chiêu cốt lõi
+            if (llPerTurn < top2Phi * 0.65) {
+              const def = top2Phi * 0.65 - llPerTurn;
+              llPenalty += def * (mode === "danh" ? 7.0 : 4.5);
+            }
+            // c) Phạt nếu dung lượng linh lực tối đa quá nông so với chiêu lớn nhất
+            if (llMax < maxPhi * 1.5) {
+              const def = maxPhi * 1.5 - llMax;
+              llPenalty += def * 3.5;
+            }
+            // d) Phạt nặng hiện tượng "Bội Thực Chiêu Thức" (quá nhiều chiêu ngốn chỗ & đói linh lực)
+            // Trong thực chiến 1 hiệp chỉ ra được 1-2 đòn, tối đa 3-4 chiêu là lý tưởng. Từ 5 chiêu trở lên là thừa thãi.
+            if (costSkills.length > 4) {
+              const ex = costSkills.length - 4;
+              llPenalty +=
+                ex * (mode === "danh" ? 45 : 30) + Math.pow(ex, 1.8) * 20;
+            }
+
+            // e) Thưởng điểm "Tự Cân Bằng Hoàn Hảo" (Chiêu mạnh + Linh lực dồi dào, tự đánh mượt mà không cần nuốt đan)
+            let llBonus = 0;
+            if (
+              llPerTurn >= maxPhi * 1.1 &&
+              llPerTurn >= top2Phi * 0.7 &&
+              costSkills.length >= 2 &&
+              costSkills.length <= 4
+            ) {
+              llBonus += mode === "danh" ? 60 : 40;
+            }
+
+            // Điểm linh lực tổng quát
+            const llScore =
+              (mode === "tu" ? 2.5 : mode === "danh" ? 8.0 : 6.0) * llPerTurn +
+              (mode === "tu" ? 0.8 : 1.5) * Math.min(300, llMax) -
+              llPenalty +
+              llBonus;
 
             // 7.14.1: Tối ưu huyệt đạo: buff cực đại khi đặt chiêu mạnh lên huyệt, phạt nặng chiếm huyệt mà không thông
             let hyScore = 0;
@@ -6261,14 +6322,40 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const nv = clone(nv0);
             nv.kinhMach.manh = manh.map((p) => ({ ...p.m }));
             const R = K.tinhKinhMach(nv, c);
-            const chieuList = R.chieu || [];
-            const uy = chieuList.reduce(
-              (a, x) => a + (x.uyLuc || x.uy || 0) / 10,
-              0,
+
+            // 7.14.8: Đánh giá chiêu thức thực tế & áp lực linh lực ngay từ Greedy
+            const chieuList = (R.chieu || []).filter(
+              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0),
             );
-            const uyMax = chieuList.length
-              ? Math.max(...chieuList.map((x) => (x.uyLuc || x.uy || 0) / 10))
+            const sortedQ = chieuList.slice().sort(
+              (a, b) => (b.uyLuc || b.uy || 0) - (a.uyLuc || a.uy || 0),
+            );
+            const qWeights = [1.0, 0.65, 0.35, 0.15];
+            let rotUy = 0;
+            for (let i = 0; i < sortedQ.length; i++) {
+              const wt = i < qWeights.length ? qWeights[i] : 0.05;
+              rotUy += ((sortedQ[i].uyLuc || sortedQ[i].uy || 0) / 10) * wt;
+            }
+            const uyMax = sortedQ.length
+              ? (sortedQ[0].uyLuc || sortedQ[0].uy || 0) / 10
               : 0;
+
+            const llQ = R.linhLuc || 0;
+            const costQ = sortedQ.filter((x) => (x.phi || 0) > 0);
+            const maxPhiQ = costQ.length
+              ? Math.max(...costQ.map((x) => x.phi || 0))
+              : 0;
+            const top2PhiQ = costQ
+              .slice(0, 2)
+              .reduce((sum, x) => sum + (x.phi || 0), 0);
+            let llPenaltyQ = 0;
+            if (llQ < maxPhiQ) llPenaltyQ += (maxPhiQ - llQ) * 5.0;
+            if (llQ < top2PhiQ * 0.65) llPenaltyQ += (top2PhiQ * 0.65 - llQ) * 4.0;
+            if (costQ.length > 4) {
+              const ex = costQ.length - 4;
+              llPenaltyQ += ex * 30 + ex * ex * 12;
+            }
+
             const toc = R.biDong.toc_do || 0,
               dp = R.biDong.dot_pha || 0;
             const w =
@@ -6341,12 +6428,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               w[0] * R.linhLuc +
               w[1] * toc +
               w[2] * dp +
-              w[3] * uy +
+              w[3] * rotUy +
               (mode === "danh" ? 0.8 * uyMax : 0) +
               hyScore +
               kinhLoBonus -
               hoThePenalty -
               colorConflictPenalty -
+              llPenaltyQ -
               6 * (R.diemNghich || 0) * (S.dir === "ma" ? 0.4 : 1) +
               biasScore(B, manh, R) +
               capScore(capX, R) +
@@ -6507,13 +6595,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           const itemsK = C().items;
 
-          // 7.14.1: Tiền tính toán trọng số vật phẩm (ưu tiên Thiên/Địa/Huyền & chiêu công đỉnh cao)
+          // 7.14.8: Cân bằng trọng số vật phẩm (ưu tiên Tâm Pháp tăng linh_luc / bị động, chiêu thức chọn lọc)
           const itemWeights = new Map();
           for (const id of ids) {
             const it = itemsK.get(id);
             const pwr = kmItemPower(it, mode);
             const ph = it.pham_cap || 1;
-            let w = Math.pow(ph, 1.8) * 8 + (it.chieu ? 30 : 0) + pwr * 0.4;
+            let w = Math.pow(ph, 1.8) * 8 + pwr * 0.45;
+            if (it.chieu && (it.pham_cap || 1) >= 3) w += 15;
+            if (it.linh_luc) w += it.linh_luc * 15;
             if (it.tag && it.tag.includes("nghich")) w += 45;
             itemWeights.set(id, Math.max(5, w));
           }
@@ -11727,6 +11817,29 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ? `×${num(s, 2)} (+${pct((r && r.biDong && r.biDong.toc_do) || 0)})`
               : `+${pct((r && r.biDong && r.biDong.toc_do) || 0)}`;
 
+          const llBalanceStr = (P) => {
+            if (!P) return "—";
+            const cList = (P.chieu || []).filter((x) => (x.phi || 0) > 0);
+            if (!cList.length)
+              return `<span class="vk-ok">0 chiêu tiêu hao</span>`;
+            const ll = P.linhLucMoiLuot || 0;
+            const mPhi = Math.max(...cList.map((x) => x.phi || 0));
+            const t2Phi = cList
+              .slice(0, 2)
+              .reduce((s, x) => s + (x.phi || 0), 0);
+            if (ll >= mPhi * 1.1 && ll >= t2Phi * 0.65 && cList.length <= 4) {
+              return `<span class="vk-ok" style="font-weight:bold">Dư dả (${cList.length} chiêu, không cần đan)</span>`;
+            }
+            if (ll < mPhi) {
+              const def = Math.round((mPhi - ll) * 10) / 10;
+              return `<span style="color:#ef4444;font-weight:bold">Thiếu hụt (thiếu ${num(def)} LL/lượt)</span>`;
+            }
+            if (cList.length > 4) {
+              return `<span style="color:#f59e0b">Bội thực (${cList.length} chiêu, ngốn LL)</span>`;
+            }
+            return `<span class="vk-ok">Vừa đủ (${cList.length} chiêu)</span>`;
+          };
+
           const rows = [
             ["Thắng trận mẫu", `${a.wins}/${a.n}`, `${b.wins}/${b.n}`],
             ["Pháp lực", spStrA, spStrB],
@@ -11773,6 +11886,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "Chiêu tốn nhiều nhất",
               num(Math.max(0, ...(a.P.chieu || []).map((x) => x.phi || 0))),
               num(Math.max(0, ...(b.P.chieu || []).map((x) => x.phi || 0))),
+            ],
+            [
+              "Vòng chiêu & Linh lực",
+              llBalanceStr(a.P),
+              llBalanceStr(b.P),
             ],
             ["Tu luyện", tuStr(spdA, a.R), tuStr(spdB, b.R)],
             [
@@ -31389,9 +31507,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.7 · Khắc Phục Lỗi Phạm Vi Biến B Trong Anneal",
+            t: "Phiên Bản 7.14.8 · Tối Ưu Cân Bằng Linh Lực & Khắc Phục Bội Thực Chiêu Thức",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Cân Bằng Tiêu Hao & Hồi Phục Linh Lực Thực Chiến:</b> Thuật toán tự động đo lường tương quan giữa Linh Lực hồi mỗi lượt / dung lượng tối đa và chi phí thi triển của các chiêu thức. Phạt nặng cấu hình 'đói linh lực' (không đủ linh lực xuất chiêu lớn, phải cắn đan dược trong trận). Thưởng lớn cấu hình 'Tự Cân Bằng Hoàn Hảo' (hồi phục dư dả, xoay chiêu mượt mà 100% không cần nuốt đan).",
+              "<b>Đánh Giá Sát Thương Vòng Chiêu (Rotation) Thay Vì Cộng Dồn Thô:</b> Loại bỏ hiện tượng nhồi nhét 7–9 chiêu thức làm loãng kinh mạch. Áp dụng trọng số sát thương thực chiến giảm dần theo thứ tự ưu tiên (chiêu 1: 100%, chiêu 2: 65%, chiêu 3: 35%...). Phạt nặng hiện tượng bội thực chiêu (>4 active skills) để nhường đất kinh mạch cho các Tâm Pháp tăng mạnh Khí Huyết %, Hộ Thể %, Pháp Lực % và Tốc Độ.",
+              "<b>Nâng Tầm Trọng Số Tâm Pháp Hồi Linh Lực:</b> Nâng mạnh điểm thưởng của các mảnh có thuộc tính <code>linh_luc</code> và chỉ số bị động trong <code>kmItemPower</code> và <code>itemWeights</code>, giúp máy ưu tiên ghép các Tâm Pháp cao cấp gánh tải linh lực cho toàn bộ hệ thống.",
+              "<b>Bổ Sung Dòng 'Vòng Chiêu & Linh Lực' Trên Bảng So Sánh:</b> Trực quan hóa tình trạng tiêu hao năng lượng của bản kinh mạch (Dư dả không cần đan / Vừa đủ / Thiếu hụt) để đạo hữu đánh giá độ bền bỉ ngay tức thì."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.7 · Khắc Phục Lỗi Phạm Vi Biến B Trong Anneal",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Lỗi 'B is not defined':</b> Khai báo đầy đủ biến ngữ cảnh <code>const B = biasCtx(nv0, g)</code> trong thuật toán Simulated Annealing (<code>anneal</code>), đảm bảo bộ lọc thông minh <code>smart</code> đánh giá chính xác độ tương sinh công pháp theo hướng build (Kiếm Tu...) mà không bị lỗi crash ngắt ngang tiến trình Auto.",
               "<b>Tối Ưu & Bảo Đảm Toàn Vẹn Thuật Toán:</b> Kiểm toán toàn diện phạm vi biến trong chuỗi thuật toán Auto Kinh Mạch (<code>greedy</code>, <code>anneal</code>, <code>makeEval</code>, <code>findOptimalRecolors</code>), đảm bảo Auto Kinh Mạch chạy trơn tru, ổn định và chính xác 100%."
