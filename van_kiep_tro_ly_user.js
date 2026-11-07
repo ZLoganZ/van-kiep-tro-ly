@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.6
+// @version      7.13.7
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.6
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.7
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.6";
+      var TOOL_VER = "7.13.7";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -4830,6 +4830,30 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // Tính năng phụ: thiếu thì chỉ tính năng đó tắt, phần còn lại vẫn chạy.
         const CORE_OPTIONAL = [
           [
+            "drugCapped",
+            "character/character",
+            "drugCapped",
+            "kiểm tra trần đan dược cảnh giới",
+          ],
+          [
+            "realmDrugUses",
+            "character/character",
+            "realmDrugUses",
+            "số viên đan đã dùng trong cảnh giới",
+          ],
+          [
+            "drugTargetsOf",
+            "character/character",
+            "drugTargetsOf",
+            "mục tiêu bị dược kháng",
+          ],
+          [
+            "DRUG_TARGETS",
+            "character/character",
+            "DRUG_TARGETS",
+            "danh sách mục tiêu có dược kháng",
+          ],
+          [
             "atBottleneck",
             "character/character",
             "atBottleneck",
@@ -5244,6 +5268,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             "balance/encounter",
             "AMBUSH_MIN_DISTANCE",
           );
+          live(
+            "AUCTION_HAND_LOT_SHARE",
+            "balance/economy",
+            "AUCTION_HAND_LOT_SHARE",
+          );
+          live("DIFFICULTY", "balance/difficulty", "DIFFICULTY");
+          live("DIFFICULTY_MODES", "balance/difficulty", "DIFFICULTY_MODES");
+          live("DIFFICULTY_KNOB_INFO", "balance/difficulty", "DIFFICULTY_KNOB_INFO");
+          live("SIEGE_MAX_ROUNDS", "balance/combat", "SIEGE_MAX_ROUNDS");
+          live("SECT_GROUND_BONUS", "balance/sect", "SECT_GROUND_BONUS");
           live("CAP_BAC", "balance/sect", "CAP_BAC"); // tên cấp bậc tông môn: Tạp dịch … Trưởng lão
           if (!Array.isArray(K.CAP_BAC) || !K.CAP_BAC.length)
             throw new Error(
@@ -12841,8 +12875,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               it.canh_gioi === nv.canhGioi,
           );
           const tuv = (p.here && p.here.tuViNam) || 0;
-          const rowP = (it, eff) =>
-            `<tr><td><b>${esc(it.ten)}</b><br><span class="vk-mu" style="font-size:12px">${eff}</span></td><td style="font-size:13px">${whereToGet(it.id) || '<span class="vk-mu">chưa thấy — quét tab Chợ</span>'}</td></tr>`;
+          const rowP = (it, eff) => {
+            let capHint = "";
+            const K = S.core;
+            if (K && typeof K.drugCapped === "function" && K.drugCapped(nv, it.id)) {
+              capHint = ` <b class="vk-bad" style="font-size:11px">[Đã đạt trần cảnh giới]</b>`;
+            } else if (
+              K &&
+              typeof K.realmDrugUses === "function" &&
+              K.DIFFICULTY &&
+              K.DIFFICULTY.drugUsesPerRealm > 0
+            ) {
+              const u = K.realmDrugUses(nv, it.id);
+              const maxU = K.DIFFICULTY.drugUsesPerRealm;
+              capHint = ` <span class="vk-mu" style="font-size:11px">(còn ${Math.max(0, maxU - u)}/${maxU} viên)</span>`;
+            }
+            return `<tr><td><b>${esc(it.ten)}</b>${capHint}<br><span class="vk-mu" style="font-size:12px">${eff}</span></td><td style="font-size:13px">${whereToGet(it.id) || '<span class="vk-mu">chưa thấy — quét tab Chợ</span>'}</td></tr>`;
+          };
           let ph = '<table class="vk-t"><tr><th>Đan</th><th>Có ở đâu</th></tr>';
           for (const it of tuPills)
             ph += rowP(
@@ -20966,13 +21015,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (!it) continue;
             const pbc = getItemPhaBinhCanh(it);
             if (pbc && pbc.canh_gioi === nv.canhGioi) {
-              pills.push({
-                id,
-                it,
-                ten: it.ten || id,
-                phan: pbc.phan || 1,
-                count,
-              });
+              const isCapped =
+                S.core && typeof S.core.drugCapped === "function"
+                  ? S.core.drugCapped(nv, id)
+                  : false;
+              if (!isCapped) {
+                pills.push({
+                  id,
+                  it,
+                  ten: it.ten || id,
+                  phan: pbc.phan || 1,
+                  count,
+                });
+              }
             }
           }
           return pills.sort((a, b) => b.phan - a.phan);
@@ -24271,8 +24326,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 it.tu_luyen &&
                 (it.canh_gioi === undefined || it.canh_gioi === nv.canhGioi)
               ) {
-                cultPills.push(id);
-                if (cultPills.length >= 2) break;
+                const isCapped =
+                  S.core && typeof S.core.drugCapped === "function"
+                    ? S.core.drugCapped(nv, id)
+                    : false;
+                if (!isCapped) {
+                  cultPills.push(id);
+                  if (cultPills.length >= 2) break;
+                }
               }
             }
           }
@@ -26463,10 +26524,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["oneLife", "Tuyệt Mệnh (1 Mạng)"],
         ];
         const RR_DAOLO_HINT = {
-          easy: "điểm luân hồi ×0,75",
-          normal: "điểm luân hồi ×1",
-          hardcore: "điểm luân hồi ×1,25; bỏ Thiên Mệnh",
-          oneLife: "1 mạng duy nhất; không điểm luân hồi; tranh danh hiệu",
+          easy: "điểm luân hồi ×0,75; đan không giới hạn",
+          normal: "điểm luân hồi ×1; đan không giới hạn",
+          hardcore:
+            "điểm luân hồi ×1,25; trần đan 3 viên/cảnh giới; bỏ Thiên Mệnh; địch AI bậc 3",
+          oneLife:
+            "1 mạng duy nhất; trần đan 2 viên/cảnh giới; không điểm luân hồi; địch AI bậc 3",
         };
         const rrDlOk = (v) => (RR_DAOLO.some((x) => x[0] === v) ? v : "normal");
         const rrDlTen = (v) =>
@@ -30055,9 +30118,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   run.difficulty.includes("tuyet_menh") ||
                   run.difficulty.includes("oneLife")))
             );
+            const diffMode = (run && run.difficulty) || "normal";
             const oneLifeBadge = isOneLife
-              ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Chế Độ Tuyệt Mệnh (Tool Đã Kích Hoạt Bypass Cứu Mạng)</span>`
-              : `<span style="background:rgba(61,220,151,0.18);color:#3ddc97;border:1px solid rgba(61,220,151,0.4);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">Bình Thường</span>`;
+              ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Tuyệt Mệnh (1 Mạng · Trần Đan 2/Cảnh Giới)</span>`
+              : diffMode === "hardcore"
+                ? `<span style="background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">🔥 Nghịch Thiên (Trần Đan 3/Cảnh Giới)</span>`
+                : diffMode === "easy"
+                  ? `<span style="background:rgba(59,130,246,0.18);color:#60a5fa;border:1px solid rgba(59,130,246,0.4);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">🌱 Thuận Thiên</span>`
+                  : `<span style="background:rgba(61,220,151,0.18);color:#3ddc97;border:1px solid rgba(61,220,151,0.4);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">⚖️ Trung Đạo (Bình Thường)</span>`;
 
             let pName = "Vị trí không rõ";
             try {
@@ -30411,9 +30479,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.6 · Đồng Bộ Tương Sinh Phẩm Cấp & Khai Phá Lõi Kinh Mạch Game",
+            t: "Phiên Bản 7.13.7 · Thích Ứng Bản Cập Nhật Trần Dược Kháng & Cân Bằng Đạo Lộ Game",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Đồng Bộ Bản Build Game Mới (index-pyGvwuOa.js & content-AFgvANiO.json):</b> Hoàn tất quy trình kiểm tra 6 bước theo dõi bản cập nhật mới nhất từ nhà phát triển game; kiểm tra 100% các module gọi lõi qua <code>window.tuTien.core</code> bảo đảm tính tương thích và bảo mật Stealth tuyệt đối.",
+              "<b>Thích Ứng Cơ Chế Trần Dược Kháng Theo Cảnh Giới (drugUsesPerRealm & drugCapped):</b> Game bổ sung cơ chế giới hạn số viên đan dược thấm trong một cảnh giới ở các Đạo Lộ khắc nghiệt (Nghịch Thiên trần 3 viên/cảnh giới, Tuyệt Mệnh trần 2 viên/cảnh giới). Tool nay tự động kiểm tra trần dược kháng qua <code>drugCapped</code> và <code>realmDrugUses</code>, ngăn chặn hoàn toàn việc spam đan dược đã kháng khi bế quan hoặc cắn đan phá bình cảnh.",
+              "<b>Hiển Thị Trực Quan Số Viên Đan Thấm Còn Lại:</b> Tích hợp trạng thái còn thấm và cảnh báo <i>[Đã đạt trần cảnh giới]</i> vào Tab Đột Phá & Thọ, Tab Túi Đồ và gợi ý cắn đan bù điểm để người chơi dễ dàng quản lý tài nguyên đan dược quý giá.",
+              "<b>Cập Nhật Cân Bằng AI Địch & Đấu Giá (enemyAiBonus & AUCTION_HAND_LOT_SHARE):</b> Đồng bộ các hằng số cân bằng mới của game gồm AI và trang bị thông minh của địch ở chế độ khó, trần vòng vây hãm môn phái (<code>SIEGE_MAX_ROUNDS = 100</code>), và tỉ lệ phân bổ lô viết tay trong đại hội đấu giá."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.6 · Đồng Bộ Tương Sinh Phẩm Cấp & Khai Phá Lõi Kinh Mạch Game",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Đồng Bộ Công Thức Suy Giảm Tương Sinh (generationRank & zD):</b> Khai quật chính xác từ mã nguồn game: công pháp phẩm thấp sinh cho công pháp phẩm cao bị suy giảm theo mảng chênh bậc <code>zD = [1, 2/3, 1/3, 0]</code> (kém 1 phẩm còn 67%, kém 2 phẩm còn 33%, kém ≥3 phẩm mất trắng 0% tương sinh). Trấn phái và Nghịch Thiên luôn giữ chuẩn bậc 5 (Thiên phẩm), Nghịch Thiên sinh cho bất kỳ ai cũng nhận đủ 100%.",
               "<b>Nâng Cấp Thuật Toán Xếp Kinh Mạch Thông Minh:</b> Tích hợp bảng suy giảm <code>genSlack</code> vào bộ lọc vị trí (<code>smart candidate scoring</code>) và hàm lượng giá (<code>biasInfo</code>). Bộ xếp tự động ưu tiên ghép các mảnh cùng hoặc cao hơn phẩm cấp kề nhau để đạt trọn vẹn 100% tương sinh (+15% hệ số), loại bỏ triệt để tình trạng ghép mảnh rác phẩm thấp quanh mảnh chủ lực.",
