@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.2
+// @version      7.14.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.2";
+      var TOOL_VER = "7.14.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -11083,6 +11083,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               n: evalNew.n,
             };
           }
+          if (AU.cfg && AU.cfg.km && AU.cfg.km.tayO) {
+            const recolors = findOptimalRecolors(nv, best.manh, AU.cfg.km.tayMax || 3);
+            if (recolors.length > 0) {
+              best.recolorPlan = recolors;
+            }
+          }
           prog(1, "Xong");
           return { cur, best };
         }
@@ -11300,93 +11306,107 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         // ── Tìm danh sách các ô kinh mạch nên tẩy (đổi hệ) để khớp các mảnh đã xếp tối đa
         function findOptimalRecolors(nv, bestPieces, maxCount) {
-          if (!nv || !nv.kinhMach || !Array.isArray(bestPieces)) return [];
+          if (!nv || !nv.kinhMach) return [];
           const K = S.core,
             c = C();
           if (!K || !c) return [];
-          const doiMauLeft =
-            (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
-          if (doiMauLeft <= 0) return [];
-          const limit = Math.min(
-            doiMauLeft,
-            maxCount != null ? maxCount : doiMauLeft,
-          );
-          if (limit <= 0) return [];
 
           const g = K.luoiKinhMach(c, nv);
           if (!g) return [];
           const mauK = nv.kinhMach.mau || [];
+          const maxLimit =
+            maxCount != null
+              ? maxCount
+              : (AU.cfg && AU.cfg.km && AU.cfg.km.tayMax) || 3;
+          const limit = Math.max(1, maxLimit);
+
           const candidates = [];
-          const seenCells = new Set();
+          const seenCandCells = new Set();
 
-          for (const m of bestPieces) {
-            if (!m || !m.item) continue;
-            const it = c.items.get(m.item);
-            if (!it) continue;
-            let cells, cellElements;
-            try {
-              cells = K.oCuaManh(g, m, it);
-              cellElements = K.heTungO(it, m.xoay);
-            } catch (e) {
-              continue;
-            }
-            if (!cells || !cellElements || cells.length !== cellElements.length)
-              continue;
-
-            for (let idx = 0; idx < cells.length; idx++) {
-              const cell = cells[idx];
-              if (seenCells.has(cell)) continue;
-              if (cell === g.danDien) continue;
-              if (
-                nv.kinhMach.trangThai &&
-                nv.kinhMach.trangThai[cell] === "an"
-              )
-                continue;
-
-              const wantedHe = cellElements[idx];
-              const curMau = mauK[cell];
-              if (!wantedHe || curMau === wantedHe) continue;
-
-              let availHe = [];
+          const evaluatePieces = (pieceList) => {
+            if (!Array.isArray(pieceList)) return;
+            for (const m of pieceList) {
+              if (!m || !m.item) continue;
+              const it = c.items.get(m.item);
+              if (!it) continue;
+              let cells, cellElements;
               try {
-                availHe = K.heDoiDuoc(nv, c, cell) || [];
+                cells = K.oCuaManh(g, m, it);
+                cellElements = K.heTungO ? K.heTungO(it, m.xoay) : null;
               } catch (e) {
-                availHe = [];
+                continue;
               }
-              if (!availHe.length) continue;
+              if (!cells) continue;
+              const hs = ((it && it.he) || []).filter(
+                (h) => h && h !== "vo_sac",
+              );
 
-              let targetHe = null;
-              let gain = 0;
-              if (availHe.includes(wantedHe)) {
-                targetHe = wantedHe;
-                gain = curMau === "vo_sac" ? 0.5 : 1.0;
-              } else if (curMau !== "vo_sac" && availHe.includes("vo_sac")) {
-                targetHe = "vo_sac";
-                gain = 0.5;
-              }
+              for (let idx = 0; idx < cells.length; idx++) {
+                const cell = cells[idx];
+                if (seenCandCells.has(cell)) continue;
+                if (cell === g.danDien) continue;
+                if (
+                  nv.kinhMach.trangThai &&
+                  nv.kinhMach.trangThai[cell] === "an"
+                )
+                  continue;
 
-              if (targetHe) {
-                const itPwr = kmItemPower(it) || 10;
-                candidates.push({
-                  cell,
-                  fromHe: curMau,
-                  toHe: targetHe,
-                  itId: it.id,
-                  itTen: it.ten || it.id,
-                  col: (cell % g.rong) + 1,
-                  row: Math.floor(cell / g.rong) + 1,
-                  score: gain * itPwr,
-                });
+                const wantedHe =
+                  cellElements && cellElements[idx]
+                    ? cellElements[idx]
+                    : hs[0] || "vo_sac";
+                const curMau = mauK[cell] || "vo_sac";
+                if (!wantedHe || wantedHe === "vo_sac" || curMau === wantedHe)
+                  continue;
+
+                let availHe = [];
+                try {
+                  availHe = K.heDoiDuoc(nv, c, cell) || [];
+                } catch (e) {
+                  availHe = [];
+                }
+                if (!availHe.length) continue;
+
+                let targetHe = null;
+                let gain = 0;
+                if (availHe.includes(wantedHe)) {
+                  targetHe = wantedHe;
+                  gain = curMau === "vo_sac" ? 0.5 : 1.0;
+                } else if (curMau !== "vo_sac" && availHe.includes("vo_sac")) {
+                  targetHe = "vo_sac";
+                  gain = 0.5;
+                }
+
+                if (targetHe) {
+                  seenCandCells.add(cell);
+                  const itPwr = kmItemPower(it) || 10;
+                  candidates.push({
+                    cell,
+                    fromHe: curMau,
+                    toHe: targetHe,
+                    itId: it.id,
+                    itTen: it.ten || it.id,
+                    col: (cell % g.rong) + 1,
+                    row: Math.floor(cell / g.rong) + 1,
+                    score: gain * itPwr,
+                  });
+                }
               }
             }
-          }
+          };
+
+          if (Array.isArray(bestPieces) && bestPieces.length)
+            evaluatePieces(bestPieces);
+          if (Array.isArray(nv.kinhMach.manh) && nv.kinhMach.manh.length)
+            evaluatePieces(nv.kinhMach.manh);
 
           candidates.sort((a, b) => b.score - a.score);
 
           const chosen = [];
+          const chosenCells = new Set();
           for (const cand of candidates) {
-            if (!seenCells.has(cand.cell)) {
-              seenCells.add(cand.cell);
+            if (!chosenCells.has(cand.cell)) {
+              chosenCells.add(cand.cell);
               chosen.push(cand);
               if (chosen.length >= limit) break;
             }
@@ -11571,6 +11591,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           let recolorHtml = "";
           const plan = (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
           if (Array.isArray(plan) && plan.length > 0) {
+            const doiMauLeft = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+            const pillsInBag =
+              (nv.tuiDo &&
+                ((nv.tuiDo["item.tay_tuy_dan"] || 0) +
+                  (nv.tuiDo["item.cai_menh_dan"] || 0) +
+                  (nv.tuiDo["item.dich_cot_dan"] || 0))) ||
+              0;
+            let pillStatus = "";
+            if (doiMauLeft >= plan.length) {
+              pillStatus = `<span class="vk-ok" style="font-size:11.5px"> · Đang có sẵn <b>${doiMauLeft}</b> lượt chuyển hệ</span>`;
+            } else {
+              const need = plan.length - doiMauLeft;
+              if (pillsInBag >= need) {
+                pillStatus = `<span class="vk-ok" style="font-size:11.5px"> · Túi có sẵn <b>${pillsInBag}</b> viên đan tẩy tủy (Auto sẽ tự dùng khi chạy)</span>`;
+              } else {
+                pillStatus = `<span class="vk-mu" style="font-size:11.5px"> · Cần thêm <b>${need}</b> viên Tẩy Tủy / Cải Mệnh Đan (túi có ${pillsInBag} viên)</span>`;
+              }
+            }
+
             const planItems = plan
               .map(
                 (p) =>
@@ -11578,7 +11617,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               )
               .join("<br>");
             recolorHtml = `<div style="margin-top:8px;padding:7px 11px;background:rgba(61,220,151,0.08);border:1px solid var(--acc, #3ddc97);border-radius:8px;font-size:12px;line-height:1.45">
-              <b style="color:var(--acc, #3ddc97)">🎨 Kế Hoạch Tẩy Ô Tối Ưu (${plan.length} ô):</b><br>${planItems}
+              <b style="color:var(--acc, #3ddc97)">🎨 Kế Hoạch Tẩy Ô Tối Ưu (${plan.length} ô):</b>${pillStatus}<br>${planItems}
             </div>`;
           }
 
@@ -23491,7 +23530,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     }
                     nvSim.kinhMach.manh = sol.best.manh;
                     const simBest = evalCurrent(nvSim, modes[k]);
-                    if (simBest && simBest.score >= sol.best.score) {
+                    if (simBest) {
                       simBest.recolorPlan = recolors;
                       sol.bestSim = simBest;
                     }
@@ -23532,12 +23571,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   }
                 }
               }
-              const maxDo = Math.min(
-                allPlans.length,
-                (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0,
-              );
-              for (let pi = 0; pi < maxDo; pi++) {
-                const p = allPlans[pi];
+              for (const p of allPlans) {
+                if (st.stop) break;
+                // Nếu chưa có lượt tẩy chờ sẵn, tự động dùng đan Tẩy Tủy / Cải Mệnh / Dịch Cốt trong túi nếu còn
+                let curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+                if (curDoiMau <= 0) {
+                  const pillOrder = [
+                    { id: "item.tay_tuy_dan", bac: 1, name: "Tẩy Tủy Đan" },
+                    { id: "item.cai_menh_dan", bac: 2, name: "Cải Mệnh Đan" },
+                    { id: "item.dich_cot_dan", bac: 3, name: "Dịch Cốt Đan" },
+                  ];
+                  for (const pill of pillOrder) {
+                    const countInBag = (nv.tuiDo && nv.tuiDo[pill.id]) || 0;
+                    const canUse = K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
+                    if (countInBag > 0 && canUse > 0) {
+                      const useRes = auCall((gg) => gg.useItem(pill.id));
+                      if (useRes.ok) {
+                        auLog(
+                          `Đã dùng 1 viên ${pill.name} để nhận lượt chuyển hệ.`,
+                          "vk-ok",
+                        );
+                        nv = nvNow();
+                        curDoiMau =
+                          (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                if (curDoiMau <= 0) {
+                  auLog(
+                    "Không còn lượt chuyển hệ và không có đan tẩy tủy trong túi để dùng.",
+                    "vk-mu",
+                  );
+                  break;
+                }
+
                 const r = auCall((gg) => gg.doiMauO(p.cell, p.toHe));
                 if (r.ok) {
                   st.recolorsDone = (st.recolorsDone || 0) + 1;
@@ -23545,6 +23615,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     `🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`,
                     "vk-ok",
                   );
+                  nv = nvNow();
                 } else {
                   auLog(
                     `Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`,
@@ -31084,9 +31155,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.2 · Chuẩn Hóa 100% Chỉ Số Vận Hành Thực Tế & Khắc Chế Triệt Để Lệch Hệ Mạch",
+            t: "Phiên Bản 7.14.3 · Sửa Lỗi Tự Động Tẩy Ô & Bổ Sung Tự Dùng Đan Tẩy Tủy",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Triệt Để Lỗi Chức Năng Tẩy Ô Không Báo Khi Xem Trước:</b> Khắc phục lỗi kiểm tra chặn cứng <code>doiMauLeft <= 0</code> khiến thuật toán lập kế hoạch tẩy ô trả về rỗng khi người chơi chưa cắn đan tẩy tủy. Nay chức năng <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i> luôn quét toàn diện cả bộ đang xếp và bộ đề xuất mới để tìm ra các ô lệch hệ tối ưu nhất cần tẩy (tối đa theo cấu hình <code>tayMax</code>).",
+              "<b>Tự Động Nuốt Đan Tẩy Tủy / Cải Mệnh / Dịch Cốt Từ Túi:</b> Khi chạy Auto thật, nếu chưa có lượt chuyển hệ chờ sẵn, Tool tự động kiểm tra đan trong túi đồ (Tẩy Tủy Đan, Cải Mệnh Đan, Dịch Cốt Đan) và tự động gọi <code>gg.useItem</code> để nhận lượt rồi mới thực hiện tẩy ô <code>gg.doiMauO</code> an toàn.",
+              "<b>Hiển Thị Trực Quan Tình Trạng Lượt Tẩy & Đan Trong Túi:</b> Bảng kế hoạch tẩy ô nay hiển thị rõ số lượt chuyển hệ đang có sẵn, hoặc số viên đan tẩy tủy hiện có trong túi đồ để người chơi nắm rõ trước khi chạy.",
+              "<b>Đồng Bộ Kế Hoạch Tẩy Ô Sang Mọi Luồng Tính:</b> Kế hoạch tẩy ô nay hiển thị nhất quán ở cả chế độ Xem Trước (Dry run) trong Auto Kinh Mạch lẫn nút Tìm Cách Xếp trong tab Kinh Mạch."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.2 · Chuẩn Hóa 100% Chỉ Số Vận Hành Thực Tế & Khắc Chế Triệt Để Lệch Hệ Mạch",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Chuẩn Hóa Tuyệt Đối Báo Chỉ Số Vận Hành (Đồng Bộ 100% Game):</b> Sửa triệt để lỗi báo chỉ số sai lệch giữa Tool và giao diện game. Thay vì xóa bảng Lĩnh Ngộ (khiến hệ số mảnh bị đội lên ảo), cột 'Đang xếp' nay đọc và tính toán trực tiếp từ trạng thái thực tế của nhân vật (giữ nguyên Lĩnh Ngộ và số năm tu luyện): Linh lực hồi/lượt (57,6), Hộ thể (+47%), Đột phá (+9%), Khí huyết (22.950), Kháng tâm ma (+24%), Linh lực tối đa (172,7), Pháp lực (1.019,4).",
               "<b>Đồng Bộ Hiển Thị Tốc Độ Tu Luyện:</b> Cột 'Tu luyện' nay hiển thị trực tiếp hệ số vận hành thực tế của game (ví dụ: <code>×3.03 (+251%)</code>) thông qua hàm <code>S.core.tocDoTuLuyen</code>, xóa bỏ hoàn toàn hiểu lầm giữa tốc độ tu vi tổng hợp và dòng bị động mảnh.",
