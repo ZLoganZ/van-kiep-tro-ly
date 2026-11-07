@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.0
+// @version      7.13.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.0";
+      var TOOL_VER = "7.13.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -20308,6 +20308,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           tl: {
             mode: "be_quan", // "be_quan" | "danh_quai"
             targetRealm: 5,
+            targetSubRealm: 3,
             minSafeRate: 65,
             minTho: 10,
             useCultPills: true,
@@ -20607,6 +20608,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           if (!["be_quan", "danh_quai"].includes(AU.cfg.tl.mode)) {
             AU.cfg.tl.mode = "be_quan";
+          }
+          if (AU.cfg.tl.targetSubRealm === undefined) {
+            AU.cfg.tl.targetSubRealm = 3;
           }
           if (o.san) {
             if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined) AU.cfg.tl.maxY = o.san.maxY;
@@ -23019,15 +23023,48 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const targetRealm = Number(
             cfg.targetRealm != null ? cfg.targetRealm : 5,
           );
+          const targetSubRealm = Number(
+            cfg.targetSubRealm != null ? cfg.targetSubRealm : 3,
+          );
 
           // 2. Kiểm tra đích cảnh giới
-          if (nv.canhGioi >= targetRealm) {
-            return {
-              stop:
-                "Chúc mừng! Đã đạt cảnh giới mục tiêu: " +
-                realmName(targetRealm) +
-                "!",
-            };
+          if (targetRealm > 0) {
+            let reached = false;
+            if (nv.canhGioi > targetRealm) {
+              reached = true;
+            } else if (nv.canhGioi === targetRealm) {
+              if (targetSubRealm === -1) {
+                // Bất kỳ tiểu cảnh giới nào (chạm cảnh giới là đạt)
+                reached = true;
+              } else if (targetSubRealm >= 0 && targetSubRealm <= 3) {
+                if ((nv.tieuCanhGioi ?? 0) >= targetSubRealm) {
+                  reached = true;
+                }
+              } else if (targetSubRealm === 4) {
+                // Đại viên mãn (Tu vi đầy 100%)
+                const { p: planCheck } = planData();
+                if ((nv.tieuCanhGioi ?? 0) >= 3 && planCheck.need <= 0) {
+                  reached = true;
+                }
+              }
+            }
+
+            if (reached) {
+              const subRealmNames = [
+                "Sơ kỳ",
+                "Trung kỳ",
+                "Hậu kỳ",
+                "Đại viên mãn",
+                "Đại viên mãn (Đầy 100%)",
+              ];
+              const goalName =
+                targetSubRealm >= 0 && targetSubRealm <= 4
+                  ? realmName(targetRealm) + " · " + subRealmNames[targetSubRealm]
+                  : realmName(targetRealm);
+              return {
+                stop: "Chúc mừng! Đã đạt mục tiêu tu luyện: " + goalName + "!",
+              };
+            }
           }
 
           // 3. Kiểm tra thọ nguyên an toàn
@@ -23047,8 +23084,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           // 4. Kiểm tra tu vi & bình cảnh
           const { c, p: plan } = planData();
           const atTop = plan.need <= 0;
+          const isMaxRealm = nv.canhGioi >= 5;
 
-          if (atTop) {
+          if (atTop && isMaxRealm) {
+            if (!isDanhQuai) {
+              return {
+                stop:
+                  "Tu vi Hóa Thần Đại viên mãn đã đạt cực hạn tối đa, không thể tích lũy thêm qua bế quan.",
+              };
+            }
+            // Ở chế độ Đánh Quái: tu vi đã chạm đỉnh nhưng người chơi vẫn có thể farm quái lấy tài nguyên, nên bỏ qua đột phá và tiếp tục đánh quái bên dưới.
+          } else if (atTop) {
             // ───── TIẾN HÀNH ĐỘT PHÁ ─────
             auLog("Tu vi đã viên mãn, chuẩn bị đột phá cảnh giới...", "vk-ok");
             const h0 = S.core.chuanBiDotPha(c, { dan: [], thieuDot: 0 });
@@ -23379,15 +23425,31 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             100,
             Math.max(1, Math.floor(life - minTho)),
           );
-          const neededYears =
+          let neededYears =
             plan.hereYears && Number.isFinite(plan.hereYears)
               ? Math.ceil(plan.hereYears)
               : 10;
+          let untilExhausted = true;
+          let nextMinor = false;
+          if (
+            targetRealm > 0 &&
+            targetRealm === nv.canhGioi &&
+            targetSubRealm >= 0 &&
+            targetSubRealm < 3 &&
+            (nv.tieuCanhGioi ?? 0) < targetSubRealm
+          ) {
+            if (plan.nextNeed > 0 && plan.here && plan.here.tuViNam > 0) {
+              neededYears = Math.ceil(plan.nextNeed / plan.here.tuViNam);
+              nextMinor = true;
+              untilExhausted = false;
+            }
+          }
           const yearsToSit = Math.min(maxSafeYears, Math.max(1, neededYears));
 
           const lcBeQuan = {
             nam: yearsToSit,
-            untilExhausted: true,
+            untilExhausted,
+            nextMinorRealm: nextMinor,
             dan: cultPills,
             autoBreak: autoBreak,
           };
@@ -24987,7 +25049,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             };
             c.mode = sel("au-tl-mode", c.mode || "be_quan");
             c.targetRealm = Math.floor(
-              num0("au-tl-realm", 1, 5, c.targetRealm),
+              num0("au-tl-realm", 0, 5, c.targetRealm != null ? c.targetRealm : 5),
+            );
+            c.targetSubRealm = Math.floor(
+              num0("au-tl-sub-realm", -1, 4, c.targetSubRealm != null ? c.targetSubRealm : 3),
             );
             c.minSafeRate = num0("au-tl-rate", 30, 100, c.minSafeRate);
             c.minTho = num0("au-tl-tho", 1, 1000, c.minTho);
@@ -25281,9 +25346,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ),
             ]);
           } else if (kind === "tl") {
+            const tr = Number(AU.cfg.tl.targetRealm != null ? AU.cfg.tl.targetRealm : 5);
+            const tsr = Number(AU.cfg.tl.targetSubRealm != null ? AU.cfg.tl.targetSubRealm : 3);
+            const subRealmNames = [
+              "Sơ kỳ",
+              "Trung kỳ",
+              "Hậu kỳ",
+              "Đại viên mãn",
+              "Đại viên mãn (Đầy 100%)",
+            ];
+            let targetLabel = "♾️ Không Giới Hạn (Farm Liên Tục)";
+            if (tr > 0) {
+              targetLabel = realmName(tr);
+              if (tsr >= 0 && tsr <= 4) {
+                targetLabel += " · " + subRealmNames[tsr];
+              }
+            }
             rows.push([
               "Cảnh Giới Đích",
-              esc(realmName(Number(AU.cfg.tl.targetRealm || 5))),
+              esc(targetLabel),
             ]);
             rows.push([
               "Phương Thức Tu Luyện",
@@ -26217,13 +26298,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         </select>
       </label>
       <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px">
-        <span><b>Mục Tiêu Đột Phá Tới Cảnh Giới</b></span>
-        <select class="vk-sel" id="au-tl-realm" style="width:190px">
-          <option value="1" ${c.targetRealm === 1 ? "selected" : ""}>Trúc Cơ</option>
-          <option value="2" ${c.targetRealm === 2 ? "selected" : ""}>Kim Đan</option>
-          <option value="3" ${c.targetRealm === 3 ? "selected" : ""}>Nguyên Anh</option>
-          <option value="4" ${c.targetRealm === 4 ? "selected" : ""}>Hóa Thần</option>
-          <option value="5" ${c.targetRealm === 5 ? "selected" : ""}>Đại Thừa / Phi Thăng</option>
+        <span><b>Mục Tiêu Đại Cảnh Giới</b></span>
+        <select class="vk-sel" id="au-tl-realm" style="width:190px;font-weight:600">
+          <option value="0" ${c.targetRealm === 0 ? "selected" : ""}>♾️ Không Giới Hạn (Farm Liên Tục)</option>
+          <option value="1" ${c.targetRealm === 1 ? "selected" : ""}>Luyện Khí</option>
+          <option value="2" ${c.targetRealm === 2 ? "selected" : ""}>Trúc Cơ</option>
+          <option value="3" ${c.targetRealm === 3 ? "selected" : ""}>Kim Đan (Kết Đan)</option>
+          <option value="4" ${c.targetRealm === 4 ? "selected" : ""}>Nguyên Anh</option>
+          <option value="5" ${c.targetRealm === 5 || c.targetRealm == null ? "selected" : ""}>Hóa Thần (Đỉnh Nhân Giới)</option>
+        </select>
+      </label>
+      <label id="au-tl-sub-realm-wrap" style="display:${c.targetRealm === 0 ? "none" : "flex"};justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px">
+        <span><b>Mục Tiêu Tiểu Cảnh Giới</b></span>
+        <select class="vk-sel" id="au-tl-sub-realm" style="width:190px">
+          <option value="-1" ${c.targetSubRealm === -1 ? "selected" : ""}>Bất kỳ (Chạm cảnh giới là đạt)</option>
+          <option value="0" ${c.targetSubRealm === 0 ? "selected" : ""}>Sơ kỳ</option>
+          <option value="1" ${c.targetSubRealm === 1 ? "selected" : ""}>Trung kỳ</option>
+          <option value="2" ${c.targetSubRealm === 2 ? "selected" : ""}>Hậu kỳ</option>
+          <option value="3" ${c.targetSubRealm === 3 || c.targetSubRealm == null ? "selected" : ""}>Đại viên mãn</option>
+          <option value="4" ${c.targetSubRealm === 4 ? "selected" : ""}>Đại viên mãn (Tu vi đầy 100%)</option>
         </select>
       </label>
       ${auFld("au-tl-rate", "Tỉ Lệ Đột Phá An Toàn Tối Thiểu", c.minSafeRate, "(%)")}
@@ -26272,6 +26365,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const dqBox = body.querySelector("#au-tl-danh-quai-box");
               if (bqBox) bqBox.style.display = !isDq ? "block" : "none";
               if (dqBox) dqBox.style.display = isDq ? "block" : "none";
+              auReadCfg("tl");
+            };
+          }
+
+          const rSel = body.querySelector("#au-tl-realm");
+          if (rSel) {
+            rSel.onchange = () => {
+              const val = Number(rSel.value);
+              const subWrap = body.querySelector("#au-tl-sub-realm-wrap");
+              if (subWrap) subWrap.style.display = val === 0 ? "none" : "flex";
               auReadCfg("tl");
             };
           }
@@ -29431,9 +29534,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.0 · Gộp Toàn Diện Auto Tu Luyện & Săn Yêu (Tùy Chọn Bế Quan Hoặc Đánh Quái Cày Tu Vi)",
+            t: "Phiên Bản 7.13.1 · Chuẩn Hóa Mục Tiêu Đại Cảnh Giới & Bổ Sung Tùy Chọn Tiểu Cảnh Giới Cho Auto Tu Luyện",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Chuẩn Hóa Danh Sách Đại Cảnh Giới:</b> Sửa triệt để lỗi lệch chỉ số cảnh giới (off-by-one) ở mục chọn cảnh giới đích. Cập nhật đúng thang cảnh giới game: Luyện Khí (1) → Trúc Cơ (2) → Kim Đan (3) → Nguyên Anh (4) → Hóa Thần (5 - Đỉnh Nhân Giới), cùng tùy chọn <i>«♾️ Không Giới Hạn (Farm Liên Tục)»</i>.",
+              "<b>Bổ Sung Tùy Chọn Mục Tiêu Tiểu Cảnh Giới:</b> Thêm dropdown chọn chính xác tiểu cảnh giới cần đạt: <i>Bất kỳ, Sơ kỳ, Trung kỳ, Hậu kỳ, Đại viên mãn, hoặc Đại viên mãn (Đầy tu vi 100%)</i>. Giúp các nhân vật ở mọi cảnh giới — đặc biệt là Hóa Thần — có thể tự động bế quan hoặc đánh quái để đạt mốc mong muốn mà không bị dừng sớm.",
+              "<b>Tối Ưu Logic Khi Nhân Vật Ở Đỉnh Nhân Giới (Hóa Thần):</b> Khắc phục lỗi tự động dừng hoặc báo lỗi Thiên Môn đóng khi nhân vật đã ở Hóa Thần. Trong chế độ Đánh Quái, khi tu vi Hóa Thần đã đầy, Tool sẽ bỏ qua bước xung kích và tiếp tục chu trình săn yêu cày linh thạch/tài nguyên liên tục nếu đặt mục tiêu Không Giới Hạn hoặc chưa đủ số trận.",
+              "<b>Tự Động Tính Năm Bế Quan Theo Tiểu Cảnh Giới:</b> Khi người chơi chọn mục tiêu tiểu cảnh giới kế tiếp, Tool tự động điều chỉnh số năm bế quan (kích hoạt chế độ nextMinorRealm) để đạt tiểu cảnh giới mục tiêu một cách nhanh và chuẩn xác nhất."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.0 · Gộp Toàn Diện Auto Tu Luyện & Săn Yêu (Tùy Chọn Bế Quan Hoặc Đánh Quái Cày Tu Vi)",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Hợp Nhất Auto Tu Luyện & Auto Săn Yêu:</b> Nhận thấy đánh yêu thú cũng nhằm mục đích tích lũy tu vi và tài nguyên đột phá, Tool chính thức gộp toàn bộ tính năng Săn Yêu vào Tab Auto Tu Luyện (atl), mang lại trải nghiệm tu tiên liền mạch và tinh gọn.",
               "<b>Tùy Chọn Phương Thức Tu Luyện Linh Hoạt:</b> Người chơi có thể tự do chuyển đổi giữa 2 chế độ: <b>Bế Quan (Nhập Định)</b> (tự nuốt đan tu luyện, tự giải phóng bình cảnh, tính số năm tối ưu) hoặc <b>Đánh Quái (Săn Yêu)</b> (tự động tới các bãi hoang dã quanh khu vực, kiểm tra sức đánh, tự Tốc Chiến hoặc dùng Siêu AI VIP nghênh chiến, né chim Hạc giữ Khí Vận).",
