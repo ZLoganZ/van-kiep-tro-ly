@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.5
+// @version      7.14.6
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.6
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.5";
+      var TOOL_VER = "7.14.6";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6053,9 +6053,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             // 7.14.2: Thưởng mảnh đúng màu hệ số cao (1.30), phạt nặng mảnh lệch màu (< 1.0)
             let colorScore = 0;
-            (R.manh || []).forEach((m) => {
+            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
+            (R.manh || []).forEach((m, idx) => {
               if (m && m.thong) {
-                if (m.mau >= 1.25) colorScore += 35;
+                const p = manh[idx];
+                const canRecolor =
+                  isTayO &&
+                  p &&
+                  p.recolorableCount > 0 &&
+                  (p.unfixableCount || 0) === 0;
+                if (m.mau >= 1.25 || canRecolor)
+                  colorScore += canRecolor ? 25 : 35;
                 else if (m.mau < 1.0) colorScore -= 65 * (1.1 - m.mau);
               }
             });
@@ -6235,6 +6243,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         // 7.14.1: Xếp tham lam hình học thông minh: xây dựng trục xương sống Công Pháp từ Đan Điền, vươn nhánh tới huyệt đạo và định tuyến Pháp Khí
         async function greedy(nv0, mode, altSeed = false) {
           nv0 = lnPrep(nv0);
+          const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
           const K = S.core,
             c = C(),
             { cand, g } = buildCandidates(nv0),
@@ -6317,7 +6326,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             // Phạt khi đặt đè lên ô xung đột màu
             let colorConflictPenalty = 0;
-            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
             manh.forEach((p) => {
               if (isTayO) {
                 colorConflictPenalty +=
@@ -31380,9 +31388,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.5 · Tối Ưu Hóa Tương Sinh Chiêu Kiếm & Khai Thông Thuật Toán Tẩy Ô Toàn Diện",
+            t: "Phiên Bản 7.14.6 · Khắc Phục Lỗi Phạm Vi Biến isTayO Trong Greedy",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Lỗi 'isTayO is not defined':</b> Nâng phạm vi khai báo biến <code>isTayO</code> lên đầu hàm <code>greedy</code> và <code>makeEval</code>, khắc phục triệt để lỗi tham chiếu ngoài phạm vi khiến tiến trình Auto Kinh Mạch (xem trước / chạy) bị dừng đột ngột.",
+              "<b>Tích Hợp Tẩy Ô Vào Hàm Đánh Giá Luyện Kim (makeEval):</b> Cho phép thuật toán Simulated Annealing chủ động cộng điểm thưởng cho các vị trí công pháp đặt trên ô tẩy được, giúp tìm ra cấu hình kinh mạch đột phá sát thương cao nhất có thể."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.5 · Tối Ưu Hóa Tương Sinh Chiêu Kiếm & Khai Thông Thuật Toán Tẩy Ô Toàn Diện",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Khai Thông Triệt Để Chức Năng Tẩy Ô (Đổi Hệ Ô):</b> Khắc phục nguyên nhân gốc rễ khiến chức năng tẩy ô không đề xuất: trước đây thuật toán lọc cứng loại bỏ các vị trí lệch màu trước khi xếp, khiến bộ kết quả không còn ô lệch màu nào để tẩy. Nay khi bật <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i>, thuật toán nhận diện các ô có thể tẩy sang hệ của linh căn (qua Tẩy Tủy / Cải Mệnh Đan) là vị trí hợp lệ, cho phép đặt các công pháp mạnh nhất lên đó và tự động lập Kế Hoạch Tẩy Ô chính xác.",
               "<b>Cập Nhật Số Liệu Dự Phóng Sau Tẩy Ô:</b> Bảng so sánh 'Bản mới' nay tự động phản ánh đầy đủ chỉ số sau khi giả định đã tẩy các ô theo kế hoạch (hệ số màu tối đa 1.30, điểm tương sinh đạt đỉnh, sát thương chiêu tăng vọt).",
