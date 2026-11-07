@@ -5,8 +5,8 @@
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
-// @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
-// @downloadURL  https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/refs/heads/main/van_kiep_tro_ly_user.js
+// @updateURL    https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
+// @downloadURL  https://raw.githubusercontent.com/ZLoganZ/van-kiep-tro-ly/main/van_kiep_tro_ly_user.js
 // @homepageURL  https://github.com/ZLoganZ/van-kiep-tro-ly
 // @supportURL   https://github.com/ZLoganZ/van-kiep-tro-ly/issues
 // @grant        none
@@ -412,7 +412,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             for (var i = 0; i < muts.length; i++) {
               var m = muts[i];
               if (m.type === "characterData") {
-                if (m.target && m.target.parentNode) pending.add(m.target.parentNode);
+                if (m.target && m.target.parentNode)
+                  pending.add(m.target.parentNode);
               } else {
                 for (var j = 0; j < m.addedNodes.length; j++) {
                   pending.add(m.addedNodes[j]);
@@ -5275,7 +5276,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           );
           live("DIFFICULTY", "balance/difficulty", "DIFFICULTY");
           live("DIFFICULTY_MODES", "balance/difficulty", "DIFFICULTY_MODES");
-          live("DIFFICULTY_KNOB_INFO", "balance/difficulty", "DIFFICULTY_KNOB_INFO");
+          live(
+            "DIFFICULTY_KNOB_INFO",
+            "balance/difficulty",
+            "DIFFICULTY_KNOB_INFO",
+          );
           live("SIEGE_MAX_ROUNDS", "balance/combat", "SIEGE_MAX_ROUNDS");
           live("SECT_GROUND_BONUS", "balance/sect", "SECT_GROUND_BONUS");
           live("CAP_BAC", "balance/sect", "CAP_BAC"); // tên cấp bậc tông môn: Tạp dịch … Trưởng lão
@@ -5861,8 +5866,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (it.chieu) {
             const ch = it.chieu;
             const dmgW =
-              ch.dang === "cong" ? (mode === "tu" ? 40 : mode === "danh" ? 140 : 85) :
-              ch.dang === "khong_che" ? 65 : 45;
+              ch.dang === "cong"
+                ? mode === "tu"
+                  ? 40
+                  : mode === "danh"
+                    ? 140
+                    : 85
+                : ch.dang === "khong_che"
+                  ? 65
+                  : 45;
             p += (ch.uy || 1) * dmgW;
             p += (ch.effects || []).length * 15;
             if (ch.controlTurns) p += ch.controlTurns * 35;
@@ -5942,9 +5954,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             // Sát thương thực tế & bộc phát chiêu
             const chieuList = R.chieu || [];
-            const uyTong = chieuList.reduce((acc, x) => acc + (x.uyLuc || ((x.uy || 0) * (P.phapLuc || 1))), 0);
-            const uyMax = chieuList.length ? Math.max(...chieuList.map((x) => x.uyLuc || ((x.uy || 0) * (P.phapLuc || 1)))) : 0;
-            const dmgScore = Math.log10(Math.max(10, uyTong)) * 35 + Math.log10(Math.max(10, uyMax)) * 25;
+            const uyTong = chieuList.reduce(
+              (acc, x) => acc + (x.uyLuc || (x.uy || 0) * (P.phapLuc || 1)),
+              0,
+            );
+            const uyMax = chieuList.length
+              ? Math.max(
+                  ...chieuList.map(
+                    (x) => x.uyLuc || (x.uy || 0) * (P.phapLuc || 1),
+                  ),
+                )
+              : 0;
+            const dmgScore =
+              Math.log10(Math.max(10, uyTong)) * 35 +
+              Math.log10(Math.max(10, uyMax)) * 25;
 
             // 7.14.1: Tối ưu huyệt đạo: buff cực đại khi đặt chiêu mạnh lên huyệt, phạt nặng chiếm huyệt mà không thông
             let hyScore = 0;
@@ -6032,7 +6055,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 0.5 * thong -
                 8 * ng +
                 llScore;
-            s += hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
+            s +=
+              hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
             if (S.hbRatio) s -= hbRatioPenalty(manh, R);
             if (S.full) s += 20 * manh.reduce((a, p) => a + p.cells.length, 0);
@@ -6116,13 +6140,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     }
 
                     const mColor = mauK[cellIdx] || "vo_sac";
-                    const pieceHe = cellElements && cellElements[i] ? cellElements[i] : (hs[0] || "vo_sac");
+                    const pieceHe =
+                      cellElements && cellElements[i]
+                        ? cellElements[i]
+                        : hs[0] || "vo_sac";
                     if (pieceHe === "vo_sac") {
                       if (mColor === "vo_sac") matchCount++;
                       else partialCount++;
                     } else if (mColor === pieceHe) {
                       matchCount++;
-                    } else if (mColor === "vo_sac" || (gocHe(mColor) === gocHe(pieceHe))) {
+                    } else if (
+                      mColor === "vo_sac" ||
+                      gocHe(mColor) === gocHe(pieceHe)
+                    ) {
                       partialCount++;
                     } else {
                       conflictCount++; // Xung đột màu hoàn toàn (ví dụ: Thổ trên Kim, Kim trên Thổ)
@@ -6130,7 +6160,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   }
                   for (const cellIdx of cells) adj.delete(cellIdx);
 
-                  const aff = cells.length ? (matchCount * 1.0 + partialCount * 0.5) / cells.length : 0.4;
+                  const aff = cells.length
+                    ? (matchCount * 1.0 + partialCount * 0.5) / cells.length
+                    : 0.4;
                   const isKhacPha = conflictCount > 0;
 
                   cand[id].push({
@@ -6227,7 +6259,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             let kinhLoBonus = 0;
             (R.manh || []).forEach((m) => {
-              if (m && m.thong && m.item && m.item.loai === "phap_khi" && m.kinhLo > 1) {
+              if (
+                m &&
+                m.thong &&
+                m.item &&
+                m.item.loai === "phap_khi" &&
+                m.kinhLo > 1
+              ) {
                 kinhLoBonus += (m.kinhLo - 1) * 40;
               }
             });
@@ -6270,7 +6308,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const addPieceToFlow = (p) => {
             if (p.isCP) {
               for (const adjCell of p.adj || []) {
-                if (g.vung[adjCell] >= 0 && nv0.kinhMach.trangThai[adjCell] === "thong") {
+                if (
+                  g.vung[adjCell] >= 0 &&
+                  nv0.kinhMach.trangThai[adjCell] === "thong"
+                ) {
                   flowAccessible.add(adjCell);
                 }
               }
@@ -6287,8 +6328,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             }
           }
-          const cleanAnchors = anchorCandidates.filter((a) => a.cnd.conflictCount === 0);
-          const anchorPool = cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
+          const cleanAnchors = anchorCandidates.filter(
+            (a) => a.cnd.conflictCount === 0,
+          );
+          const anchorPool =
+            cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
           anchorPool.sort((a, b) => b.v - a.v);
 
           const anchorIdx = altSeed && anchorPool.length > 1 ? 1 : 0;
@@ -6314,12 +6358,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (!canConnect && !S.full) continue;
 
                 // Nếu chưa có Công Pháp nào kề Đan Điền, cấm Pháp Khí chẹn cửa
-                if (cur.length === 0 && !cnd.isCP && anchorPool.length > 0) continue;
+                if (cur.length === 0 && !cnd.isCP && anchorPool.length > 0)
+                  continue;
 
                 // Nếu món này có vị trí hợp lệ không xung đột màu, bỏ qua vị trí xung đột
                 if (
                   cnd.conflictCount > 0 &&
-                  cand[id].some((c) => c.conflictCount === 0 && !c.cells.some((x) => used.has(x)))
+                  cand[id].some(
+                    (c) =>
+                      c.conflictCount === 0 &&
+                      !c.cells.some((x) => used.has(x)),
+                  )
                 ) {
                   continue;
                 }
@@ -6436,16 +6485,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const itSmart = itemsK.get(id);
             const pwr = kmItemPower(itSmart, mode);
             const isHighVal =
-              itSmart && (itSmart.chieu || (itSmart.pham_cap || 1) >= 4 || pwr > 100);
-            const hsSmart = (
-              (itSmart && itSmart.he) ||
-              []
-            ).filter((h) => h && h !== "vo_sac");
+              itSmart &&
+              (itSmart.chieu || (itSmart.pham_cap || 1) >= 4 || pwr > 100);
+            const hsSmart = ((itSmart && itSmart.he) || []).filter(
+              (h) => h && h !== "vo_sac",
+            );
 
             let best = null,
               bs = -1e9;
             const sampleCount = Math.min(24, pool.length);
-            const step = pool.length <= sampleCount ? 1 : Math.floor(pool.length / sampleCount);
+            const step =
+              pool.length <= sampleCount
+                ? 1
+                : Math.floor(pool.length / sampleCount);
 
             for (let k = 0; k < pool.length; k += step) {
               const c = pool[k];
@@ -6462,10 +6514,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               for (const p of next) {
                 if (!c.adj.some((a) => p.cells.includes(a))) continue;
                 const itP = itemsK.get(p.m.item);
-                const hsP = (
-                  (itP && itP.he) ||
-                  []
-                ).filter((h) => h && h !== "vo_sac");
+                const hsP = ((itP && itP.he) || []).filter(
+                  (h) => h && h !== "vo_sac",
+                );
                 let sDirect = 0,
                   sReverse = 0,
                   kDirect = 0;
@@ -6535,7 +6586,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const free = () =>
               ids.filter((id) => !next.some((p) => p.m.item === id));
 
-            if (next.length === 0 || r < 0.20) {
+            if (next.length === 0 || r < 0.2) {
               // 1. Thêm mảnh mới với phân bổ xác suất theo phẩm cấp & uy lực
               const f = free();
               if (!f.length) continue;
@@ -6578,8 +6629,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (candA.length && candB.length) {
                 const newB = candA[Math.floor(rnd() * candA.length)];
                 const newA = candB[Math.floor(rnd() * candB.length)];
-                const testNext = next.filter((_, idx) => idx !== i && idx !== j);
-                if (!overlaps(testNext, newA) && !overlaps([...testNext, newA], newB)) {
+                const testNext = next.filter(
+                  (_, idx) => idx !== i && idx !== j,
+                );
+                if (
+                  !overlaps(testNext, newA) &&
+                  !overlaps([...testNext, newA], newB)
+                ) {
                   next[i] = newA;
                   next[j] = newB;
                 }
@@ -6596,7 +6652,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 const f = free();
                 let found = null;
                 // Ưu tiên thử các món phẩm cao trước
-                const sortedF = f.slice().sort((a, b) => (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0));
+                const sortedF = f
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0),
+                  );
                 for (const fid of sortedF) {
                   const arr = cand[fid] || [];
                   for (const c of arr) {
@@ -6828,8 +6889,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               for (const id of ids) {
                 if (cur.some((p) => p.m.item === id)) continue;
                 const matches = (cand[id] || []).filter(
-                  (c) =>
-                    c.cells.some((x) => area.has(x)) && !overl(cur, c, i),
+                  (c) => c.cells.some((x) => area.has(x)) && !overl(cur, c, i),
                 );
                 for (const cn of matches.slice(0, 8)) {
                   const nx = cur.slice();
@@ -7473,11 +7533,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["nl", "Ngự Linh", ["nlw", "nlm", "nls", "nlv", "nlc"]],
           ["lh", "Luân Hồi", ["lhs", "lht", "lhd", "sv"]],
           ["nm", "Nhân Mạch", ["tkb", "nmn"]],
-          [
-            "au",
-            "Tự Động",
-            ["atl", "atc", "asdb", "abb", "akm", "bis", "arr"],
-          ],
+          ["au", "Tự Động", ["atl", "atc", "asdb", "abb", "akm", "bis", "arr"]],
         ];
         const grpOf = (k) => GROUPS.find((g) => g[2].includes(k)) || GROUPS[0];
         S.tab = "tq";
@@ -8306,17 +8362,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
             if (o.tienLo && Array.isArray(o.tienLo.relics)) {
               for (const r of o.tienLo.relics) {
-                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+                if (typeof r === "string" && r.startsWith("item."))
+                  relics.add(r);
               }
             }
             if (Array.isArray(o.relics)) {
               for (const r of o.relics) {
-                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+                if (typeof r === "string" && r.startsWith("item."))
+                  relics.add(r);
               }
             }
             if (Array.isArray(o.newRelics)) {
               for (const r of o.newRelics) {
-                if (typeof r === "string" && r.startsWith("item.")) relics.add(r);
+                if (typeof r === "string" && r.startsWith("item."))
+                  relics.add(r);
               }
             }
             if (!nodes && o.nodes && typeof o.nodes === "object") {
@@ -8365,7 +8424,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const diaDanhSlotCache = new Map();
         function findSlotByDiaDanh(diaDanhId, diaName, c) {
           const cacheKey = (diaDanhId || "") + "::" + (diaName || "");
-          if (diaDanhSlotCache.has(cacheKey)) return diaDanhSlotCache.get(cacheKey);
+          if (diaDanhSlotCache.has(cacheKey))
+            return diaDanhSlotCache.get(cacheKey);
           try {
             const W = (c && c.world) || (G().env && G().env.world);
             if (!W || !Array.isArray(W.slots)) return null;
@@ -11017,9 +11077,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             cur &&
             cur.score > 80 &&
             (cur.R.manh || []).every((m) => !m || m.thong);
-          const g1 = hasGoodCur
-            ? cur.manh
-            : await greedy(nv0, mode, true);
+          const g1 = hasGoodCur ? cur.manh : await greedy(nv0, mode, true);
           if (kmAborted()) return null;
 
           prog(0.08, "Tìm từ trục xương sống…");
@@ -11040,7 +11098,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             iters: Math.round(iters * 0.65),
             init: g1,
             seed: 987654321,
-            onProg: (f) => prog(0.42 + f * 0.30, "Dò tìm toàn cục…"),
+            onProg: (f) => prog(0.42 + f * 0.3, "Dò tìm toàn cục…"),
           });
           if (kmAborted()) return null;
 
@@ -11051,7 +11109,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             iters: Math.round(iters / 2),
             init: top.manh,
             seed: 424243,
-            onProg: (f) => prog(0.72 + f * 0.23, "Đang tối ưu huyệt & tương sinh…"),
+            onProg: (f) =>
+              prog(0.72 + f * 0.23, "Đang tối ưu huyệt & tương sinh…"),
           });
           if (kmAborted()) return null;
 
@@ -11084,7 +11143,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             };
           }
           if (AU.cfg && AU.cfg.km && AU.cfg.km.tayO) {
-            const recolors = findOptimalRecolors(nv, best.manh, AU.cfg.km.tayMax || 3);
+            const recolors = findOptimalRecolors(
+              nv,
+              best.manh,
+              AU.cfg.km.tayMax || 3,
+            );
             if (recolors.length > 0) {
               best.recolorPlan = recolors;
             }
@@ -11488,7 +11551,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const hpMax = (r && r.P && r.P.khiHuyetToiDa) || 0;
             const shieldCap = Math.round(hpMax * shieldCapRatio);
             return {
-              spellPower: Math.round((r && r.P && (r.P.spellPower ?? r.P.phapLuc)) || 0),
+              spellPower: Math.round(
+                (r && r.P && (r.P.spellPower ?? r.P.phapLuc)) || 0,
+              ),
               bodyPower:
                 r && r.P && r.P.bodyPower ? Math.round(r.P.bodyPower) : null,
               strongest: strongest
@@ -11516,16 +11581,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             num(skB.spellPower) +
             (skB.bodyPower ? ` (Thể: ${num(skB.bodyPower)})` : "");
 
-          const spdA = a.speed != null ? a.speed : (K && K.tocDoTuLuyen ? K.tocDoTuLuyen(nv, c) : null);
+          const spdA =
+            a.speed != null
+              ? a.speed
+              : K && K.tocDoTuLuyen
+                ? K.tocDoTuLuyen(nv, c)
+                : null;
           let spdB = b.speed;
           if (spdB == null) {
             if (b.same) spdB = spdA;
             else {
               try {
                 const nvB = clone(nv);
-                nvB.kinhMach.manh = b.manh.map(m => ({ ...m }));
+                nvB.kinhMach.manh = b.manh.map((m) => ({ ...m }));
                 spdB = K && K.tocDoTuLuyen ? K.tocDoTuLuyen(nvB, c) : null;
-              } catch (e) { spdB = null; }
+              } catch (e) {
+                spdB = null;
+              }
             }
           }
           const tuStr = (s, r) =>
@@ -11562,41 +11634,44 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ],
             [
               "Linh lực",
-              num(a.R.linhLucToiDa ?? a.P.linhLucToiDa ?? a.P.linhLuc ?? (a.P.linhLucMoiLuot * 3)),
-              num(b.R.linhLucToiDa ?? b.P.linhLucToiDa ?? b.P.linhLuc ?? (b.P.linhLucMoiLuot * 3)),
+              num(
+                a.R.linhLucToiDa ??
+                  a.P.linhLucToiDa ??
+                  a.P.linhLuc ??
+                  a.P.linhLucMoiLuot * 3,
+              ),
+              num(
+                b.R.linhLucToiDa ??
+                  b.P.linhLucToiDa ??
+                  b.P.linhLuc ??
+                  b.P.linhLucMoiLuot * 3,
+              ),
             ],
             [
               "Chiêu tốn nhiều nhất",
               num(Math.max(0, ...(a.P.chieu || []).map((x) => x.phi || 0))),
               num(Math.max(0, ...(b.P.chieu || []).map((x) => x.phi || 0))),
             ],
-            [
-              "Tu luyện",
-              tuStr(spdA, a.R),
-              tuStr(spdB, b.R),
-            ],
+            ["Tu luyện", tuStr(spdA, a.R), tuStr(spdB, b.R)],
             [
               "Đột phá",
               "+" + pct(a.R.biDong.dot_pha || 0, 1),
               "+" + pct(b.R.biDong.dot_pha || 0, 1),
             ],
-            [
-              "Kháng tâm ma",
-              "+" + pct(curKtm),
-              "+" + pct(newKtm),
-            ],
+            ["Kháng tâm ma", "+" + pct(curKtm), "+" + pct(newKtm)],
             ["Điểm nghịch", a.R.diemNghich || 0, b.R.diemNghich || 0],
           ];
 
           let recolorHtml = "";
-          const plan = (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
+          const plan =
+            (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
           if (Array.isArray(plan) && plan.length > 0) {
             const doiMauLeft = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
             const pillsInBag =
               (nv.tuiDo &&
-                ((nv.tuiDo["item.tay_tuy_dan"] || 0) +
+                (nv.tuiDo["item.tay_tuy_dan"] || 0) +
                   (nv.tuiDo["item.cai_menh_dan"] || 0) +
-                  (nv.tuiDo["item.dich_cot_dan"] || 0))) ||
+                  (nv.tuiDo["item.dich_cot_dan"] || 0)) ||
               0;
             let pillStatus = "";
             if (doiMauLeft >= plan.length) {
@@ -13276,7 +13351,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const rowP = (it, eff) => {
             let capHint = "";
             const K = S.core;
-            if (K && typeof K.drugCapped === "function" && K.drugCapped(nv, it.id)) {
+            if (
+              K &&
+              typeof K.drugCapped === "function" &&
+              K.drugCapped(nv, it.id)
+            ) {
               capHint = ` <b class="vk-bad" style="font-size:11px">[Đã đạt trần cảnh giới]</b>`;
             } else if (
               K &&
@@ -21344,7 +21423,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
               if (Number.isFinite(v) && v > maxTv) maxTv = v;
             }
-            if (obj.start_chain && typeof obj.start_chain === "string" && Cc && Cc.chains) {
+            if (
+              obj.start_chain &&
+              typeof obj.start_chain === "string" &&
+              Cc &&
+              Cc.chains
+            ) {
               const chDef = Cc.chains.get(obj.start_chain);
               if (chDef && chDef.steps) {
                 for (const stp of Object.values(chDef.steps)) {
@@ -21390,7 +21474,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             function checkObj(obj) {
               if (!obj || typeof obj !== "object") return;
               if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
-                const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
+                const v = Number(
+                  obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi,
+                );
                 if (Number.isFinite(v) && v > chTv) chTv = v;
               }
               for (const v of Object.values(obj)) {
@@ -21462,7 +21548,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           } catch (e) {}
           if (typeof nv.binhCanh === "number" && nv.binhCanh > 0) return true;
           try {
-            const cg = S.core && S.core.canhGioi && S.core.canhGioi(nv.canhGioi);
+            const cg =
+              S.core && S.core.canhGioi && S.core.canhGioi(nv.canhGioi);
             if (cg && cg.tieu && cg.tieu[nv.tieuCanhGioi]) {
               const cap = cg.tieu[nv.tieuCanhGioi].tuVi;
               if (cap && nv.tuVi >= cap && nv.tieuCanhGioi < 3) return true;
@@ -21623,12 +21710,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             AU.cfg.tl.autoBreakBottleneck = true;
           }
           if (o.san) {
-            if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined) AU.cfg.tl.maxY = o.san.maxY;
-            if (o.tl && o.tl.tran === undefined && o.san.tran !== undefined) AU.cfg.tl.tran = o.san.tran;
-            if (o.tl && o.tl.thuong === undefined && o.san.thuong !== undefined) AU.cfg.tl.thuong = o.san.thuong;
-            if (o.tl && o.tl.kt === undefined && o.san.kt !== undefined) AU.cfg.tl.kt = o.san.kt;
-            if (o.tl && o.tl.neHac === undefined && o.san.neHac !== undefined) AU.cfg.tl.neHac = o.san.neHac;
-            if (o.tl && o.tl.danhAi === undefined && o.san.danhAi !== undefined) AU.cfg.tl.danhAi = o.san.danhAi;
+            if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined)
+              AU.cfg.tl.maxY = o.san.maxY;
+            if (o.tl && o.tl.tran === undefined && o.san.tran !== undefined)
+              AU.cfg.tl.tran = o.san.tran;
+            if (o.tl && o.tl.thuong === undefined && o.san.thuong !== undefined)
+              AU.cfg.tl.thuong = o.san.thuong;
+            if (o.tl && o.tl.kt === undefined && o.san.kt !== undefined)
+              AU.cfg.tl.kt = o.san.kt;
+            if (o.tl && o.tl.neHac === undefined && o.san.neHac !== undefined)
+              AU.cfg.tl.neHac = o.san.neHac;
+            if (o.tl && o.tl.danhAi === undefined && o.san.danhAi !== undefined)
+              AU.cfg.tl.danhAi = o.san.danhAi;
             if (o.tl && !o.tl.mau && o.san.mau) AU.cfg.tl.mau = o.san.mau;
           }
           AU.cfg.tl.mau = auMauNorm(AU.cfg.tl.mau || AU_DEF.tl.mau);
@@ -22145,8 +22238,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 (core && core.formationBlock);
               if (typeof formationBlock === "function") {
                 try {
-                  if (formationBlock(tran, Cc, it.id) !== undefined)
-                    continue;
+                  if (formationBlock(tran, Cc, it.id) !== undefined) continue;
                 } catch (e) {}
               }
               return { loai: "bay_tran", item: it.id };
@@ -22501,7 +22593,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               else if (act.loai === "bay_tran")
                 failed.add("bay_tran:" + act.item);
               else if (act.loai === "danh_thuong") failed.add("danh_thuong");
-              else if (act.loai === "muc_tieu") failed.add("muc_tieu:" + act.ma);
+              else if (act.loai === "muc_tieu")
+                failed.add("muc_tieu:" + act.ma);
 
               // Nếu hành động này thất bại, TIẾP TỤC VÒNG LẶP để thử chiêu / hành động khác!
               // TUYỆT ĐỐI không lập tức đánh thường rồi kết lượt bỏ cuộc!
@@ -22603,7 +22696,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             document.body.appendChild(combatOverlayEl);
 
-            const btnStep = combatOverlayEl.querySelector("#vkx-btn-combat-step");
+            const btnStep = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-step",
+            );
             if (btnStep) {
               btnStep.onclick = (e) => {
                 e.stopPropagation();
@@ -22631,8 +22726,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 "#vkx-btn-combat-toggle",
               );
               if (btnToggle) {
-                btnToggle.textContent = combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh";
-                btnToggle.style.background = combatAutoActive ? "#f87171" : "#3ddc97";
+                btnToggle.textContent = combatAutoActive
+                  ? "⏹ Dừng"
+                  : "▶ Tự Đánh";
+                btnToggle.style.background = combatAutoActive
+                  ? "#f87171"
+                  : "#3ddc97";
               }
             }
           }
@@ -22874,8 +22973,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
               const isRelicEv =
                 opt.sdb &&
-                (a.id.startsWith("ev.di_bao") ||
-                  DIBAO.evMap.has(a.id));
+                (a.id.startsWith("ev.di_bao") || DIBAO.evMap.has(a.id));
               const r = auCall(() => g.closeEncounter());
               if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
               if (encGivesTuVi(a.id) > 0) {
@@ -23576,7 +23674,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               for (const p of allPlans) {
                 if (st.stop) break;
                 // Nếu chưa có lượt tẩy chờ sẵn, tự động dùng đan Tẩy Tủy / Cải Mệnh / Dịch Cốt trong túi nếu còn
-                let curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+                let curDoiMau =
+                  (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
                 if (curDoiMau <= 0) {
                   const pillOrder = [
                     { id: "item.tay_tuy_dan", bac: 1, name: "Tẩy Tủy Đan" },
@@ -23921,11 +24020,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           // 2. Quét từ director.placeActivities cho tất cả các ô có thể tới
           if (director && typeof director.placeActivities === "function") {
             for (const [slotStr, y] of reachable.entries()) {
-              if (
-                st &&
-                st.bad &&
-                (st.bad.has(slotStr) || st.bad.has(+slotStr))
-              )
+              if (st && st.bad && (st.bad.has(slotStr) || st.bad.has(+slotStr)))
                 continue;
               const d = danger(c, slotStr);
               if (d && !auColorOK(d.id, cfg.mau)) continue;
@@ -23989,22 +24084,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 (st.skipEnc.has(encId) || st.skipEnc.has(encKey))
               )
                 continue;
-              if (
-                st &&
-                st.encAttempts &&
-                (st.encAttempts[encKey] || 0) >= 3
-              )
+              if (st && st.encAttempts && (st.encAttempts[encKey] || 0) >= 3)
                 continue;
 
               const tv = encGivesTuVi(encId);
               if (tv <= 0) continue;
 
               if (!reachable.has(slotStr)) continue;
-              if (
-                st &&
-                st.bad &&
-                (st.bad.has(slotStr) || st.bad.has(+slotStr))
-              )
+              if (st && st.bad && (st.bad.has(slotStr) || st.bad.has(+slotStr)))
                 continue;
 
               const y = reachable.get(slotStr);
@@ -24058,11 +24145,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             for (const [slotStr, nc] of Object.entries(run.noiChon)) {
               if (!nc) continue;
               if (!reachable.has(slotStr)) continue;
-              if (
-                st &&
-                st.bad &&
-                (st.bad.has(slotStr) || st.bad.has(+slotStr))
-              )
+              if (st && st.bad && (st.bad.has(slotStr) || st.bad.has(+slotStr)))
                 continue;
 
               const d = danger(c, slotStr);
@@ -24085,11 +24168,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   (st.skipEnc.has(encId) || st.skipEnc.has(encKey))
                 )
                   continue;
-                if (
-                  st &&
-                  st.encAttempts &&
-                  (st.encAttempts[encKey] || 0) >= 3
-                )
+                if (st && st.encAttempts && (st.encAttempts[encKey] || 0) >= 3)
                   continue;
 
                 const tv = encGivesTuVi(encId);
@@ -24454,7 +24533,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ];
               const goalName =
                 targetSubRealm >= 0 && targetSubRealm <= 4
-                  ? realmName(targetRealm) + " · " + subRealmNames[targetSubRealm]
+                  ? realmName(targetRealm) +
+                    " · " +
+                    subRealmNames[targetSubRealm]
                   : realmName(targetRealm);
               return {
                 stop: "Chúc mừng! Đã đạt mục tiêu tu luyện: " + goalName + "!",
@@ -24541,8 +24622,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           if (atTop && isMaxRealm) {
             if (!isDanhQuai) {
               return {
-                stop:
-                  "Tu vi Hóa Thần Đại viên mãn đã đạt cực hạn tối đa, không thể tích lũy thêm qua bế quan.",
+                stop: "Tu vi Hóa Thần Đại viên mãn đã đạt cực hạn tối đa, không thể tích lũy thêm qua bế quan.",
               };
             }
             // Ở chế độ Đánh Quái: tu vi đã chạm đỉnh nhưng người chơi vẫn có thể farm quái lấy tài nguyên, nên bỏ qua đột phá và tiếp tục đánh quái bên dưới.
@@ -24819,7 +24899,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     }
 
                     // Fallback doAction nếu chưa mở
-                    if (!rAct.ok || (rAfter && !rAfter.active && !rAfter.tran)) {
+                    if (
+                      !rAct.ok ||
+                      (rAfter && !rAfter.active && !rAfter.tran)
+                    ) {
                       auCall(() => {
                         if (typeof g.doAction === "function")
                           g.doAction(targetTv.encId);
@@ -25425,7 +25508,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (cfg.autoQuickSave && st.savedEnc !== target.encId) {
                 st.savedEnc = target.encId;
                 try {
-                  saveQuickSave(`Trước trận Dị Bảo: ${target.title} (${target.pName})`);
+                  saveQuickSave(
+                    `Trước trận Dị Bảo: ${target.title} (${target.pName})`,
+                  );
                   auLog(
                     `💾 [Quick Save] Đã tự động chụp bản lưu trước trận «${target.title}» tại ${target.pName}. (Nếu xịt 7%, bạn có thể vào tab [Lưu & Nạp Save] bật 'Tẩy Thiên Cơ' để gieo quẻ mới!).`,
                     "vk-ok",
@@ -25788,7 +25873,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const validMocs = hereInfo.moc.filter(
               (m) => m <= (pity.waitYears >= 450 ? 1 : Math.min(5, maxCanSit)),
             );
-            if (validMocs.length > 0) sitYears = validMocs[validMocs.length - 1];
+            if (validMocs.length > 0)
+              sitYears = validMocs[validMocs.length - 1];
             else sitYears = Math.min(hereInfo.moc[0], maxCanSit);
           }
           if (sitYears <= 0) sitYears = 1;
@@ -26628,10 +26714,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             };
             c.mode = sel("au-tl-mode", c.mode || "be_quan");
             c.targetRealm = Math.floor(
-              num0("au-tl-realm", 0, 5, c.targetRealm != null ? c.targetRealm : 5),
+              num0(
+                "au-tl-realm",
+                0,
+                5,
+                c.targetRealm != null ? c.targetRealm : 5,
+              ),
             );
             c.targetSubRealm = Math.floor(
-              num0("au-tl-sub-realm", -1, 4, c.targetSubRealm != null ? c.targetSubRealm : 3),
+              num0(
+                "au-tl-sub-realm",
+                -1,
+                4,
+                c.targetSubRealm != null ? c.targetSubRealm : 3,
+              ),
             );
             c.minSafeRate = num0("au-tl-rate", 30, 100, c.minSafeRate);
             c.minTho = num0("au-tl-tho", 1, 1000, c.minTho);
@@ -26933,8 +27029,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ),
             ]);
           } else if (kind === "tl") {
-            const tr = Number(AU.cfg.tl.targetRealm != null ? AU.cfg.tl.targetRealm : 5);
-            const tsr = Number(AU.cfg.tl.targetSubRealm != null ? AU.cfg.tl.targetSubRealm : 3);
+            const tr = Number(
+              AU.cfg.tl.targetRealm != null ? AU.cfg.tl.targetRealm : 5,
+            );
+            const tsr = Number(
+              AU.cfg.tl.targetSubRealm != null ? AU.cfg.tl.targetSubRealm : 3,
+            );
             const subRealmNames = [
               "Sơ kỳ",
               "Trung kỳ",
@@ -26949,10 +27049,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 targetLabel += " · " + subRealmNames[tsr];
               }
             }
-            rows.push([
-              "Cảnh Giới Đích",
-              esc(targetLabel),
-            ]);
+            rows.push(["Cảnh Giới Đích", esc(targetLabel)]);
             rows.push([
               "Phương Thức Tu Luyện",
               AU.cfg.tl.mode === "danh_quai"
@@ -28117,7 +28214,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           // Thống kê nhanh
           const totalRelics = DIBAO.ev.length;
-          const ownedCount = DIBAO.ev.filter((e) => isOwnedItem(e.relic)).length;
+          const ownedCount = DIBAO.ev.filter((e) =>
+            isOwnedItem(e.relic),
+          ).length;
           const metaRelics =
             sc && sc.metaRelics
               ? sc.metaRelics
@@ -31162,7 +31261,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             now: true,
             pts: [
               "<b>Mở Rộng Tùy Chọn Độ Kỹ (Số Vòng Lặp Luyện Kim):</b> Bổ sung thêm 2 mức dò tìm chuyên sâu: <code>Rất Kỹ (12.000 vòng)</code> và <code>Cực Hạn (24.000 vòng)</code> trong mục <i>'Độ Kỹ'</i> tại Cài Đặt Chung (Hướng Build / Auto Kinh Mạch). Giúp thuật toán Simulated Annealing dò tìm triệt để toàn bộ không gian hoán vị khi xếp từ lưới trống.",
-              "<b>Hiển Thị Rõ Số Vòng Lặp Trong Giao Diện:</b> Các tùy chọn trong menu thả xuống 'Độ Kỹ' nay ghi chú rõ ràng số vòng lặp tương ứng (1.500, 3.000, 6.000, 12.000, 24.000) giúp đạo hữu dễ dàng lựa chọn thời gian và độ sâu tính toán theo cấu hình máy."
+              "<b>Hiển Thị Rõ Số Vòng Lặp Trong Giao Diện:</b> Các tùy chọn trong menu thả xuống 'Độ Kỹ' nay ghi chú rõ ràng số vòng lặp tương ứng (1.500, 3.000, 6.000, 12.000, 24.000) giúp đạo hữu dễ dàng lựa chọn thời gian và độ sâu tính toán theo cấu hình máy.",
             ],
           },
           {
@@ -31173,7 +31272,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Sửa Triệt Để Lỗi Chức Năng Tẩy Ô Không Báo Khi Xem Trước:</b> Khắc phục lỗi kiểm tra chặn cứng <code>doiMauLeft <= 0</code> khiến thuật toán lập kế hoạch tẩy ô trả về rỗng khi người chơi chưa cắn đan tẩy tủy. Nay chức năng <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i> luôn quét toàn diện cả bộ đang xếp và bộ đề xuất mới để tìm ra các ô lệch hệ tối ưu nhất cần tẩy (tối đa theo cấu hình <code>tayMax</code>).",
               "<b>Tự Động Nuốt Đan Tẩy Tủy / Cải Mệnh / Dịch Cốt Từ Túi:</b> Khi chạy Auto thật, nếu chưa có lượt chuyển hệ chờ sẵn, Tool tự động kiểm tra đan trong túi đồ (Tẩy Tủy Đan, Cải Mệnh Đan, Dịch Cốt Đan) và tự động gọi <code>gg.useItem</code> để nhận lượt rồi mới thực hiện tẩy ô <code>gg.doiMauO</code> an toàn.",
               "<b>Hiển Thị Trực Quan Tình Trạng Lượt Tẩy & Đan Trong Túi:</b> Bảng kế hoạch tẩy ô nay hiển thị rõ số lượt chuyển hệ đang có sẵn, hoặc số viên đan tẩy tủy hiện có trong túi đồ để người chơi nắm rõ trước khi chạy.",
-              "<b>Đồng Bộ Kế Hoạch Tẩy Ô Sang Mọi Luồng Tính:</b> Kế hoạch tẩy ô nay hiển thị nhất quán ở cả chế độ Xem Trước (Dry run) trong Auto Kinh Mạch lẫn nút Tìm Cách Xếp trong tab Kinh Mạch."
+              "<b>Đồng Bộ Kế Hoạch Tẩy Ô Sang Mọi Luồng Tính:</b> Kế hoạch tẩy ô nay hiển thị nhất quán ở cả chế độ Xem Trước (Dry run) trong Auto Kinh Mạch lẫn nút Tìm Cách Xếp trong tab Kinh Mạch.",
             ],
           },
           {
@@ -31187,7 +31286,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "&nbsp;&nbsp;• <b>Khóa Đan Điền Chuẩn Hệ:</b> Ở giai đoạn chọn nhánh kết nối Đan Điền, thuật toán bắt buộc chỉ chọn Công Pháp có hệ trùng khớp 100% với ô kề cận Đan Điền, cấm hoàn toàn tình trạng công pháp khác hệ chiếm giữ cửa ngõ.",
               "&nbsp;&nbsp;• <b>Trừng Phạt Nặng Lệch Màu:</b> Thiết lập mức phạt cực nặng (-80 điểm/ô xung đột trong quick & -30 điểm trong simulated annealing), đồng thời thưởng lớn (+35 điểm) cho các mảnh đạt hệ số màu chuẩn (1.30).",
               "&nbsp;&nbsp;• <b>Bộ Lọc Vị Trí Khớp Hệ:</b> Tự động ưu tiên 100% các vị trí đúng hệ; chỉ xem xét vị trí khác khi không còn bất kỳ phương án nào phù hợp.",
-              "<b>Cập Nhật Mô Phỏng Bản Mới Thực Tế:</b> Khi tìm thấy cách xếp mới hoặc giữ nguyên cách xếp, các chỉ số dự phóng ở cột 'Bản mới' được tính toán sát thực tế dựa trên Lĩnh Ngộ của nhân vật, không phóng đại số liệu."
+              "<b>Cập Nhật Mô Phỏng Bản Mới Thực Tế:</b> Khi tìm thấy cách xếp mới hoặc giữ nguyên cách xếp, các chỉ số dự phóng ở cột 'Bản mới' được tính toán sát thực tế dựa trên Lĩnh Ngộ của nhân vật, không phóng đại số liệu.",
             ],
           },
           {
@@ -31200,7 +31299,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Tối Ưu Hóa & Trọng Thưởng Huyệt Đạo (x2.0–x2.5 Multiplier):</b> Cơ chế tìm kiếm mới tự động nhận diện các ô Huyệt Đạo và ưu tiên đưa các chiêu công/pháp khí chủ lực mạnh nhất lên huyệt để kích hoạt hệ số nhân sát thương và thuộc tính cực đại; phạt nặng việc chiếm huyệt mà không thông hoặc bỏ trống huyệt.",
               "<b>Định Tuyến Kinh Lộ Pháp Khí Đồng Hệ:</b> Tự động tính toán đường dẫn kinh lộ từ Đan Điền qua các Công Pháp cùng họ hệ tới Pháp Khí, khai thác tối đa hệ số Kinh Lộ (+40% đến +100% uy lực chiêu), biến Pháp Khí thành mũi nhọn dứt điểm uy lực.",
               "<b>Luyện Kim Mô Phỏng Nâng Cao (Dual-Seed Simulated Annealing):</b> Phân bổ xác suất lấy vật phẩm theo hàm số mũ của Phẩm Cấp (Thiên/Địa/Huyền > Hoàng/Phàm) và Uy Lực thực chiến. Khởi động 2 hạt giống song song (trục Đan Điền + biến thể hoặc bản xếp tốt hiện tại), loại bỏ hoàn toàn bẫy tối ưu cục bộ.",
-              "<b>Trừng Phạt Triệt Để Mảnh Tắc (Zero Dead Pieces):</b> Phạt cực nặng các mảnh không thông (-85 điểm/mảnh), buộc bộ tìm kiếm phải duy trì 100% mảnh thông mạch, không còn tình trạng bị lột bỏ để lại ô trống sau khi xếp."
+              "<b>Trừng Phạt Triệt Để Mảnh Tắc (Zero Dead Pieces):</b> Phạt cực nặng các mảnh không thông (-85 điểm/mảnh), buộc bộ tìm kiếm phải duy trì 100% mảnh thông mạch, không còn tình trạng bị lột bỏ để lại ô trống sau khi xếp.",
             ],
           },
           {
@@ -31215,7 +31314,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "&nbsp;&nbsp;• <b>Chiêu Mạnh Nhất:</b> Tên chiêu có sát thương đơn kích uy lực nhất và giá trị sát thương chuẩn.",
               "&nbsp;&nbsp;• <b>Tổng Sát Thương Chiêu:</b> Tổng lượng sát thương đầu ra của tất cả các chiêu tấn công và khống chế.",
               "&nbsp;&nbsp;• <b>Tạo Hộ Thuẫn:</b> Lượng khiên phòng ngự tạo ra từ các chiêu thức kèm trần khiên tối đa (60% Khí Huyết).",
-              "&nbsp;&nbsp;• <b>Bột Phát Sát Thương:</b> Hệ số bộc phát (×1.5) cùng mức sát thương đỉnh cao nhất khi kích hoạt bộc phát."
+              "&nbsp;&nbsp;• <b>Bột Phát Sát Thương:</b> Hệ số bộc phát (×1.5) cùng mức sát thương đỉnh cao nhất khi kích hoạt bộc phát.",
             ],
           },
           {
@@ -31226,7 +31325,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Mở Rộng Quét 100% Hoạt Động & Sự Kiện Tăng Tu Vi:</b> Khắc phục triệt để hạn chế trước đây chỉ quét hoạt động tại ô đang đứng. Thuật toán mới tự động quét toàn bộ hơn 380 sự kiện tăng tu vi (kỳ ngộ, di tích, bí cảnh, đầm lầy, thư viện môn phái...) trong toàn bộ bán kính di chuyển qua <code>placeActivities</code>, <code>run.nodes</code> và <code>run.noiChon</code>.",
               "<b>Gỡ Bỏ Rào Cản Hồi Chiêu & Sửa Lỗi Điều Hướng Nơi Chốn:</b> Bỏ qua giới hạn hồi chiêu cứng 60 năm lỗi thời, đồng bộ chuẩn xác với cấu hình <code>limits.moi_run</code> và <code>limits.hoi_chieu_nam</code> của game. Tự động gọi <code>enterPlace</code>/<code>enterNode</code> khi đến địa điểm giúp <code>chooseActivity</code> kích hoạt tức thì không bị lỗi 'Không ở nơi chốn nào', đồng thời sửa lỗi so sánh slot ngăn chặn việc đánh dấu nhầm ô sự kiện vào danh sách đen.",
               "<b>Đưa Lựa Chọn Tu Vi Lên Đầu & Tránh Rút Lui Sớm:</b> Nâng cấp cơ chế ra quyết định <code>auPick</code>, luôn đặt lựa chọn tăng tu vi và vượt khảo nghiệm lên mức ưu tiên cao nhất trong mọi nhánh kịch bản (kể cả sự kiện phân nhánh và chuỗi liên hoàn <code>start_chain</code>), tuyệt đối không bỏ chạy sớm.",
-              "<b>Thêm Dòng 'Tu Vi Đã Tăng' Trong Thống Kê Auto:</b> Tích hợp công thức tính lũy kế tu vi chính xác từ cảnh giới lớn, tiểu cảnh giới, tu vi hiện tại và điểm phá bình cảnh. Hiển thị trực quan theo thời gian thực <b>Tu Vi Đã Tăng: +X</b> giúp đạo hữu dễ dàng theo dõi hiệu quả cày tu vi của Auto."
+              "<b>Thêm Dòng 'Tu Vi Đã Tăng' Trong Thống Kê Auto:</b> Tích hợp công thức tính lũy kế tu vi chính xác từ cảnh giới lớn, tiểu cảnh giới, tu vi hiện tại và điểm phá bình cảnh. Hiển thị trực quan theo thời gian thực <b>Tu Vi Đã Tăng: +X</b> giúp đạo hữu dễ dàng theo dõi hiệu quả cày tu vi của Auto.",
             ],
           },
           {
@@ -31237,7 +31336,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Đồng Bộ Bản Build Game Mới (index-pyGvwuOa.js & content-AFgvANiO.json):</b> Hoàn tất quy trình kiểm tra 6 bước theo dõi bản cập nhật mới nhất từ nhà phát triển game; kiểm tra 100% các module gọi lõi qua <code>window.tuTien.core</code> bảo đảm tính tương thích và bảo mật Stealth tuyệt đối.",
               "<b>Thích Ứng Cơ Chế Trần Dược Kháng Theo Cảnh Giới (drugUsesPerRealm & drugCapped):</b> Game bổ sung cơ chế giới hạn số viên đan dược thấm trong một cảnh giới ở các Đạo Lộ khắc nghiệt (Nghịch Thiên trần 3 viên/cảnh giới, Tuyệt Mệnh trần 2 viên/cảnh giới). Tool nay tự động kiểm tra trần dược kháng qua <code>drugCapped</code> và <code>realmDrugUses</code>, ngăn chặn hoàn toàn việc spam đan dược đã kháng khi bế quan hoặc cắn đan phá bình cảnh.",
               "<b>Hiển Thị Trực Quan Số Viên Đan Thấm Còn Lại:</b> Tích hợp trạng thái còn thấm và cảnh báo <i>[Đã đạt trần cảnh giới]</i> vào Tab Đột Phá & Thọ, Tab Túi Đồ và gợi ý cắn đan bù điểm để người chơi dễ dàng quản lý tài nguyên đan dược quý giá.",
-              "<b>Cập Nhật Cân Bằng AI Địch & Đấu Giá (enemyAiBonus & AUCTION_HAND_LOT_SHARE):</b> Đồng bộ các hằng số cân bằng mới của game gồm AI và trang bị thông minh của địch ở chế độ khó, trần vòng vây hãm môn phái (<code>SIEGE_MAX_ROUNDS = 100</code>), và tỉ lệ phân bổ lô viết tay trong đại hội đấu giá."
+              "<b>Cập Nhật Cân Bằng AI Địch & Đấu Giá (enemyAiBonus & AUCTION_HAND_LOT_SHARE):</b> Đồng bộ các hằng số cân bằng mới của game gồm AI và trang bị thông minh của địch ở chế độ khó, trần vòng vây hãm môn phái (<code>SIEGE_MAX_ROUNDS = 100</code>), và tỉ lệ phân bổ lô viết tay trong đại hội đấu giá.",
             ],
           },
           {
@@ -31247,7 +31346,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             pts: [
               "<b>Đồng Bộ Công Thức Suy Giảm Tương Sinh (generationRank & zD):</b> Khai quật chính xác từ mã nguồn game: công pháp phẩm thấp sinh cho công pháp phẩm cao bị suy giảm theo mảng chênh bậc <code>zD = [1, 2/3, 1/3, 0]</code> (kém 1 phẩm còn 67%, kém 2 phẩm còn 33%, kém ≥3 phẩm mất trắng 0% tương sinh). Trấn phái và Nghịch Thiên luôn giữ chuẩn bậc 5 (Thiên phẩm), Nghịch Thiên sinh cho bất kỳ ai cũng nhận đủ 100%.",
               "<b>Nâng Cấp Thuật Toán Xếp Kinh Mạch Thông Minh:</b> Tích hợp bảng suy giảm <code>genSlack</code> vào bộ lọc vị trí (<code>smart candidate scoring</code>) và hàm lượng giá (<code>biasInfo</code>). Bộ xếp tự động ưu tiên ghép các mảnh cùng hoặc cao hơn phẩm cấp kề nhau để đạt trọn vẹn 100% tương sinh (+15% hệ số), loại bỏ triệt để tình trạng ghép mảnh rác phẩm thấp quanh mảnh chủ lực.",
-              "<b>Nhận Diện Tương Sinh Nội Tại & Triệt Tiêu Điểm Nghịch:</b> Nhận diện mảnh đa hệ có tương sinh nội tại (<code>noiTai = 1.1</code>, tăng 10% toàn mảnh), đồng thời cảnh báo và tránh các cặp ô/mảnh tương khắc không có hệ trung gian thông quan gây phản phệ."
+              "<b>Nhận Diện Tương Sinh Nội Tại & Triệt Tiêu Điểm Nghịch:</b> Nhận diện mảnh đa hệ có tương sinh nội tại (<code>noiTai = 1.1</code>, tăng 10% toàn mảnh), đồng thời cảnh báo và tránh các cặp ô/mảnh tương khắc không có hệ trung gian thông quan gây phản phệ.",
             ],
           },
           {
@@ -31259,7 +31358,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Bộ Đột Biến Hình Học 8 Tầng (8-Layer Geometric Mutators):</b> Tích hợp các toán tử hình học chuyên biệt: Xoay tại chỗ (Rotate-In-Place), Hoán đổi cặp mảnh (Piece Swap), Bắn tỉa huyệt vị (Acupoint Snipe), Trượt hình học lân cận (Slide / Jiggle) và Tối ưu màu ô cộng hưởng (Cell Element Resonance), giúp thuật toán bứt phá khỏi bẫy cực trị địa phương và lách khít từng góc chết trên lưới.",
               "<b>Tối Ưu Hóa Tuyệt Đối Tài Nguyên Huyệt Đạo (x2.0 Buff):</b> Tự động nhận diện và ưu tiên găm các mảnh Công Pháp / Pháp Khí chủ lực (sát thương chiêu cao nhất hoặc tốc độ tu luyện/đột phá cao nhất) đè trúng các ô Huyệt Đạo, nghiêm ngặt tránh lãng phí huyệt trống hoặc để mảnh rác chiếm chỗ.",
               "<b>Tối Ưu Hóa Kinh Lộ Pháp Khí & Tương Sinh Ngũ Hành:</b> Xếp đặt chuỗi công pháp hợp hệ từ Đan Điền vươn tới Pháp Khí để kích hoạt trọn vẹn buff kinh lộ (+10% đến +50%), đồng thời kết nối các cặp mảnh tương sinh (+15% mỗi mảnh sinh kề bên) và triệt tiêu điểm nghịch gây trừ tỉ lệ đột phá.",
-              "<b>Leo Đồi Chuyên Sâu (Ultra Hill-Climbing Polish):</b> Sau khi luyện kim, hệ thống tự động quét xoay tại chỗ, trượt lân cận, hoán đổi cặp mảnh và lấp đầy các ô trống bằng các món vừa vặn trong túi, đem lại cách xếp tối ưu nhất cả về điểm số lẫn mỹ thuật hình học."
+              "<b>Leo Đồi Chuyên Sâu (Ultra Hill-Climbing Polish):</b> Sau khi luyện kim, hệ thống tự động quét xoay tại chỗ, trượt lân cận, hoán đổi cặp mảnh và lấp đầy các ô trống bằng các món vừa vặn trong túi, đem lại cách xếp tối ưu nhất cả về điểm số lẫn mỹ thuật hình học.",
             ],
           },
           {
@@ -31269,7 +31368,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             pts: [
               "<b>Tự Động Uống Đan Phá Bình Cảnh:</b> Khi tu vi chạm bình cảnh tiểu cảnh giới (Sơ kỳ → Trung kỳ, Trung kỳ → Hậu kỳ...), Auto sẽ tự động kiểm tra túi đồ và nuốt các loại đan phá bình cảnh (Phá Chướng Đan, Toái Bích Đan, Thông Huyền Đan, Phá Hư Đan, Khai Khiếu Châu, Xuyên Bích Giác, Huyền Quan Tủy, Hư Linh Phách) tương ứng cảnh giới hiện tại để lập tức thăng cấp tiểu cảnh giới.",
               "<b>Hỗ Trợ Toàn Diện Cả Bế Quan & Đánh Quái:</b> Tính năng được kích hoạt xuyên suốt cho cả 2 phương thức Bế Quan Nhập Định lẫn Đánh Quái Săn Yêu cày tu vi, đồng thời sửa lỗi nhận diện đan phá bình cảnh trong lệnh nhập định của game.",
-              "<b>Tùy Chọn Trực Quan & Thống Kê Chi Tiết:</b> Đưa tùy chọn «💊 Tự Động Uống Đan Phá Bình Cảnh Khi Chạm Nấc» vào khu vực An Toàn Chung của Tab Auto Tu Luyện để dễ dàng bật/tắt ở mọi chế độ, đồng thời bổ sung chỉ số <i>«Bình Cảnh Đã Phá»</i> thời gian thực trên bảng tiến trình."
+              "<b>Tùy Chọn Trực Quan & Thống Kê Chi Tiết:</b> Đưa tùy chọn «💊 Tự Động Uống Đan Phá Bình Cảnh Khi Chạm Nấc» vào khu vực An Toàn Chung của Tab Auto Tu Luyện để dễ dàng bật/tắt ở mọi chế độ, đồng thời bổ sung chỉ số <i>«Bình Cảnh Đã Phá»</i> thời gian thực trên bảng tiến trình.",
             ],
           },
           {
@@ -31279,7 +31378,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             pts: [
               "<b>Đồng Bộ Hoàn Toàn Với Bản Build Game Mới:</b> Hoàn thành quy trình điều tra 6 bước theo dõi bản cập nhật mới nhất của game (bundle <code>index-U3gz8Mj2.js</code>); xác nhận 100% các module gọi lõi (<code>window.tuTien.core</code>) và cơ chế chiến đấu/tu luyện tương thích ổn định tuyệt đối.",
               "<b>Hỗ Trợ Toàn Diện Đạo Lộ «Tuyệt Mệnh» (One-Life Mode):</b> Đồng bộ 4 Đạo Lộ chuẩn của game: Thuận Thiên, Trung Đạo, Nghịch Thiên và Tuyệt Mệnh. Bổ sung tùy chọn chọn Đạo Lộ Tuyệt Mệnh trong Auto Reroll tạo kiếp; chuẩn hóa nhận diện cờ <code>run.difficulty = 'oneLife'</code> trên bảng trạng thái và công cụ nạp lưu an toàn.",
-              "<b>Cập Nhật Cơ Chế Công Phá Sơn Môn & Dị Bảo Biển:</b> Đồng bộ các hằng số và cơ chế mới của Hộ Sơn Đại Trận (<code>combat/sectSiege</code>); ghi nhận cập nhật tỉ lệ chắc chắn kích hoạt Thuyền Rồng (Dị Bảo Thái Hư Chu) tại Bến Lạc Khư từ nhà phát triển game."
+              "<b>Cập Nhật Cơ Chế Công Phá Sơn Môn & Dị Bảo Biển:</b> Đồng bộ các hằng số và cơ chế mới của Hộ Sơn Đại Trận (<code>combat/sectSiege</code>); ghi nhận cập nhật tỉ lệ chắc chắn kích hoạt Thuyền Rồng (Dị Bảo Thái Hư Chu) tại Bến Lạc Khư từ nhà phát triển game.",
             ],
           },
           {
@@ -31290,7 +31389,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi:</b> Trong chế độ Đánh Quái (Săn Yêu Thú) của Auto Tu Luyện, bổ sung tùy chọn tự động quét toàn diện các cơ duyên, kỳ ngộ, bí cảnh, di tích và hoạt động nơi chốn xung quanh có ban tặng tu vi.",
               "<b>Định Hướng Đỉnh Cao & Đột Phá Thần Tốc:</b> Tự động so sánh và chọn các nhánh khảo nghiệm / quyết định mang lại lượng tu vi cao nhất trong sự kiện (nhận hàng chục đến hàng trăm nghìn tu vi), giúp nhân vật thăng cấp thần tốc hơn việc chỉ đánh quái đơn thuần.",
               "<b>Thống Kê Tiến Độ Thời Gian Thực:</b> Bổ sung chỉ số <i>«Sự Kiện Tu Vi Đã Qua»</i> ngay trên bảng trạng thái Auto, hiển thị rõ số lần tham gia kỳ ngộ thành công.",
-              "<b>Bảo Toàn An Toàn & Tránh Kẹt:</b> Tích hợp cơ chế tự động ghi nhớ, giới hạn số lần thử (retry limit 3 lần) và tự động bỏ qua các sự kiện vượt quá khả năng để hành trình tu tiên luôn thông suốt."
+              "<b>Bảo Toàn An Toàn & Tránh Kẹt:</b> Tích hợp cơ chế tự động ghi nhớ, giới hạn số lần thử (retry limit 3 lần) và tự động bỏ qua các sự kiện vượt quá khả năng để hành trình tu tiên luôn thông suốt.",
             ],
           },
           {
@@ -31301,7 +31400,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Chuẩn Hóa Danh Sách Đại Cảnh Giới:</b> Sửa triệt để lỗi lệch chỉ số cảnh giới (off-by-one) ở mục chọn cảnh giới đích. Cập nhật đúng thang cảnh giới game: Luyện Khí (1) → Trúc Cơ (2) → Kim Đan (3) → Nguyên Anh (4) → Hóa Thần (5 - Đỉnh Nhân Giới), cùng tùy chọn <i>«♾️ Không Giới Hạn (Farm Liên Tục)»</i>.",
               "<b>Bổ Sung Tùy Chọn Mục Tiêu Tiểu Cảnh Giới:</b> Thêm dropdown chọn chính xác tiểu cảnh giới cần đạt: <i>Bất kỳ, Sơ kỳ, Trung kỳ, Hậu kỳ, Đại viên mãn, hoặc Đại viên mãn (Đầy tu vi 100%)</i>. Giúp các nhân vật ở mọi cảnh giới — đặc biệt là Hóa Thần — có thể tự động bế quan hoặc đánh quái để đạt mốc mong muốn mà không bị dừng sớm.",
               "<b>Tối Ưu Logic Khi Nhân Vật Ở Đỉnh Nhân Giới (Hóa Thần):</b> Khắc phục lỗi tự động dừng hoặc báo lỗi Thiên Môn đóng khi nhân vật đã ở Hóa Thần. Trong chế độ Đánh Quái, khi tu vi Hóa Thần đã đầy, Tool sẽ bỏ qua bước xung kích và tiếp tục chu trình săn yêu cày linh thạch/tài nguyên liên tục nếu đặt mục tiêu Không Giới Hạn hoặc chưa đủ số trận.",
-              "<b>Tự Động Tính Năm Bế Quan Theo Tiểu Cảnh Giới:</b> Khi người chơi chọn mục tiêu tiểu cảnh giới kế tiếp, Tool tự động điều chỉnh số năm bế quan (kích hoạt chế độ nextMinorRealm) để đạt tiểu cảnh giới mục tiêu một cách nhanh và chuẩn xác nhất."
+              "<b>Tự Động Tính Năm Bế Quan Theo Tiểu Cảnh Giới:</b> Khi người chơi chọn mục tiêu tiểu cảnh giới kế tiếp, Tool tự động điều chỉnh số năm bế quan (kích hoạt chế độ nextMinorRealm) để đạt tiểu cảnh giới mục tiêu một cách nhanh và chuẩn xác nhất.",
             ],
           },
           {
@@ -31313,7 +31412,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Tùy Chọn Phương Thức Tu Luyện Linh Hoạt:</b> Người chơi có thể tự do chuyển đổi giữa 2 chế độ: <b>Bế Quan (Nhập Định)</b> (tự nuốt đan tu luyện, tự giải phóng bình cảnh, tính số năm tối ưu) hoặc <b>Đánh Quái (Săn Yêu)</b> (tự động tới các bãi hoang dã quanh khu vực, kiểm tra sức đánh, tự Tốc Chiến hoặc dùng Siêu AI VIP nghênh chiến, né chim Hạc giữ Khí Vận).",
               "<b>Tự Động Đột Phá Khi Tu Vi Chạm Trần:</b> Dù tu luyện bằng hình thức Bế Quan hay Đánh Quái, ngay khi tu vi đạt mức viên mãn hoặc chạm ngưỡng đại cảnh giới, Tool sẽ tự động chuyển sang quy trình Đột Phá: tính toán combo đan dược có tỉ lệ thành công cao nhất, kiểm tra ngưỡng an toàn chống nổ đan, xung kích cảnh giới và dùng Siêu AI VIP hạ gục Tâm Ma khi kiếp nạn xuất hiện.",
               "<b>Giao Diện Điều Khiển Thông Minh & Chuyển Đổi Mượt Mà:</b> Bảng cấu hình tự động ẩn/hiện các khối chức năng tương ứng theo chế độ được chọn, tích hợp nút <i>«🔍 Xem Sức Đánh & Các Bãi Săn Quanh Đây»</i> trực quan.",
-              "<b>Tinh Gọn Thanh Tab Tự Động:</b> Loại bỏ tab Săn Yêu riêng lẻ để thanh điều hướng gọn gàng, đồng thời duy trì cơ chế chuyển hướng tương thích ngược 100%."
+              "<b>Tinh Gọn Thanh Tab Tự Động:</b> Loại bỏ tab Săn Yêu riêng lẻ để thanh điều hướng gọn gàng, đồng thời duy trì cơ chế chuyển hướng tương thích ngược 100%.",
             ],
           },
           {
@@ -31326,7 +31425,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "<b>Bộ Lọc Nhanh 1-Chạm Đa Tiêu Chí:</b> Thêm hệ thống nút lọc thông minh cho danh sách chọn Dị Bảo: [✓ Tất Cả (19)], [✕ Bỏ Hết], [⭐ 12 Món Hồn], [📦 Chỉ Chưa Có], [⚔️ 13 Boss (7%)], [🧠 6 Trí (3%)], kết hợp ô tìm kiếm tức thì theo tên Dị Bảo và địa danh.",
               "<b>Thẻ Dị Bảo Trực Quan, Minh Bạch Cơ Chế:</b> Mỗi Dị Bảo được trình bày dạng card hiện đại với huy hiệu cơ chế rõ ràng (⭐ Hồn vs Kiếp, ⚔️ 7% Boss vs 🧠 3% Trí tuệ), địa điểm xuất thế và tình trạng sở hữu thực tế của nhân vật.",
               "<b>Tự Động Quick Save Trước Khi Vào Trận Săn Bảo (Auto Quick Save):</b> Tùy chọn mới cho phép Tool tự động tạo bản sao lưu nhanh (Quick Save) ngay khi phi hành tới địa điểm có Dị Bảo (trước khi kích hoạt sự kiện/giao chiến Boss). Kết hợp hoàn hảo với tính năng 'Tẩy Thiên Cơ' (Đổi Vận Rủi RNG) trong Nạp Save để người chơi dễ dàng tối ưu cơ hội đoạt bảo.",
-              "<b>Cấu Hình & Chiến Thuật Nhóm Gọn Gàng:</b> Phân loại cài đặt mạch lạc thành các khối: Di Chuyển & Cắm Trại, Chiến Đấu & AI, Tốc Độ & An Toàn, và Tự Lưu Nhanh Trước Trận."
+              "<b>Cấu Hình & Chiến Thuật Nhóm Gọn Gàng:</b> Phân loại cài đặt mạch lạc thành các khối: Di Chuyển & Cắm Trại, Chiến Đấu & AI, Tốc Độ & An Toàn, và Tự Lưu Nhanh Trước Trận.",
             ],
           },
           {
