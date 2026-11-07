@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.9
+// @version      7.14.10
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.9
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.10
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.9";
+      var TOOL_VER = "7.14.10";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -19723,8 +19723,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         cfg.dir,
       )}
       ${auSel("au-km-it", "Độ Kỹ", AU_KM_IT, cfg.iters)}
-      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}
-      ${auChk("au-km-tayo-cg", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(cho phép xếp đè lên ô khác hệ của linh căn & tự động cắn đan chuyển hệ)")}</div>
+      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}</div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px">${cfg.kb ? "Đã chọn <b>" + esc(b.ten) + "</b>: khi xếp, Tool cộng điểm cho món đúng hướng đang thông (thêm nếu nằm trên huyệt). " : "Chưa ép hướng: Auto và xếp từ túi theo hệ số game; phần Xếp Theo Cảnh Giới tạm dùng <b>" + esc(b.ten) + "</b>. "}Tâm Pháp (công pháp không chiêu) chiếm một nửa số ô thông, Đấu Pháp + Pháp Khí + Bảo Vật chiếm nửa còn lại khi chọn 5 : 5; mỗi ô lệch bị trừ ${HB_RATIO_W} điểm. Tool tính sức mỗi món ở mức Lĩnh Ngộ đã đầy.</div></div>
     <div class="vk-card"><h3>Auto Kinh Mạch</h3>
       <div class="vk-mu" style="font-size:13px">Tool tìm cách xếp tốt nhất theo Cài Đặt Chung rồi <b>tự áp dụng vào game bằng chính các hàm của game</b>: gỡ mảnh sai, đặt mảnh mới, đổi bộ, mở ô. Chỉ đổi khi điểm tăng đủ lớn vì đổi cách xếp làm món mới phải Lĩnh Ngộ lại từ đầu; game bận thì Tool đợi hoặc dừng.</div>
@@ -19811,15 +19810,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
           body.querySelectorAll('[id^="au-km-"]').forEach((el) => {
             el.onchange = () => {
-              if (el.id === "au-km-tayo-cg") {
-                cfg.tayO = !!el.checked;
-                const other = body.querySelector("#au-km-tayo");
-                if (other) other.checked = cfg.tayO;
-              } else if (el.id === "au-km-tayo") {
-                cfg.tayO = !!el.checked;
-                const other = body.querySelector("#au-km-tayo-cg");
-                if (other) other.checked = cfg.tayO;
-              }
               const oldKb = cfg.kb;
               auReadCfg("km");
               if (cfg.kb !== oldKb) {
@@ -27114,25 +27104,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.moBo = ck("au-km-mobo", c.moBo);
             c.mo = ck("au-km-mo", c.mo);
             c.moMax = Math.floor(num0("au-km-momax", 1, 20, c.moMax));
-            const elCg = q("au-km-tayo-cg");
-            const elAuto = q("au-km-tayo");
-            if (elCg && elAuto) {
-              if (elCg.checked !== c.tayO && elAuto.checked === c.tayO) {
-                c.tayO = elCg.checked;
-              } else if (elAuto.checked !== c.tayO && elCg.checked === c.tayO) {
-                c.tayO = elAuto.checked;
-              } else if (elCg.checked === elAuto.checked) {
-                c.tayO = elCg.checked;
-              } else {
-                c.tayO = elAuto.checked;
-              }
-              elCg.checked = c.tayO;
-              elAuto.checked = c.tayO;
-            } else if (elCg) {
-              c.tayO = elCg.checked;
-            } else if (elAuto) {
-              c.tayO = elAuto.checked;
-            }
+            c.tayO = ck("au-km-tayo", c.tayO);
             c.tayMax = Math.floor(
               num0("au-km-taymax", 1, 20, c.tayMax != null ? c.tayMax : 3),
             );
@@ -31524,9 +31496,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.9 · Sửa Lỗi Không Uncheck Được Tùy Chọn Tự Động Tẩy Ô",
+            t: "Phiên Bản 7.14.10 · Tinh Gọn Giao Diện & Quy Nhất Tùy Chọn Tẩy Ô",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Quy Nhất Tùy Chọn Tẩy Ô Vào Đúng Khối Chức Năng:</b> Xóa bỏ ô tích trùng lặp thừa thãi ở khung 'Cài Đặt Chung', giữ lại duy nhất 1 vị trí chuẩn mực và trực quan tại khối <b>Tẩy Ô (Đổi Hệ Ô)</b> trong khung 'Auto Kinh Mạch' (nơi hiển thị số lượt chuyển hệ còn lại và số ô tẩy tối đa mỗi lần chạy).",
+              "<b>Giao Diện Tinh Gọn, Thống Nhất:</b> Loại bỏ hoàn toàn sự rườm rà và các nguy cơ xung đột đồng bộ giữa nhiều ô tích, giúp đạo hữu dễ dàng quản lý và cài đặt tính năng Tẩy Ô."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.9 · Sửa Lỗi Không Uncheck Được Tùy Chọn Tự Động Tẩy Ô",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Lỗi Đồng Bộ Checkbox Tẩy Ô:</b> Khắc phục triệt để lỗi xung đột logic khiến người dùng không thể bỏ chọn (uncheck) ô tích <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i>. Trước đây toán tử OR (<code>||</code>) giữa ô tích tại 'Cài Đặt Chung' và 'Auto Kinh Mạch' khiến việc bỏ chọn một bên bị bên kia tự động kích hoạt trở lại.",
               "<b>Cơ Chế Đồng Bộ Hai Chiều Linh Hoạt:</b> Nay khi đạo hữu tích hoặc bỏ chọn ở bất kỳ vị trí nào ('Cài Đặt Chung' hoặc 'Auto Kinh Mạch'), cả hai ô đều tự động đồng bộ trạng thái ngay lập tức và lưu cấu hình chuẩn xác vào hệ thống."
