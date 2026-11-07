@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.4
+// @version      7.14.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.4";
+      var TOOL_VER = "7.14.5";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5652,6 +5652,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         function biasInfo(B, manh, R) {
           const f = {
             sinh: 0,
+            sinhVal: 0,
+            bSinh: 0,
             khac: 0,
             hop: 0,
             lech: 0,
@@ -5672,6 +5674,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const thong = (i) => !R || !R.manh || !R.manh[i] || R.manh[i].thong;
           manh.forEach((p, i) => {
             if (!thong(i)) return;
+            const it_i = B.items.get(p.m.item);
+            const isSkill_i = !!(it_i && it_i.chieu);
+            const isBuild_i = !!(B.build && it_i && buildMatch(B.build, it_i));
+            const onHuyet_i = p.cells.some((c) => B.hy.has(c));
+            const pwr_i = kmItemPower(it_i);
+
+            // Hệ số giá trị thực chiến của tương sinh dồn vào mảnh này
+            let synWeight = 1.0;
+            if (isSkill_i) synWeight += Math.min(4.5, pwr_i / 30);
+            if (isBuild_i) synWeight *= 2.2;
+            if (onHuyet_i) synWeight *= 1.6;
+
             const nb = new Set();
             for (const c of p.cells) {
               const x = c % B.rong;
@@ -5696,10 +5710,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     )
                   : Math.max(0, gm.generators - (gm.weakGenerators || 0));
               f.sinh += ct;
+              f.sinhVal += ct * synWeight;
+              if (isBuild_i && ct > 0) f.bSinh += ct;
               f.khac += gm.restrainers || 0;
-              if (gm.noiTai && gm.noiTai > 1) f.sinh += 0.67; // Tương sinh nội tại đa hệ (x1.1 hệ số toàn mảnh)
+              if (gm.noiTai && gm.noiTai > 1) {
+                f.sinh += 0.67;
+                f.sinhVal += 0.67 * synWeight;
+              }
             } else {
-              const it_i = B.items.get(p.m.item);
+              let itemSinh = 0,
+                itemKhac = 0;
               for (const j of nb) {
                 if (!thong(j)) continue;
                 const it_j = B.items.get(manh[j].m.item);
@@ -5713,14 +5733,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                       if (mult > sinh) sinh = mult;
                     } else if (d < 0) khac = 1;
                   }
-                f.sinh += sinh;
-                f.khac += khac;
+                itemSinh += sinh;
+                itemKhac += khac;
               }
+              f.sinh += itemSinh;
+              f.sinhVal += itemSinh * synWeight;
+              if (isBuild_i && itemSinh > 0) f.bSinh += itemSinh;
+              f.khac += itemKhac;
               if (hes[i].length > 1) {
                 for (const a of hes[i])
                   for (const b of hes[i])
                     if (heTacDong(a, b) > 0) {
                       f.sinh += 0.67;
+                      f.sinhVal += 0.67 * synWeight;
                       break;
                     }
               }
@@ -5765,8 +5790,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           try {
             const f = biasInfo(B, manh, R);
             let s = 0;
-            if (B.dir === "tien") s += 8 * f.sinh - 10 * f.khac;
-            else if (B.dir === "ma") s += 8 * f.khac - 3 * f.sinh;
+            const synEff = f.sinhVal || f.sinh;
+            if (B.dir === "tien" || !B.dir) {
+              s += 10 * synEff - 12 * f.khac + 8 * (f.bSinh || 0);
+            } else if (B.dir === "ma") {
+              s += 10 * f.khac - 4 * synEff;
+            }
             if (B.prio)
               s +=
                 2 * f.hop -
@@ -5775,7 +5804,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 2.4 * f.lcGoc -
                 1.5 * f.lcKhac +
                 5 * f.huyet;
-            if (B.build) s += 12 * f.build + 4 * f.bhuyet;
+            if (B.build) s += 14 * f.build + 5 * f.bhuyet;
             return s * (S.biasK || 1);
           } catch (e) {
             return 0;
@@ -6118,8 +6147,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   let touchesDanDien = false;
                   let matchCount = 0,
                     partialCount = 0,
-                    conflictCount = 0;
+                    conflictCount = 0,
+                    recolorableCount = 0,
+                    unfixableCount = 0;
                   const adj = new Set();
+                  const lcHe = (nv0.linhCan && nv0.linhCan.he) || [];
 
                   for (let i = 0; i < cells.length; i++) {
                     const cellIdx = cells[i];
@@ -6155,7 +6187,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     ) {
                       partialCount++;
                     } else {
-                      conflictCount++; // Xung đột màu hoàn toàn (ví dụ: Thổ trên Kim, Kim trên Thổ)
+                      conflictCount++; // Xung đột màu với ô hiện tại
+                      const canRecolor =
+                        cellIdx !== g.danDien &&
+                        g.vung[cellIdx] >= 0 &&
+                        nv0.kinhMach.trangThai &&
+                        nv0.kinhMach.trangThai[cellIdx] !== "an" &&
+                        (lcHe.includes(pieceHe) || pieceHe === "vo_sac");
+                      if (canRecolor) {
+                        recolorableCount++;
+                      } else {
+                        unfixableCount++;
+                      }
                     }
                   }
                   for (const cellIdx of cells) adj.delete(cellIdx);
@@ -6179,6 +6222,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     matchCount,
                     partialCount,
                     conflictCount,
+                    recolorableCount,
+                    unfixableCount,
                     isKhacPha,
                   });
                 }
@@ -6270,11 +6315,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
-            // 7.14.2: Phạt cực nặng khi đặt đè lên ô xung đột màu (Thổ lên Kim, Kim lên Thổ)
+            // Phạt khi đặt đè lên ô xung đột màu
             let colorConflictPenalty = 0;
+            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
             manh.forEach((p) => {
-              if (p.conflictCount > 0) {
-                colorConflictPenalty += p.conflictCount * 80;
+              if (isTayO) {
+                colorConflictPenalty +=
+                  (p.unfixableCount || 0) * 80 + (p.recolorableCount || 0) * 4;
+              } else {
+                if (p.conflictCount > 0) {
+                  colorConflictPenalty += p.conflictCount * 80;
+                }
               }
             });
 
@@ -6328,8 +6379,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             }
           }
-          const cleanAnchors = anchorCandidates.filter(
-            (a) => a.cnd.conflictCount === 0,
+          const cleanAnchors = anchorCandidates.filter((a) =>
+            isTayO
+              ? (a.cnd.unfixableCount || 0) === 0
+              : a.cnd.conflictCount === 0,
           );
           const anchorPool =
             cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
@@ -6362,12 +6415,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   continue;
 
                 // Nếu món này có vị trí hợp lệ không xung đột màu, bỏ qua vị trí xung đột
+                const conflictScore = isTayO
+                  ? (cnd.unfixableCount || 0)
+                  : cnd.conflictCount;
                 if (
-                  cnd.conflictCount > 0 &&
+                  conflictScore > 0 &&
                   cand[id].some(
                     (c) =>
-                      c.conflictCount === 0 &&
-                      !c.cells.some((x) => used.has(x)),
+                      (isTayO ? (c.unfixableCount || 0) : c.conflictCount) ===
+                        0 && !c.cells.some((x) => used.has(x)),
                   )
                 ) {
                   continue;
@@ -6466,6 +6522,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return fList[fList.length - 1];
           };
 
+          const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
+
           // 7.14.1: Đặt thông minh hoàn toàn không đè lấn, chấm điểm hình học & tương sinh chính xác
           const smart = (id, next) => {
             const arr = cand[id];
@@ -6477,8 +6535,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const valid = arr.filter((c) => !c.cells.some((x) => used.has(x)));
             if (!valid.length) return null;
 
-            // 7.14.2: Ưu tiên các vị trí không xung đột màu (đúng hệ hoặc vô sắc)
-            const cleanValid = valid.filter((c) => c.conflictCount === 0);
+            // Ưu tiên các vị trí không xung đột màu không thể tẩy
+            const cleanValid = valid.filter((c) =>
+              isTayO
+                ? (c.unfixableCount || 0) === 0
+                : (c.conflictCount || 0) === 0,
+            );
             const pool = cleanValid.length > 0 ? cleanValid : valid;
 
             const cpCells = getCpCells(next);
@@ -6506,11 +6568,28 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 hyCount > 0 ? (isHighVal ? 3.5 * hyCount : 0.8 * hyCount) : 0;
               const conn = connectsToSpine(c, cpCells) ? 3.0 : -2.5;
               const khacPen = c.isKhacPha ? -1.2 : 0;
-              const conflictPen = (c.conflictCount || 0) * 30.0;
-              const matchBonus = (c.matchCount || 0) * 5.0;
+              const unfixable =
+                c.unfixableCount !== undefined
+                  ? c.unfixableCount
+                  : c.conflictCount || 0;
+              const recolorable = c.recolorableCount || 0;
+              const conflictPen =
+                unfixable * 35.0 +
+                (isTayO ? recolorable * 2.0 : recolorable * 30.0);
+              const matchBonus =
+                (c.matchCount || 0) * 5.0 + (isTayO ? recolorable * 3.5 : 0);
 
               // Khảo sát tương sinh / tương khắc thực tế với các mảnh láng giềng đã đặt
               let synBonus = 0;
+              const isSkillSmart = !!(itSmart && itSmart.chieu);
+              const isBuildSmart = !!(
+                B &&
+                B.build &&
+                itSmart &&
+                buildMatch(B.build, itSmart)
+              );
+              const onHuyetSmart = hyCount > 0;
+
               for (const p of next) {
                 if (!c.adj.some((a) => p.cells.includes(a))) continue;
                 const itP = itemsK.get(p.m.item);
@@ -6524,23 +6603,37 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   for (const b of hsP) {
                     if (heTacDong(a, b) > 0) {
                       const m = genSlack(itP, itSmart);
-                      if (m > sDirect) sDirect = m;
+                      if (m > sDirect) sDirect = m; // itP sinh itSmart (itSmart nhận tương sinh!)
                     } else if (heTacDong(b, a) > 0) {
                       const m = genSlack(itSmart, itP);
-                      if (m > sReverse) sReverse = m;
+                      if (m > sReverse) sReverse = m; // itSmart sinh itP
                     } else if (heTacDong(a, b) < 0 || heTacDong(b, a) < 0) {
                       kDirect = 1;
                     }
                   }
                 }
                 if (S.dir === "tien" || !S.dir) {
-                  synBonus += 1.0 * sDirect + 1.0 * sReverse - 1.5 * kDirect;
+                  // Tương sinh dồn vào chiêu công / kiếm tu:
+                  let directMult = 3.5;
+                  if (isSkillSmart) directMult += 4.0;
+                  if (isBuildSmart) directMult += 6.5; // Thưởng đặc biệt cho Hướng Build (vd Kiếm Tu)
+                  if (onHuyetSmart) directMult *= 1.6;
+
+                  let reverseMult = 2.5;
+                  if (itP && itP.chieu) reverseMult += 3.0;
+                  if (B && B.build && itP && buildMatch(B.build, itP))
+                    reverseMult += 5.0;
+
+                  synBonus +=
+                    directMult * sDirect +
+                    reverseMult * sReverse -
+                    8.0 * kDirect;
                 } else if (S.dir === "ma") {
-                  synBonus += 1.0 * kDirect - 0.5 * (sDirect + sReverse);
+                  synBonus += 6.0 * kDirect - 3.0 * (sDirect + sReverse);
                 }
                 // Pháp khí kinh lộ: thưởng thêm khi tiếp giáp công pháp cùng hệ
                 if (!c.isCP && p.isCP && hsSmart.some((h) => hsP.includes(h))) {
-                  synBonus += 1.8;
+                  synBonus += 3.5;
                 }
               }
 
@@ -11150,6 +11243,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             );
             if (recolors.length > 0) {
               best.recolorPlan = recolors;
+              try {
+                const nvRecolor = clone(nv);
+                for (const r of recolors) {
+                  nvRecolor.kinhMach.mau[r.cell] = r.toHe;
+                }
+                nvRecolor.kinhMach.manh = best.manh;
+                const evalRecolor = evalCurrent(nvRecolor, mode);
+                if (evalRecolor) {
+                  best.P = evalRecolor.P;
+                  best.R = evalRecolor.R;
+                  best.speed = evalRecolor.speed;
+                  best.wins = evalRecolor.wins;
+                  best.n = evalRecolor.n;
+                  best.score = evalRecolor.score;
+                }
+              } catch (e) {}
             }
           }
           prog(1, "Xong");
@@ -11424,9 +11533,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
                 let availHe = [];
                 try {
-                  availHe = K.heDoiDuoc(nv, c, cell) || [];
+                  availHe = (K.heDoiDuoc && K.heDoiDuoc(nv, c, cell)) || [];
                 } catch (e) {
                   availHe = [];
+                }
+                if (!availHe.length) {
+                  const lcHe = (nv.linhCan && nv.linhCan.he) || [];
+                  availHe = lcHe.filter((h) => h !== curMau);
                 }
                 if (!availHe.length) continue;
 
@@ -19483,7 +19596,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         cfg.dir,
       )}
       ${auSel("au-km-it", "Độ Kỹ", AU_KM_IT, cfg.iters)}
-      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}</div>
+      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}
+      ${auChk("au-km-tayo-cg", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(cho phép xếp đè lên ô khác hệ của linh căn & tự động cắn đan chuyển hệ)")}</div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px">${cfg.kb ? "Đã chọn <b>" + esc(b.ten) + "</b>: khi xếp, Tool cộng điểm cho món đúng hướng đang thông (thêm nếu nằm trên huyệt). " : "Chưa ép hướng: Auto và xếp từ túi theo hệ số game; phần Xếp Theo Cảnh Giới tạm dùng <b>" + esc(b.ten) + "</b>. "}Tâm Pháp (công pháp không chiêu) chiếm một nửa số ô thông, Đấu Pháp + Pháp Khí + Bảo Vật chiếm nửa còn lại khi chọn 5 : 5; mỗi ô lệch bị trừ ${HB_RATIO_W} điểm. Tool tính sức mỗi món ở mức Lĩnh Ngộ đã đầy.</div></div>
     <div class="vk-card"><h3>Auto Kinh Mạch</h3>
       <div class="vk-mu" style="font-size:13px">Tool tìm cách xếp tốt nhất theo Cài Đặt Chung rồi <b>tự áp dụng vào game bằng chính các hàm của game</b>: gỡ mảnh sai, đặt mảnh mới, đổi bộ, mở ô. Chỉ đổi khi điểm tăng đủ lớn vì đổi cách xếp làm món mới phải Lĩnh Ngộ lại từ đầu; game bận thì Tool đợi hoặc dừng.</div>
@@ -26864,7 +26978,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.moBo = ck("au-km-mobo", c.moBo);
             c.mo = ck("au-km-mo", c.mo);
             c.moMax = Math.floor(num0("au-km-momax", 1, 20, c.moMax));
-            c.tayO = ck("au-km-tayo", c.tayO);
+            const elCg = q("au-km-tayo-cg");
+            const elAuto = q("au-km-tayo");
+            if (elCg && elAuto) {
+              c.tayO = elCg.checked || elAuto.checked;
+              elCg.checked = c.tayO;
+              elAuto.checked = c.tayO;
+            } else if (elCg) {
+              c.tayO = elCg.checked;
+            } else if (elAuto) {
+              c.tayO = elAuto.checked;
+            }
             c.tayMax = Math.floor(
               num0("au-km-taymax", 1, 20, c.tayMax != null ? c.tayMax : 3),
             );
@@ -31256,9 +31380,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.4 · Mở Rộng Số Vòng Lặp Luyện Kim Kinh Mạch Đến 24.000 Vòng",
+            t: "Phiên Bản 7.14.5 · Tối Ưu Hóa Tương Sinh Chiêu Kiếm & Khai Thông Thuật Toán Tẩy Ô Toàn Diện",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Khai Thông Triệt Để Chức Năng Tẩy Ô (Đổi Hệ Ô):</b> Khắc phục nguyên nhân gốc rễ khiến chức năng tẩy ô không đề xuất: trước đây thuật toán lọc cứng loại bỏ các vị trí lệch màu trước khi xếp, khiến bộ kết quả không còn ô lệch màu nào để tẩy. Nay khi bật <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i>, thuật toán nhận diện các ô có thể tẩy sang hệ của linh căn (qua Tẩy Tủy / Cải Mệnh Đan) là vị trí hợp lệ, cho phép đặt các công pháp mạnh nhất lên đó và tự động lập Kế Hoạch Tẩy Ô chính xác.",
+              "<b>Cập Nhật Số Liệu Dự Phóng Sau Tẩy Ô:</b> Bảng so sánh 'Bản mới' nay tự động phản ánh đầy đủ chỉ số sau khi giả định đã tẩy các ô theo kế hoạch (hệ số màu tối đa 1.30, điểm tương sinh đạt đỉnh, sát thương chiêu tăng vọt).",
+              "<b>Dồn Trọng Số Tương Sinh Vào Chiêu Công & Hướng Build (Đặc Biệt Kiếm Tu):</b>",
+              "&nbsp;&nbsp;• <b>Thưởng Lớn Cho Món Nhận Tương Sinh:</b> Nâng cấp thuật toán đánh giá tương sinh trong Annealing & Quick: khi một chiêu công mạnh (như các chiêu kiếm của Kiếm Tu) được các công pháp láng giềng (ví dụ Thổ sinh Kim) tiếp sức, hệ số thưởng được nhân lên gấp 3–8 lần so với món bị động thông thường.",
+              "&nbsp;&nbsp;• <b>Khuếch Đại Tương Sinh Trên Huyệt:</b> Chiêu công nằm trên Huyệt Đạo đồng thời nhận tương sinh từ nhiều hướng sẽ được cộng điểm đột phá, khuyến khích máy tự động bao bọc công pháp tương sinh quanh trục chiêu chính.",
+              "<b>Đồng Bộ Tùy Chọn Tẩy Ô Lên Card Cài Đặt Chung:</b> Bổ sung ô tích bật Tẩy Ô ngay tại khung <i>'Hướng Build · Cài Đặt Chung'</i> giúp đạo hữu thao tác nhanh chóng và dễ thấy nhất."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.4 · Mở Rộng Số Vòng Lặp Luyện Kim Kinh Mạch Đến 24.000 Vòng",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Mở Rộng Tùy Chọn Độ Kỹ (Số Vòng Lặp Luyện Kim):</b> Bổ sung thêm 2 mức dò tìm chuyên sâu: <code>Rất Kỹ (12.000 vòng)</code> và <code>Cực Hạn (24.000 vòng)</code> trong mục <i>'Độ Kỹ'</i> tại Cài Đặt Chung (Hướng Build / Auto Kinh Mạch). Giúp thuật toán Simulated Annealing dò tìm triệt để toàn bộ không gian hoán vị khi xếp từ lưới trống.",
               "<b>Hiển Thị Rõ Số Vòng Lặp Trong Giao Diện:</b> Các tùy chọn trong menu thả xuống 'Độ Kỹ' nay ghi chú rõ ràng số vòng lặp tương ứng (1.500, 3.000, 6.000, 12.000, 24.000) giúp đạo hữu dễ dàng lựa chọn thời gian và độ sâu tính toán theo cấu hình máy.",
