@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.3
+// @version      7.14.4
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.4
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.3";
+      var TOOL_VER = "7.14.4";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -23366,9 +23366,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["tu", "Ưu Tiên Tu Luyện / Đột Phá"],
         ];
         const AU_KM_IT = [
-          [1500, "Nhanh"],
-          [3000, "Vừa"],
-          [6000, "Kỹ (Lâu)"],
+          [1500, "Nhanh (1.500 vòng)"],
+          [3000, "Vừa (3.000 vòng)"],
+          [6000, "Kỹ (6.000 vòng)"],
+          [12000, "Rất Kỹ (12.000 vòng)"],
+          [24000, "Cực Hạn (24.000 vòng)"],
         ];
         const AU_KM_BK = 5; // 6.19: bỏ ô chọn Độ Ép Hướng Sinh / Khắc, cố định ở mức Mạnh
 
@@ -31155,9 +31157,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.3 · Sửa Lỗi Tự Động Tẩy Ô & Bổ Sung Tự Dùng Đan Tẩy Tủy",
+            t: "Phiên Bản 7.14.4 · Mở Rộng Số Vòng Lặp Luyện Kim Kinh Mạch Đến 24.000 Vòng",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Mở Rộng Tùy Chọn Độ Kỹ (Số Vòng Lặp Luyện Kim):</b> Bổ sung thêm 2 mức dò tìm chuyên sâu: <code>Rất Kỹ (12.000 vòng)</code> và <code>Cực Hạn (24.000 vòng)</code> trong mục <i>'Độ Kỹ'</i> tại Cài Đặt Chung (Hướng Build / Auto Kinh Mạch). Giúp thuật toán Simulated Annealing dò tìm triệt để toàn bộ không gian hoán vị khi xếp từ lưới trống.",
+              "<b>Hiển Thị Rõ Số Vòng Lặp Trong Giao Diện:</b> Các tùy chọn trong menu thả xuống 'Độ Kỹ' nay ghi chú rõ ràng số vòng lặp tương ứng (1.500, 3.000, 6.000, 12.000, 24.000) giúp đạo hữu dễ dàng lựa chọn thời gian và độ sâu tính toán theo cấu hình máy."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.3 · Sửa Lỗi Tự Động Tẩy Ô & Bổ Sung Tự Dùng Đan Tẩy Tủy",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Triệt Để Lỗi Chức Năng Tẩy Ô Không Báo Khi Xem Trước:</b> Khắc phục lỗi kiểm tra chặn cứng <code>doiMauLeft <= 0</code> khiến thuật toán lập kế hoạch tẩy ô trả về rỗng khi người chơi chưa cắn đan tẩy tủy. Nay chức năng <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i> luôn quét toàn diện cả bộ đang xếp và bộ đề xuất mới để tìm ra các ô lệch hệ tối ưu nhất cần tẩy (tối đa theo cấu hình <code>tayMax</code>).",
               "<b>Tự Động Nuốt Đan Tẩy Tủy / Cải Mệnh / Dịch Cốt Từ Túi:</b> Khi chạy Auto thật, nếu chưa có lượt chuyển hệ chờ sẵn, Tool tự động kiểm tra đan trong túi đồ (Tẩy Tủy Đan, Cải Mệnh Đan, Dịch Cốt Đan) và tự động gọi <code>gg.useItem</code> để nhận lượt rồi mới thực hiện tẩy ô <code>gg.doiMauO</code> an toàn.",
