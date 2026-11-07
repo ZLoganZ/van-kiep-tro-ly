@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.3
+// @version      7.13.4
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.3
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.4
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.3";
+      var TOOL_VER = "7.13.4";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -4829,6 +4829,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         ];
         // Tính năng phụ: thiếu thì chỉ tính năng đó tắt, phần còn lại vẫn chạy.
         const CORE_OPTIONAL = [
+          [
+            "atBottleneck",
+            "character/character",
+            "atBottleneck",
+            "kiểm tra bình cảnh",
+          ],
+          [
+            "binhCanhThreshold",
+            "character/character",
+            "binhCanhThreshold",
+            "ngưỡng bình cảnh",
+          ],
           [
             "facilitiesAt",
             "encounter/director",
@@ -20588,6 +20600,65 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           return null;
         }
+
+        function getItemPhaBinhCanh(it) {
+          if (!it) return null;
+          if (it.pha_binh_canh) return it.pha_binh_canh;
+          if (Array.isArray(it.dung)) {
+            for (const d of it.dung) {
+              if (d && d.pha_binh_canh) return d.pha_binh_canh;
+            }
+          }
+          return null;
+        }
+
+        function isAtBottleneck(nv) {
+          if (!nv) return false;
+          try {
+            const atB =
+              (S.core && S.core.atBottleneck) ||
+              (TT.core &&
+                TT.core["character/character"] &&
+                TT.core["character/character"].atBottleneck);
+            if (typeof atB === "function") return atB(nv);
+          } catch (e) {}
+          if (typeof nv.binhCanh === "number" && nv.binhCanh > 0) return true;
+          try {
+            const cg = S.core && S.core.canhGioi && S.core.canhGioi(nv.canhGioi);
+            if (cg && cg.tieu && cg.tieu[nv.tieuCanhGioi]) {
+              const cap = cg.tieu[nv.tieuCanhGioi].tuVi;
+              if (cap && nv.tuVi >= cap && nv.tieuCanhGioi < 3) return true;
+            }
+          } catch (e) {}
+          return false;
+        }
+
+        function findPhaBinhCanhPills(nv) {
+          const pills = [];
+          if (!nv || !nv.tuiDo) return pills;
+          let Cc = null;
+          try {
+            Cc = C();
+          } catch (e) {}
+          if (!Cc || !Cc.items) return pills;
+          for (const [id, count] of Object.entries(nv.tuiDo)) {
+            if (!count || count <= 0) continue;
+            const it = Cc.items.get(id);
+            if (!it) continue;
+            const pbc = getItemPhaBinhCanh(it);
+            if (pbc && pbc.canh_gioi === nv.canhGioi) {
+              pills.push({
+                id,
+                it,
+                ten: it.ten || id,
+                phan: pbc.phan || 1,
+                count,
+              });
+            }
+          }
+          return pills.sort((a, b) => b.phan - a.phan);
+        }
+
         const auYield = (() => {
           if (typeof MessageChannel !== "function")
             return () => new Promise((r) => setTimeout(r, 0));
@@ -20703,6 +20774,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           if (typeof AU.cfg.tl.uuTienSuKienTuVi !== "boolean") {
             AU.cfg.tl.uuTienSuKienTuVi = true;
+          }
+          if (typeof AU.cfg.tl.autoBreakBottleneck !== "boolean") {
+            AU.cfg.tl.autoBreakBottleneck = true;
           }
           if (o.san) {
             if (o.tl && o.tl.maxY === undefined && o.san.maxY !== undefined) AU.cfg.tl.maxY = o.san.maxY;
@@ -22325,6 +22399,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             retreatYearsDone: 0,
             breakouts: 0,
             breakoutFails: 0,
+            bottlenecksBroken: 0,
+            breakPillAttempts: 0,
             relicsWon: 0,
             tuViEventsDone: 0,
             targetTitle: "",
@@ -23394,6 +23470,63 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const atTop = plan.need <= 0;
           const isMaxRealm = nv.canhGioi >= 5;
 
+          // Kiểm tra và tự động uống đan phá bình cảnh (Cả Bế quan & Đánh quái)
+          if (cfg.autoBreakBottleneck !== false && isAtBottleneck(nv)) {
+            const bPills = findPhaBinhCanhPills(nv);
+            if (bPills.length > 0) {
+              const pill = bPills[0];
+              st.breakPillAttempts = (st.breakPillAttempts || 0) + 1;
+              if (st.breakPillAttempts <= 3) {
+                const curRun = G().state && G().state.run;
+                if (curRun) {
+                  if (
+                    curRun.active &&
+                    (curRun.active.done || !curRun.active.waiting) &&
+                    typeof g.closeEncounter === "function"
+                  ) {
+                    try {
+                      g.closeEncounter();
+                    } catch (e) {}
+                  }
+                  if (curRun.thongBao && typeof g.dongThongBao === "function") {
+                    try {
+                      g.dongThongBao();
+                    } catch (e) {}
+                  }
+                  if (
+                    curRun.longNotice &&
+                    typeof g.closeLongNotice === "function"
+                  ) {
+                    try {
+                      g.closeLongNotice();
+                    } catch (e) {}
+                  }
+                }
+                auLog(
+                  `💊 Tu vi chạm bình cảnh! Tự động uống «${pill.ten}» (còn ×${pill.count}) để phá bình cảnh...`,
+                  "vk-ok",
+                );
+                const rPill = auCall(() => {
+                  if (typeof g.useItem === "function") g.useItem(pill.id);
+                });
+                if (rPill.ok) {
+                  st.bottlenecksBroken = (st.bottlenecksBroken || 0) + 1;
+                  st.breakPillAttempts = 0;
+                  auLog(
+                    `🎉 Đã uống «${pill.ten}» phá bình cảnh thành công!`,
+                    "vk-ok",
+                  );
+                  return null;
+                } else {
+                  auLog(
+                    `Không dùng được «${pill.ten}»: ${rPill.err || "lỗi không rõ"}`,
+                    "vk-mu",
+                  );
+                }
+              }
+            }
+          }
+
           if (atTop && isMaxRealm) {
             if (!isDanhQuai) {
               return {
@@ -23826,16 +23959,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
           const autoBreak = [];
           if (cfg.autoBreakBottleneck !== false && nv.tuiDo) {
-            for (const [id, count] of Object.entries(nv.tuiDo)) {
-              if (!count || count <= 0) continue;
-              const it = C().items && C().items.get(id);
-              if (
-                it &&
-                it.pha_binh_canh &&
-                (it.canh_gioi === undefined || it.canh_gioi === nv.canhGioi)
-              ) {
-                autoBreak.push(id);
-              }
+            const bPills = findPhaBinhCanhPills(nv);
+            for (const p of bPills) {
+              autoBreak.push(p.id);
             }
           }
 
@@ -25812,6 +25938,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             rows.push(["Đột Phá Thành Công", (st.breakouts || 0) + " lần"]);
             if (st.breakoutFails)
               rows.push(["Đột Phá Thất Bại", st.breakoutFails + " lần"]);
+            if (st.bottlenecksBroken)
+              rows.push(["Bình Cảnh Đã Phá", st.bottlenecksBroken + " lần"]);
           } else if (kind === "san") {
             rows.push([
               "Số Trận Đã Đánh",
@@ -26754,7 +26882,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <div id="au-tl-be-quan-box" style="display:${!isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
         <div style="font-weight:700;color:var(--acc);margin-bottom:6px">⚙️ Cài Đặt Bế Quan (Nhập Định)</div>
         <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-cult-pills" ${c.useCultPills !== false ? "checked" : ""}> Tự nuốt Đan Tu Luyện trong túi khi bế quan</label>
-        <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-bottleneck" ${c.autoBreakBottleneck !== false ? "checked" : ""}> Tự nuốt Đan Phá Bình Cảnh khi chạm nấc</label>
       </div>
 
       <!-- KHỐI TÙY CHỌN ĐÁNH QUÁI (SĂN YÊU) -->
@@ -26775,6 +26902,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <!-- KHỐI ĐỘT PHÁ & AN TOÀN CHUNG -->
       <hr style="border:0;border-top:1px dashed var(--line);margin:10px 0">
       <div style="font-weight:700;color:var(--acc);margin-bottom:6px">🛡️ Đột Phá & Xử Trí An Toàn</div>
+      <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-bottleneck" ${c.autoBreakBottleneck !== false ? "checked" : ""} style="margin-top:3px"><span><b>💊 Tự Động Uống Đan Phá Bình Cảnh Khi Chạm Nấc (Cả Bế Quan & Đánh Quái)</b> <span class="vk-mu" style="font-size:11px">(Khi tu vi chạm bình cảnh tiểu cảnh giới, nếu có Phá Chướng Đan, Toái Bích Đan, Thông Huyền Đan, Phá Hư Đan, Khai Khiếu Châu... trong túi sẽ tự động uống để lập tức thăng cấp)</span></span></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-break-pills" ${c.useBreakPills !== false ? "checked" : ""}> Tự chọn combo Đan Đột Phá có tỉ lệ cao nhất</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-demons" ${c.autoBeatDemons !== false ? "checked" : ""}> Tự đánh trấn áp Tâm Ma / Quái quấy bế quan (dùng Siêu AI VIP)</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự tha mạng cho trộm cắp / kẻ đột kích động phủ khi bế quan, tránh bị dừng Auto</label>
@@ -29964,9 +30092,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.3 · Thích Ứng Toàn Diện Bản Cập Nhật Game Mới & Đồng Bộ Đạo Lộ Tuyệt Mệnh",
+            t: "Phiên Bản 7.13.4 · Tự Động Uống Đan Phá Bình Cảnh Cả Khi Bế Quan & Săn Yêu",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Tự Động Uống Đan Phá Bình Cảnh:</b> Khi tu vi chạm bình cảnh tiểu cảnh giới (Sơ kỳ → Trung kỳ, Trung kỳ → Hậu kỳ...), Auto sẽ tự động kiểm tra túi đồ và nuốt các loại đan phá bình cảnh (Phá Chướng Đan, Toái Bích Đan, Thông Huyền Đan, Phá Hư Đan, Khai Khiếu Châu, Xuyên Bích Giác, Huyền Quan Tủy, Hư Linh Phách) tương ứng cảnh giới hiện tại để lập tức thăng cấp tiểu cảnh giới.",
+              "<b>Hỗ Trợ Toàn Diện Cả Bế Quan & Đánh Quái:</b> Tính năng được kích hoạt xuyên suốt cho cả 2 phương thức Bế Quan Nhập Định lẫn Đánh Quái Săn Yêu cày tu vi, đồng thời sửa lỗi nhận diện đan phá bình cảnh trong lệnh nhập định của game.",
+              "<b>Tùy Chọn Trực Quan & Thống Kê Chi Tiết:</b> Đưa tùy chọn «💊 Tự Động Uống Đan Phá Bình Cảnh Khi Chạm Nấc» vào khu vực An Toàn Chung của Tab Auto Tu Luyện để dễ dàng bật/tắt ở mọi chế độ, đồng thời bổ sung chỉ số <i>«Bình Cảnh Đã Phá»</i> thời gian thực trên bảng tiến trình."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.3 · Thích Ứng Toàn Diện Bản Cập Nhật Game Mới & Đồng Bộ Đạo Lộ Tuyệt Mệnh",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Đồng Bộ Hoàn Toàn Với Bản Build Game Mới:</b> Hoàn thành quy trình điều tra 6 bước theo dõi bản cập nhật mới nhất của game (bundle <code>index-U3gz8Mj2.js</code>); xác nhận 100% các module gọi lõi (<code>window.tuTien.core</code>) và cơ chế chiến đấu/tu luyện tương thích ổn định tuyệt đối.",
               "<b>Hỗ Trợ Toàn Diện Đạo Lộ «Tuyệt Mệnh» (One-Life Mode):</b> Đồng bộ 4 Đạo Lộ chuẩn của game: Thuận Thiên, Trung Đạo, Nghịch Thiên và Tuyệt Mệnh. Bổ sung tùy chọn chọn Đạo Lộ Tuyệt Mệnh trong Auto Reroll tạo kiếp; chuẩn hóa nhận diện cờ <code>run.difficulty = 'oneLife'</code> trên bảng trạng thái và công cụ nạp lưu an toàn.",
