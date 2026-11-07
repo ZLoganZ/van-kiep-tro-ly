@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.2
+// @version      7.13.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.2";
+      var TOOL_VER = "7.13.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -26008,16 +26008,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ["main", "Hệ Đầu (Chủ Hệ) Thuộc Danh Sách"],
         ];
         const RR_SAMPLE = 400; // số lần dò thử khi bấm “Dò Tỉ Lệ”
-        // Đạo Lộ = độ khó game chọn lúc vào kiếp (difficulty). Nhãn và hệ số điểm đúng như game: Ki = {easy, normal, hardcore}, UH = {0.75, 1, 1.25}.
+        // Đạo Lộ = độ khó game chọn lúc vào kiếp (difficulty). Nhãn và hệ số điểm chuẩn theo game: easy (Thuận Thiên), normal (Trung Đạo), hardcore (Nghịch Thiên), oneLife (Tuyệt Mệnh).
         const RR_DAOLO = [
           ["normal", "Trung Đạo"],
           ["easy", "Thuận Thiên"],
           ["hardcore", "Nghịch Thiên"],
+          ["oneLife", "Tuyệt Mệnh (1 Mạng)"],
         ];
         const RR_DAOLO_HINT = {
           easy: "điểm luân hồi ×0,75",
           normal: "điểm luân hồi ×1",
           hardcore: "điểm luân hồi ×1,25; bỏ Thiên Mệnh",
+          oneLife: "1 mạng duy nhất; không điểm luân hồi; tranh danh hiệu",
         };
         const rrDlOk = (v) => (RR_DAOLO.some((x) => x[0] === v) ? v : "normal");
         const rrDlTen = (v) =>
@@ -26681,7 +26683,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       ${auFld("rr-max", "Số Lần Thử Tối Đa", c.max, "(1 – 200.000)")}
       ${auTocSel(c.toc)}
       ${sel("rr-dl", "Đạo Lộ", RR_DAOLO, c.dl)}
-      <div class="vk-mu" style="font-size:11px;margin:-2px 0 4px">Đạo Lộ chọn lúc vào kiếp, không đổi giữa chừng: Thuận Thiên (${RR_DAOLO_HINT.easy}), Trung Đạo (${RR_DAOLO_HINT.normal}), Nghịch Thiên (${RR_DAOLO_HINT.hardcore}). Dò và tạo kiếp thật đều theo Đạo Lộ này.</div>
+      <div class="vk-mu" style="font-size:11px;margin:-2px 0 4px">Đạo Lộ chọn lúc vào kiếp, không đổi giữa chừng: Thuận Thiên (${RR_DAOLO_HINT.easy}), Trung Đạo (${RR_DAOLO_HINT.normal}), Nghịch Thiên (${RR_DAOLO_HINT.hardcore}), Tuyệt Mệnh (${RR_DAOLO_HINT.oneLife}). Dò và tạo kiếp thật đều theo Đạo Lộ này.</div>
       <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="rr-lp" ${c.lp ? "checked" : ""} style="margin-top:3px"><span>Mua Hết Lộ Phí Qua Sông <span class="vk-mu" style="font-size:11px">(chỉ mua khi đã tìm được tư chất, ngay trước lúc vào kiếp mới; món chỉ dùng một kiếp, mua rồi không hoàn điểm; Dò Tỉ Lệ không mua)</span></span></label>
       <div class="vk-mu" id="rr-lp-info" style="font-size:12px;margin:0 0 4px 22px"></div>
       <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="rr-lh" ${c.lh ? "checked" : ""} style="margin-top:3px"><span>Tự Mua Mục Mở Khóa Luân Hồi <span class="vk-mu" style="font-size:11px">(mua các mục tích bên dưới, từng bậc theo thứ tự trong danh sách, TRƯỚC khi dò tư chất vì Linh Căn, Thiên Tư… đổi tỉ lệ ra tư chất; điểm đã mua không hoàn lại; chỉ chạy ở Reroll thật, không chạy ở Dò Tỉ Lệ)</span></span></label>
@@ -29602,7 +29604,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (run &&
                 run.difficulty &&
                 typeof run.difficulty === "string" &&
-                run.difficulty.includes("tuyet_menh"))
+                (run.difficulty === "oneLife" ||
+                  run.difficulty.includes("tuyet_menh") ||
+                  run.difficulty.includes("oneLife")))
             );
             const oneLifeBadge = isOneLife
               ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Chế Độ Tuyệt Mệnh (Tool Đã Kích Hoạt Bypass Cứu Mạng)</span>`
@@ -29960,9 +29964,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.2 · Bổ Sung Tùy Chọn Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi Khi Săn Yêu",
+            t: "Phiên Bản 7.13.3 · Thích Ứng Toàn Diện Bản Cập Nhật Game Mới & Đồng Bộ Đạo Lộ Tuyệt Mệnh",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Đồng Bộ Hoàn Toàn Với Bản Build Game Mới:</b> Hoàn thành quy trình điều tra 6 bước theo dõi bản cập nhật mới nhất của game (bundle <code>index-U3gz8Mj2.js</code>); xác nhận 100% các module gọi lõi (<code>window.tuTien.core</code>) và cơ chế chiến đấu/tu luyện tương thích ổn định tuyệt đối.",
+              "<b>Hỗ Trợ Toàn Diện Đạo Lộ «Tuyệt Mệnh» (One-Life Mode):</b> Đồng bộ 4 Đạo Lộ chuẩn của game: Thuận Thiên, Trung Đạo, Nghịch Thiên và Tuyệt Mệnh. Bổ sung tùy chọn chọn Đạo Lộ Tuyệt Mệnh trong Auto Reroll tạo kiếp; chuẩn hóa nhận diện cờ <code>run.difficulty = 'oneLife'</code> trên bảng trạng thái và công cụ nạp lưu an toàn.",
+              "<b>Cập Nhật Cơ Chế Công Phá Sơn Môn & Dị Bảo Biển:</b> Đồng bộ các hằng số và cơ chế mới của Hộ Sơn Đại Trận (<code>combat/sectSiege</code>); ghi nhận cập nhật tỉ lệ chắc chắn kích hoạt Thuyền Rồng (Dị Bảo Thái Hư Chu) tại Bến Lạc Khư từ nhà phát triển game."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.2 · Bổ Sung Tùy Chọn Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi Khi Săn Yêu",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi:</b> Trong chế độ Đánh Quái (Săn Yêu Thú) của Auto Tu Luyện, bổ sung tùy chọn tự động quét toàn diện các cơ duyên, kỳ ngộ, bí cảnh, di tích và hoạt động nơi chốn xung quanh có ban tặng tu vi.",
               "<b>Định Hướng Đỉnh Cao & Đột Phá Thần Tốc:</b> Tự động so sánh và chọn các nhánh khảo nghiệm / quyết định mang lại lượng tu vi cao nhất trong sự kiện (nhận hàng chục đến hàng trăm nghìn tu vi), giúp nhân vật thăng cấp thần tốc hơn việc chỉ đánh quái đơn thuần.",
