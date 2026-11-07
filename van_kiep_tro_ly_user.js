@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.14.10
+// @version      7.15.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.10
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.14.10";
+      var TOOL_VER = "7.15.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5977,7 +5977,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               dp = R.biDong.dot_pha || 0;
             const ng = (R.diemNghich || 0) * ngW;
 
-            // 7.14.8: Đánh giá chiêu thức thực tế (Rotation) & Cân bằng Linh Lực chuyên sâu
+            // 7.15.0: Đánh giá chiêu thức thực tế (Rotation) & Động cơ Bền Vững Chân Khí (Qi Sustainability Engine)
             const chieuList = (P.chieu || []).filter(
               (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0),
             );
@@ -5987,12 +5987,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return uyB - uyA;
             });
 
-            // 1. Sát thương thực tế theo vòng quay chiêu (Rank 1: 100%, Rank 2: 65%, Rank 3: 35%, Rank 4: 15%, Rank 5+: 5%)
-            // Tránh bẫy nhồi nhét 7–9 chiêu làm loãng kinh mạch và đói linh lực thực chiến
-            const rotWeights = [1.0, 0.65, 0.35, 0.15];
+            // 1. Sát thương thực tế theo vòng quay chiêu (Rank 1: 100%, Rank 2: 70%, Rank 3: 35%, Rank 4: 10%, Rank 5+: 0%)
+            // Trọng tâm thực chiến: 2–3 chiêu tinh hoa luân chuyển. Tuyệt đối không cho phép chiêu thứ 4-5 làm loãng mạch
+            const rotWeights = [1.0, 0.70, 0.35, 0.10];
             let effectiveRotDmg = 0;
             for (let i = 0; i < sortedSkills.length; i++) {
-              const w = i < rotWeights.length ? rotWeights[i] : 0.05;
+              const w = i < rotWeights.length ? rotWeights[i] : 0.0;
               const skillDmg =
                 sortedSkills[i].uyLuc ||
                 (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
@@ -6017,45 +6017,57 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               .slice(0, 2)
               .reduce((sum, x) => sum + (x.phi || 0), 0);
 
-            let llPenalty = 0;
-            // a) Phạt nặng nếu không đủ linh lực hồi mỗi lượt để xuất chiêu chủ lực
-            if (llPerTurn < maxPhi) {
-              const def = maxPhi - llPerTurn;
-              llPenalty += def * (mode === "danh" ? 8.0 : 5.0);
-            }
-            // b) Phạt nếu không duy trì được vòng xoay 2 chiêu cốt lõi
-            if (llPerTurn < top2Phi * 0.65) {
-              const def = top2Phi * 0.65 - llPerTurn;
-              llPenalty += def * (mode === "danh" ? 7.0 : 4.5);
-            }
-            // c) Phạt nếu dung lượng linh lực tối đa quá nông so với chiêu lớn nhất
-            if (llMax < maxPhi * 1.5) {
-              const def = maxPhi * 1.5 - llMax;
-              llPenalty += def * 3.5;
-            }
-            // d) Phạt nặng hiện tượng "Bội Thực Chiêu Thức" (quá nhiều chiêu ngốn chỗ & đói linh lực)
-            // Trong thực chiến 1 hiệp chỉ ra được 1-2 đòn, tối đa 3-4 chiêu là lý tưởng. Từ 5 chiêu trở lên là thừa thãi.
-            if (costSkills.length > 4) {
-              const ex = costSkills.length - 4;
-              llPenalty +=
-                ex * (mode === "danh" ? 45 : 30) + Math.pow(ex, 1.8) * 20;
+            // Tính toán chi phí tiêu hao chân khí trung bình mỗi hiệp theo hồi chiêu (Drain Rate per Turn)
+            let drainPerTurn = 0;
+            for (const sk of costSkills) {
+              const cd = Math.max(1, (sk.hoi || 0) + 1);
+              drainPerTurn += (sk.phi || 0) / cd;
             }
 
-            // e) Thưởng điểm "Tự Cân Bằng Hoàn Hảo" (Chiêu mạnh + Linh lực dồi dào, tự đánh mượt mà không cần nuốt đan)
+            let llPenalty = 0;
+            // a) Phạt thâm hụt chân khí mỗi hiệp (Drain Rate > llPerTurn): Chống hoàn toàn hiện tượng cạn chân khí phải cắn đan
+            if (drainPerTurn > llPerTurn) {
+              const def = drainPerTurn - llPerTurn;
+              llPenalty += def * (mode === "danh" ? 35 : 25) + Math.pow(def, 1.7) * 15;
+            }
+            // b) Phạt nếu chiêu chủ lực đơn lẻ ngốn quá 60% chân khí hồi mỗi hiệp
+            if (llPerTurn < maxPhi * 0.9) {
+              const def = maxPhi * 0.9 - llPerTurn;
+              llPenalty += def * (mode === "danh" ? 18.0 : 12.0);
+            }
+            // c) Phạt nếu dung lượng linh lực tối đa quá nông (không đủ đệm cho 1 vòng ra chiêu)
+            if (llMax < maxPhi * 1.6) {
+              const def = maxPhi * 1.6 - llMax;
+              llPenalty += def * 6.0;
+            }
+            // d) Khống chế trần số lượng chiêu thức (Skill Ceiling):
+            // Lấy trần từ S.hbMaxSkills (nếu có) hoặc mặc định là 3 chiêu khi tỉ lệ >= 0.6
+            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : (S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
+            if (skillCap > 0 && costSkills.length > skillCap) {
+              const ex = costSkills.length - skillCap;
+              llPenalty += ex * 260 + Math.pow(ex, 2) * 180;
+            } else if (costSkills.length > 4) {
+              const ex = costSkills.length - 4;
+              llPenalty += ex * 200 + Math.pow(ex, 2) * 120;
+            }
+
+            // e) Thưởng điểm "Chân Khí Viên Mãn · Tự Cấp Tự Túc" (Không cần cắn đan, tuần hoàn mượt mà)
             let llBonus = 0;
             if (
-              llPerTurn >= maxPhi * 1.1 &&
-              llPerTurn >= top2Phi * 0.7 &&
+              llPerTurn >= drainPerTurn * 1.15 &&
+              llPerTurn >= maxPhi * 0.95 &&
               costSkills.length >= 2 &&
-              costSkills.length <= 4
+              (skillCap === 0 || costSkills.length <= skillCap)
             ) {
-              llBonus += mode === "danh" ? 60 : 40;
+              llBonus += mode === "danh" ? 110 : 80;
             }
 
             // Điểm linh lực tổng quát
             const llScore =
-              (mode === "tu" ? 2.5 : mode === "danh" ? 8.0 : 6.0) * llPerTurn +
-              (mode === "tu" ? 0.8 : 1.5) * Math.min(300, llMax) -
+              (mode === "tu" ? 3.0 : mode === "danh" ? 9.0 : 7.0) * llPerTurn +
+              (mode === "tu" ? 1.0 : 1.8) * Math.min(300, llMax) -
               llPenalty +
               llBonus;
 
@@ -6323,17 +6335,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             nv.kinhMach.manh = manh.map((p) => ({ ...p.m }));
             const R = K.tinhKinhMach(nv, c);
 
-            // 7.14.8: Đánh giá chiêu thức thực tế & áp lực linh lực ngay từ Greedy
+            // 7.15.0: Đánh giá chiêu thức thực tế & áp lực linh lực ngay từ Greedy
             const chieuList = (R.chieu || []).filter(
               (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0),
             );
             const sortedQ = chieuList.slice().sort(
               (a, b) => (b.uyLuc || b.uy || 0) - (a.uyLuc || a.uy || 0),
             );
-            const qWeights = [1.0, 0.65, 0.35, 0.15];
+            const qWeights = [1.0, 0.70, 0.35, 0.10];
             let rotUy = 0;
             for (let i = 0; i < sortedQ.length; i++) {
-              const wt = i < qWeights.length ? qWeights[i] : 0.05;
+              const wt = i < qWeights.length ? qWeights[i] : 0.0;
               rotUy += ((sortedQ[i].uyLuc || sortedQ[i].uy || 0) / 10) * wt;
             }
             const uyMax = sortedQ.length
@@ -6345,15 +6357,27 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const maxPhiQ = costQ.length
               ? Math.max(...costQ.map((x) => x.phi || 0))
               : 0;
-            const top2PhiQ = costQ
-              .slice(0, 2)
-              .reduce((sum, x) => sum + (x.phi || 0), 0);
+            let drainQ = 0;
+            for (const sk of costQ) {
+              drainQ += (sk.phi || 0) / Math.max(1, (sk.hoi || 0) + 1);
+            }
+
             let llPenaltyQ = 0;
-            if (llQ < maxPhiQ) llPenaltyQ += (maxPhiQ - llQ) * 5.0;
-            if (llQ < top2PhiQ * 0.65) llPenaltyQ += (top2PhiQ * 0.65 - llQ) * 4.0;
-            if (costQ.length > 4) {
+            if (drainQ > llQ) {
+              const def = drainQ - llQ;
+              llPenaltyQ += def * 25 + Math.pow(def, 1.6) * 12;
+            }
+            if (llQ < maxPhiQ * 0.9) llPenaltyQ += (maxPhiQ * 0.9 - llQ) * 12.0;
+            
+            const skillCapQ = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : (S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
+            if (skillCapQ > 0 && costQ.length > skillCapQ) {
+              const ex = costQ.length - skillCapQ;
+              llPenaltyQ += ex * 200 + ex * ex * 150;
+            } else if (costQ.length > 4) {
               const ex = costQ.length - 4;
-              llPenaltyQ += ex * 30 + ex * ex * 12;
+              llPenaltyQ += ex * 150 + ex * ex * 100;
             }
 
             const toc = R.biDong.toc_do || 0,
@@ -6424,6 +6448,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
+            const ratioPenaltyQ = S.hbRatio ? hbRatioPenalty(manh, R) : 0;
             return (
               w[0] * R.linhLuc +
               w[1] * toc +
@@ -6435,6 +6460,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               hoThePenalty -
               colorConflictPenalty -
               llPenaltyQ -
+              ratioPenaltyQ -
               6 * (R.diemNghich || 0) * (S.dir === "ma" ? 0.4 : 1) +
               biasScore(B, manh, R) +
               capScore(capX, R) +
@@ -6608,15 +6634,49 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             itemWeights.set(id, Math.max(5, w));
           }
 
-          const pickWeightedFree = (fList) => {
+          const pickWeightedFree = (fList, currentPieces) => {
             if (!fList.length) return null;
             if (fList.length === 1) return fList[0];
+            
+            let curTamCells = 0, curTotCells = 0, curSkills = 0;
+            if (currentPieces && currentPieces.length) {
+              for (const p of currentPieces) {
+                const itP = itemsK.get(p.m.item);
+                if (!itP) continue;
+                curTotCells += p.cells.length;
+                if (hbCls(itP) === "tam") curTamCells += p.cells.length;
+                if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
+              }
+            }
+            const targetRatio = S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
+            const needTam = curTotCells > 0 ? (curTamCells / curTotCells < targetRatio) : true;
+            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (targetRatio >= 0.6 ? 3 : 4);
+            const skillsFull = skillCap > 0 && curSkills >= skillCap;
+
             let sum = 0;
-            for (const id of fList) sum += itemWeights.get(id) || 10;
-            let r = rnd() * sum;
+            const weights = [];
             for (const id of fList) {
-              r -= itemWeights.get(id) || 10;
-              if (r <= 0) return id;
+              const it = itemsK.get(id);
+              let w = itemWeights.get(id) || 10;
+              const isTam = it && hbCls(it) === "tam";
+              const hasCostSkill = it && it.chieu && (it.chieu.phi || 0) > 0;
+              
+              if (needTam) {
+                if (isTam) w *= 3.5;
+                else if (hasCostSkill) w *= 0.25;
+              }
+              if (skillsFull && hasCostSkill) {
+                w *= 0.05;
+              } else if (curSkills < 2 && hasCostSkill && it && it.chieu && it.chieu.dang === "cong") {
+                w *= 2.5;
+              }
+              weights.push(w);
+              sum += w;
+            }
+            let r = rnd() * sum;
+            for (let i = 0; i < fList.length; i++) {
+              r -= weights[i];
+              if (r <= 0) return fList[i];
             }
             return fList[fList.length - 1];
           };
@@ -6782,7 +6842,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               // 1. Thêm mảnh mới với phân bổ xác suất theo phẩm cấp & uy lực
               const f = free();
               if (!f.length) continue;
-              const id = pickWeightedFree(f);
+              const id = pickWeightedFree(f, next);
               const c = smart(id, next);
               if (!c || overlaps(next, c)) continue;
               next.push(c);
@@ -6892,7 +6952,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const i = Math.floor(rnd() * next.length);
               const f = free();
               if (!f.length) continue;
-              const id = pickWeightedFree(f);
+              const id = pickWeightedFree(f, testNext);
               const testNext = next.filter((_, idx) => idx !== i);
               const c = smart(id, testNext);
               if (!c || overlaps(testNext, c)) continue;
@@ -11821,23 +11881,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (!P) return "—";
             const cList = (P.chieu || []).filter((x) => (x.phi || 0) > 0);
             if (!cList.length)
-              return `<span class="vk-ok">0 chiêu tiêu hao</span>`;
+              return `<span class="vk-ok">0 chiêu tiêu hao · Chân khí thuần bị động</span>`;
             const ll = P.linhLucMoiLuot || 0;
             const mPhi = Math.max(...cList.map((x) => x.phi || 0));
-            const t2Phi = cList
-              .slice(0, 2)
-              .reduce((s, x) => s + (x.phi || 0), 0);
-            if (ll >= mPhi * 1.1 && ll >= t2Phi * 0.65 && cList.length <= 4) {
-              return `<span class="vk-ok" style="font-weight:bold">Dư dả (${cList.length} chiêu, không cần đan)</span>`;
+            let drain = 0;
+            for (const sk of cList) {
+              drain += (sk.phi || 0) / Math.max(1, (sk.hoi || 0) + 1);
             }
-            if (ll < mPhi) {
-              const def = Math.round((mPhi - ll) * 10) / 10;
-              return `<span style="color:#ef4444;font-weight:bold">Thiếu hụt (thiếu ${num(def)} LL/lượt)</span>`;
+            drain = Math.round(drain * 10) / 10;
+            if (ll >= drain * 1.15 && ll >= mPhi * 0.95 && cList.length <= 3) {
+              return `<span class="vk-ok" style="font-weight:bold">🟢 Tự Cấp Tự Túc (${cList.length} chiêu · hồi +${num(ll)}/lượt vs dùng ~${num(drain)}/lượt · Không cần cắn đan)</span>`;
             }
-            if (cList.length > 4) {
-              return `<span style="color:#f59e0b">Bội thực (${cList.length} chiêu, ngốn LL)</span>`;
+            if (ll >= drain && cList.length <= 4) {
+              return `<span class="vk-ok">🟡 Cân Bằng (${cList.length} chiêu · hồi +${num(ll)}/lượt vs dùng ~${num(drain)}/lượt)</span>`;
             }
-            return `<span class="vk-ok">Vừa đủ (${cList.length} chiêu)</span>`;
+            if (drain > ll) {
+              const def = Math.round((drain - ll) * 10) / 10;
+              return `<span style="color:#ef4444;font-weight:bold">🔴 Thiếu Hụt Chân Khí (thiếu ~${num(def)}/lượt · Nguy cơ cắn đan)</span>`;
+            }
+            return `<span style="color:#f59e0b">⚠️ Dồn Chiêu (${cList.length} chiêu)</span>`;
           };
 
           const rows = [
@@ -18492,10 +18554,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           "Nghịch Thiên",
         ];
         const HB_RATIO = {
-          55: ["5 : 5 (Chuẩn)", 0.5],
-          64: ["6 : 4 (Nghiêng Tâm Pháp)", 0.6],
-          46: ["4 : 6 (Nghiêng Chiến Pháp)", 0.4],
+          64: ["6 : 4 (Nghiêng Tâm Pháp · Tự Cấp Chân Khí) [Khuyên Dùng]", 0.6],
+          73: ["7 : 3 (Đại Tu Tâm Pháp · Tối Đa Tốc Tu & Chân Khí)", 0.7],
+          55: ["5 : 5 (Cân Bằng Tiêu Chuẩn)", 0.5],
+          46: ["4 : 6 (Nghiêng Chiến Pháp · Dồn Đòn Tấn Công)", 0.4],
           0: ["Không Ép Tỉ Lệ", null],
+        };
+        const HB_MAX_SKILLS = {
+          3: ["2–3 Chiêu (Tinh Hoa · Tự Cung Chân Khí · Không Cắn Đan) [Khuyên Dùng]", 3],
+          4: ["3–4 Chiêu (Đa Năng · Công Thủ Toàn Diện)", 4],
+          0: ["Không Giới Hạn (Tự Do)", 0],
         };
         const HB_MODE = {
           bal: "Cân Bằng (Đánh + Tu Luyện)",
@@ -18510,10 +18578,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const HB_PRESETS = [
           {
             id: "all",
-            name: "🎯 Tự Do / Mặc Định",
-            desc: "Cân bằng theo thiết lập cá nhân & hệ số game",
+            name: "🎯 Cân Bằng Chuẩn Mực",
+            desc: "Tâm:Chiến 6:4, 2–3 chiêu tinh hoa, tự cấp chân khí không cắn đan, tu luyện + chiến đấu song toàn",
             mode: "bal",
-            ratio: "55",
+            ratio: "64",
+            maxSkills: "3",
             dt: "",
           },
           {
@@ -18521,23 +18590,26 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             name: "⚡ Bạo Sát Thần Tốc",
             desc: "Dồn uy lực công kích, phá giáp, bộc phát sát thương hạ gục nhanh",
             mode: "danh",
-            ratio: "46",
+            ratio: "55",
+            maxSkills: "4",
             dt: "ef.sunder",
           },
           {
             id: "tank",
             name: "🛡️ Bất Hoại Hộ Thể",
-            desc: "Dày hộ thể, khí huyết, hồi máu, thủ hộ trường sinh phản kích",
+            desc: "Dày hộ thể 60%, khí huyết dồi dào, hồi máu, thủ hộ trường sinh phản kích",
             mode: "danh",
-            ratio: "55",
+            ratio: "64",
+            maxSkills: "3",
             dt: "ho_the",
           },
           {
             id: "speed",
             name: "🚀 Tốc Tu Đột Phá",
-            desc: "Tối đa tốc độ tu luyện, tỉ lệ đột phá, bế quan nhanh và kháng tâm ma",
+            desc: "Tối đa tốc độ tu luyện, tỉ lệ đột phá, 70% Tâm Pháp dưỡng sinh kháng tâm ma",
             mode: "tu",
-            ratio: "64",
+            ratio: "73",
+            maxSkills: "3",
             dt: "toc_do",
           },
           {
@@ -18545,7 +18617,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             name: "❄️ Khống Chế Phong Tỏa",
             desc: "Đóng băng, choáng, giảm tốc độ, khóa chết lượt hành động của địch",
             mode: "danh",
-            ratio: "55",
+            ratio: "64",
+            maxSkills: "3",
             dt: "dg.khong_che",
           },
           {
@@ -18553,7 +18626,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             name: "🩸 Ma Đạo Hút Huyết",
             desc: "Tối đa ma niệm, hút máu liên tục, bồi đắp độc và tà công ma hóa",
             mode: "danh",
-            ratio: "55",
+            ratio: "64",
+            maxSkills: "3",
             dt: "ma_hoa",
           },
         ];
@@ -18999,19 +19073,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
           const tam = fill(sel.by.tam, tamB, [sel.by.tam.find((x) => x.fam)]);
           const cong = (x) => x.it.chieu && x.it.chieu.dang === "cong";
-          const chAll = [...sel.by.dau, ...sel.by.pk, ...sel.by.bv].sort(
-            (a, c) => c.dens - a.dens,
-          );
+          const maxSkills = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (T >= 0.6 ? 3 : 4);
           const first = [
             sel.by.dau.find(cong),
             sel.by.pk.find(cong),
-            sel.by.dau.find(
-              (x) =>
-                x.it.chieu &&
-                (x.it.chieu.dang === "thu" || x.it.chieu.dang === "hoi_phuc"),
-            ),
+            maxSkills > 2 ? sel.by.dau.find((x) => x.it.chieu && (x.it.chieu.dang === "thu" || x.it.chieu.dang === "hoi_phuc")) : null,
             sel.by.bv[0],
-          ];
+          ].filter(Boolean);
+          const chAll = [...sel.by.dau, ...sel.by.pk, ...sel.by.bv].sort(
+            (a, c) => c.dens - a.dens,
+          );
           const chien = fill(chAll, chB, first);
           return {
             B,
@@ -19073,7 +19144,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             (s, i) => s === "thong" && i !== g.danDien && g.vung[i] >= 0,
           ).length;
         }
-        // Điểm trừ khi tỉ lệ ô Tâm Pháp / Chiến Pháp (chỉ tính món đang thông) lệch khỏi tỉ lệ đặt. Được makeEval gọi khi S.hbRatio bật.
+        // 7.15.0: Phạt luỹ tiến bất đối xứng khi vi phạm tỉ lệ Tâm Pháp : Chiến Pháp
         function hbRatioPenalty(manh, R) {
           const H = S.hbRatio;
           if (!H) return 0;
@@ -19090,7 +19161,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           });
           const tot = tam + chien;
           if (!tot) return 0;
-          return H.w * Math.abs(tam - H.t * tot);
+          const targetTam = H.t * tot;
+          // Phạt luỹ tiến cực mạnh khi thiếu Tâm Pháp (ngăn chặn dồn thừa chiêu thức):
+          if (tam < targetTam) {
+            const def = targetTam - tam;
+            return def * 75 + Math.pow(def, 1.8) * 35;
+          }
+          // Thừa Tâm Pháp chỉ phạt nhẹ:
+          return (tam - targetTam) * 12;
         }
         function hbShareOf(nvH, manh) {
           const K = S.core,
@@ -19127,7 +19205,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             throw new Error(
               "Không có món nào khớp bộ lọc. Nới khoảng phẩm, bỏ lọc nguyên tố, hoặc chọn nguồn đồ trong game.",
             );
-          const restore = auKmPin({ ...AU.cfg.km, kb: b.k, ratio: F.ratio });
+          const restore = auKmPin({ ...AU.cfg.km, kb: b.k, ratio: F.ratio, maxSkills: F.maxSkills });
           S.hbLite = true;
           try {
             const res = await optimizeMode(
@@ -19440,6 +19518,15 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return `<b>${pct(v)}</b> <span class="vk-mu" style="font-size:11px">/${Math.round(maxHoThe * 100)}%</span>`;
           };
 
+          const calcDrain = (P) => {
+            if (!P || !P.chieu) return 0;
+            return P.chieu
+              .filter((x) => x && x.dang !== undefined && (x.phi || 0) > 0)
+              .reduce((a, x) => a + (x.phi || 0) / Math.max(1, (x.hoi || 0) + 1), 0);
+          };
+          const curDrain = calcDrain(cur.P);
+          const newDrain = calcDrain(res.P);
+
           const curSkills =
             (cur.P.chieu || [])
               .filter((x) => x.dang !== undefined)
@@ -19463,10 +19550,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         <tr><td>Tỉ lệ đột phá</td><td>+${pct(curDotPha, 1)}</td><td><b>+${pct(newDotPha, 1)}</b></td><td>${diff(curDotPha, newDotPha, true)}</td></tr>
         <tr><td>Khí huyết tối đa</td><td>${Math.round(curHp)}</td><td><b>${Math.round(newHp)}</b></td><td>${diff(curHp, newHp, false)}</td></tr>
         <tr><td>Linh lực hồi / lượt</td><td>${num(curRegen)}</td><td><b>${num(newRegen)}</b></td><td>${diff(curRegen, newRegen, false)}</td></tr>
+        <tr><td>Tiêu hao Chân Khí TB / lượt</td><td>~${num(curDrain)}</td><td><b>~${num(newDrain)}</b></td><td>${diff(curDrain, newDrain, false, true)}</td></tr>
         <tr><td>Điểm nghịch (Tà / Lệch ô)</td><td>${curNghich}</td><td><b>${newNghich}</b></td><td>${diff(curNghich, newNghich, false, true)}</td></tr>
       </table>
-      <div style="font-size:12.5px;margin-top:6px;line-height:1.5">
-        <div><b>Chiêu thức hiện tại:</b> <span class="vk-mu">${curSkills}</span></div>
+      <div style="font-size:12.5px;margin-top:8px;line-height:1.6">
+        <div><b>Chân Khí hiện tại:</b> ${llBalanceStr(cur.P)}</div>
+        <div style="margin-top:3px"><b>Chân Khí build mới:</b> ${llBalanceStr(res.P)}</div>
+        <div style="margin-top:5px"><b>Chiêu thức hiện tại:</b> <span class="vk-mu">${curSkills}</span></div>
         <div style="margin-top:2px"><b>Chiêu thức build mới:</b> <span class="vk-ok">${newSkills}</span></div>
       </div>
     </div>`;
@@ -19498,6 +19588,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       ${hbBar(sh.tam, sh.chien)}
       <div class="vk-mu" style="font-size:12px">Chi tiết ô: Tâm Pháp ${sh.tam} · Đấu Pháp ${sh.dau} · Pháp Khí ${sh.pk} · Bảo Vật ${sh.bv}.</div>
       <div style="font-size:14px;margin:6px 0">Thắng <b>${res.wins}/${res.n}</b> trận mẫu · Tu luyện +${pct(res.R.biDong.toc_do || 0)} · Đột phá +${pct(res.R.biDong.dot_pha || 0, 1)} · Hộ thể <b>${pct(res.R.biDong.ho_the || 0)}</b>${(res.R.biDong.ho_the || 0) >= 0.6 ? " (đạt trần 60%)" : "/60%"} · Huyệt: <b>${(res.R.manh || []).filter((m) => m && m.thong && m.acupoints > 0).reduce((a, m) => a + m.acupoints, 0)}</b> ô · Linh lực hồi ${num(res.P ? res.P.linhLucMoiLuot || 0 : 0)}/lượt · Điểm nghịch ${res.R.diemNghich || 0}</div>
+      <div style="margin:4px 0 8px 0">${llBalanceStr(res.P)}</div>
       ${hbCompareHtml(nvReal, F, res)}
       ${drawGrid(nvH, res.manh)}
       ${miss.length ? hbMissingRoadmapHtml(miss) : '<div style="margin:10px 0"><button class="vk-btn" id="hb-apply" style="font-size:14px;padding:8px 18px;background:linear-gradient(135deg, #10b981, #059669)">✅ Áp Dụng Vào Game Ngay</button></div>'}
@@ -19545,7 +19636,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             cur = Math.max(0, Math.min(5, nv.canhGioi || 0));
           hbScanBuilds();
           if (cfg.kb && !BUILDS.some((x) => x.k === cfg.kb)) cfg.kb = "";
-          if (!HB_RATIO[cfg.ratio]) cfg.ratio = "55";
+          if (!HB_RATIO[cfg.ratio]) cfg.ratio = "64";
+          if (!HB_MAX_SKILLS[cfg.maxSkills]) cfg.maxSkills = "3";
           const sig =
             Cc.items.size +
             "|" +
@@ -19582,6 +19674,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               src: "game",
               assume: true,
               preset: "all",
+              maxSkills: cfg.maxSkills || "3",
             },
             S.bld || {},
           ));
@@ -19604,8 +19697,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           F.mode = cfg.mode;
           F.iters = cfg.iters;
           F.ratio = cfg.ratio;
+          F.maxSkills = cfg.maxSkills;
           const cat = hbCatalog(F.R),
-            rt = HB_RATIO[F.ratio],
+            rt = HB_RATIO[F.ratio] || HB_RATIO["64"],
             sel = hbSelect(b, F.R, F, nv);
           const nv0 = hbNv(F.R, F.st, F, []),
             B = hbBudget(nv0),
@@ -19654,7 +19748,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       </tr>`;
           }).join("");
           const dropNote = HB_DROP.length
-            ? `<div class=\"vk-mu\" style=\"font-size:12px;margin-top:6px\">Đã ẩn ${HB_DROP.length} hướng không đủ đồ để xếp kinh mạch: ${HB_DROP.map((d) => esc(d.ten) + " (" + esc(d.why) + ")").join("; ")}.</div>`
+            ? `<div class="vk-mu" style="font-size:12px;margin-top:6px">Đã ẩn ${HB_DROP.length} hướng không đủ đồ để xếp kinh mạch: ${HB_DROP.map((d) => esc(d.ten) + " (" + esc(d.why) + ")").join("; ")}.</div>`
             : "";
           const dp = [...Cc.items.values()].filter(
             (it) =>
@@ -19670,9 +19764,56 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             moLeft = (nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0,
             doiMauLeft = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0,
             openable = kmOpenable(nv).length;
+
+          // ── Khảo sát tình trạng chân khí / chiêu thức thực tế hiện tại của nhân vật
+          let curDrain = 0;
+          const curCostSkills = [];
+          if (nv.kinhMach && nv.kinhMach.manh) {
+            for (const m of nv.kinhMach.manh) {
+              const it = Cc.items.get(m.item);
+              if (it && it.chieu && (it.chieu.phi || 0) > 0) {
+                curCostSkills.push(it);
+                curDrain += (it.chieu.phi || 0) / Math.max(1, (it.chieu.hoi || 0) + 1);
+              }
+            }
+          }
+          curDrain = Math.round(curDrain * 10) / 10;
+          let curRegen = 0, curMaxLl = 0;
+          try {
+            if (S.core && S.core.tinhKinhMach) {
+              const rCur = S.core.tinhKinhMach(nv, Cc);
+              curRegen = rCur.linhLuc || 0;
+              curMaxLl = rCur.linhLucToiDa || (curRegen * 3);
+            }
+          } catch (e) {}
+
+          let qiBadgeHtml = "";
+          if (curCostSkills.length === 0) {
+            qiBadgeHtml = `<div style="display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);border-radius:6px;padding:6px 10px;font-size:12.5px;color:#16a34a;margin-top:6px">
+              <span>🌿</span>
+              <span><b>Chân Khí Thuần Bị Động:</b> Hiện chưa lắp chiêu tiêu hao nào, tốc tu & dưỡng sinh tối đa.</span>
+            </div>`;
+          } else if (curRegen >= curDrain * 1.15 && curCostSkills.length <= 3) {
+            qiBadgeHtml = `<div style="display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:6px 10px;font-size:12.5px;color:#15803d;margin-top:6px">
+              <span>🟢</span>
+              <span><b>Chân Khí Tự Cấp Tự Túc:</b> ${curCostSkills.length} chiêu chủ lực · Hồi <b>+${num(curRegen)}</b>/lượt vs dùng trung bình <b>~${num(curDrain)}</b>/lượt → <b>Tự đánh mượt mà, không bao giờ phải cắn đan!</b></span>
+            </div>`;
+          } else if (curRegen >= curDrain) {
+            qiBadgeHtml = `<div style="display:flex;align-items:center;gap:6px;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.35);border-radius:6px;padding:6px 10px;font-size:12.5px;color:#b45309;margin-top:6px">
+              <span>🟡</span>
+              <span><b>Chân Khí Cân Bằng Đủ Dùng:</b> ${curCostSkills.length} chiêu · Hồi <b>+${num(curRegen)}</b>/lượt vs dùng <b>~${num(curDrain)}</b>/lượt.</span>
+            </div>`;
+          } else {
+            const def = Math.round((curDrain - curRegen) * 10) / 10;
+            qiBadgeHtml = `<div style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:6px;padding:6px 10px;font-size:12.5px;color:#b91c1c;margin-top:6px">
+              <span>🔴</span>
+              <span><b>Cảnh Báo Thiếu Chân Khí (Bệnh Cắn Đan):</b> ${curCostSkills.length} chiêu · Dùng <b>~${num(curDrain)}</b>/lượt nhưng chỉ hồi <b>+${num(curRegen)}</b>/lượt (thiếu <b>-${num(def)}</b>/lượt) → <b>Toàn phải cắn đan mới ra nổi chiêu! Hãy bấm Chạy Auto Kinh Mạch để Tool cân bằng lại.</b></span>
+            </div>`;
+          }
+
           const kbSel = auRow(
-            "Hướng Build",
-            `<select class="vk-sel" id="au-km-kb" style="width:210px"><option value="">Không Ép (Theo Hệ Số Game)</option>${groups
+            "Hướng Build Mục Tiêu",
+            `<select class="vk-sel" id="au-km-kb" style="width:230px"><option value="">Không Ép (Theo Hệ Số Game)</option>${groups
               .map(
                 (g) =>
                   `<optgroup label="${esc(g)}">${BUILDS.filter(
@@ -19691,111 +19832,213 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             HB_PRESETS[0];
 
           body.innerHTML = `
-    <div class="vk-card"><h3>Hướng Build · Cài Đặt Chung</h3>
-      <div class="vk-mu" style="font-size:13px">Một bộ cài đặt dùng cho Auto Kinh Mạch, xếp từ đồ trong túi và xếp theo cảnh giới bên dưới. Hợp nhân vật nhất lúc này: ${top3.map((x) => `<b>${esc(x.b.ten)}</b>${x.f.why.length ? " (" + esc(x.f.why.join(", ")) + ")" : ""}`).join(" · ")}</div>
-      ${known && known.sig !== sig ? `<div class="vk-ok" style="font-size:12px;margin-top:4px">Đã quét lại dữ liệu game: ${newItems > 0 ? "+" + newItems + " món mới · " : ""}${BUILDS.filter((x) => x.dyn).length} hướng do Tool tự thêm.</div>` : ""}
-      <div style="margin-top:6px">${kbSel}
-      <div style="margin:8px 0;background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:6px;padding:8px">
+    <!-- ═════════ 1. BANNER TRẠNG THÁI BUILD & CHÂN KHÍ ═════════ -->
+    <div class="vk-card" style="border-left:4px solid var(--acc2);background:linear-gradient(180deg, var(--bg2) 0%, rgba(20,24,35,0.6) 100%)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <h3 style="margin:0;font-size:16px;display:inline-flex;align-items:center;gap:6px">
+            <span>🧭</span> Hướng Build: <span style="color:var(--acc2)">${esc(b.ten)}</span>
+            <span style="font-size:12px;font-weight:normal" class="vk-mu">(${esc(b.nhom)})</span>
+          </h3>
+          <div class="vk-mu" style="font-size:12px;margin-top:2px">
+            Cảnh giới: <b>${esc(realmName(cur))}</b> · Đang dùng: <b>${b.onKm || 0}</b> món trên kinh mạch (${b.inBag || 0} trong túi)
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:${b.color || '#3b82f6'}22;color:${b.color || '#3b82f6'};border:1px solid ${b.color || '#3b82f6'}55">
+            ${b.badge || 'Khả Dụng'}
+          </span>
+        </div>
+      </div>
+      ${qiBadgeHtml}
+    </div>
+
+    <!-- ═════════ 2. KHỐI CÀI ĐẶT CHIẾN THUẬT & TỈ LỆ MẠCH ═════════ -->
+    <div class="vk-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0;font-size:14.5px">⚙️ Cài Đặt Chiến Thuật & Tỉ Lệ Mạch</h3>
+        <span class="vk-mu" style="font-size:11.5px">Dùng chung cho Auto và Xếp Kinh Mạch</span>
+      </div>
+
+      ${kbSel}
+
+      <!-- Presets Nhanh -->
+      <div style="margin:8px 0;background:rgba(255,255,255,0.02);border:1px solid var(--line);border-radius:8px;padding:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <b style="font-size:13px">Lối Chơi & Meta Presets</b>
-          <span class="vk-mu" style="font-size:11.5px">1-chạm thiết lập phong cách tối ưu</span>
+          <b style="font-size:12.5px">🎯 Chọn Nhanh Lối Chơi (Presets)</b>
+          <span class="vk-mu" style="font-size:11px">1-chạm thiết lập tỉ lệ & giới hạn chiêu</span>
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${HB_PRESETS.map((p) => `<button class="vk-btn ${F.preset === p.id ? "" : "sec"} hb-preset-btn" data-pid="${p.id}" style="font-size:12px;padding:4px 9px">${esc(p.name)}</button>`).join("")}
         </div>
         <div class="vk-mu" style="font-size:12px;margin-top:5px" id="hb-preset-desc">💡 ${esc(curPreset.desc)}</div>
       </div>
+
       ${auSel(
         "au-km-ratio",
         "Tỉ Lệ Tâm Pháp : Chiến Pháp",
         Object.entries(HB_RATIO).map(([k, v]) => [k, v[0]]),
         cfg.ratio,
       )}
-      ${auSel("au-km-mode", "Chế Độ", AU_KM_MODE, cfg.mode)}
+      ${auSel(
+        "au-km-maxskills",
+        "Giới Hạn Chiêu Thức Chủ Động",
+        Object.entries(HB_MAX_SKILLS).map(([k, v]) => [k, v[0]]),
+        cfg.maxSkills || "3",
+      )}
+      ${auSel("au-km-mode", "Chế Độ Ưu Tiên", AU_KM_MODE, cfg.mode)}
       ${auSel(
         "au-km-dir",
-        "Hướng Xếp",
+        "Hướng Xếp Khí Vận",
         [
           ["", "Theo Hệ Số Game"],
-          ["tien", "Tiên Tu · Tương Sinh"],
+          ["tien", "Tiên Tu · Tương Sinh (Khuyên Dùng)"],
           ["ma", "Ma Tu · Tương Khắc"],
         ],
         cfg.dir,
       )}
-      ${auSel("au-km-it", "Độ Kỹ", AU_KM_IT, cfg.iters)}
-      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}</div>
-      <div class="vk-mu" style="font-size:12px;margin-top:4px">${cfg.kb ? "Đã chọn <b>" + esc(b.ten) + "</b>: khi xếp, Tool cộng điểm cho món đúng hướng đang thông (thêm nếu nằm trên huyệt). " : "Chưa ép hướng: Auto và xếp từ túi theo hệ số game; phần Xếp Theo Cảnh Giới tạm dùng <b>" + esc(b.ten) + "</b>. "}Tâm Pháp (công pháp không chiêu) chiếm một nửa số ô thông, Đấu Pháp + Pháp Khí + Bảo Vật chiếm nửa còn lại khi chọn 5 : 5; mỗi ô lệch bị trừ ${HB_RATIO_W} điểm. Tool tính sức mỗi món ở mức Lĩnh Ngộ đã đầy.</div></div>
-    <div class="vk-card"><h3>Auto Kinh Mạch</h3>
-      <div class="vk-mu" style="font-size:13px">Tool tìm cách xếp tốt nhất theo Cài Đặt Chung rồi <b>tự áp dụng vào game bằng chính các hàm của game</b>: gỡ mảnh sai, đặt mảnh mới, đổi bộ, mở ô. Chỉ đổi khi điểm tăng đủ lớn vì đổi cách xếp làm món mới phải Lĩnh Ngộ lại từ đầu; game bận thì Tool đợi hoặc dừng.</div>
-      <div style="margin:10px 0 2px"><b style="font-size:13px">Hai Bộ Kinh Mạch</b> <span class="vk-mu" style="font-size:11px">(đang có ${slots}/3 bộ)</span></div>
-      ${auChk("au-km-two", "Xếp 2 Bộ: Bộ 1 Tu Luyện, Bộ 2 Đánh", cfg.two, "(bỏ qua ô Chế Độ ở trên)")}
-      ${auSel(
-        "au-km-keep",
-        "Dùng Bộ Nào Khi Xong",
-        [
-          ["tu", "Bộ 1 · Tu Luyện"],
-          ["danh", "Bộ 2 · Đánh"],
-        ],
-        cfg.keep,
-      )}
-      ${auChk("au-km-mobo", "Tự Mở Bộ 2 Nếu Chưa Có", cfg.moBo, "(tốn Linh Thạch: bộ 2 là 1.000, bộ 3 là 15.000; game báo giá thật)")}
-      <div style="margin:10px 0 2px"><b style="font-size:13px">Mở Ô</b> <span class="vk-mu" style="font-size:11px">(${openable} ô mở được ngay · còn ${moLeft} lượt khai thông)</span></div>
-      ${auChk("au-km-mo", "Tự Mở Ô Khi Có Lợi", cfg.mo, "(không đảo ngược được; chỉ mở khi lợi từ " + AU_KM_MO_MIN + " điểm)")}
-      ${auRow("Mở Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-momax" type="number" min="1" max="20" step="1" value="${cfg.moMax}" style="width:92px;text-align:right">`)}
-      <div style="margin:10px 0 2px"><b style="font-size:13px">Tẩy Ô (Đổi Hệ Ô)</b> <span class="vk-mu" style="font-size:11px">(còn ${doiMauLeft} lượt chuyển hệ)</span></div>
-      ${auChk("au-km-tayo", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(đổi hệ ô sang hệ của công pháp hoặc vô sắc để kích hoạt 100% tương sinh & hệ số màu)")}
-      ${auRow("Tẩy Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-taymax" type="number" min="1" max="20" step="1" value="${cfg.tayMax != null ? cfg.tayMax : 3}" style="width:92px;text-align:right">`)}
-      <div style="margin:10px 0 2px"><b style="font-size:13px">Theo Dõi</b></div>
-      ${auChk("au-km-watch", "Tự Xếp Lại Khi Có Đồ Mới, Ô Đổi Hoặc Lên Cảnh Giới", cfg.watch, "(chạy mãi tới khi bạn bấm Dừng; mỗi lần xếp lại tốn một ít CPU)")}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="vk-btn au-go" id="au-run">Chạy Auto Kinh Mạch</button><button class="vk-btn sec au-go" id="au-prev">Xem Trước (Không Áp Dụng)</button><button class="vk-btn sec" id="au-stop">Dừng</button></div>
-      <div id="au-info"></div></div>
-    <div class="vk-card"><h3>Tiến Trình Auto</h3><div id="au-st"></div></div>
-    <div class="vk-card"><h3>Nhật Ký Auto</h3><div id="au-lg"></div></div>
-    <div class="vk-card"><h3>Hướng Build Khả Dụng (Quét Từ Game)</h3>
-      <div class="vk-mu" style="font-size:12px">Số món theo nhóm của từng hướng trong dữ liệu game hiện tại. Cột cuối: dùng được ở ${esc(realmName(F.R))} (Tâm Pháp + Chiến Pháp). Chạm một dòng để chọn hướng.</div>
-      <details open><summary><b>${BUILDS.length} hướng</b>${
-        BUILDS.some((x) => x.dyn)
-          ? " · " +
-            BUILDS.filter((x) => x.dyn)
-              .map((x) => esc(x.ten))
-              .join(", ") +
-            " là hướng mới quét thêm"
-          : ""
-      }</summary>
-      <table class="vk-t"><tr><th>Hướng Build</th><th>Tâm</th><th>Đấu</th><th>Khí</th><th>Bảo</th><th>Dùng Được</th><th>Đang Có</th></tr>${catRows}</table>${dropNote}</details>
-      <button class="vk-btn sec" id="hb-rescan" style="margin-top:6px">Quét Lại Dữ Liệu Game</button></div>
-    <div class="vk-card"><h3>${esc(b.ten)} · Cốt Lõi</h3><ul style="margin:0;padding-left:18px;font-size:14px">${b.core.map((x) => `<li>${resolveTC(x)}</li>`).join("")}</ul></div>
-    ${kmCard(b, nv)}
-    <div class="vk-card"><h3>Xếp Theo Cảnh Giới Và Bộ Lọc Đồ</h3>
-      <div class="tc-row"><select class="vk-sel" id="hb-r">${[0, 1, 2, 3, 4, 5].map((r) => o(r, F.R, "Cảnh Giới: " + realmName(r) + (r === cur ? " ●" : ""))).join("")}</select>
-        <select class="vk-sel" id="hb-st">${STAGE.map((t, i) => o(i, F.st, "Tiểu Cảnh Giới: " + t)).join("")}</select></div>
-      <div class="tc-row" style="margin-top:6px"><select class="vk-sel" id="hb-p0">${phOpts(F.phMin, "Phẩm Từ: ")}</select><select class="vk-sel" id="hb-p1">${phOpts(F.phMax, "Đến: ")}</select></div>
-      <div class="tc-row" style="margin-top:6px"><select class="vk-sel" id="hb-he">${o("", F.he, "Nguyên Tố: Tất Cả")}${heOpts.map((h) => o(h, F.he, "Nguyên Tố: " + heTen(h))).join("")}</select>
-        <select class="vk-sel" id="hb-dt">${o("", F.dt, "Đặc Tính: Không Chọn")}${trOpts}</select></div>
-      <div style="margin-top:6px"><select class="vk-sel" id="hb-src">${o("game", F.src, "Nguồn Đồ: Trong Game (Giả Định)")}${o("own", F.src, "Nguồn Đồ: Chỉ Đồ Đang Có")}</select></div>
-      ${auChk("hb-assume", "Giả định mọi ô của cảnh giới đã thông", F.assume)}
-      ${auChk("hb-vo", "Kèm đồ Vô Sắc khi lọc nguyên tố", F.vo)}
-      <div class="vk-mu" style="font-size:12px;margin-top:4px">Nguyên tố và khoảng phẩm lọc cứng. Đặc tính chọn vào được ưu tiên mạnh khi chọn đồ, không loại hẳn món khác (Tâm Pháp không có hiệu ứng chiêu nên vẫn được lấy). Hướng, tỉ lệ, chế độ, độ kỹ lấy từ Cài Đặt Chung.</div></div>
-    ${hbScanHtml(b, F, sel, plan, rt)}
-    <div class="vk-card"><h3>Xếp Kinh Mạch Theo Hướng Này</h3>
-      <div class="vk-mu" style="font-size:13px">Tool chọn đồ theo hướng, cảnh giới, phẩm, nguyên tố rồi xếp lên lưới của ${esc(realmName(F.R))} (đồ giả định, không đụng game), ép tỉ lệ ô Tâm Pháp : Chiến Pháp theo Cài Đặt Chung. Dùng chính hàm tính của game để chấm điểm.</div>
-      <button class="vk-btn" id="hb-go" style="margin-top:8px">Xếp Kinh Mạch Theo Cảnh Giới</button>${progressHtml("hb-pr")}<div id="hb-out"></div></div>
-    ${kmManualHtml(nv)}
-    <details class="vk-card"><summary><b>Ở ${esc(realmName(F.R))} Cần Làm Gì</b></summary><ul style="margin:6px 0 0;padding-left:18px;font-size:14px">
-      ${steps}
-      <li>Đồ nên dùng ở cảnh giới này: <b>${PHAM_TEN.filter((_, i) => TIER_CG[i] + 1 >= F.R && TIER_CG[i] <= F.R).join(", ")} phẩm</b>. Đồ phẩm thấp hơn bị kẹp uy lực, hiệu ứng phụ nhạt dần.</li>
-      ${(REALM_STEPS[F.R] || []).map((x) => `<li>${x}</li>`).join("")}
-      ${dp.length ? `<li>Đan đột phá lên ${esc(realmName(F.R + 1))}: ${dp.map((d) => `${esc(d.ten)} (+${pct(d.dot_pha.ti_le || 0)}${d.dot_pha.tam_ma ? ", +" + d.dot_pha.tam_ma + " tâm ma" : ""}, ~${d.gia})`).join(", ")}</li>` : ""}
-    </ul></details>
-    <details class="vk-card"><summary><b>Luật Chung (Đọc Từ Code Game)</b></summary><ul style="margin:6px 0 0;padding-left:18px;font-size:14px">
-      <li><b>Bốn loại đồ trên kinh mạch:</b> Tâm Pháp (công pháp không chiêu, bị động) · Đấu Pháp (công pháp có chiêu) · Pháp Khí (pháp khí có chiêu) · Bảo Vật (pháp khí không chiêu, bị động). Tool xếp theo tỉ lệ ô Tâm Pháp : (Đấu Pháp + Pháp Khí + Bảo Vật), chuẩn là 5 : 5. Tâm Pháp còn là đường nối cho món khác thông, nên không nên để quá ít.</li>
-      <li><b>Phẩm và cảnh giới:</b> Phàm/Hoàng phẩm đủ sức tới Luyện Khí, Huyền tới Trúc Cơ, Địa tới Kết Đan, Thiên tới Nguyên Anh, Tiên tới Hóa Thần. Quá mức đó uy chiêu bị kẹp; vượt 2 cảnh giới thì hiệu ứng còn một nửa, vượt 3 thì mất. ${fitNote()}</li>
-      <li><b>Chính / tà:</b> mảnh tà (ma, nghịch, thi, quỷ, độc, hợp hoan) chiếm ≥ 1/3 ô đang thông thì lưới ngả tà; giữ đủ 5/5/10/20/40/60 năm (Phàm Nhân → Hóa Thần) thì đạo cơ đổi theo. Hướng chính đạo vì vậy không lấy mảnh tà.</li>
-      <li><b>Sinh khắc giữa các món:</b> món sinh kém phẩm thì cộng yếu đi (kém 1 phẩm ×2/3, kém 2 ×1/3, kém từ 3 không tính); tà công được +25% cho mỗi món khắc kề bên.</li>
-      <li><b>Theo hướng là gặp cơ duyên của hướng đó:</b> có tâm pháp mang nhãn lưu phái trên kinh mạch, hoặc ≥ 2 món cùng lưu phái, hoặc tông môn cùng phái, hoặc linh vật đúng loại → sự kiện của lưu phái đó xuất hiện nhiều gấp 3.</li>
-      <li><b>Dị hỏa trang bị:</b> chiêu cùng hệ với dị hỏa +6% (Huyền), 8% (Địa), 10% (Thiên), 12% (Tiên), 15% (Thần), 20% (Nghịch Thiên).</li>
-      <li><b>Bộ kinh mạch:</b> tối đa 3 bộ, đổi miễn phí; mở bộ 2 tốn 1.000, bộ 3 tốn 15.000 linh thạch.</li>
-    </ul></details>`;
+      ${auSel("au-km-it", "Độ Kỹ Luyện Kim", AU_KM_IT, cfg.iters)}
+      ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}
+
+      <!-- Tùy Chọn Nâng Cao Gọn Gàng -->
+      <details style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">
+        <summary style="font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer">
+          🔧 Tùy Chọn Nâng Cao (Hai Bộ, Mở Ô, Tẩy Ô, Theo Dõi)
+        </summary>
+        <div style="margin-top:8px;padding-left:6px">
+          <div style="margin:6px 0 2px"><b style="font-size:12.5px">Hai Bộ Kinh Mạch</b> <span class="vk-mu" style="font-size:11px">(đang có ${slots}/3 bộ)</span></div>
+          ${auChk("au-km-two", "Xếp 2 Bộ: Bộ 1 Tu Luyện, Bộ 2 Đánh", cfg.two, "(bỏ qua ô Chế Độ ở trên)")}
+          ${auSel(
+            "au-km-keep",
+            "Dùng Bộ Nào Khi Xong",
+            [
+              ["tu", "Bộ 1 · Tu Luyện"],
+              ["danh", "Bộ 2 · Đánh"],
+            ],
+            cfg.keep,
+          )}
+          ${auChk("au-km-mobo", "Tự Mở Bộ 2 Nếu Chưa Có", cfg.moBo, "(tốn Linh Thạch: bộ 2 là 1.000, bộ 3 là 15.000)")}
+
+          <div style="margin:8px 0 2px"><b style="font-size:12.5px">Khai Thông Ô Mới</b> <span class="vk-mu" style="font-size:11px">(${openable} ô mở được ngay · còn ${moLeft} lượt khai thông)</span></div>
+          ${auChk("au-km-mo", "Tự Mở Ô Khi Có Lợi", cfg.mo, "(chỉ mở khi lợi từ " + AU_KM_MO_MIN + " điểm)")}
+          ${auRow("Mở Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-momax" type="number" min="1" max="20" step="1" value="${cfg.moMax}" style="width:85px;text-align:right">`)}
+
+          <div style="margin:8px 0 2px"><b style="font-size:12.5px">Tẩy Ô (Đổi Hệ Ô)</b> <span class="vk-mu" style="font-size:11px">(còn ${doiMauLeft} lượt chuyển hệ)</span></div>
+          ${auChk("au-km-tayo", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(đổi hệ ô sang hệ công pháp / vô sắc để kích hoạt 100% tương sinh)")}
+          ${auRow("Tẩy Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-taymax" type="number" min="1" max="20" step="1" value="${cfg.tayMax != null ? cfg.tayMax : 3}" style="width:85px;text-align:right">`)}
+
+          <div style="margin:8px 0 2px"><b style="font-size:12.5px">Theo Dõi Tự Động</b></div>
+          ${auChk("au-km-watch", "Tự Xếp Lại Khi Có Đồ Mới, Ô Đổi Hoặc Lên Cảnh Giới", cfg.watch, "(tự động tối ưu liên tục trong lúc bế quan)")}
+        </div>
+      </details>
+    </div>
+
+    <!-- ═════════ 3. BẢNG ĐIỀU KHIỂN AUTO KINH MẠCH (LIVE CONTROL) ═════════ -->
+    <div class="vk-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h3 style="margin:0;font-size:15px">🚀 Bảng Điều Khiển Auto Kinh Mạch</h3>
+        <span class="vk-ok" style="font-size:12px;font-weight:600">Áp Dụng Trực Tiếp Vào Game</span>
+      </div>
+      <div class="vk-mu" style="font-size:12.5px">
+        Tool sử dụng thuật toán Luyện Kim Hai Hạt Giống (Dual-Seed Annealing) cùng <b>Động Cơ Bền Vững Chân Khí</b> để tìm cách xếp tối ưu nhất từ đồ trong túi, bảo đảm <b>tự cấp chân khí không cần cắn đan</b>, sau đó tự gỡ, đặt, mở ô, tẩy ô vào game.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">
+        <button class="vk-btn au-go" id="au-run" style="flex:1.2;min-width:140px;padding:9px 12px;font-size:13.5px;font-weight:bold;background:linear-gradient(135deg, #10b981, #059669)">
+          ▶ Chạy Auto Kinh Mạch
+        </button>
+        <button class="vk-btn sec au-go" id="au-prev" style="flex:1;min-width:120px;padding:9px 10px;font-size:13px">
+          🔍 Xem Trước (An Toàn)
+        </button>
+        <button class="vk-btn sec" id="au-stop" style="flex:0.6;min-width:80px;padding:9px 10px;font-size:13px">
+          ⏹ Dừng
+        </button>
+      </div>
+
+      <!-- Container Tiến Trình & Trạng Thái Trực Tiếp -->
+      <div id="au-st" style="margin-top:6px"></div>
+      <div id="au-info"></div>
+      <details style="margin-top:8px">
+        <summary style="font-size:12px;color:var(--mut);cursor:pointer">📜 Nhật Ký Auto Chi Tiết</summary>
+        <div id="au-lg" style="margin-top:4px;font-size:12px"></div>
+      </details>
+    </div>
+
+    <!-- ═════════ 4. PHÒNG THÍ NGHIỆM: XẾP THỬ THEO CẢNH GIỚI ═════════ -->
+    <details class="vk-card">
+      <summary style="cursor:pointer;font-size:14px;font-weight:700">
+        🔮 Phòng Thí Nghiệm: Xếp Thử Theo Cảnh Giới & Toàn Bộ Đồ Trong Game
+      </summary>
+      <div style="margin-top:8px">
+        <div class="vk-mu" style="font-size:12.5px;margin-bottom:8px">
+          Khu vực giả định độc lập (không đụng save game thật). Cho phép đạo hữu thử nghiệm cách xếp tối ưu ở cảnh giới cao hơn hoặc quét toàn bộ kho đồ game.
+        </div>
+        <div class="tc-row">
+          <select class="vk-sel" id="hb-r">${[0, 1, 2, 3, 4, 5].map((r) => o(r, F.R, "Cảnh Giới: " + realmName(r) + (r === cur ? " ●" : ""))).join("")}</select>
+          <select class="vk-sel" id="hb-st">${STAGE.map((t, i) => o(i, F.st, "Tiểu Cảnh Giới: " + t)).join("")}</select>
+        </div>
+        <div class="tc-row" style="margin-top:6px">
+          <select class="vk-sel" id="hb-p0">${phOpts(F.phMin, "Phẩm Từ: ")}</select>
+          <select class="vk-sel" id="hb-p1">${phOpts(F.phMax, "Đến: ")}</select>
+        </div>
+        <div class="tc-row" style="margin-top:6px">
+          <select class="vk-sel" id="hb-he">${o("", F.he, "Nguyên Tố: Tất Cả")}${heOpts.map((h) => o(h, F.he, "Nguyên Tố: " + heTen(h))).join("")}</select>
+          <select class="vk-sel" id="hb-dt">${o("", F.dt, "Đặc Tính: Không Chọn")}${trOpts}</select>
+        </div>
+        <div style="margin-top:6px">
+          <select class="vk-sel" id="hb-src">${o("game", F.src, "Nguồn Đồ: Trong Game (Giả Định)")}${o("own", F.src, "Nguồn Đồ: Chỉ Đồ Đang Có Trong Túi")}</select>
+        </div>
+        ${auChk("hb-assume", "Giả định mọi ô của cảnh giới đã thông", F.assume)}
+        ${auChk("hb-vo", "Kèm đồ Vô Sắc khi lọc nguyên tố", F.vo)}
+
+        ${hbScanHtml(b, F, sel, plan, rt)}
+
+        <div style="margin-top:8px">
+          <button class="vk-btn" id="hb-go" style="width:100%;padding:8px;font-size:13px;font-weight:600">
+            🔮 Xếp Kinh Mạch Thử Nghiệm Theo Cảnh Giới
+          </button>
+          ${progressHtml("hb-pr")}
+          <div id="hb-out"></div>
+        </div>
+        ${kmManualHtml(nv)}
+      </div>
+    </details>
+
+    <!-- ═════════ 5. CẨM NANG & DANH MỤC HƯỚNG BUILD ═════════ -->
+    <details class="vk-card">
+      <summary style="cursor:pointer;font-size:14px;font-weight:700">
+        📖 Danh Sách 19 Hướng Build Trong Game & Cốt Lõi Lộ Trình
+      </summary>
+      <div style="margin-top:8px">
+        <div class="vk-mu" style="font-size:12px;margin-bottom:6px">
+          Số món theo nhóm của từng hướng trong dữ liệu game hiện tại. Chạm một dòng để chọn hướng.
+        </div>
+        <table class="vk-t">
+          <tr><th>Hướng Build</th><th>Tâm</th><th>Đấu</th><th>Khí</th><th>Bảo</th><th>Dùng Được</th><th>Đang Có</th></tr>
+          ${catRows}
+        </table>
+        ${dropNote}
+        <button class="vk-btn sec" id="hb-rescan" style="margin-top:6px;width:100%">Quét Lại Dữ Liệu Game</button>
+
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)">
+          <b>${esc(b.ten)} · Cốt Lõi:</b>
+          <ul style="margin:4px 0 0;padding-left:18px;font-size:13.5px">
+            ${b.core.map((x) => `<li>${resolveTC(x)}</li>`).join("")}
+          </ul>
+        </div>
+        ${kmCard(b, nv)}
+
+        <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)">
+          <b>Ở ${esc(realmName(F.R))} Cần Làm Gì:</b>
+          <ul style="margin:4px 0 0;padding-left:18px;font-size:13px">
+            ${steps}
+            <li>Đồ nên dùng ở cảnh giới này: <b>${PHAM_TEN.filter((_, i) => TIER_CG[i] + 1 >= F.R && TIER_CG[i] <= F.R).join(", ")} phẩm</b>.</li>
+            ${(REALM_STEPS[F.R] || []).map((x) => `<li>${x}</li>`).join("")}
+            ${dp.length ? `<li>Đan đột phá lên ${esc(realmName(F.R + 1))}: ${dp.map((d) => `${esc(d.ten)} (+${pct(d.dot_pha.ti_le || 0)}${d.dot_pha.tam_ma ? ", +" + d.dot_pha.tam_ma + " tâm ma" : ""}, ~${d.gia})`).join(", ")}</li>` : ""}
+          </ul>
+        </div>
+      </div>
+    </details>`;
+
           // ── sự kiện
           const rd = () => {
             F.R = +body.querySelector("#hb-r").value;
@@ -19868,6 +20111,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 F.ratio = pre.ratio;
                 cfg.ratio = pre.ratio;
               }
+              if (pre.maxSkills) {
+                F.maxSkills = pre.maxSkills;
+                cfg.maxSkills = pre.maxSkills;
+              }
               if (pre.dt !== undefined) {
                 F.dt = pre.dt;
               }
@@ -19922,6 +20169,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             cfg.prio,
             cfg.bk,
             F.preset,
+            cfg.maxSkills,
           ]);
           const showRes = () => {
             const out = body.querySelector("#hb-out");
@@ -21382,7 +21630,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             kb: "",
             prio: true,
             bk: 5,
-            ratio: "55",
+            ratio: "64",
+            maxSkills: "3",
             iters: 3000,
             mo: false,
             moMax: 1,
@@ -21905,6 +22154,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             AU.cfg.km.v619 = 1;
             AU.cfg.km.bk = 5;
             if (!AU.cfg.km.dir) AU.cfg.km.dir = "tien";
+          }
+          if (AU.cfg.km.v715 !== 1) {
+            AU.cfg.km.v715 = 1;
+            if (!AU.cfg.km.ratio || AU.cfg.km.ratio === "55") AU.cfg.km.ratio = "64";
+            if (AU.cfg.km.maxSkills == null) AU.cfg.km.maxSkills = "3";
           }
           AU.cfg.rr.lh = !!AU.cfg.rr.lh;
           if (!Array.isArray(AU.cfg.rr.lhIds)) AU.cfg.rr.lhIds = [];
@@ -23721,6 +23975,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             biasK: S.biasK,
             kmBuild: S.kmBuild,
             hbRatio: S.hbRatio,
+            hbMaxSkills: S.hbMaxSkills,
             hbLite: S.hbLite,
           };
           try {
@@ -23736,6 +23991,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           S.kmBuild = b ? b.k : "";
           const rt = HB_RATIO[c.ratio];
           S.hbRatio = rt && rt[1] != null ? { t: rt[1], w: HB_RATIO_W } : null;
+          S.hbMaxSkills = c.maxSkills != null ? Number(c.maxSkills) : (rt && rt[1] >= 0.6 ? 3 : 4);
           S.hbLite = false;
           return () => {
             Object.assign(S, old);
@@ -27097,6 +27353,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ),
             );
             c.ratio = pick("au-km-ratio", Object.keys(HB_RATIO), c.ratio);
+            c.maxSkills = pick("au-km-maxskills", Object.keys(HB_MAX_SKILLS), c.maxSkills != null ? String(c.maxSkills) : "3");
             c.bk = AU_KM_BK;
             c.prio = ck("au-km-prio", c.prio);
             c.two = ck("au-km-two", c.two);
@@ -31496,9 +31753,22 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.14.10 · Tinh Gọn Giao Diện & Quy Nhất Tùy Chọn Tẩy Ô",
+            t: "Phiên Bản 7.15.0 · Đại Trùng Tu Tab Hướng Build & Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine)",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Đại Trùng Tu Tab Hướng Build & Auto Kinh Mạch:</b> Tái cấu trúc toàn diện giao diện theo 4 phân khu chuyên nghiệp, mạch lạc, thẩm mỹ cao: <i>Thanh Trạng Thái & Presets</i> → <i>⚙️ Cài Đặt Chiến Thuật & Tỉ Lệ Mạch</i> → <i>🚀 Bảng Điều Khiển Auto Trực Tiếp & Giám Sát Chân Khí Bền Vững</i> → <i>🧪 Phòng Thí Nghiệm Xếp Thử Cảnh Giới</i> → <i>🗺️ Lộ Trình Săn Đồ & Hướng Build</i>.",
+              "<b>Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine):</b> Đo lường chính xác tốc độ tiêu hao chân khí trung bình mỗi lượt (Drain Rate per Turn) dựa trên phí linh lực và thời gian hồi chiêu của từng chiêu thức so với linh lực hồi mỗi lượt. Phạt luỹ tiến cực nặng khi thâm hụt chân khí, triệt tiêu hoàn toàn căn bệnh 'loạn chiêu, vào trận cạn sạch chân khí toàn phải cắn đan'!",
+              "<b>Thi Hành Nghiêm Ngặt Tỉ Lệ Tâm Pháp : Chiến Pháp (Strict Progressive Penalty):</b> Khắc phục triệt để hiện tượng solver bất chấp tỉ lệ để nhét chiêu. Chuyển sang hàm phạt luỹ tiến cực mạnh khi thiếu Tâm Pháp, đảm bảo khi chọn <b>6 : 4</b> hoặc <b>7 : 3</b> thì ít nhất 60%–70% diện tích kinh mạch được dành trọn vẹn cho các Tâm Pháp nuôi chân khí và chỉ số nền.",
+              "<b>Bổ Sung Tùy Chọn 'Giới Hạn Chiêu Thức Chủ Động' (Skill Ceiling):</b> Cho phép người dùng giới hạn cứng số lượng chiêu thức (Mặc định: <i>2–3 Chiêu Tinh Hoa · Tự Cấp Chân Khí Không Cần Cắn Đan</i>). Solver tập trung tối đa vào 2 đòn công kích chủ lực mạnh nhất + 1 chiêu thủ/hồi phục, cấm spam chiêu thừa thãi làm loãng kinh mạch.",
+              "<b>Đồng Bộ Hóa Toàn Diện Vào Hạt Giống Greedy & Annealing Mutation:</b> Tích hợp kiểm tra tỉ lệ Tâm:Chiến và bền vững chân khí ngay từ hạt giống ban đầu (Greedy). Trong Simulated Annealing, tăng x3.5 lần xác suất bốc Tâm Pháp khi đang thiếu và khóa bốc chiêu thức khi đã đủ trần chiêu.",
+              "<b>Bổ Sung Tỉ Lệ Mới 7 : 3 (Đại Tu Tâm Pháp):</b> Dành riêng cho đạo hữu theo trường phái tốc tu, dưỡng sinh, kháng tâm ma bế quan nhanh và chân khí vô tận."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.14.10 · Tinh Gọn Giao Diện & Quy Nhất Tùy Chọn Tẩy Ô",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Quy Nhất Tùy Chọn Tẩy Ô Vào Đúng Khối Chức Năng:</b> Xóa bỏ ô tích trùng lặp thừa thãi ở khung 'Cài Đặt Chung', giữ lại duy nhất 1 vị trí chuẩn mực và trực quan tại khối <b>Tẩy Ô (Đổi Hệ Ô)</b> trong khung 'Auto Kinh Mạch' (nơi hiển thị số lượt chuyển hệ còn lại và số ô tẩy tối đa mỗi lần chạy).",
               "<b>Giao Diện Tinh Gọn, Thống Nhất:</b> Loại bỏ hoàn toàn sự rườm rà và các nguy cơ xung đột đồng bộ giữa nhiều ô tích, giúp đạo hữu dễ dàng quản lý và cài đặt tính năng Tẩy Ô."
