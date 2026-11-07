@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.13.8
+// @version      7.14.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.13.8
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.14.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.13.8";
+      var TOOL_VER = "7.14.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -11089,6 +11089,115 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           };
         }
 
+        const HE_VI = {
+          kim: "Kim",
+          moc: "Mộc",
+          thuy: "Thủy",
+          hoa: "Hỏa",
+          tho: "Thổ",
+          loi: "Lôi",
+          bang: "Băng",
+          phong: "Phong",
+          am: "Ám",
+          vo_sac: "Vô Sắc",
+        };
+
+        // ── Tìm danh sách các ô kinh mạch nên tẩy (đổi hệ) để khớp các mảnh đã xếp tối đa
+        function findOptimalRecolors(nv, bestPieces, maxCount) {
+          if (!nv || !nv.kinhMach || !Array.isArray(bestPieces)) return [];
+          const K = S.core,
+            c = C();
+          if (!K || !c) return [];
+          const doiMauLeft =
+            (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+          if (doiMauLeft <= 0) return [];
+          const limit = Math.min(
+            doiMauLeft,
+            maxCount != null ? maxCount : doiMauLeft,
+          );
+          if (limit <= 0) return [];
+
+          const g = K.luoiKinhMach(c, nv);
+          if (!g) return [];
+          const mauK = nv.kinhMach.mau || [];
+          const candidates = [];
+          const seenCells = new Set();
+
+          for (const m of bestPieces) {
+            if (!m || !m.item) continue;
+            const it = c.items.get(m.item);
+            if (!it) continue;
+            let cells, cellElements;
+            try {
+              cells = K.oCuaManh(g, m, it);
+              cellElements = K.heTungO(it, m.xoay);
+            } catch (e) {
+              continue;
+            }
+            if (!cells || !cellElements || cells.length !== cellElements.length)
+              continue;
+
+            for (let idx = 0; idx < cells.length; idx++) {
+              const cell = cells[idx];
+              if (seenCells.has(cell)) continue;
+              if (cell === g.danDien) continue;
+              if (
+                nv.kinhMach.trangThai &&
+                nv.kinhMach.trangThai[cell] === "an"
+              )
+                continue;
+
+              const wantedHe = cellElements[idx];
+              const curMau = mauK[cell];
+              if (!wantedHe || curMau === wantedHe) continue;
+
+              let availHe = [];
+              try {
+                availHe = K.heDoiDuoc(nv, c, cell) || [];
+              } catch (e) {
+                availHe = [];
+              }
+              if (!availHe.length) continue;
+
+              let targetHe = null;
+              let gain = 0;
+              if (availHe.includes(wantedHe)) {
+                targetHe = wantedHe;
+                gain = curMau === "vo_sac" ? 0.5 : 1.0;
+              } else if (curMau !== "vo_sac" && availHe.includes("vo_sac")) {
+                targetHe = "vo_sac";
+                gain = 0.5;
+              }
+
+              if (targetHe) {
+                const itPwr = kmItemPower(it) || 10;
+                candidates.push({
+                  cell,
+                  fromHe: curMau,
+                  toHe: targetHe,
+                  itId: it.id,
+                  itTen: it.ten || it.id,
+                  col: (cell % g.rong) + 1,
+                  row: Math.floor(cell / g.rong) + 1,
+                  score: gain * itPwr,
+                });
+              }
+            }
+          }
+
+          candidates.sort((a, b) => b.score - a.score);
+
+          const chosen = [];
+          for (const cand of candidates) {
+            if (!seenCells.has(cand.cell)) {
+              seenCells.add(cand.cell);
+              chosen.push(cand);
+              if (chosen.length >= limit) break;
+            }
+          }
+          return chosen;
+        }
+
         // ── Tab Kinh mạch
         function statRows(a, b) {
           const ch = (r) =>
@@ -11115,8 +11224,87 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             .reduce((x, m) => x + m.acupoints, 0);
           const curHt = (a.R.biDong && a.R.biDong.ho_the) || 0,
             newHt = (b.R.biDong && b.R.biDong.ho_the) || 0;
+
+          // ── Tính toán các chỉ số chiến đấu chuyên sâu
+          const ctrlRatio =
+            K && K.CONTROL_DAMAGE_RATIO != null ? K.CONTROL_DAMAGE_RATIO : 0.6;
+          const shieldMult =
+            K && K.SHIELD_UY_MULT != null ? K.SHIELD_UY_MULT : 1.0;
+          const shieldCapRatio =
+            K && K.SHIELD_CAP_RATIO != null ? K.SHIELD_CAP_RATIO : 0.6;
+          const burstMult =
+            K && K.BURST_DAMAGE_MULT != null ? K.BURST_DAMAGE_MULT : 1.5;
+
+          const getSkillDmg = (s) => {
+            if (!s || !s.uy) return 0;
+            if (s.dang === "cong") return s.uy;
+            if (s.dang === "khong_che") return s.uy * ctrlRatio;
+            if (s.dang !== "thu" && s.dang !== "hoi_phuc" && s.uy > 0)
+              return s.uy;
+            return 0;
+          };
+
+          const parseSkills = (r) => {
+            const list = (r && r.P && r.P.chieu) || [];
+            let strongest = null,
+              maxD = 0,
+              totalD = 0,
+              shieldSum = 0;
+            for (const s of list) {
+              const d = getSkillDmg(s);
+              totalD += d;
+              if (d > maxD) {
+                maxD = d;
+                strongest = s;
+              }
+              if (
+                s.dang === "thu" ||
+                (s.effects &&
+                  s.effects.some(
+                    (e) => e.kind === "ho_thuan" || e.loai === "ho_thuan",
+                  ))
+              ) {
+                shieldSum += (s.uy || 0) * shieldMult;
+              }
+            }
+            const hpMax = (r && r.P && r.P.khiHuyetToiDa) || 0;
+            const shieldCap = Math.round(hpMax * shieldCapRatio);
+            return {
+              spellPower: Math.round((r && r.P && r.P.spellPower) || 0),
+              bodyPower:
+                r && r.P && r.P.bodyPower ? Math.round(r.P.bodyPower) : null,
+              strongest: strongest
+                ? `${esc(strongest.ten)} (${num(Math.round(maxD))})`
+                : "—",
+              strongestDmg: maxD,
+              totalDmg: Math.round(totalD),
+              shieldText:
+                shieldSum > 0
+                  ? `${num(Math.round(shieldSum))} (trần ${num(shieldCap)})`
+                  : `0 (trần ${num(shieldCap)})`,
+              burstText:
+                maxD > 0
+                  ? `×${num(burstMult, 1)} (tới ${num(Math.round(maxD * burstMult))})`
+                  : `×${num(burstMult, 1)}`,
+            };
+          };
+
+          const skA = parseSkills(a),
+            skB = parseSkills(b);
+          const spStrA =
+            num(skA.spellPower) +
+            (skA.bodyPower ? ` (Thể: ${num(skA.bodyPower)})` : "");
+          const spStrB =
+            num(skB.spellPower) +
+            (skB.bodyPower ? ` (Thể: ${num(skB.bodyPower)})` : "");
+
           const rows = [
             ["Thắng trận mẫu", `${a.wins}/${a.n}`, `${b.wins}/${b.n}`],
+            ["Pháp lực", spStrA, spStrB],
+            ["Chiêu mạnh nhất", skA.strongest, skB.strongest],
+            ["Tổng sát thương chiêu", num(skA.totalDmg), num(skB.totalDmg)],
+            ["Tạo hộ thuẫn", skA.shieldText, skB.shieldText],
+            ["Bột phát sát thương", skA.burstText, skB.burstText],
             [
               "Tận dụng huyệt đạo",
               `${curHy}/${hy.size} ô`,
@@ -11159,8 +11347,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ],
             ["Điểm nghịch", a.R.diemNghich || 0, b.R.diemNghich || 0],
           ];
+
+          let recolorHtml = "";
+          const plan = (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
+          if (Array.isArray(plan) && plan.length > 0) {
+            const planItems = plan
+              .map(
+                (p) =>
+                  `• Cột ${p.col}, Hàng ${p.row}: ${HE_VI[p.fromHe] || p.fromHe} ➔ <b style="color:var(--acc, #3ddc97)">${HE_VI[p.toHe] || p.toHe}</b> (phù hợp «${esc(p.itTen)}»)`,
+              )
+              .join("<br>");
+            recolorHtml = `<div style="margin-top:8px;padding:7px 11px;background:rgba(61,220,151,0.08);border:1px solid var(--acc, #3ddc97);border-radius:8px;font-size:12px;line-height:1.45">
+              <b style="color:var(--acc, #3ddc97)">🎨 Kế Hoạch Tẩy Ô Tối Ưu (${plan.length} ô):</b><br>${planItems}
+            </div>`;
+          }
+
           return `<table class="vk-t"><tr><th></th><th>Đang xếp</th><th>Bản mới</th></tr>${rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td><td><b>${r[2]}</b></td></tr>`).join("")}
-    <tr><td>Chiêu</td><td>${ch(a)}</td><td>${ch(b)}</td></tr></table>`;
+    <tr><td>Chiêu</td><td>${ch(a)}</td><td>${ch(b)}</td></tr></table>${recolorHtml}`;
         }
 
         async function optimizeMode(nv, mode, iters, prog, f0, f1, label) {
@@ -18951,6 +19154,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               : "";
           const slots = (nv.kinhMach.loadouts || [1]).length,
             moLeft = (nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0,
+            doiMauLeft = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0,
             openable = kmOpenable(nv).length;
           const kbSel = auRow(
             "Hướng Build",
@@ -19024,6 +19228,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <div style="margin:10px 0 2px"><b style="font-size:13px">Mở Ô</b> <span class="vk-mu" style="font-size:11px">(${openable} ô mở được ngay · còn ${moLeft} lượt khai thông)</span></div>
       ${auChk("au-km-mo", "Tự Mở Ô Khi Có Lợi", cfg.mo, "(không đảo ngược được; chỉ mở khi lợi từ " + AU_KM_MO_MIN + " điểm)")}
       ${auRow("Mở Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-momax" type="number" min="1" max="20" step="1" value="${cfg.moMax}" style="width:92px;text-align:right">`)}
+      <div style="margin:10px 0 2px"><b style="font-size:13px">Tẩy Ô (Đổi Hệ Ô)</b> <span class="vk-mu" style="font-size:11px">(còn ${doiMauLeft} lượt chuyển hệ)</span></div>
+      ${auChk("au-km-tayo", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(đổi hệ ô sang hệ của công pháp hoặc vô sắc để kích hoạt 100% tương sinh & hệ số màu)")}
+      ${auRow("Tẩy Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-taymax" type="number" min="1" max="20" step="1" value="${cfg.tayMax != null ? cfg.tayMax : 3}" style="width:92px;text-align:right">`)}
       <div style="margin:10px 0 2px"><b style="font-size:13px">Theo Dõi</b></div>
       ${auChk("au-km-watch", "Tự Xếp Lại Khi Có Đồ Mới, Ô Đổi Hoặc Lên Cảnh Giới", cfg.watch, "(chạy mãi tới khi bạn bấm Dừng; mỗi lần xếp lại tốn một ít CPU)")}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="vk-btn au-go" id="au-run">Chạy Auto Kinh Mạch</button><button class="vk-btn sec au-go" id="au-prev">Xem Trước (Không Áp Dụng)</button><button class="vk-btn sec" id="au-stop">Dừng</button></div>
@@ -20669,6 +20876,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             keep: "tu",
             moBo: false,
             watch: false,
+            tayO: false,
+            tayMax: 3,
           },
           rr: {
             pham: ["thien", "bien_di"],
@@ -23108,11 +23317,36 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 ),
               );
               if (!sol) return { stop: "Bạn bấm Dừng" };
+
+              // Lập kế hoạch tẩy ô nếu bật cfg.tayO
+              if (cfg.tayO) {
+                const recolors = findOptimalRecolors(
+                  nv,
+                  sol.best.manh,
+                  cfg.tayMax,
+                );
+                if (recolors.length > 0) {
+                  sol.recolorPlan = recolors;
+                  sol.best.recolorPlan = recolors;
+                  try {
+                    const nvSim = clone(nv);
+                    for (const r of recolors) {
+                      nvSim.kinhMach.mau[r.cell] = r.toHe;
+                    }
+                    const simBest = evalCurrent(nvSim, modes[k]);
+                    if (simBest && simBest.score >= sol.best.score) {
+                      simBest.recolorPlan = recolors;
+                      sol.bestSim = simBest;
+                    }
+                  } catch (e) {}
+                }
+              }
+
               sols.push(sol);
             }
             st.last = sols.map((s) => ({
               cur: s.cur.score,
-              best: s.best.score,
+              best: (s.bestSim || s.best).score,
             }));
             AU.kmPrev = { nv, modes, sols };
             if (st.dry) {
@@ -23126,6 +23360,44 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             st.phase = "apply";
             st.label = "Áp dụng vào game";
             auPaintSoon();
+
+            // 3.1) Thực hiện tẩy ô vào game nếu được bật
+            if (cfg.tayO) {
+              const allPlans = [];
+              const seenPlanCells = new Set();
+              for (const s of sols) {
+                if (Array.isArray(s.recolorPlan)) {
+                  for (const p of s.recolorPlan) {
+                    if (!seenPlanCells.has(p.cell)) {
+                      seenPlanCells.add(p.cell);
+                      allPlans.push(p);
+                    }
+                  }
+                }
+              }
+              const maxDo = Math.min(
+                allPlans.length,
+                (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0,
+              );
+              for (let pi = 0; pi < maxDo; pi++) {
+                const p = allPlans[pi];
+                const r = auCall((gg) => gg.doiMauO(p.cell, p.toHe));
+                if (r.ok) {
+                  st.recolorsDone = (st.recolorsDone || 0) + 1;
+                  auLog(
+                    `🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`,
+                    "vk-ok",
+                  );
+                } else {
+                  auLog(
+                    `Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`,
+                    "vk-mu",
+                  );
+                  break;
+                }
+              }
+              nv = nvNow();
+            }
             if (cfg.two) {
               const r = await kmApplyLoadouts(
                 sols.map((s) => s.best.manh),
@@ -23200,6 +23472,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             steps: 0,
             passes: 0,
             opened: 0,
+            recolorsDone: 0,
             applied: 0,
             msg: "",
             phase: "plan",
@@ -23333,6 +23606,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           rows.push(
             ["Số Lần Xếp Lại", st.applied || 0],
             ["Số Ô Đã Mở", st.opened || 0],
+            ["Số Ô Đã Tẩy", st.recolorsDone || 0],
           );
           if (st.last && st.last.length)
             rows.push([
@@ -23363,7 +23637,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               Pv.sols
                 .map(
                   (s, k) =>
-                    `<div style="margin-top:10px"><b>${Pv.modes.length > 1 ? k + 1 + ". " : ""}${esc(nm[Pv.modes[k]] || Pv.modes[k])}</b>${s.best.same ? ' <span class="vk-mu" style="font-size:12px">(giữ nguyên cách đang xếp)</span>' : ""}${drawGrid(Pv.nv, s.best.manh)}${statRows(s.cur, s.best)}</div>`,
+                    `<div style="margin-top:10px"><b>${Pv.modes.length > 1 ? k + 1 + ". " : ""}${esc(nm[Pv.modes[k]] || Pv.modes[k])}</b>${s.best.same ? ' <span class="vk-mu" style="font-size:12px">(giữ nguyên cách đang xếp)</span>' : ""}${drawGrid(Pv.nv, s.best.manh)}${statRows(s.cur, s.bestSim || s.best)}</div>`,
                 )
                 .join("");
           } catch (e) {
@@ -26264,6 +26538,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             c.moBo = ck("au-km-mobo", c.moBo);
             c.mo = ck("au-km-mo", c.mo);
             c.moMax = Math.floor(num0("au-km-momax", 1, 20, c.moMax));
+            c.tayO = ck("au-km-tayo", c.tayO);
+            c.tayMax = Math.floor(
+              num0("au-km-taymax", 1, 20, c.tayMax != null ? c.tayMax : 3),
+            );
             c.watch = ck("au-km-watch", c.watch);
             auSave();
             return;
@@ -30649,9 +30927,24 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.13.8 · Mở Rộng Dò Tìm Sự Kiện Tu Vi & Bổ Sung Bảng Tu Vi Đã Tăng",
+            t: "Phiên Bản 7.14.0 · Bổ Sung Tự Động Tẩy Ô Khớp Công Pháp & Bộ Chỉ Số Chiến Đấu Chuyên Sâu",
             d: "07/11/2026",
             now: true,
+            pts: [
+              "<b>Cơ Chế Tự Động Tẩy Ô (Đổi Hệ Ô) Kinh Mạch Khớp Công Pháp:</b> Tích hợp tùy chọn <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i> trong Auto Kinh Mạch. Thuật toán tự động rà soát các ô bị lệch hệ dưới các mảnh công pháp/pháp khí chủ lực, tính toán độ tăng điểm tương sinh & hệ số màu để lập kế hoạch chuyển hệ (sang hệ của công pháp hoặc ô xám Vô Sắc) và tự động gọi <code>g.doiMauO</code> an toàn.",
+              "<b>Mô Phỏng Sức Mạnh Trước & Sau Khi Tẩy Ô:</b> Khi xem trước hoặc chạy Auto, Tool tự động giả lập kết quả sau khi tẩy ô, hiển thị danh sách tọa độ (Cột, Hàng) cùng chi tiết hệ cũ ➔ hệ mới, giúp đạo hữu nắm rõ hiệu quả trước khi chốt.",
+              "<b>Bổ Sung Bộ Chỉ Số Chiến Đấu Toàn Diện Vào Bảng So Sánh (statRows):</b> Nâng cấp bảng so sánh kinh mạch hiển thị đầy đủ các chỉ số thực chiến quan trọng:",
+              "&nbsp;&nbsp;• <b>Pháp Lực:</b> Sát thương nền của chiêu (kèm Nền Thể đối với thể tu).",
+              "&nbsp;&nbsp;• <b>Chiêu Mạnh Nhất:</b> Tên chiêu có sát thương đơn kích uy lực nhất và giá trị sát thương chuẩn.",
+              "&nbsp;&nbsp;• <b>Tổng Sát Thương Chiêu:</b> Tổng lượng sát thương đầu ra của tất cả các chiêu tấn công và khống chế.",
+              "&nbsp;&nbsp;• <b>Tạo Hộ Thuẫn:</b> Lượng khiên phòng ngự tạo ra từ các chiêu thức kèm trần khiên tối đa (60% Khí Huyết).",
+              "&nbsp;&nbsp;• <b>Bột Phát Sát Thương:</b> Hệ số bộc phát (×1.5) cùng mức sát thương đỉnh cao nhất khi kích hoạt bộc phát."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.13.8 · Mở Rộng Dò Tìm Sự Kiện Tu Vi & Bổ Sung Bảng Tu Vi Đã Tăng",
+            d: "07/11/2026",
+            now: false,
             pts: [
               "<b>Mở Rộng Quét 100% Hoạt Động & Sự Kiện Tăng Tu Vi:</b> Khắc phục triệt để hạn chế trước đây chỉ quét hoạt động tại ô đang đứng. Thuật toán mới tự động quét toàn bộ hơn 380 sự kiện tăng tu vi (kỳ ngộ, di tích, bí cảnh, đầm lầy, thư viện môn phái...) trong toàn bộ bán kính di chuyển qua <code>placeActivities</code>, <code>run.nodes</code> và <code>run.noiChon</code>.",
               "<b>Gỡ Bỏ Rào Cản Hồi Chiêu & Sửa Lỗi Điều Hướng Nơi Chốn:</b> Bỏ qua giới hạn hồi chiêu cứng 60 năm lỗi thời, đồng bộ chuẩn xác với cấu hình <code>limits.moi_run</code> và <code>limits.hoi_chieu_nam</code> của game. Tự động gọi <code>enterPlace</code>/<code>enterNode</code> khi đến địa điểm giúp <code>chooseActivity</code> kích hoạt tức thì không bị lỗi 'Không ở nơi chốn nào', đồng thời sửa lỗi so sánh slot ngăn chặn việc đánh dấu nhầm ô sự kiện vào danh sách đen.",
