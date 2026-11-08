@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.15.1
+// @version      7.15.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.15.1";
+      var TOOL_VER = "7.15.2";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -21630,6 +21630,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             kt: true,
             neHac: true,
             danhAi: true,
+            sanMucTieu: "uu_tien_dau_dan",
+            autoDuongThuong: true,
+            uuTienCapNen: true,
             toc: "nhanh",
           },
           km: {
@@ -21687,6 +21690,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             neHac: true,
             danhAi: true,
             uuTienSuKienTuVi: true,
+            sanMucTieu: "uu_tien_dau_dan",
+            autoDuongThuong: true,
+            uuTienCapNen: true,
           },
           tc: {
             autoCombatOverlay: true,
@@ -22229,6 +22235,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           AU.cfg.tl.mau = auMauNorm(AU.cfg.tl.mau || AU_DEF.tl.mau);
           if (typeof AU.cfg.tl.neHac !== "boolean") AU.cfg.tl.neHac = true;
           if (typeof AU.cfg.tl.danhAi !== "boolean") AU.cfg.tl.danhAi = true;
+          AU.cfg.tl.sanMucTieu = AU.cfg.tl.sanMucTieu || "uu_tien_dau_dan";
+          if (typeof AU.cfg.tl.autoDuongThuong !== "boolean")
+            AU.cfg.tl.autoDuongThuong = true;
+          if (typeof AU.cfg.tl.uuTienCapNen !== "boolean")
+            AU.cfg.tl.uuTienCapNen = true;
+          if (AU.cfg.san) {
+            AU.cfg.san.sanMucTieu =
+              AU.cfg.san.sanMucTieu || AU.cfg.tl.sanMucTieu || "uu_tien_dau_dan";
+            if (typeof AU.cfg.san.autoDuongThuong !== "boolean")
+              AU.cfg.san.autoDuongThuong = true;
+            if (typeof AU.cfg.san.uuTienCapNen !== "boolean")
+              AU.cfg.san.uuTienCapNen = true;
+          }
         }
         function auSave() {
           try {
@@ -23707,9 +23726,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 v.id === "ev.yeu_thu_lang_thang" ||
                 v.id === "ev.truy_tim_yeu" ||
                 v.id === "ev.truy_tim_dau_dan" ||
-                /chiến|đánh/i.test(pick.text)) &&
+                v.id === "ev.san_yeu_thu" ||
+                v.id === "ev.tm_yeu_dau_dan" ||
+                /chiến|đánh|săn|lùng/i.test(pick.text)) &&
               !pick.thoat
             );
+            const isApexFight = isFightChoice && /đầu đàn/i.test(pick.text);
             // Ghi nhớ thương thế trước khi thực hiện lựa chọn
             const curNvBefore = run.nhanVat;
             st.lastThuongThe = (curNvBefore && curNvBefore.thuongThe) || 0;
@@ -23719,6 +23741,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               (pick.chance ? ` [${pick.chance}]` : "");
             if (!isFightChoice) {
               auLog(`» Chọn: «${pickDesc}»...`, "vk-mu");
+            } else if (isApexFight) {
+              auLog(
+                `👑 Nghênh chiến Yêu Thú Đầu Đàn (Tinh Anh · Tu Vi x3 · Rơi x1.5)...`,
+                "vk-ok",
+              );
             }
             const r = auCall(() => g.choose(pick.index));
             if (!r.ok)
@@ -23729,14 +23756,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               st.fights = (st.fights || 0) + 1;
               if (!runAfter.ketThuc) st.wins = (st.wins || 0) + 1;
               st.hacStreak = 0;
-              auLog(
-                "Đã hạ " +
-                  (pick.text || "đối thủ") +
-                  " (Trận #" +
-                  st.fights +
-                  ").",
-                "vk-ok",
-              );
+              const winMsg = isApexFight
+                ? `👑 Đã trảm Yêu Thú Đầu Đàn (Tinh Anh) thành công! (+6 Tu Vi · Trận #${st.fights}).`
+                : `Đã hạ ${pick.text || "đối thủ"} (Trận #${st.fights}).`;
+              auLog(winMsg, "vk-ok");
             }
             return "ok";
           }
@@ -23756,17 +23779,70 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (nonThoat.length > 0) return nonThoat[0];
           }
           if (opt.hunt) {
-            if (v.id === "ev.san_yeu" || v.id === "ev.truy_tim_yeu") {
-              const c = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text));
-              if (c) return c;
+            const sanMucTieu = opt.sanMucTieu || "uu_tien_dau_dan";
+
+            if (v.id === "ev.san_yeu") {
+              const cBoss = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
+              const cNorm = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text));
+
+              if (sanMucTieu === "chi_dau_dan") {
+                if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+                  return cBoss;
+                }
+                const leave = cs.find((x) => x.thoat);
+                if (leave) return leave;
+              } else if (sanMucTieu === "thuong") {
+                if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+                  return cNorm;
+                }
+              } else {
+                // uu_tien_dau_dan (Mặc định)
+                if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+                  return cBoss;
+                }
+                if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+                  return cNorm;
+                }
+              }
+              const leave = cs.find((x) => x.thoat);
+              if (leave) return leave;
             }
-            if (v.id === "ev.yeu_thu_lang_thang") {
-              const c = cs.find((x) => !x.thoat && !x.chance);
-              if (c) return c;
-            }
+
             if (v.id === "ev.truy_tim_dau_dan") {
               const c = cs.find((x) => !x.thoat);
-              if (c) return c;
+              if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
+              const leave = cs.find((x) => x.thoat);
+              if (leave) return leave;
+            }
+
+            if (v.id === "ev.truy_tim_yeu") {
+              const c = cs.find((x) => !x.thoat);
+              if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
+              const leave = cs.find((x) => x.thoat);
+              if (leave) return leave;
+            }
+
+            if (v.id === "ev.yeu_thu_lang_thang") {
+              const c = cs.find((x) => !x.thoat && !x.chance);
+              if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
+            }
+
+            if (v.id === "ev.san_yeu_thu") {
+              const c = cs.find((x) => !x.thoat && /săn|chiến|đánh/i.test(x.text));
+              if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
+            }
+
+            if (v.id === "ev.tm_yeu_dau_dan") {
+              const cHelp = cs.find((x) => !x.thoat && /cùng.*ra tay/i.test(x.text));
+              const cDirect = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
+              const pickTm = cHelp || cDirect;
+              if (pickTm && (!pickTm.risk || auColorOK(pickTm.risk.level, opt.mau))) return pickTm;
+            }
+
+            if (v.id === "ev.ls_bay_yeu_thu") {
+              const cTha = cs.find((x) => /thả/i.test(x.text));
+              const cDan = cs.find((x) => /yêu đan|kết liễu/i.test(x.text));
+              return cTha || cDan || cs[0];
             }
           }
           if (opt.sdb) {
@@ -24479,6 +24555,43 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
 
         // ═════════ AUTO SĂN YÊU ═════════
+        // Tìm đan dược chữa thương trong túi đồ
+        function findHealItem(nv) {
+          if (!nv || !nv.tuiDo || !(nv.thuongThe > 0)) return null;
+          let Cc = null;
+          try {
+            Cc = C();
+          } catch (e) {}
+          const itemsMap = Cc && Cc.items;
+          if (!itemsMap) return null;
+          let best = null;
+          for (const [id, count] of Object.entries(nv.tuiDo)) {
+            if (!count || count <= 0) continue;
+            const it = itemsMap.get(id);
+            if (!it || !Array.isArray(it.dung)) continue;
+            // kiểm tra xem có gây thêm thương thế không (ví dụ đan bạo phát)
+            const hasPenalty = it.dung.some(
+              (d) => typeof d.thuong_the === "number" && d.thuong_the > 0,
+            );
+            if (hasPenalty) continue;
+            let healAmount = 0;
+            for (const d of it.dung) {
+              if (typeof d.heal === "number") healAmount += d.heal;
+            }
+            if (healAmount > 0) {
+              if (
+                !best ||
+                (healAmount >= nv.thuongThe && best.heal < nv.thuongThe) ||
+                (healAmount < best.heal && healAmount >= nv.thuongThe) ||
+                (best.heal < nv.thuongThe && healAmount > best.heal)
+              ) {
+                best = { id, ten: it.ten || id, heal: healAmount, count };
+              }
+            }
+          }
+          return best;
+        }
+
         // Nơi này có màu nằm trong danh sách được tích không (không đọc được màu thì coi là không được).
         function auSanSpotOK(c, slot, cfg) {
           const d = danger(c, slot);
@@ -24486,21 +24599,57 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         }
         function auHuntSpots(c, cfg, st) {
           const run = c.run,
+            nv = run.nhanVat,
             out = [];
+          const isChiDauDan = cfg && cfg.sanMucTieu === "chi_dau_dan";
+          const prioCapNen = cfg && cfg.uuTienCapNen !== false;
+          const nvCg = nv ? nv.canhGioi || 0 : 0;
+
           for (const x of nearSlots(c, cfg.maxY)) {
             if (!auIsWild(c, x.slot) || (st && st.bad.has(x.slot))) continue;
             const left = auHuntLeft(run, x.slot);
-            if (left < 1) continue;
+            if (left < (isChiDauDan ? 1.5 : 1)) continue;
             if (!auSanSpotOK(c, x.slot, cfg)) continue;
-            out.push({ slot: x.slot, y: x.y, left, d: danger(c, x.slot) });
+
+            let capNen = 0;
+            try {
+              if (c.world && typeof c.world.info === "function") {
+                const inf = c.world.info(x.slot);
+                capNen = inf && inf.capNen != null ? inf.capNen : 0;
+              }
+            } catch (e) {}
+
+            out.push({
+              slot: x.slot,
+              y: x.y,
+              left,
+              d: danger(c, x.slot),
+              capNen,
+            });
           }
-          // Ưu tiên nơi còn nhiều lượt săn, rồi nơi màu an toàn hơn, rồi nơi gần.
-          return out.sort(
-            (a, b) =>
-              Math.floor(b.left) - Math.floor(a.left) ||
-              (AU_HIEM[a.d.id] ?? 3) - (AU_HIEM[b.d.id] ?? 3) ||
-              a.y - b.y,
-          );
+
+          // Chấm điểm bãi săn thông minh:
+          // 1. Độ an toàn: Màu an toàn hơn ưu tiên trước (an_toan: 0, ngang_suc: 1, hiem: 2, tu_dia: 3)
+          // 2. Chênh lệch cảnh giới: bãi sát cảnh giới nhân vật nhận nhiều tu vi hơn
+          // 3. Khoảng cách: di chuyển gần đỡ tốn thọ nguyên
+          // 4. Lượt săn: bãi còn nhiều lượt săn
+          return out.sort((a, b) => {
+            const dangerA = AU_HIEM[a.d.id] ?? 3;
+            const dangerB = AU_HIEM[b.d.id] ?? 3;
+            if (dangerA !== dangerB) return dangerA - dangerB;
+
+            if (prioCapNen) {
+              const diffA = Math.abs(a.capNen - nvCg);
+              const diffB = Math.abs(b.capNen - nvCg);
+              const scoreA =
+                diffA * 3 + a.y * 2 - Math.min(3, Math.floor(a.left)) * 1.2;
+              const scoreB =
+                diffB * 3 + b.y * 2 - Math.min(3, Math.floor(b.left)) * 1.2;
+              return scoreA - scoreB || a.y - b.y;
+            }
+
+            return Math.floor(b.left) - Math.floor(a.left) || a.y - b.y;
+          });
         }
         // Tìm các sự kiện / địa danh / node có thể tăng tu vi xung quanh
         function auFindTuViSpots(c, cfg, st) {
@@ -24780,6 +24929,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             mau: cfg.mau,
             neHac: cfg.neHac !== false,
             danhAi: cfg.danhAi !== false,
+            sanMucTieu: cfg.sanMucTieu || "uu_tien_dau_dan",
           });
           if (p !== "idle") {
             if (p === "ok") return null;
@@ -24795,13 +24945,67 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             nv = run.nhanVat;
           if (st.fights >= cfg.tran)
             return { stop: "Đã đánh đủ " + cfg.tran + " trận như đã đặt" };
-          if ((nv.thuongThe || 0) >= cfg.thuong)
+          if ((nv.thuongThe || 0) >= (cfg.thuong != null ? cfg.thuong : 2)) {
+            const healPill = findHealItem(nv);
+            if (healPill) {
+              auLog(
+                `🩺 Thương thế ${AU_TT_TEN[nv.thuongThe]} (${nv.thuongThe}/${AU_TT_MAX})! Tự động dùng «${healPill.ten}» chữa thương...`,
+                "vk-ok",
+              );
+              const rHeal = auCall(() => {
+                if (typeof g.useItem === "function") g.useItem(healPill.id);
+              });
+              if (rHeal.ok) {
+                const nvAfter =
+                  G().state && G().state.run && G().state.run.nhanVat;
+                auLog(
+                  `🎉 Đã dùng «${healPill.ten}», thương thế hiện tại: ${AU_TT_TEN[nvAfter?.thuongThe || 0]}.`,
+                  "vk-ok",
+                );
+                return null;
+              }
+            }
+            if (cfg.autoDuongThuong !== false) {
+              const lifeLeft = auLifeLeft();
+              if (lifeLeft > (cfg.tho != null ? cfg.tho : 15) + 2) {
+                auLog(
+                  `🩺 Đang bị thương ${AU_TT_TEN[nv.thuongThe]} (${nv.thuongThe}/${AU_TT_MAX}) và không có đan trị thương. Tự động tạm bế quan tĩnh dưỡng 1 năm để phục hồi...`,
+                  "vk-warn",
+                );
+                const rBq = auCall(() => {
+                  if (typeof g.beQuan === "function") {
+                    try {
+                      g.beQuan();
+                    } catch (e) {}
+                  }
+                  if (typeof g.doRetreat === "function") {
+                    g.doRetreat({
+                      nam: 1,
+                      untilExhausted: false,
+                      nextMinorRealm: false,
+                      dan: [],
+                      autoBreak: [],
+                    });
+                  }
+                });
+                if (rBq.ok) {
+                  const nvHealed =
+                    G().state && G().state.run && G().state.run.nhanVat;
+                  auLog(
+                    `🌿 Đã hoàn tất 1 năm tĩnh dưỡng! Thương thế hiện tại: ${AU_TT_TEN[nvHealed?.thuongThe || 0]}. Tiếp tục săn yêu!`,
+                    "vk-ok",
+                  );
+                  return null;
+                }
+              }
+            }
             return {
               stop:
                 "Thương Thế đã tới mức " +
                 AU_TT_TEN[Math.min(AU_TT_MAX, nv.thuongThe)] +
-                ", dừng để bạn chữa thương",
+                ", dừng để bạn chữa thương (hoặc bật «Tự Động Trị Thương & Tĩnh Dưỡng»)",
             };
+          }
           if (auLifeLeft() < cfg.tho)
             return {
               stop:
@@ -24855,6 +25059,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             auSanSpotOK(c, run.viTri, cfg) &&
             g.canDo("ev.san_yeu")
           ) {
+            if (cfg.sanMucTieu === "chi_dau_dan" && auHuntLeft(run, run.viTri) < 1.5) {
+              st.bad.add(run.viTri);
+              auLog(
+                "Nơi này không đủ 2 lượt săn cho Đầu Đàn, tìm nơi khác...",
+                "vk-mu",
+              );
+              return null;
+            }
             if (cfg.neHac !== false && typeof g.huntTargets === "function") {
               try {
                 const tgs = g.huntTargets();
@@ -24983,6 +25195,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             mau: isDanhQuai ? cfg.mau : undefined,
             neHac: isDanhQuai ? cfg.neHac !== false : false,
             danhAi: isDanhQuai ? cfg.danhAi !== false : true,
+            sanMucTieu: isDanhQuai
+              ? cfg.sanMucTieu || "uu_tien_dau_dan"
+              : undefined,
             tl: true,
           });
           if (p !== "idle") {
@@ -25269,13 +25484,106 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             // === CHẾ ĐỘ ĐÁNH QUÁI (SĂN YÊU THÚ CÀY TU VI) ===
             if (cfg.tran && st.fights >= cfg.tran)
               return { stop: "Đã đánh đủ " + cfg.tran + " trận như đã đặt" };
-            if ((nv.thuongThe || 0) >= (cfg.thuong != null ? cfg.thuong : 2))
+            if ((nv.thuongThe || 0) >= (cfg.thuong != null ? cfg.thuong : 2)) {
+              // 1. Tự động kiểm tra nuốt đan dược chữa thương
+              const healPill = findHealItem(nv);
+              if (healPill) {
+                auLog(
+                  `🩺 Thương thế ${AU_TT_TEN[nv.thuongThe]} (${nv.thuongThe}/${AU_TT_MAX})! Tự động dùng «${healPill.ten}» chữa thương...`,
+                  "vk-ok",
+                );
+                const rHeal = auCall(() => {
+                  if (typeof g.useItem === "function") g.useItem(healPill.id);
+                });
+                if (rHeal.ok) {
+                  const nvAfter =
+                    G().state && G().state.run && G().state.run.nhanVat;
+                  auLog(
+                    `🎉 Đã dùng «${healPill.ten}», thương thế hiện tại: ${AU_TT_TEN[nvAfter?.thuongThe || 0]}.`,
+                    "vk-ok",
+                  );
+                  return null;
+                }
+              }
+
+              // 2. Nếu không có đan, kiểm tra tự động tĩnh dưỡng lành thương
+              if (cfg.autoDuongThuong !== false) {
+                const lifeLeft = auLifeLeft();
+                if (lifeLeft > (cfg.minTho != null ? cfg.minTho : 10) + 2) {
+                  auLog(
+                    `🩺 Đang bị thương ${AU_TT_TEN[nv.thuongThe]} (${nv.thuongThe}/${AU_TT_MAX}) và không có đan trị thương. Tự động tạm bế quan tĩnh dưỡng 1 năm để phục hồi thể trạng...`,
+                    "vk-warn",
+                  );
+                  if (
+                    !plan.here ||
+                    plan.here.chan ||
+                    !(plan.here.tuViNam > 0)
+                  ) {
+                    const spots = await scanRetreat(cLite, 3, null);
+                    if (spots && spots.length > 0) {
+                      const bestSpot = spots[0];
+                      auLog(
+                        `Chỗ này không bế quan được, di chuyển tới ${placeName(cLite, bestSpot.slot)} (${num(bestSpot.y)} năm) để dưỡng thương...`,
+                        "vk-mu",
+                      );
+                      const rTravel = auCall(() => g.travelTo(bestSpot.slot));
+                      if (!rTravel.ok) {
+                        return {
+                          stop:
+                            "Không di chuyển tới chỗ dưỡng thương được: " +
+                            rTravel.err,
+                        };
+                      }
+                      return null;
+                    }
+                  }
+                  // Tiến hành bế quan 1 năm dưỡng thương
+                  const rBq = auCall(() => {
+                    const rRun = G().state && G().state.run;
+                    if (
+                      rRun &&
+                      rRun.active &&
+                      (rRun.active.done || !rRun.active.waiting) &&
+                      typeof g.closeEncounter === "function"
+                    ) {
+                      try {
+                        g.closeEncounter();
+                      } catch (e) {}
+                    }
+                    if (typeof g.beQuan === "function") {
+                      try {
+                        g.beQuan();
+                      } catch (e) {}
+                    }
+                    if (typeof g.doRetreat === "function") {
+                      g.doRetreat({
+                        nam: 1,
+                        untilExhausted: false,
+                        nextMinorRealm: false,
+                        dan: [],
+                        autoBreak: [],
+                      });
+                    }
+                  });
+                  if (rBq.ok) {
+                    const nvHealed =
+                      G().state && G().state.run && G().state.run.nhanVat;
+                    auLog(
+                      `🌿 Đã hoàn tất 1 năm tĩnh dưỡng! Thương thế hiện tại: ${AU_TT_TEN[nvHealed?.thuongThe || 0]}. Tiếp tục săn quái cày tu vi!`,
+                      "vk-ok",
+                    );
+                    return null;
+                  }
+                }
+              }
+
               return {
                 stop:
                   "Thương Thế đã tới mức " +
                   AU_TT_TEN[Math.min(AU_TT_MAX, nv.thuongThe)] +
-                  ", dừng để bạn chữa thương",
+                  ", dừng để bạn chữa thương (hoặc bật «Tự Động Trị Thương & Tĩnh Dưỡng»)",
               };
+            }
 
             const cLite = ctxLite();
             const dNow = danger(cLite, run.viTri);
@@ -25456,6 +25764,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               auSanSpotOK(cLite, run.viTri, cfg) &&
               g.canDo("ev.san_yeu")
             ) {
+              if (cfg.sanMucTieu === "chi_dau_dan" && auHuntLeft(run, run.viTri) < 1.5) {
+                st.bad.add(run.viTri);
+                auLog(
+                  "Nơi này không đủ 2 lượt săn cho Đầu Đàn, tìm nơi khác...",
+                  "vk-mu",
+                );
+                return null;
+              }
               if (cfg.neHac !== false && typeof g.huntTargets === "function") {
                 try {
                   const tgs = g.huntTargets();
@@ -27271,6 +27587,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "au-tl-tu-vi-events",
               c.uuTienSuKienTuVi !== false,
             );
+            c.sanMucTieu = sel(
+              "au-tl-san-target",
+              c.sanMucTieu || "uu_tien_dau_dan",
+            );
+            c.autoDuongThuong = ck(
+              "au-tl-auto-duong-thuong",
+              c.autoDuongThuong !== false,
+            );
+            c.uuTienCapNen = ck(
+              "au-tl-uu-tien-cap-nen",
+              c.uuTienCapNen !== false,
+            );
             const m = AU_MAU_ID.filter((x) => {
               const el = q("au-tl-mau-" + x);
               return el ? el.checked : (c.mau || []).includes(x);
@@ -27286,6 +27614,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 danhAi: c.danhAi,
                 mau: c.mau,
                 toc: c.toc,
+                sanMucTieu: c.sanMucTieu,
+                autoDuongThuong: c.autoDuongThuong,
+                uuTienCapNen: c.uuTienCapNen,
               });
             }
             auSave();
@@ -28549,10 +28880,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <!-- KHỐI TÙY CHỌN ĐÁNH QUÁI (SĂN YÊU) -->
       <div id="au-tl-danh-quai-box" style="display:${isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
         <div style="font-weight:700;color:var(--acc);margin-bottom:6px">⚔️ Cài Đặt Đánh Quái (Săn Yêu Thú Cày Tu Vi)</div>
+        <label class="vk-row" style="margin:6px 0"><span><b>Mục Tiêu Săn Yêu:</b></span>
+          <select class="vk-sel" id="au-tl-san-target" style="width:230px;font-weight:600">
+            <option value="uu_tien_dau_dan" ${c.sanMucTieu === "uu_tien_dau_dan" || !c.sanMucTieu ? "selected" : ""}>👑 Ưu Tiên Lùng Đầu Đàn (Tu Vi x3 · Rơi x1.5 · Tự lùi nếu nguy)</option>
+            <option value="thuong" ${c.sanMucTieu === "thuong" ? "selected" : ""}>🐾 Chỉ Săn Yêu Thường (An toàn · 1 lượt)</option>
+            <option value="chi_dau_dan" ${c.sanMucTieu === "chi_dau_dan" ? "selected" : ""}>🔥 Chỉ Săn Đầu Đàn (Bỏ qua thú thường)</option>
+          </select>
+        </label>
         ${auFld("au-tl-maxy", "Mỗi Chặng Đi Tối Đa", c.maxY != null ? c.maxY : 3, "(năm)")}
         <div style="margin:8px 0 4px">${auMauHtml(c.mau || ["an_toan", "ngang_suc", "hiem"], "au-tl-mau")}</div>
         ${auFld("au-tl-tran", "Dừng Sau Số Trận (0 = không giới hạn, đánh tới khi viên mãn)", c.tran != null ? c.tran : 20)}
         ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-auto-duong-thuong" ${c.autoDuongThuong !== false ? "checked" : ""} style="margin-top:3px"><span><b>🩺 Tự Động Trị Thương & Tĩnh Dưỡng (Không dừng Auto)</b> <span class="vk-mu" style="font-size:11px">(Tự nuốt đan dược chữa thương trong túi; nếu hết đan sẽ tự động bế quan ngắn 1 năm để vết thương tự lành lặn và tích thêm tu vi, sau đó tiếp tục đi săn)</span></span></label>
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-uu-tien-cap-nen" ${c.uuTienCapNen !== false ? "checked" : ""} style="margin-top:3px"><span><b>🎯 Ưu Tiên Bãi Săn Sát Cảnh Giới Nhân Vật (Tối Ưu Tu Vi)</b> <span class="vk-mu" style="font-size:11px">(Chọn bãi hoang dã có cấp cảnh giới sát nhân vật nhất để nhận được lượng tu vi lớn nhất mỗi trận)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc... tự chọn Bỏ Đi khi gặp để không bị trừ Khí Vận)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-danh-ai" ${c.danhAi !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Dùng Siêu AI VIP tự đánh khi game khóa nút Tốc Chiến)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-tu-vi-events" ${c.uuTienSuKienTuVi !== false ? "checked" : ""} style="margin-top:3px"><span><b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi (Kỳ Ngộ, Bí Cảnh, Di Tích...)</b> <span class="vk-mu" style="font-size:11px">(Khi phát hiện sự kiện / kỳ ngộ / bí cảnh quanh đây có thể nhận nhiều tu vi, Auto sẽ ưu tiên tới tham gia trước khi săn quái để tu luyện nhanh nhất)</span></span></label>
@@ -28612,7 +28952,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     ? `<div class="vk-mu" style="font-size:13px;margin:8px 0">Cảnh giới <b>${esc(pw.realm)}</b>: thắng chắc <b>${pw.win}</b> · có thể thắng ${pw.maybe} · dễ thua ${pw.lose} (trên ${pw.n} yêu thú mẫu).</div>`
                     : '<div class="vk-mu" style="font-size:13px;margin:8px 0">Chưa đo được sức (thiếu dữ liệu yêu thú hoặc hàm mô phỏng).</div>') +
                   (spots.length
-                    ? `<table class="vk-t"><tr><th>Nơi</th><th>Đường</th><th>Lượt Săn</th></tr>${spots.map((x) => `<tr><td>${esc(placeName(c2, x.slot))}<br>${dangerTag(x.d)}</td><td>${yrs(x.y)}</td><td>${Math.floor(x.left)}</td></tr>`).join("")}</table>`
+                    ? `<table class="vk-t"><tr><th>Nơi</th><th>Cấp Nền</th><th>Đường</th><th>Lượt Săn</th></tr>${spots.map((x) => `<tr><td>${esc(placeName(c2, x.slot))}<br>${dangerTag(x.d)}</td><td>${realmName(x.capNen || 0)} (Cấp ${x.capNen || 0})</td><td>${yrs(x.y)}</td><td>${Math.floor(x.left)}</td></tr>`).join("")}</table>`
                     : '<div class="vk-mu" style="font-size:13px">Không có nơi hoang dã nào thuộc màu đã chọn (' +
                       esc(auMauLabel(cfg.mau)) +
                       ") trong bán kính đã đặt.</div>") +
@@ -31761,9 +32101,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.15.1 · Sửa Lỗi Anneal testNext & Nổi Bật Tính Năng Tẩy Ô",
+            t: "Phiên Bản 7.15.2 · Nâng Cấp Auto Tu Luyện & Tùy Chọn Săn Yêu Toàn Diện",
             d: "08/11/2026",
             now: true,
+            pts: [
+              "<b>Chế Độ Săn Yêu Đột Phá (Boss Đầu Đàn):</b> Bổ sung tùy chọn mục tiêu săn yêu linh hoạt: <i>👑 Ưu Tiên Lùng Đầu Đàn (Nhận Tu Vi x3 & Rơi Đồ x1.5 · Tự lùi về thường nếu nguy hiểm)</i>, <i>🐾 Chỉ Săn Yêu Thường (An toàn · 1 lượt)</i>, <i>🔥 Chỉ Săn Đầu Đàn (Bỏ qua thú thường)</i>. Tự động nhận diện và tính toán nguy cơ chiến đấu trước khi quyết định.",
+              "<b>Tự Động Trị Thương & Tĩnh Dưỡng Lành Thể (Auto Duong Thuong):</b> Khi thương thế chạm ngưỡng (Thương nhẹ/Thương nặng), Tool tự động kiểm tra và nuốt ngay đan dược chữa thương trong túi (Hồi Xuân Đan, Sinh Cơ Đan, Cửu Chuyển Kim Đan...); nếu hết đan dược sẽ tự động tạm bế quan 1 năm tĩnh dưỡng để vết thương hoàn toàn lành lặn và tích thêm tu vi, sau đó tự động tiếp tục đi săn mà không bị dừng Auto.",
+              "<b>Thuật Toán Đánh Giá Bãi Săn Thông Minh (Smart Hunt Spots):</b> Tích hợp đọc Cấp Nền (cảnh giới yêu thú của ô hoang dã), ưu tiên các bãi săn có cấp cảnh giới sát với nhân vật nhất để tối đa hóa tu vi nhận được mỗi trận; đồng thời tối ưu hóa khoảng cách di chuyển để tiết kiệm thọ nguyên tối đa.",
+              "<b>Hỗ Trợ Mở Rộng Kỳ Ngộ Săn Thú:</b> Xử lý mượt mà và thông minh tất cả các biến thể sự kiện săn yêu trong game: <code>ev.san_yeu</code>, <code>ev.truy_tim_dau_dan</code>, <code>ev.truy_tim_yeu</code>, <code>ev.san_yeu_thu</code>, <code>ev.tm_yeu_dau_dan</code> (Yêu đầu đàn quấy sơn môn), <code>ev.ls_bay_yeu_thu</code> (Cứu thú trong bẫy tích phúc phận/khí vận).",
+              "<b>Tương Thích Bản Cập Nhật Mới Nhất:</b> Đồng bộ các cập nhật hệ thống của game (chỉ số tốc độ tu luyện thụ động của công pháp Khôi Lỗi Ngự Linh, điều chỉnh mở thẳng bảng treo thưởng, các mở khóa Luân Hồi thiên mệnh chọn linh căn/thể chất)."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.15.1 · Sửa Lỗi Anneal testNext & Nổi Bật Tính Năng Tẩy Ô",
+            d: "08/11/2026",
+            now: false,
             pts: [
               "<b>Sửa Lỗi ReferenceError testNext:</b> Khắc phục triệt để lỗi <code>Cannot access testNext before initialization</code> trong nhánh hoán đổi đồ của thuật toán Tôi Luyện Luyện Kim (Annealing), giúp Auto Kinh Mạch và Xem Trước chạy trơn tru 100%.",
               "<b>Khắc Phục Lỗi Hiển Thị Banner Hướng Build:</b> Sửa lỗi hiển thị số món trên kinh mạch và trong túi bị 0 dù nhân vật đã có trang bị, nay liên kết chuẩn xác với <code>buildFit</code> của hướng build.",
