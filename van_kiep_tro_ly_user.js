@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.15.0
+// @version      7.15.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.15.0";
+      var TOOL_VER = "7.15.1";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -6952,8 +6952,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const i = Math.floor(rnd() * next.length);
               const f = free();
               if (!f.length) continue;
-              const id = pickWeightedFree(f, testNext);
               const testNext = next.filter((_, idx) => idx !== i);
+              const id = pickWeightedFree(f, testNext);
               const c = smart(id, testNext);
               if (!c || overlaps(testNext, c)) continue;
               next[i] = c;
@@ -19830,6 +19830,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const curPreset =
             HB_PRESETS.find((p) => p.id === (F.preset || "all")) ||
             HB_PRESETS[0];
+          const bFit = buildFit(b, nv, cur);
 
           body.innerHTML = `
     <!-- ═════════ 1. BANNER TRẠNG THÁI BUILD & CHÂN KHÍ ═════════ -->
@@ -19840,13 +19841,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             <span>🧭</span> Hướng Build: <span style="color:var(--acc2)">${esc(b.ten)}</span>
             <span style="font-size:12px;font-weight:normal" class="vk-mu">(${esc(b.nhom)})</span>
           </h3>
-          <div class="vk-mu" style="font-size:12px;margin-top:2px">
-            Cảnh giới: <b>${esc(realmName(cur))}</b> · Đang dùng: <b>${b.onKm || 0}</b> món trên kinh mạch (${b.inBag || 0} trong túi)
+          <div class="vk-mu" style="font-size:12.5px;margin-top:2px">
+            Cảnh giới: <b>${esc(realmName(cur))}</b> · Đang dùng: <b>${bFit.onKm || 0}</b> món trên kinh mạch (${bFit.inBag || 0} trong túi)
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:${b.color || '#3b82f6'}22;color:${b.color || '#3b82f6'};border:1px solid ${b.color || '#3b82f6'}55">
-            ${b.badge || 'Khả Dụng'}
+          <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:${bFit.color || '#3b82f6'}22;color:${bFit.color || '#3b82f6'};border:1px solid ${bFit.color || '#3b82f6'}55">
+            ${bFit.badge || 'Khả Dụng'}
           </span>
         </div>
       </div>
@@ -19900,10 +19901,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       ${auSel("au-km-it", "Độ Kỹ Luyện Kim", AU_KM_IT, cfg.iters)}
       ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}
 
-      <!-- Tùy Chọn Nâng Cao Gọn Gàng -->
-      <details style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">
-        <summary style="font-size:12.5px;font-weight:600;color:var(--mut);cursor:pointer">
-          🔧 Tùy Chọn Nâng Cao (Hai Bộ, Mở Ô, Tẩy Ô, Theo Dõi)
+      <!-- Tùy Chọn Nâng Cao (Mở Sẵn) -->
+      <details open style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">
+        <summary style="font-size:13px;font-weight:600;color:var(--txt);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>🔧 Tùy Chọn Nâng Cao (Hai Bộ, Mở Ô, Tẩy Ô, Theo Dõi)</span>
+          <span style="font-size:11.5px;font-weight:normal" class="vk-mu">Mở ô: <b class="${cfg.mo ? 'vk-ok' : ''}">${cfg.mo ? 'Bật' : 'Tắt'}</b> · Tẩy ô: <b class="${cfg.tayO ? 'vk-ok' : ''}">${cfg.tayO ? 'Bật' : 'Tắt'}</b></span>
         </summary>
         <div style="margin-top:8px;padding-left:6px">
           <div style="margin:6px 0 2px"><b style="font-size:12.5px">Hai Bộ Kinh Mạch</b> <span class="vk-mu" style="font-size:11px">(đang có ${slots}/3 bộ)</span></div>
@@ -19923,8 +19925,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           ${auChk("au-km-mo", "Tự Mở Ô Khi Có Lợi", cfg.mo, "(chỉ mở khi lợi từ " + AU_KM_MO_MIN + " điểm)")}
           ${auRow("Mở Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-momax" type="number" min="1" max="20" step="1" value="${cfg.moMax}" style="width:85px;text-align:right">`)}
 
-          <div style="margin:8px 0 2px"><b style="font-size:12.5px">Tẩy Ô (Đổi Hệ Ô)</b> <span class="vk-mu" style="font-size:11px">(còn ${doiMauLeft} lượt chuyển hệ)</span></div>
-          ${auChk("au-km-tayo", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(đổi hệ ô sang hệ công pháp / vô sắc để kích hoạt 100% tương sinh)")}
+          <div style="margin:8px 0 2px"><b style="font-size:12.5px;color:#3b82f6">🎨 Tẩy Ô (Đổi Hệ Ô Kinh Mạch)</b> <span class="vk-mu" style="font-size:11px">(còn ${doiMauLeft} lượt chuyển hệ)</span></div>
+          ${auChk("au-km-tayo", "Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa", cfg.tayO, "(đổi hệ ô sang hệ công pháp / vô sắc để kích hoạt 100% tương sinh; tự cắn Tẩy Tủy Đan / Cải Mệnh Đan nếu hết lượt)")}
           ${auRow("Tẩy Tối Đa Mỗi Lần Chạy", `<input class="vk-sel" id="au-km-taymax" type="number" min="1" max="20" step="1" value="${cfg.tayMax != null ? cfg.tayMax : 3}" style="width:85px;text-align:right">`)}
 
           <div style="margin:8px 0 2px"><b style="font-size:12.5px">Theo Dõi Tự Động</b></div>
@@ -19941,6 +19943,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       </div>
       <div class="vk-mu" style="font-size:12.5px">
         Tool sử dụng thuật toán Luyện Kim Hai Hạt Giống (Dual-Seed Annealing) cùng <b>Động Cơ Bền Vững Chân Khí</b> để tìm cách xếp tối ưu nhất từ đồ trong túi, bảo đảm <b>tự cấp chân khí không cần cắn đan</b>, sau đó tự gỡ, đặt, mở ô, tẩy ô vào game.
+      </div>
+      <div style="margin-top:5px;font-size:12px;color:var(--txt);display:flex;gap:12px;flex-wrap:wrap">
+        <span>⚙️ Thiết lập nâng cao:</span>
+        <span class="${cfg.mo ? 'vk-ok' : 'vk-mu'}">Mở ô: <b>${cfg.mo ? 'BẬT (tối đa ' + cfg.moMax + ')' : 'TẮT'}</b></span>
+        <span class="${cfg.tayO ? 'vk-ok' : 'vk-mu'}">Tẩy ô: <b>${cfg.tayO ? 'BẬT (tối đa ' + (cfg.tayMax || 3) + ')' : 'TẮT'}</b></span>
+        <span class="vk-mu">(Bật/Tắt ngay tại mục <b>Tùy Chọn Nâng Cao</b> ở trên)</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">
         <button class="vk-btn au-go" id="au-run" style="flex:1.2;min-width:140px;padding:9px 12px;font-size:13.5px;font-weight:bold;background:linear-gradient(135deg, #10b981, #059669)">
@@ -31753,9 +31761,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
+            t: "Phiên Bản 7.15.1 · Sửa Lỗi Anneal testNext & Nổi Bật Tính Năng Tẩy Ô",
+            d: "08/11/2026",
+            now: true,
+            pts: [
+              "<b>Sửa Lỗi ReferenceError testNext:</b> Khắc phục triệt để lỗi <code>Cannot access testNext before initialization</code> trong nhánh hoán đổi đồ của thuật toán Tôi Luyện Luyện Kim (Annealing), giúp Auto Kinh Mạch và Xem Trước chạy trơn tru 100%.",
+              "<b>Khắc Phục Lỗi Hiển Thị Banner Hướng Build:</b> Sửa lỗi hiển thị số món trên kinh mạch và trong túi bị 0 dù nhân vật đã có trang bị, nay liên kết chuẩn xác với <code>buildFit</code> của hướng build.",
+              "<b>Nổi Bật Tùy Chọn Auto Tẩy Ô (Đổi Hệ Ô):</b> Mở sẵn mục Tùy Chọn Nâng Cao, hiển thị trạng thái Bật/Tắt rõ ràng kèm ghi chú tự động cắn đan Tẩy Tủy / Cải Mệnh / Dịch Cốt từ túi đồ."
+            ],
+          },
+          {
             t: "Phiên Bản 7.15.0 · Đại Trùng Tu Tab Hướng Build & Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine)",
             d: "07/11/2026",
-            now: true,
+            now: false,
             pts: [
               "<b>Đại Trùng Tu Tab Hướng Build & Auto Kinh Mạch:</b> Tái cấu trúc toàn diện giao diện theo 4 phân khu chuyên nghiệp, mạch lạc, thẩm mỹ cao: <i>Thanh Trạng Thái & Presets</i> → <i>⚙️ Cài Đặt Chiến Thuật & Tỉ Lệ Mạch</i> → <i>🚀 Bảng Điều Khiển Auto Trực Tiếp & Giám Sát Chân Khí Bền Vững</i> → <i>🧪 Phòng Thí Nghiệm Xếp Thử Cảnh Giới</i> → <i>🗺️ Lộ Trình Săn Đồ & Hướng Build</i>.",
               "<b>Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine):</b> Đo lường chính xác tốc độ tiêu hao chân khí trung bình mỗi lượt (Drain Rate per Turn) dựa trên phí linh lực và thời gian hồi chiêu của từng chiêu thức so với linh lực hồi mỗi lượt. Phạt luỹ tiến cực nặng khi thâm hụt chân khí, triệt tiêu hoàn toàn căn bệnh 'loạn chiêu, vào trận cạn sạch chân khí toàn phải cắn đan'!",
