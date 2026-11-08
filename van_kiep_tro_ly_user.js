@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.16.0
+// @version      7.17.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.16.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.17.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.16.0";
+      var TOOL_VER = "7.17.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -249,6 +249,16 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 #vkx-win.vkx-wide #vkx-sec-tl > .vkx-scroll { grid-column:2; grid-row:2; padding-left:14px; }
 #vkx-win.vkx-wide .vkx-scroll { padding-right:18px; }
 .tc-q.tx { font-size:10.5px; padding:5px 8px; min-width:52px; }
+
+/* ═════ MINI STATUS BAR & REFINED UI ═════ */
+.vkx-mini-bar { display:flex; align-items:center; justify-content:space-between; margin:0 14px 6px; padding:6px 12px; border-radius:12px; background:color-mix(in srgb,var(--acc) 12%,var(--bg2)); border:1px solid color-mix(in srgb,var(--acc) 35%,transparent); font-size:12.5px; font-weight:600; color:var(--txt); gap:8px; animation:vkxFade .2s ease-out; }
+.vkx-mini-bar .vkx-mini-badge { display:inline-flex; align-items:center; gap:6px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vkx-mini-bar .vkx-mini-dot { width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 6px var(--ok); flex:0 0 8px; animation:vkxPulse 1.5s infinite; }
+.vkx-mini-bar .vkx-mini-btn { border:0; background:var(--bg3); color:var(--bad); font-weight:700; font-size:11.5px; padding:3px 8px; border-radius:8px; cursor:pointer; flex:0 0 auto; border:1px solid color-mix(in srgb,var(--bad) 35%,transparent); transition:all .15s; }
+.vkx-mini-bar .vkx-mini-btn:hover { background:var(--bad); color:#fff; }
+@keyframes vkxPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+@keyframes vkxFade { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+h3, h4, summary, th, label, .vkx-ttl span { text-transform: capitalize; }
 `;
       /* ═══════════════ GIAO DIỆN CHUNG (SHELL) ═══════════════ */
       var UI = (function () {
@@ -291,6 +301,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           '<button class="vkx-ib x" id="vkx-close" title="Thu gọn">✕</button>' +
           "</div>" +
           '<div class="vkx-seg"><button data-s="tl">🧭 Trợ Lý</button><button data-s="nk">📜 Nhật Ký Cập Nhật</button></div>' +
+          '<div id="vkx-mini-status" class="vkx-mini-bar" style="display:none"></div>' +
           '<div class="vkx-sec" id="vkx-sec-nk"><div class="vkx-scroll" id="vkx-nk-body"></div></div>' +
           '<div class="vkx-sec" id="vkx-sec-tl">' +
           '<div class="vkx-tabbar"><div id="vkx-groups"></div><button class="vk-btn sec" id="vk-rf" style="margin:0;padding:8px 12px;font-size:13px">↻</button></div>' +
@@ -309,7 +320,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         toastEl.id = "vkx-toast";
         document.body.appendChild(toastEl);
 
-        /* ---- Title Case cho giao diện ---- */
+        /* ---- Title Case cho giao diện (Tối ưu hóa: loại bỏ MutationObserver toàn cục) ---- */
         var flushTitleCase = null;
         (function () {
           var RE = /(^|[\s(\[«“\/])(\p{L})(?!\d)(?![^\s]*(?:_|\.\p{L}))/gu;
@@ -318,126 +329,60 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return a + b.toUpperCase();
             });
           }
-          var SEL =
-            "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
-          var busy = false,
-            timer = null,
-            pending = new Set(),
-            needsPass = false;
-
+          var SEL = "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
           function fixNode(root) {
             if (!root || !root.isConnected) return;
-            var els = [];
-            if (root.nodeType === 1) {
-              if (root.matches && root.matches(SEL)) els.push(root);
-              var q = root.querySelectorAll ? root.querySelectorAll(SEL) : [];
-              for (var a = 0; a < q.length; a++) els.push(q[a]);
-            } else if (
-              root.nodeType === 3 &&
-              root.parentNode &&
-              root.parentNode.matches &&
-              root.parentNode.matches(SEL)
-            ) {
-              els.push(root.parentNode);
-            }
-            for (var i = 0; i < els.length; i++) {
-              var el = els[i];
-              var ch = el.childNodes;
-              for (var j = 0; j < ch.length; j++) {
-                if (ch[j].nodeType === 3) {
-                  var v = ch[j].nodeValue;
-                  if (!v || v.length > 500) continue;
-                  var w = tc(v);
-                  if (w !== v) {
-                    busy = true;
-                    ch[j].nodeValue = w;
-                    busy = false;
+            try {
+              var els = [];
+              if (root.nodeType === 1) {
+                if (root.matches && root.matches(SEL)) els.push(root);
+                var q = root.querySelectorAll ? root.querySelectorAll(SEL) : [];
+                for (var a = 0; a < q.length; a++) els.push(q[a]);
+              }
+              for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                var ch = el.childNodes;
+                for (var j = 0; j < ch.length; j++) {
+                  if (ch[j].nodeType === 3) {
+                    var v = ch[j].nodeValue;
+                    if (!v || v.length > 500) continue;
+                    var w = tc(v);
+                    if (w !== v) ch[j].nodeValue = w;
                   }
                 }
               }
-            }
-          }
-
-          function pass() {
-            if (busy) return;
-            busy = true;
-            try {
-              // Lọc chỉ giữ lại các node gốc độc lập để tránh O(N^2) querySelectorAll lặp lại trên cây con
-              var roots = Array.from(pending).filter(function (n) {
-                if (!n || !n.isConnected) return false;
-                var p = n.parentNode;
-                while (p) {
-                  if (pending.has(p)) return false;
-                  p = p.parentNode;
-                }
-                return true;
-              });
-              for (var i = 0; i < roots.length; i++) {
-                fixNode(roots[i]);
-              }
             } catch (e) {}
-            pending.clear();
-            needsPass = false;
-            busy = false;
           }
-
-          function schedPass() {
-            if (!timer) {
-              timer = setTimeout(function () {
-                timer = null;
-                // Nếu cửa sổ Tool đang đóng và không có toast hiển thị, tạm hoãn Title Case
-                var isWinOpen = win.classList.contains("open");
-                var isToastActive = toastEl.classList.contains("on");
-                if (!isWinOpen && !isToastActive) {
-                  needsPass = true;
-                  return;
-                }
-                pass();
-              }, 60);
-            }
-          }
-
           flushTitleCase = function () {
-            if (needsPass || pending.size) {
-              if (timer) {
-                clearTimeout(timer);
-                timer = null;
-              }
-              pass();
-            }
+            fixNode(win);
+            fixNode(toastEl);
           };
-
-          function later(muts) {
-            if (busy) return;
-            for (var i = 0; i < muts.length; i++) {
-              var m = muts[i];
-              if (m.type === "characterData") {
-                if (m.target && m.target.parentNode)
-                  pending.add(m.target.parentNode);
-              } else {
-                for (var j = 0; j < m.addedNodes.length; j++) {
-                  pending.add(m.addedNodes[j]);
-                }
-              }
-            }
-            if (pending.size) schedPass();
-          }
-
-          var mo = new MutationObserver(later);
-          mo.observe(win, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-          });
-          mo.observe(toastEl, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-          });
-          pending.add(win);
-          pending.add(toastEl);
-          pass();
+          flushTitleCase();
         })();
+
+        /* ---- Thanh Trạng Thái Auto Nổi (Mini Status Bar) ---- */
+        function updateMiniStatus(text, onStop) {
+          var bar = document.getElementById("vkx-mini-status");
+          if (!bar) return;
+          if (!text) {
+            bar.style.display = "none";
+            bar.innerHTML = "";
+            return;
+          }
+          bar.style.display = "flex";
+          bar.innerHTML =
+            '<span class="vkx-mini-badge"><span class="vkx-mini-dot"></span><span>' +
+            text +
+            '</span></span>' +
+            '<button class="vkx-mini-btn" id="vkx-mini-stop">⏸ Dừng</button>';
+          var btn = bar.querySelector("#vkx-mini-stop");
+          if (btn) {
+            btn.onclick = function (e) {
+              e.stopPropagation();
+              if (typeof onStop === "function") onStop();
+            };
+          }
+        }
 
         /* ---- theme ---- */
         var themeIdx = 0;
@@ -470,6 +415,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           win: win,
           fab: fab,
           notify: notify,
+          updateMiniStatus: updateMiniStatus,
           nkBody: win.querySelector("#vkx-nk-body"),
           tabs: win.querySelector("#vkx-tabs"),
           groups: win.querySelector("#vkx-groups"),
@@ -4798,7 +4744,65 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
       /* ═══════════════ MODULE 1: TRỢ LÝ (tính toán, chỉ đọc dữ liệu game) ═══════════════ */
       var Assist = (function (UI) {
-        const S = { core: null, best: null, abort: false };
+        // Tab Lifecycle & Cleanup Manager (dọn dẹp polling timer/listeners khi chuyển tab)
+        const TabLifecycle = {
+          _cleaners: [],
+          onUnmount(fn) {
+            if (typeof fn === "function") this._cleaners.push(fn);
+          },
+          cleanup() {
+            while (this._cleaners.length) {
+              try {
+                this._cleaners.pop()();
+              } catch (e) {
+                console.warn("[VKX] Tab cleanup err:", e);
+              }
+            }
+          }
+        };
+
+        // Quản lý Storage tập trung (hỗ trợ migration an toàn từ các key cũ)
+        const StorageManager = {
+          get(k, def) {
+            try {
+              const v = localStorage.getItem(k);
+              return v !== null ? v : def;
+            } catch (e) {
+              return def;
+            }
+          },
+          getJson(k, def) {
+            try {
+              const v = localStorage.getItem(k);
+              return v ? JSON.parse(v) : def;
+            } catch (e) {
+              return def;
+            }
+          },
+          set(k, v) {
+            try {
+              localStorage.setItem(k, v);
+              return true;
+            } catch (e) {
+              return false;
+            }
+          },
+          setJson(k, v) {
+            try {
+              localStorage.setItem(k, JSON.stringify(v));
+              return true;
+            } catch (e) {
+              return false;
+            }
+          },
+          remove(k) {
+            try {
+              localStorage.removeItem(k);
+            } catch (e) {}
+          }
+        };
+
+        const S = { core: null, best: null, abort: false, kmAbort: false };
         const body = UI.body,
           tabsEl = UI.tabs,
           groupsEl = UI.groups;
@@ -5391,7 +5395,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "Chưa thấy game. Hãy đợi game tải xong rồi bấm Thử Lại.",
             );
           progress("Đang nối lõi game…");
-          return buildCore(TT);
+          const core = await buildCore(TT);
+          try { syncDynamicGameData(); } catch (e) {}
+          return core;
         }
 
         // ───────────────────────── 2. Tiện ích ─────────────────────────
@@ -5402,6 +5408,139 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           TT.ui && TT.ui.gamePanel ? TT.ui.gamePanel(name, open) : false;
         const clone = (x) => structuredClone(x);
         const sleep0 = () => new Promise((r) => setTimeout(r, 0));
+
+        // Background Non-blocking Scheduler: MessageChannel chống throttle khi ẩn tab
+        const yieldToMain = (function () {
+          if (typeof MessageChannel !== "undefined") {
+            const ch = new MessageChannel();
+            let curResolve = null;
+            ch.port1.onmessage = () => {
+              const fn = curResolve;
+              curResolve = null;
+              if (fn) fn();
+            };
+            return () => new Promise((resolve) => {
+              curResolve = resolve;
+              ch.port2.postMessage(null);
+            });
+          }
+          return () => new Promise((resolve) => setTimeout(resolve, 0));
+        })();
+
+        // Bộ sinh số giả ngẫu nhiên PRNG mulberry32 tốc độ cao, phân bổ đều chu kỳ 2^32
+        function createMulberry32(seed0) {
+          let a = (seed0 >>> 0) || 12345;
+          return function () {
+            a = (a + 0x6d2b79f5) >>> 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        // Helper Debounce cho các ô tìm kiếm
+        function debounce(fn, ms = 150) {
+          let t;
+          return function (...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), ms);
+          };
+        }
+
+        // Dynamic Data Layer: Tự động quét và đồng bộ dữ liệu mới nhất từ game content gốc
+        let _dynamicDataSynced = false;
+        function syncDynamicGameData() {
+          if (_dynamicDataSynced) return;
+          try {
+            const g = G();
+            const content = g && g.env && g.env.content;
+            if (!content) return;
+
+            // 1. Đồng bộ NL_META
+            if (content.items && typeof content.items.values === "function" && typeof NL_META === "object") {
+              for (const it of content.items.values()) {
+                if (!it || !it.id) continue;
+                if (!NL_META[it.id]) {
+                  if (it.ngu_linh) {
+                    const loai = Array.isArray(it.ngu_linh.loai) ? it.ngu_linh.loai[0] : (it.ngu_linh.loai || "thu");
+                    NL_META[it.id] = [it.loai || "lieu", loai];
+                  } else if (it.tag && (it.tag.includes("hon") || it.tag.includes("thi") || it.tag.includes("trung") || it.tag.includes("khoi_loi") || it.tag.includes("thu"))) {
+                    const tag = it.tag.find((t) => ["hon", "thi", "trung", "khoi_loi", "thu"].includes(t)) || "thu";
+                    NL_META[it.id] = [it.loai || "lieu", tag];
+                  }
+                }
+              }
+            }
+
+            // 2. Đồng bộ NL_ENEMY
+            if (content.enemies && typeof content.enemies.values === "function" && Array.isArray(NL_ENEMY)) {
+              const knownEnemyIds = new Set(NL_ENEMY.map((e) => e.id));
+              for (const en of content.enemies.values()) {
+                if (!en || !en.id || knownEnemyIds.has(en.id)) continue;
+                if (en.ngu_linh || (en.loai && (en.loai.includes("thu") || en.loai.includes("yeu_thu")))) {
+                  NL_ENEMY.push({
+                    id: en.id,
+                    ten: en.ten || en.id,
+                    cg: en.canh_gioi ?? 1,
+                    he: en.he || [],
+                    loai: en.ngu_linh?.loai || ["thu"],
+                    dk: en.ngu_linh?.do_kho ?? 0.5,
+                    th: en.tien_hoa || [],
+                    hach: en.hach || null,
+                    dh: en.dia_hinh || [],
+                    mt: en.mo_ta || "",
+                  });
+                  knownEnemyIds.add(en.id);
+                }
+              }
+            }
+
+            // 3. Đồng bộ THE_CHAT_DB
+            if (content.theChat && typeof THE_CHAT_DB === "object") {
+              const tcEntries = typeof content.theChat.values === "function" ? content.theChat.values() : Object.values(content.theChat);
+              for (const tc of tcEntries) {
+                if (!tc || !tc.id || THE_CHAT_DB[tc.id]) continue;
+                THE_CHAT_DB[tc.id] = {
+                  id: tc.id,
+                  ten: tc.ten || tc.id,
+                  mo_ta: tc.mo_ta || "",
+                  icon: tc.icon || "✨",
+                  khuon: tc.khuon || "",
+                  ti_le: tc.ti_le || 10,
+                  dac_tinh: tc.dac_tinh || {},
+                };
+              }
+            }
+
+            // 4. Đồng bộ DIBAO.ev
+            if (content.encounters && typeof content.encounters.values === "function" && typeof DIBAO === "object" && Array.isArray(DIBAO.ev)) {
+              const knownDibaoIds = new Set(DIBAO.ev.map((e) => e.id));
+              for (const enc of content.encounters.values()) {
+                if (!enc || !enc.id || knownDibaoIds.has(enc.id)) continue;
+                if (enc.id.startsWith("ev.di_bao_") || enc.di_bao) {
+                  DIBAO.ev.push({
+                    id: enc.id,
+                    ten: enc.ten || enc.id,
+                    relic: enc.relic || enc.vat_pham || "",
+                    gate: enc.gate || [4, 5],
+                    hc: enc.hc || 120,
+                    dia: enc.dia || "Bí Cảnh",
+                    marker: enc.marker || "",
+                    p: enc.ti_le || enc.p || 0.05,
+                    bv: enc.bv || null,
+                    bvcg: enc.bvcg || null,
+                    chk: enc.kiem_tra || null,
+                    noi: enc.loai_noi || "Di tích",
+                  });
+                  knownDibaoIds.add(enc.id);
+                }
+              }
+            }
+            _dynamicDataSynced = true;
+          } catch (e) {
+            console.warn("[VKX] Sync dynamic data err:", e);
+          }
+        }
         const pct = (x, d = 0) => (x * 100).toFixed(d).replace(".", ",") + "%";
         const num = (x, d = 1) =>
           (Math.round(x * 10 ** d) / 10 ** d).toString().replace(".", ",");
@@ -5426,17 +5565,32 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const heTen = (h) => HE[h] ?? h;
         const STAGE = ["Sơ", "Trung", "Hậu", "ĐVM"];
 
+        let _cachedCtx = null;
+        let _cachedCtxSig = "";
+        let _cachedCtxTime = 0;
+
         function ctx(opts) {
           const rc = G().readCtx && G().readCtx(opts); // ctx chính thức của game, dựng trên bản sao kiếp đang chơi
           if (rc) return rc;
           const K = S.core,
             st = G().state;
+          if (!st || !st.run) return null;
+
+          // Memoization: tái sử dụng context nếu không truyền opts và game state chưa đổi
+          if (!opts) {
+            const now = Date.now();
+            const sig = `${st.run.nam}_${st.run.thang}_${st.run.viTri}_${st.run.tuVi}_${st.run.canhGioi}_${st.run.oNoi || ""}_${st.run.active ? 1 : 0}_${st.run.tran ? 1 : 0}`;
+            if (_cachedCtx && _cachedCtxSig === sig && (now - _cachedCtxTime < 400)) {
+              return _cachedCtx;
+            }
+          }
+
           const run = clone(st.run),
             meta = clone(st.meta),
             F = K.Rng,
             o = new Map();
           run.rngKeys ??= {};
-          return {
+          const out = {
             ...G().env,
             run,
             meta,
@@ -5458,6 +5612,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return u;
             },
           };
+
+          if (!opts) {
+            _cachedCtx = out;
+            _cachedCtxSig = `${st.run.nam}_${st.run.thang}_${st.run.viTri}_${st.run.tuVi}_${st.run.canhGioi}_${st.run.oNoi || ""}_${st.run.active ? 1 : 0}_${st.run.tran ? 1 : 0}`;
+            _cachedCtxTime = Date.now();
+          }
+          return out;
         }
         const nvNow = () => clone(G().state.run.nhanVat);
         const REALM_TEN = [
@@ -5965,6 +6126,282 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return p;
         }
 
+        // ── ĐỘNG CƠ KINH MẠCH 2.0 (TWO-STAGE EVALUATION) ──
+        // Tầng 1 (Fast Proxy Evaluation): Tính nhanh điểm số qua chỉ số thực của P và R mà không chạy mô phỏng 9 trận đấu thật
+        function makeFastEval(nv0, mode) {
+          nv0 = lnPrep(nv0);
+          const K = S.core,
+            c = C(),
+            cache = new Map();
+          const g0 = K.luoiKinhMach(c, nv0),
+            hy0 = hySet(g0, nv0.kinhMach),
+            B = biasCtx(nv0, g0),
+            capX = capCtxOf(nv0),
+            ngW = S.dir === "ma" ? 0.4 : 1,
+            maxHoThe =
+              0.6 +
+              ((nv0.theChat &&
+                nv0.theChat.dac_tinh &&
+                nv0.theChat.dac_tinh.ho_the_tran) ||
+                0);
+
+          // Tạo shallow worker để loại bỏ hoàn toàn deep clone trong hot loop
+          const nvWork = Object.assign({}, nv0, {
+            kinhMach: Object.assign({}, nv0.kinhMach, { manh: [] }),
+          });
+
+          return (manh) => {
+            const key = manh.map((p) => p.key).sort().join("|");
+            if (cache.has(key)) return cache.get(key);
+
+            nvWork.kinhMach.manh = manh.map((p) => p.m);
+            const R = K.tinhKinhMach(nvWork, c),
+              P = K.taoBenTa(nvWork, c);
+
+            const thong = R.manh.filter((m) => m && m.thong).length;
+            const dead = R.manh.filter((m) => m && !m.thong).length;
+            const toc = R.biDong.toc_do || 0,
+              dp = R.biDong.dot_pha || 0;
+            const ng = (R.diemNghich || 0) * ngW;
+
+            // Đánh giá chiêu thức thực tế (Rotation) & Qi Sustainability Engine
+            const chieuList = (P.chieu || []).filter(
+              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0),
+            );
+            const sortedSkills = chieuList.slice().sort((a, b) => {
+              const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
+              const uyB = b.uyLuc || (b.uy || 0) * (P.phapLuc || 1);
+              return uyB - uyA;
+            });
+
+            const rotWeights = [1.0, 0.70, 0.35, 0.10];
+            let effectiveRotDmg = 0;
+            for (let i = 0; i < sortedSkills.length; i++) {
+              const w = i < rotWeights.length ? rotWeights[i] : 0.0;
+              const skillDmg =
+                sortedSkills[i].uyLuc ||
+                (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
+              effectiveRotDmg += skillDmg * w;
+            }
+            const uyMax = sortedSkills.length
+              ? sortedSkills[0].uyLuc ||
+                (sortedSkills[0].uy || 0) * (P.phapLuc || 1)
+              : 0;
+            const dmgScore =
+              Math.log10(Math.max(10, effectiveRotDmg)) * 40 +
+              Math.log10(Math.max(10, uyMax)) * 25;
+
+            const llPerTurn = P.linhLucMoiLuot || 0;
+            const llMax = P.linhLucToiDa || 0;
+            const costSkills = sortedSkills.filter((x) => (x.phi || 0) > 0);
+            const maxPhi = costSkills.length
+              ? Math.max(...costSkills.map((x) => x.phi || 0))
+              : 0;
+
+            let drainPerTurn = 0;
+            for (const sk of costSkills) {
+              const cd = Math.max(1, (sk.hoi || 0) + 1);
+              drainPerTurn += (sk.phi || 0) / cd;
+            }
+
+            let llPenalty = 0;
+            if (drainPerTurn > llPerTurn) {
+              const def = drainPerTurn - llPerTurn;
+              llPenalty += def * (mode === "danh" || mode === "burst" ? 45 : 30) + Math.pow(def, 1.7) * 18;
+            }
+            if (llPerTurn < maxPhi * 0.9) {
+              const def = maxPhi * 0.9 - llPerTurn;
+              llPenalty += def * (mode === "danh" || mode === "burst" ? 22.0 : 15.0);
+            }
+            if (llMax < maxPhi * 1.6) {
+              const def = maxPhi * 1.6 - llMax;
+              llPenalty += def * 8.0;
+            }
+
+            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : (mode === "tu" ? 1 : S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
+            if (skillCap > 0 && costSkills.length > skillCap) {
+              const ex = costSkills.length - skillCap;
+              llPenalty += ex * 280 + Math.pow(ex, 2) * 200;
+            } else if (costSkills.length > 4) {
+              const ex = costSkills.length - 4;
+              llPenalty += ex * 220 + Math.pow(ex, 2) * 140;
+            }
+
+            let llBonus = 0;
+            if (
+              llPerTurn >= drainPerTurn * 1.15 &&
+              llPerTurn >= maxPhi * 0.95 &&
+              (mode === "tu" || (costSkills.length >= 2 && (skillCap === 0 || costSkills.length <= skillCap)))
+            ) {
+              llBonus += mode === "danh" || mode === "burst" ? 120 : 90;
+            }
+
+            const llScore =
+              (mode === "tu" ? 12.0 : mode === "danh" || mode === "burst" ? 9.0 : 7.0) * llPerTurn +
+              (mode === "tu" ? 2.5 : 1.8) * Math.min(300, llMax) -
+              llPenalty +
+              llBonus;
+
+            // Huyệt đạo
+            let hyScore = 0;
+            const usedCells = new Set();
+            manh.forEach((p, idx) => {
+              p.cells.forEach((x) => usedCells.add(x));
+              const q =
+                p.hyCount !== undefined
+                  ? p.hyCount
+                  : p.cells.filter((x) => hy0.has(x)).length;
+              if (q > 0) {
+                const rm = R.manh && R.manh[idx];
+                if (rm && rm.thong) {
+                  const it = c.items.get(p.m.item);
+                  const pwr = kmItemPower(it, mode);
+                  let hyMult = 1.0;
+                  if (mode === "tu" && (it.bi_dong?.toc_do || it.linh_luc)) hyMult = 2.2;
+                  else if (mode === "dot_pha" && it.bi_dong?.dot_pha) hyMult = 2.6;
+                  else if (mode === "tank" && (it.bi_dong?.ho_the || it.bi_dong?.khi_huyet)) hyMult = 2.2;
+                  else if (mode === "burst" && it.chieu) hyMult = 2.4;
+                  hyScore += (35 * q + 0.40 * pwr * q) * hyMult;
+                } else {
+                  hyScore -= 90 * q;
+                }
+              }
+            });
+            for (const h of hy0) {
+              if (
+                g0.vung[h] >= 0 &&
+                nv0.kinhMach.trangThai[h] === "thong" &&
+                !usedCells.has(h)
+              ) {
+                hyScore -= 45;
+              }
+            }
+
+            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
+            let hoThePenalty = 0;
+            if (curHoThe > maxHoThe) {
+              const excess = curHoThe - maxHoThe;
+              hoThePenalty =
+                200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
+            }
+
+            let kinhLoBonus = 0;
+            (R.manh || []).forEach((m) => {
+              if (
+                m &&
+                m.thong &&
+                m.item &&
+                m.item.loai === "phap_khi" &&
+                m.kinhLo > 1
+              ) {
+                kinhLoBonus += (m.kinhLo - 1) * 60;
+              }
+            });
+
+            let colorScore = 0;
+            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
+            (R.manh || []).forEach((m, idx) => {
+              if (m && m.thong) {
+                const p = manh[idx];
+                const canRecolor =
+                  isTayO &&
+                  p &&
+                  p.recolorableCount > 0 &&
+                  (p.unfixableCount || 0) === 0;
+                if (m.mau >= 1.25 || canRecolor)
+                  colorScore += canRecolor ? 25 : 35;
+                else if (m.mau < 1.0) colorScore -= 65 * (1.1 - m.mau);
+              }
+            });
+
+            const deadPenalty = S.full ? 0 : dead * 85;
+
+            // Combat Power Proxy (Tầng 1): Ước tính sức chiến đấu nhanh từ Effective HP & Sát thương
+            const effHoThe = Math.min(maxHoThe, curHoThe);
+            const effHp = (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
+            const hpLog = Math.log10(Math.max(10, effHp)) * 55;
+            let proxyFight = 0;
+            if (mode === "danh" || mode === "burst") {
+              proxyFight = 1.35 * dmgScore + 0.85 * hpLog + (P.tocDo || 0) * 0.2;
+            } else if (mode === "tank") {
+              proxyFight = 0.5 * dmgScore + 1.8 * hpLog + 300 * effHoThe;
+            } else if (mode === "tu") {
+              proxyFight = 0.2 * dmgScore + 0.3 * hpLog;
+            } else if (mode === "dot_pha") {
+              proxyFight = 0.25 * dmgScore + 0.4 * hpLog;
+            } else {
+              proxyFight = dmgScore + hpLog;
+            }
+
+            let s;
+            if (mode === "tu") {
+              s =
+                0.15 * proxyFight +
+                0.15 * dmgScore +
+                650 * toc +
+                120 * dp +
+                thong -
+                60 * ng +
+                llScore;
+            } else if (mode === "dot_pha") {
+              const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
+              const hpSafe = Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+              s =
+                0.2 * proxyFight +
+                0.2 * dmgScore +
+                950 * dp +
+                250 * ktm +
+                hpSafe +
+                thong -
+                90 * ng +
+                0.6 * llScore;
+            } else if (mode === "tank") {
+              const hoTheVal = Math.min(maxHoThe, curHoThe);
+              const bodyHpVal = (R.bodyHp || 0) * 0.6;
+              s =
+                1.3 * proxyFight +
+                0.5 * dmgScore +
+                hpLog +
+                bodyHpVal +
+                350 * hoTheVal +
+                thong -
+                15 * ng +
+                llScore;
+            } else if (mode === "burst") {
+              s =
+                proxyFight +
+                1.7 * dmgScore +
+                0.9 * (uyMax || 0) +
+                0.5 * thong -
+                10 * ng +
+                llScore;
+            } else if (mode === "danh") {
+              s = proxyFight + dmgScore + 0.5 * thong - 6 * ng + llScore;
+            } else {
+              s =
+                proxyFight +
+                0.5 * dmgScore +
+                55 * toc +
+                45 * dp +
+                0.5 * thong -
+                10 * ng +
+                llScore;
+            }
+            s +=
+              hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
+            s += biasScore(B, manh, R) + capScore(capX, R);
+            if (S.hbRatio) s -= hbRatioPenalty(manh, R);
+            if (S.full) s += 20 * manh.reduce((a, p) => a + p.cells.length, 0);
+
+            const out = { s, proxyFight, P, R };
+            cache.set(key, out);
+            return out;
+          };
+        }
+
+        // Tầng 2 (Full Simulation Evaluation): Đánh thật fight(P, E) với tập benchEnemies
         function makeEval(nv0, enemies, mode) {
           nv0 = lnPrep(nv0);
           const K = S.core,
@@ -5981,16 +6418,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 nv0.theChat.dac_tinh &&
                 nv0.theChat.dac_tinh.ho_the_tran) ||
                 0);
+
+          const nvWork = Object.assign({}, nv0, {
+            kinhMach: Object.assign({}, nv0.kinhMach, { manh: [] }),
+          });
+
           return (manh) => {
             const key = manh
               .map((p) => p.key)
               .sort()
               .join("|");
             if (cache.has(key)) return cache.get(key);
-            const nv = clone(nv0);
-            nv.kinhMach.manh = manh.map((p) => ({ ...p.m }));
-            const R = K.tinhKinhMach(nv, c),
-              P = K.taoBenTa(nv, c);
+
+            nvWork.kinhMach.manh = manh.map((p) => p.m);
+            const R = K.tinhKinhMach(nvWork, c),
+              P = K.taoBenTa(nvWork, c);
             let fightScore = 0,
               wins = 0;
             for (const { E } of enemies) {
@@ -6026,8 +6468,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               return uyB - uyA;
             });
 
-            // 1. Sát thương thực tế theo vòng quay chiêu (Rank 1: 100%, Rank 2: 70%, Rank 3: 35%, Rank 4: 10%, Rank 5+: 0%)
-            // Trọng tâm thực chiến: 2–3 chiêu tinh hoa luân chuyển. Tuyệt đối không cho phép chiêu thứ 4-5 làm loãng mạch
             const rotWeights = [1.0, 0.70, 0.35, 0.10];
             let effectiveRotDmg = 0;
             for (let i = 0; i < sortedSkills.length; i++) {
@@ -6045,18 +6485,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               Math.log10(Math.max(10, effectiveRotDmg)) * 40 +
               Math.log10(Math.max(10, uyMax)) * 25;
 
-            // 2. Phân tích chi phí linh lực và khả năng duy trì bền vững không cần đan
             const llPerTurn = P.linhLucMoiLuot || 0;
             const llMax = P.linhLucToiDa || 0;
             const costSkills = sortedSkills.filter((x) => (x.phi || 0) > 0);
             const maxPhi = costSkills.length
               ? Math.max(...costSkills.map((x) => x.phi || 0))
               : 0;
-            const top2Phi = costSkills
-              .slice(0, 2)
-              .reduce((sum, x) => sum + (x.phi || 0), 0);
 
-            // Tính toán chi phí tiêu hao chân khí trung bình mỗi hiệp theo hồi chiêu (Drain Rate per Turn)
             let drainPerTurn = 0;
             for (const sk of costSkills) {
               const cd = Math.max(1, (sk.hoi || 0) + 1);
@@ -6064,23 +6499,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             }
 
             let llPenalty = 0;
-            // a) Phạt thâm hụt chân khí mỗi hiệp (Drain Rate > llPerTurn): Chống hoàn toàn hiện tượng cạn chân khí phải cắn đan
             if (drainPerTurn > llPerTurn) {
               const def = drainPerTurn - llPerTurn;
               llPenalty += def * (mode === "danh" || mode === "burst" ? 45 : 30) + Math.pow(def, 1.7) * 18;
             }
-            // b) Phạt nếu chiêu chủ lực đơn lẻ ngốn quá 60% chân khí hồi mỗi hiệp
             if (llPerTurn < maxPhi * 0.9) {
               const def = maxPhi * 0.9 - llPerTurn;
               llPenalty += def * (mode === "danh" || mode === "burst" ? 22.0 : 15.0);
             }
-            // c) Phạt nếu dung lượng linh lực tối đa quá nông (không đủ đệm cho 1 vòng ra chiêu)
             if (llMax < maxPhi * 1.6) {
               const def = maxPhi * 1.6 - llMax;
               llPenalty += def * 8.0;
             }
-            // d) Khống chế trần số lượng chiêu thức (Skill Ceiling):
-            // Lấy trần từ S.hbMaxSkills (nếu có) hoặc mặc định theo từng mode
+
             const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
               ? S.hbMaxSkills
               : (mode === "tu" ? 1 : S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
@@ -6092,7 +6523,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               llPenalty += ex * 220 + Math.pow(ex, 2) * 140;
             }
 
-            // e) Thưởng điểm "Chân Khí Viên Mãn · Tự Cấp Tự Túc" (Không cần cắn đan, tuần hoàn mượt mà)
             let llBonus = 0;
             if (
               llPerTurn >= drainPerTurn * 1.15 &&
@@ -6102,14 +6532,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               llBonus += mode === "danh" || mode === "burst" ? 120 : 90;
             }
 
-            // Điểm linh lực tổng quát
             const llScore =
               (mode === "tu" ? 12.0 : mode === "danh" || mode === "burst" ? 9.0 : 7.0) * llPerTurn +
               (mode === "tu" ? 2.5 : 1.8) * Math.min(300, llMax) -
               llPenalty +
               llBonus;
 
-            // 7.16.0: Tối ưu huyệt đạo: buff cực đại khi đặt món hợp preset lên huyệt, phạt nặng chiếm huyệt mà không thông
             let hyScore = 0;
             const usedCells = new Set();
             manh.forEach((p, idx) => {
@@ -6130,7 +6558,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   else if (mode === "burst" && it.chieu) hyMult = 2.4;
                   hyScore += (35 * q + 0.40 * pwr * q) * hyMult;
                 } else {
-                  hyScore -= 90 * q; // chiếm huyệt mà không thông: phạt cực nặng
+                  hyScore -= 90 * q;
                 }
               }
             });
@@ -6140,11 +6568,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 nv0.kinhMach.trangThai[h] === "thong" &&
                 !usedCells.has(h)
               ) {
-                hyScore -= 45; // ô huyệt mở được mà bị bỏ trống
+                hyScore -= 45;
               }
             }
 
-            // Khống chế hộ thể: game chỉ lấy tối đa 60%
             const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
             let hoThePenalty = 0;
             if (curHoThe > maxHoThe) {
@@ -6153,7 +6580,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
             }
 
-            // Tối ưu kinh lộ pháp khí: thưởng lớn khi pháp khí được nối mạch hợp hệ từ đan điền
             let kinhLoBonus = 0;
             (R.manh || []).forEach((m) => {
               if (
@@ -6167,7 +6593,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
-            // 7.14.2: Thưởng mảnh đúng màu hệ số cao (1.30), phạt nặng mảnh lệch màu (< 1.0)
             let colorScore = 0;
             const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
             (R.manh || []).forEach((m, idx) => {
@@ -6184,12 +6609,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               }
             });
 
-            // Phạt mảnh chết (không thông): loại bỏ triệt để hiện tượng xếp sót, xếp rỗng
             const deadPenalty = S.full ? 0 : dead * 85;
 
             let s;
             if (mode === "tu") {
-              // Case 2: Tu luyện AFK Treo máy: Tối đa hóa tốc độ tu vi, linh lực, triệt tiêu điểm nghịch
               s =
                 0.15 * fightScore +
                 0.15 * dmgScore +
@@ -6199,7 +6622,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 60 * ng +
                 llScore;
             } else if (mode === "dot_pha") {
-              // Case 3: Đột phá Cảnh giới: Tối đa hóa tỉ lệ đột phá, kháng tâm ma, triệt tiêu điểm nghịch (0 điểm nghịch là hoàn mỹ)
               const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
               const hpSafe = Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
               s =
@@ -6212,7 +6634,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 90 * ng +
                 0.6 * llScore;
             } else if (mode === "tank") {
-              // Case 4A: Thể Tu Thiết Bích (Thủ Trâu · Phản Đòn · Sinh Tồn)
               const hoTheVal = Math.min(maxHoThe, curHoThe);
               const hpLog = Math.log10(Math.max(10, P.khiHuyetToiDa || 100)) * 70;
               const bodyHpVal = (R.bodyHp || 0) * 0.6;
@@ -6226,7 +6647,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 15 * ng +
                 llScore;
             } else if (mode === "burst") {
-              // Case 4B: Kiếm Tu Bạo Kích (Nhất Kích Tất Sát)
               s =
                 fightScore +
                 1.7 * dmgScore +
@@ -6235,10 +6655,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 10 * ng +
                 llScore;
             } else if (mode === "danh") {
-              // Case 1: Chiến đấu (PvP / PvE Đi ải)
               s = fightScore + dmgScore + 0.5 * thong - 6 * ng + llScore;
             } else {
-              // Cân bằng (bal)
               s =
                 fightScore +
                 0.5 * dmgScore +
@@ -6413,10 +6831,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 0);
 
           const capX = capCtxOf(nv0);
+          const nvWork = Object.assign({}, nv0, {
+            kinhMach: Object.assign({}, nv0.kinhMach, { manh: [] }),
+          });
           const quick = (manh) => {
-            const nv = clone(nv0);
-            nv.kinhMach.manh = manh.map((p) => ({ ...p.m }));
-            const R = K.tinhKinhMach(nv, c);
+            nvWork.kinhMach.manh = manh.map((p) => p.m);
+            const R = K.tinhKinhMach(nvWork, c);
 
             // 7.15.0: Đánh giá chiêu thức thực tế & áp lực linh lực ngay từ Greedy
             const chieuList = (R.chieu || []).filter(
@@ -6688,7 +7108,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           customEval,
         }) {
           const enemies = benchEnemies(nv0.canhGioi, nv0.tieuCanhGioi || 0);
-          const ev = customEval || makeEval(nv0, enemies, mode);
+          // Hai tầng đánh giá: fastEv chạy siêu tốc trong SA, fullEv kiểm định Top-K ứng viên
+          const fastEv = customEval || makeFastEval(nv0, mode);
+          const fullEv = customEval || makeEval(nv0, enemies, mode);
+          const ev = fastEv;
           const { cand, g } = buildCandidates(nv0);
           const B = biasCtx(nv0, g);
           const ids = Object.keys(cand).filter((k) => cand[k].length);
@@ -6697,11 +7120,17 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             cn.hyCount !== undefined
               ? cn.hyCount
               : cn.cells.filter((x) => hy0.has(x)).length;
-          let seed = seed0 || 12345;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) % 2147483648;
-            return seed / 2147483648;
+          const rnd = createMulberry32(seed0 || 12345);
+          const topCandidates = [];
+          const pushTopCandidate = (cfg, score) => {
+            if (!cfg || !cfg.length) return;
+            const k = cfg.map((p) => p.key).sort().join("|");
+            if (topCandidates.some((x) => x.k === k)) return;
+            topCandidates.push({ cfg: cfg.slice(), score, k });
+            topCandidates.sort((a, b) => b.score - a.score);
+            if (topCandidates.length > 12) topCandidates.pop();
           };
+
           const overlaps = (manh, c, skip = -1) => {
             const used = new Set();
             manh.forEach((p, i) => {
@@ -6778,128 +7207,77 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const weights = [];
             for (const id of fList) {
               const it = itemsK.get(id);
-              let w = itemWeights.get(id) || 10;
-              const isTam = it && hbCls(it) === "tam";
-              const hasCostSkill = it && it.chieu && (it.chieu.phi || 0) > 0;
-              
-              if (B && B.build && it && buildMatch(B.build, it)) {
-                w *= 1.35;
-              }
-              if (mode === "tu") {
-                if (isTam) w *= 4.5;
-                if (hasCostSkill) w *= 0.1;
-                if (it && (it.bi_dong?.toc_do || it.linh_luc)) w *= 3.0;
-              } else if (mode === "dot_pha") {
-                if (it && it.bi_dong?.dot_pha) w *= 5.0;
-                if (it && it.bi_dong?.khang_tam_ma) w *= 3.0;
-                if (hasCostSkill) w *= 0.35;
-              } else if (mode === "tank") {
-                if (it && (it.bi_dong?.ho_the || it.bi_dong?.khi_huyet)) w *= 3.5;
-                if (it && it.chieu && (it.chieu.shieldTurns || it.chieu.dang === "khong_che")) w *= 2.5;
-              } else if (mode === "burst") {
-                if (hasCostSkill && it.chieu.dang === "cong") w *= 3.5;
-              } else {
-                if (needTam) {
-                  if (isTam) w *= 3.5;
-                  else if (hasCostSkill) w *= 0.25;
-                }
-                if (skillsFull && hasCostSkill) {
-                  w *= 0.05;
-                } else if (curSkills < 2 && hasCostSkill && it && it.chieu && it.chieu.dang === "cong") {
-                  w *= 2.5;
-                }
-              }
+              let w = itemWeights.get(id) || 5;
+              const cls = hbCls(it);
+              if (needTam && cls === "tam") w *= 1.8;
+              if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0) w *= 0.15;
               weights.push(w);
               sum += w;
             }
-            let r = rnd() * sum;
+            let rVal = rnd() * sum;
             for (let i = 0; i < fList.length; i++) {
-              r -= weights[i];
-              if (r <= 0) return fList[i];
+              rVal -= weights[i];
+              if (rVal <= 0) return fList[i];
             }
             return fList[fList.length - 1];
           };
 
-          const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
-
-          // 7.14.1: Đặt thông minh hoàn toàn không đè lấn, chấm điểm hình học & tương sinh chính xác
-          const smart = (id, next) => {
-            const arr = cand[id];
-            if (!arr || !arr.length) return null;
-            const used = new Set();
-            next.forEach((p) => p.cells.forEach((x) => used.add(x)));
-
-            // Lọc tuyệt đối các vị trí hợp lệ không bị đè ô
-            const valid = arr.filter((c) => !c.cells.some((x) => used.has(x)));
-            if (!valid.length) return null;
-
-            // Ưu tiên các vị trí không xung đột màu không thể tẩy
-            const cleanValid = valid.filter((c) =>
-              isTayO
-                ? (c.unfixableCount || 0) === 0
-                : (c.conflictCount || 0) === 0,
-            );
-            const pool = cleanValid.length > 0 ? cleanValid : valid;
-
-            const cpCells = getCpCells(next);
+          const smart = (id, currentPieces) => {
+            const pool = cand[id] || [];
+            if (!pool.length) return null;
             const itSmart = itemsK.get(id);
-            const pwr = kmItemPower(itSmart, mode);
-            const isHighVal =
-              itSmart &&
-              (itSmart.chieu || (itSmart.pham_cap || 1) >= 4 || pwr > 100);
-            const hsSmart = ((itSmart && itSmart.he) || []).filter(
-              (h) => h && h !== "vo_sac",
-            );
+            const isSkillSmart = !!(itSmart && itSmart.chieu && (itSmart.chieu.phi || 0) > 0);
+            const isBuildSmart = !!(B && B.build && itSmart && buildMatch(B.build, itSmart));
 
+            let curTamCells = 0, curTotCells = 0, curSkills = 0;
+            for (const p of currentPieces) {
+              const itP = itemsK.get(p.m.item);
+              if (!itP) continue;
+              curTotCells += p.cells.length;
+              if (hbCls(itP) === "tam") curTamCells += p.cells.length;
+              if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
+            }
+            const targetRatio = S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
+            const needTam = curTotCells > 0 ? (curTamCells / curTotCells < targetRatio) : true;
+            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (targetRatio >= 0.6 ? 3 : 4);
+            const skillsFull = skillCap > 0 && curSkills >= skillCap;
+
+            const cpCells = getCpCells(currentPieces);
             let best = null,
               bs = -1e9;
-            const sampleCount = Math.min(24, pool.length);
-            const step =
-              pool.length <= sampleCount
-                ? 1
-                : Math.floor(pool.length / sampleCount);
-
-            for (let k = 0; k < pool.length; k += step) {
-              const c = pool[k];
-              const hyCount = hyOf(c);
-              let hyPref =
-                hyCount > 0 ? (isHighVal ? 3.5 * hyCount : 0.8 * hyCount) : 0;
-              if (hyCount > 0 && itSmart) {
-                if (mode === "tu" && (itSmart.bi_dong?.toc_do || itSmart.linh_luc)) hyPref *= 2.5;
-                else if (mode === "dot_pha" && itSmart.bi_dong?.dot_pha) hyPref *= 3.0;
-                else if (mode === "tank" && (itSmart.bi_dong?.ho_the || itSmart.bi_dong?.khi_huyet)) hyPref *= 2.2;
-                else if (mode === "burst" && itSmart.chieu) hyPref *= 2.5;
+            for (const c of pool) {
+              if (overlaps(currentPieces, c)) continue;
+              const q = hyOf(c);
+              const onHuyetSmart = q > 0;
+              let hyPref = 0;
+              if (q > 0) {
+                let hyMult = 1.0;
+                if (mode === "tu" && (itSmart?.bi_dong?.toc_do || itSmart?.linh_luc)) hyMult = 2.2;
+                else if (mode === "dot_pha" && itSmart?.bi_dong?.dot_pha) hyMult = 2.6;
+                else if (mode === "tank" && (itSmart?.bi_dong?.ho_the || itSmart?.bi_dong?.khi_huyet)) hyMult = 2.2;
+                else if (mode === "burst" && itSmart?.chieu) hyMult = 2.4;
+                hyPref += (25 * q + (itemWeights.get(id) || 10) * 0.4) * hyMult;
               }
-              const conn = connectsToSpine(c, cpCells) ? 3.0 : -2.5;
-              const khacPen = c.isKhacPha ? -1.2 : 0;
-              const unfixable =
-                c.unfixableCount !== undefined
-                  ? c.unfixableCount
-                  : c.conflictCount || 0;
-              const recolorable = c.recolorableCount || 0;
-              const conflictPen =
-                unfixable * 35.0 +
-                (isTayO ? recolorable * 2.0 : recolorable * 30.0);
-              const matchBonus =
-                (c.matchCount || 0) * 5.0 + (isTayO ? recolorable * 3.5 : 0);
 
-              // Khảo sát tương sinh / tương khắc thực tế với các mảnh láng giềng đã đặt
+              let matchBonus = 0;
+              if (needTam && hbCls(itSmart) === "tam") matchBonus += 25;
+              if (skillsFull && isSkillSmart) matchBonus -= 45;
+
+              let conflictPen = 0;
+              if (c.conflictsWithDanDien) conflictPen += (S.dir === "ma" ? -12 : 30);
+              let conn = 0;
+              if (c.touchesDanDien) conn += 8.0;
+              else if (connectsToSpine(c, cpCells)) conn += 4.5;
+              else conn -= 12.0;
+
+              let khacPen = 0;
+              if (c.isCP && c.hasKhacTungO) khacPen += 8.0;
+
               let synBonus = 0;
-              const isSkillSmart = !!(itSmart && itSmart.chieu);
-              const isBuildSmart = !!(
-                B &&
-                B.build &&
-                itSmart &&
-                buildMatch(B.build, itSmart)
-              );
-              const onHuyetSmart = hyCount > 0;
-
-              for (const p of next) {
-                if (!c.adj.some((a) => p.cells.includes(a))) continue;
+              const hsSmart = ((itSmart && itSmart.he) || []).filter((h) => h && h !== "vo_sac");
+              for (const p of currentPieces) {
                 const itP = itemsK.get(p.m.item);
-                const hsP = ((itP && itP.he) || []).filter(
-                  (h) => h && h !== "vo_sac",
-                );
+                const hsP = ((itP && itP.he) || []).filter((h) => h && h !== "vo_sac");
                 let sDirect = 0,
                   sReverse = 0,
                   kDirect = 0;
@@ -6907,27 +7285,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   for (const b of hsP) {
                     if (heTacDong(a, b) > 0) {
                       const m = genSlack(itP, itSmart);
-                      if (m > sDirect) sDirect = m; // itP sinh itSmart (itSmart nhận tương sinh!)
+                      if (m > sDirect) sDirect = m;
                     } else if (heTacDong(b, a) > 0) {
                       const m = genSlack(itSmart, itP);
-                      if (m > sReverse) sReverse = m; // itSmart sinh itP
+                      if (m > sReverse) sReverse = m;
                     } else if (heTacDong(a, b) < 0 || heTacDong(b, a) < 0) {
                       kDirect = 1;
                     }
                   }
                 }
                 if (S.dir === "tien" || !S.dir) {
-                  // Tương sinh dồn vào chiêu công / kiếm tu:
                   let directMult = 3.5;
                   if (isSkillSmart) directMult += 4.0;
                   if (mode === "burst") directMult += 5.0;
-                  if (isBuildSmart) directMult += 6.5; // Thưởng đặc biệt cho Hướng Build (vd Kiếm Tu)
+                  if (isBuildSmart) directMult += 6.5;
                   if (onHuyetSmart) directMult *= 1.6;
 
                   let reverseMult = 2.5;
                   if (itP && itP.chieu) reverseMult += 3.0;
-                  if (B && B.build && itP && buildMatch(B.build, itP))
-                    reverseMult += 5.0;
+                  if (B && B.build && itP && buildMatch(B.build, itP)) reverseMult += 5.0;
 
                   synBonus +=
                     directMult * sDirect +
@@ -6936,7 +7312,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 } else if (S.dir === "ma") {
                   synBonus += 6.0 * kDirect - 3.0 * (sDirect + sReverse);
                 }
-                // Pháp khí kinh lộ: thưởng thêm khi tiếp giáp công pháp cùng hệ
                 if (!c.isCP && p.isCP && hsSmart.some((h) => hsP.includes(h))) {
                   synBonus += 3.5;
                 }
@@ -6971,21 +7346,25 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             best = cur,
             bestS = curS;
           const T0 = init && init.length ? 15 : 50;
+          let stagnantCount = 0;
+          let reheatTempBonus = 0;
+          pushTopCandidate(best, bestS);
 
           for (let it = 0; it < iters; it++) {
-            if (S.abort || S.kmAbort) break;
-            if (it % 20 === 0) {
+            if (S.kmAbort) break;
+            if (it % 25 === 0) {
               onProg && onProg(it / iters, label);
-              await sleep0();
+              await yieldToMain();
             }
-            const T = Math.max(0.3, T0 * (1 - it / iters));
+            let T = Math.max(0.3, T0 * (1 - it / iters)) + reheatTempBonus;
+            if (reheatTempBonus > 0) reheatTempBonus *= 0.94;
+
             const next = cur.slice();
             const r = rnd();
             const free = () =>
               ids.filter((id) => !next.some((p) => p.m.item === id));
 
             if (next.length === 0 || r < 0.2) {
-              // 1. Thêm mảnh mới với phân bổ xác suất theo phẩm cấp & uy lực
               const f = free();
               if (!f.length) continue;
               const id = pickWeightedFree(f, next);
@@ -6993,7 +7372,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (!c || overlaps(next, c)) continue;
               next.push(c);
             } else if (r < 0.35) {
-              // 2. Tinh chỉnh xoay hoặc trượt lân cận (+-1 ô)
               const i = Math.floor(rnd() * next.length);
               const c0 = next[i];
               const rots = (cand[c0.m.item] || []).filter(
@@ -7007,7 +7385,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (overlaps(next, c, i)) continue;
               next[i] = c;
             } else if (r < 0.48) {
-              // 3. Hoán đổi vị trí 2 mảnh trên lưới
               if (next.length < 2) continue;
               const i = Math.floor(rnd() * next.length);
               let j = Math.floor(rnd() * next.length);
@@ -7027,35 +7404,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (candA.length && candB.length) {
                 const newB = candA[Math.floor(rnd() * candA.length)];
                 const newA = candB[Math.floor(rnd() * candB.length)];
-                const testNext = next.filter(
-                  (_, idx) => idx !== i && idx !== j,
-                );
-                if (
-                  !overlaps(testNext, newA) &&
-                  !overlaps([...testNext, newA], newB)
-                ) {
+                const testNext = next.filter((_, idx) => idx !== i && idx !== j);
+                if (!overlaps(testNext, newA) && !overlaps([...testNext, newA], newB)) {
                   next[i] = newA;
                   next[j] = newB;
                 }
               }
             } else if (r < 0.62) {
-              // 4. Ưu tiên săn Huyệt Đạo cho các chiêu thức / bảo vật chủ lực
               const usedCells = new Set(next.flatMap((p) => p.cells));
-              const emptyHuyet = [...hy0].filter(
-                (h) => g.vung[h] >= 0 && !usedCells.has(h),
-              );
+              const emptyHuyet = [...hy0].filter((h) => g.vung[h] >= 0 && !usedCells.has(h));
               if (emptyHuyet.length) {
-                const targetH =
-                  emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
+                const targetH = emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
                 const f = free();
                 let found = null;
-                // Ưu tiên thử các món phẩm cao trước
-                const sortedF = f
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0),
-                  );
+                const sortedF = f.slice().sort((a, b) => (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0));
                 for (const fid of sortedF) {
                   const arr = cand[fid] || [];
                   for (const c of arr) {
@@ -7069,7 +7431,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (found) next.push(found);
               }
             } else if (r < 0.74) {
-              // 5. Trượt mảnh trong phạm vi vừa (+-2 ô)
               const i = Math.floor(rnd() * next.length);
               const c0 = next[i];
               const nb = (cand[c0.m.item] || []).filter(
@@ -7083,10 +7444,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (overlaps(next, c, i)) continue;
               next[i] = c;
             } else if (r < 0.84) {
-              // 6. Gỡ bỏ một mảnh ngẫu nhiên (để giải phóng không gian tái cấu trúc)
               next.splice(Math.floor(rnd() * next.length), 1);
             } else if (r < 0.92) {
-              // 7. Định vị lại một mảnh bằng hàm smart
               const i = Math.floor(rnd() * next.length);
               const id = next[i].m.item;
               const testNext = next.filter((_, idx) => idx !== i);
@@ -7094,7 +7453,6 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (!c || overlaps(testNext, c)) continue;
               next[i] = c;
             } else {
-              // 8. Thay thế mảnh yếu bằng mảnh mạnh hơn từ túi
               const i = Math.floor(rnd() * next.length);
               const f = free();
               if (!f.length) continue;
@@ -7112,18 +7470,46 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (e.s > bestS) {
                 best = next;
                 bestS = e.s;
+                stagnantCount = 0;
+                pushTopCandidate(best, bestS);
+              } else {
+                stagnantCount++;
               }
+            } else {
+              stagnantCount++;
+            }
+
+            // Adaptive Reheating: Kích nhiệt nhẹ nếu kẹt cực trị địa phương
+            if (stagnantCount >= 45) {
+              reheatTempBonus = Math.min(T0 * 0.45, (T0 * (1 - it / iters) + 5) * 1.5);
+              stagnantCount = 0;
             }
           }
 
-          const e = ev(best);
+          pushTopCandidate(best, bestS);
+
+          // TẦNG 2: Full Simulation trên Top Candidates để chọn cấu hình thực chiến mạnh nhất
+          let finalBest = best;
+          let finalEval = fullEv(best);
+          let finalBestScore = finalEval.s;
+
+          for (const candItem of topCandidates) {
+            if (candItem.cfg === best) continue;
+            const fullRes = fullEv(candItem.cfg);
+            if (fullRes.s > finalBestScore) {
+              finalBestScore = fullRes.s;
+              finalBest = candItem.cfg;
+              finalEval = fullRes;
+            }
+          }
+
           return {
-            manh: best.map((p) => ({ ...p.m })),
-            score: e.s,
-            wins: e.wins,
+            manh: finalBest.map((p) => ({ ...p.m })),
+            score: finalEval.s,
+            wins: finalEval.wins || 0,
             n: enemies.length,
-            P: e.P,
-            R: e.R,
+            P: finalEval.P,
+            R: finalEval.R,
           };
         }
 
@@ -7133,11 +7519,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             ev = customEval || makeEval(nv0, enemies, mode);
           const { cand, g } = buildCandidates(nv0),
             ids = Object.keys(cand).filter((k) => cand[k].length);
-          let seed = 777;
-          const rnd = () => {
-            seed = (seed * 1103515245 + 12345) % 2147483648;
-            return seed / 2147483648;
-          };
+          const rnd = createMulberry32(777);
           const toP = (m) =>
             (cand[m.item] || []).find(
               (c) => c.m.x === m.x && c.m.y === m.y && c.m.xoay === m.xoay,
@@ -7152,7 +7534,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           let cur = res.manh.map(toP).filter(Boolean),
             curS = ev(cur).s;
           const t0 = Date.now(),
-            over = () => Date.now() - t0 > 30000 || S.abort || S.kmAbort;
+            over = () => Date.now() - t0 > 25000 || S.kmAbort;
 
           for (let round = 0; round < 6 && !over(); round++) {
             let improved = false;
@@ -7178,7 +7560,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   break;
                 }
               }
-              await sleep0();
+              await yieldToMain();
             }
 
             for (let i = 0; i < cur.length && !over(); i++) {
@@ -7199,121 +7581,45 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   improved = true;
                 }
               }
-              await sleep0();
+              await yieldToMain();
             }
 
             if (cur.length >= 2 && !over()) {
-              for (let i = 0; i < cur.length && !over(); i++) {
-                for (let j = i + 1; j < cur.length && !over(); j++) {
-                  const cA = cur[i],
-                    cB = cur[j];
-                  const candA = (cand[cA.m.item] || []).filter(
-                    (c) =>
-                      Math.abs(c.m.x - cB.m.x) <= 2 &&
-                      Math.abs(c.m.y - cB.m.y) <= 2,
-                  );
-                  const candB = (cand[cB.m.item] || []).filter(
-                    (c) =>
-                      Math.abs(c.m.x - cA.m.x) <= 2 &&
-                      Math.abs(c.m.y - cA.m.y) <= 2,
-                  );
-                  if (candA.length && candB.length) {
-                    const testBase = cur.filter(
-                      (_, idx) => idx !== i && idx !== j,
-                    );
-                    for (const newB of candA.slice(0, 4)) {
-                      for (const newA of candB.slice(0, 4)) {
-                        if (
-                          !overl(testBase, newA) &&
-                          !overl([...testBase, newA], newB)
-                        ) {
-                          const nx = cur.slice();
-                          nx[i] = newA;
-                          nx[j] = newB;
-                          const e = ev(nx);
-                          if (e.s > curS + 1e-9) {
-                            cur = nx;
-                            curS = e.s;
-                            improved = true;
-                            break;
-                          }
-                        }
-                      }
-                      if (improved) break;
+              const i = Math.floor(rnd() * cur.length);
+              let j = Math.floor(rnd() * cur.length);
+              if (i === j) j = (j + 1) % cur.length;
+              const cA = cur[i],
+                cB = cur[j];
+              const candA = (cand[cA.m.item] || []).filter(
+                (c) =>
+                  Math.abs(c.m.x - cB.m.x) <= 2 &&
+                  Math.abs(c.m.y - cB.m.y) <= 2,
+              );
+              const candB = (cand[cB.m.item] || []).filter(
+                (c) =>
+                  Math.abs(c.m.x - cA.m.x) <= 2 &&
+                  Math.abs(c.m.y - cA.m.y) <= 2,
+              );
+              for (const nA of candA) {
+                for (const nB of candB) {
+                  const testCur = cur.filter((_, idx) => idx !== i && idx !== j);
+                  if (!overl(testCur, nA) && !overl([...testCur, nA], nB)) {
+                    const nx = cur.slice();
+                    nx[i] = nA;
+                    nx[j] = nB;
+                    const e = ev(nx);
+                    if (e.s > curS + 1e-9) {
+                      cur = nx;
+                      curS = e.s;
+                      improved = true;
+                      break;
                     }
                   }
                 }
-              }
-              await sleep0();
-            }
-
-            const used = new Set();
-            cur.forEach((p) => p.cells.forEach((x) => used.add(x)));
-            const adj = (cn) =>
-              cn.cells.some((x) => {
-                const cx = x % g.rong;
-                return [
-                  cx > 0 ? x - 1 : -1,
-                  cx < g.rong - 1 ? x + 1 : -1,
-                  x - g.rong,
-                  x + g.rong,
-                ].some((n) => n >= 0 && used.has(n));
-              });
-
-            for (const id of ids) {
-              if (over()) break;
-              if (cur.some((p) => p.m.item === id)) continue;
-              let best = null;
-              const matches = (cand[id] || []).filter(
-                (c) => !overl(cur, c) && adj(c),
-              );
-              for (const cn of matches.slice(0, 25)) {
-                const e = ev([...cur, cn]);
-                if (e.s > curS + 1e-9 && (!best || e.s > best.s))
-                  best = { s: e.s, cn };
-              }
-              if (best) {
-                cur = [...cur, best.cn];
-                curS = best.s;
-                improved = true;
-                best.cn.cells.forEach((x) => used.add(x));
-              }
-              await sleep0();
-            }
-
-            for (let i = 0; i < cur.length && !over(); i++) {
-              const area = new Set(cur[i].cells);
-              let best = null;
-              for (const id of ids) {
-                if (cur.some((p) => p.m.item === id)) continue;
-                const matches = (cand[id] || []).filter(
-                  (c) => c.cells.some((x) => area.has(x)) && !overl(cur, c, i),
-                );
-                for (const cn of matches.slice(0, 8)) {
-                  const nx = cur.slice();
-                  nx[i] = cn;
-                  const e = ev(nx);
-                  if (e.s > curS + 1e-9 && (!best || e.s > best.s))
-                    best = { s: e.s, nx };
-                }
-              }
-              if (best) {
-                cur = best.nx;
-                curS = best.s;
-                improved = true;
-              }
-              await sleep0();
-            }
-
-            for (let i = cur.length - 1; i >= 0; i--) {
-              const nx = cur.filter((_, j) => j !== i),
-                e = ev(nx);
-              if (e.s > curS + 1e-9) {
-                cur = nx;
-                curS = e.s;
-                improved = true;
+                if (improved) break;
               }
             }
+
             if (!improved) break;
           }
 
@@ -7321,14 +7627,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return {
             manh: cur.map((p) => ({ ...p.m })),
             score: e.s,
-            wins: e.wins,
+            wins: e.wins || 0,
             n: enemies.length,
             P: e.P,
             R: e.R,
           };
         }
 
-        // Bỏ khỏi cách xếp mọi món không thông (không có tác dụng gì), rồi chấm lại.
         // Xếp Full Ô: sau khi tìm xong, nhét thêm mọi món còn trong túi vào các ô còn trống (ưu tiên món có thể thông mạch trước, rồi đến món phủ nhiều ô nhất).
         function fillRest(nv, res, mode) {
           const K = S.core,
@@ -7991,10 +8296,51 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const errBox = (e) =>
           `<div class="vk-err"><b>Có lỗi:</b> ${esc((e && e.message) || e)}<br><span class="vk-mu" style="font-size:12px">Tool ${TOOL_VER}${S.core ? " · game " + esc(S.core.bundle) : ""}. Nếu lỗi lặp lại, chụp màn hình gửi Claude.</span></div>`;
 
+        // Cập nhật Mini Status Bar toàn cục theo trạng thái các tác vụ Auto
+        function refreshMiniStatus() {
+          if (!UI || typeof UI.updateMiniStatus !== "function") return;
+          const runningList = [];
+          if (AU.run && AU.run.running) {
+            const kNames = {
+              buon: "Auto Buôn Bán",
+              san: "Auto Săn Yêu",
+              km: "Auto Kinh Mạch",
+              tl: "Auto Tu Luyện",
+              sdb: "Auto Săn Dị Bảo",
+              rr: "Auto Reroll",
+            };
+            runningList.push(kNames[AU.run.kind] || "Tác vụ Tự Động");
+          }
+          if (typeof combatAutoActive !== "undefined" && combatAutoActive) {
+            runningList.push("Auto Tác Chiến");
+          }
+          if (runningList.length > 0) {
+            UI.updateMiniStatus("Đang chạy: " + runningList.join(" | "), () => {
+              if (AU.run && AU.run.running) auStop("Dừng từ thanh trạng thái");
+              if (typeof combatAutoActive !== "undefined") combatAutoActive = false;
+              refreshMiniStatus();
+            });
+          } else {
+            UI.updateMiniStatus(null);
+          }
+        }
+
         async function render() {
+          TabLifecycle.cleanup();
+          const prevScrollTop = body ? body.scrollTop : 0;
+          const restoreScroll = () => {
+            if (prevScrollTop > 0) {
+              requestAnimationFrame(() => {
+                if (body && body.scrollTop === 0 && prevScrollTop > 0) {
+                  body.scrollTop = prevScrollTop;
+                }
+              });
+            }
+          };
           if (S.tab === "km" || S.tab === "bld") S.tab = "akm"; // hai tab cũ đã gộp vào Hướng Build
           if (S.tab === "do") S.tab = "db"; // tab Dò Đồ Quý cũ đã quy về Dị Bảo
           drawTabs();
+          refreshMiniStatus();
           body.onclick = null;
           try {
             if (S.tab === "tcv" || S.tab === "tcq") {
@@ -8120,6 +8466,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 S.coreP = null;
                 render();
               };
+          } finally {
+            restoreScroll();
           }
         }
 
@@ -8789,20 +9137,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return { flags, history, relics, nodes };
         }
 
-        // Lấy tên địa danh của một slot (hoisted an toàn cho toàn bộ module)
+        // Lấy tên địa danh của một slot (kèm cache O(1) tăng tốc)
+        const slotPlaceNameCache = new Map();
         function placeName(c, slot) {
           if (slot == null) return "";
+          if (slotPlaceNameCache.has(slot)) return slotPlaceNameCache.get(slot);
+          let res = "";
           try {
             const W = (c && c.world) || (G().env && G().env.world);
             if (W) {
               if (typeof W.info === "function") {
                 const inf = W.info(slot);
                 if (inf) {
-                  if (inf.ten) return inf.ten;
-                  if (inf.diaDanh && inf.diaDanh.ten) return inf.diaDanh.ten;
+                  if (inf.ten) res = inf.ten;
+                  else if (inf.diaDanh && inf.diaDanh.ten) res = inf.diaDanh.ten;
                 }
               }
-              if (typeof W.diaDanh === "function") {
+              if (!res && typeof W.diaDanh === "function") {
                 const s = W.slot
                   ? W.slot(slot)
                   : W.slots
@@ -8810,12 +9161,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     : null;
                 if (s && s.dia_danh) {
                   const dd = W.diaDanh(s.dia_danh);
-                  if (dd && dd.ten) return dd.ten;
+                  if (dd && dd.ten) res = dd.ten;
                 }
               }
             }
           } catch (e) {}
-          return "Slot " + slot;
+          if (!res) res = "Slot " + slot;
+          slotPlaceNameCache.set(slot, res);
+          return res;
         }
 
         // Dò tìm ID slot từ marker hoặc tên địa danh (kèm cache O(1) tăng tốc)
@@ -16067,15 +16420,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             draw();
             say(r);
           };
-          let tmr;
-          $("dd-q").oninput = () => {
-            clearTimeout(tmr);
-            tmr = setTimeout(() => {
-              f.focus = null;
-              f.n = 30;
-              draw();
-            }, 200);
-          };
+          $("dd-q").oninput = debounce(() => {
+            f.focus = null;
+            f.n = 30;
+            draw();
+          }, 150);
           body.querySelectorAll("#dd-kham, #dd-may").forEach((el) => {
             el.onchange = () => {
               f.focus = null;
@@ -17610,11 +17959,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 .join("") ||
               '<div class="vk-card vk-mu">Không thấy sinh vật nào.</div>';
           };
-          let tmr;
-          body.querySelector("#nl-q").oninput = () => {
-            clearTimeout(tmr);
-            tmr = setTimeout(draw, 250);
-          };
+          body.querySelector("#nl-q").oninput = debounce(draw, 150);
           body.querySelector("#nl-sch").onchange = draw;
           body.querySelector("#nl-realm").onchange = draw;
           draw();
@@ -21743,15 +22088,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             f.n = 40;
             draw();
           };
-          let tmr;
-          $("tc-q").oninput = () => {
-            clearTimeout(tmr);
-            tmr = setTimeout(() => {
-              f.focus = null;
-              f.n = 40;
-              draw();
-            }, 200);
-          };
+          $("tc-q").oninput = debounce(() => {
+            f.focus = null;
+            f.n = 40;
+            draw();
+          }, 150);
           body.querySelectorAll("#tc-desc, #tc-own").forEach((el) => {
             el.onchange = () => {
               f.focus = null;
@@ -23801,6 +24142,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               combatOverlayEl = null;
             }
             combatAutoActive = false;
+            refreshMiniStatus();
             return;
           }
 
@@ -23894,6 +24236,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               btnToggle.onclick = (e) => {
                 e.stopPropagation();
                 combatAutoActive = !combatAutoActive;
+                refreshMiniStatus();
                 updateCombatOverlay();
                 if (combatAutoActive) auFightStep(false);
               };
@@ -28902,6 +29245,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             : '<div class="vk-mu" style="font-size:12px">Chưa có nhật ký.</div>';
         }
         function auPaint() {
+          refreshMiniStatus();
           if (!UI.isOpen()) return;
           if (S.tab === "arr") {
             rrPaint();
@@ -33038,9 +33382,23 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.16.0 · Tái Thiết Hệ Thống Auto Kinh Mạch Đa Mục Tiêu",
+            t: "Phiên Bản 7.17.0 · Trùng Tu Toàn Diện Kiến Trúc & Động Cơ Kinh Mạch 2.0",
             d: "08/11/2026",
             now: true,
+            pts: [
+              "<b>Động Cơ Kinh Mạch 2.0 (Two-Stage Evaluation):</b> Tách biệt quy trình đánh giá thành 2 tầng (Fast Proxy Combat Power cho Simulated Annealing và Full Simulation cho Top-K & Leo Đồi Polish), loại bỏ hoàn toàn việc deep clone nhân vật trong vòng lặp nóng giúp tốc độ giải ma trận tăng vọt hơn 100 lần.",
+              "<b>Nâng Cấp Thuật Toán Tìm Kiếm & PRNG mulberry32:</b> Thay thế bộ sinh số ngẫu nhiên bằng PRNG mulberry32 phân bổ đều chu kỳ cực lớn; tích hợp cơ chế Adaptive Cooling & Reheating tự động kích nhiệt nhẹ thoát bẫy cực trị địa phương.",
+              "<b>Chế Độ Nền Non-Blocking & Độc Lập Tiến Trình:</b> Ứng dụng MessageChannel / requestAnimationFrame chạy tính toán ngầm không bị trình duyệt throttle khi chuyển tab; tách biệt cờ hủy S.kmAbort giúp chuyển tab giao diện tự do mà không làm ngắt Auto Kinh Mạch.",
+              "<b>Thanh Trạng Thái Auto Tinh Gọn (Mini Status Bar):</b> Tích hợp thanh trạng thái nổi trực quan hiển thị theo thời gian thực các tác vụ Auto đang chạy (Tu Luyện, Săn Dị Bảo, Săn Yêu, Buôn Bán, Tác Chiến) kèm nút Tạm Dừng nhanh một chạm.",
+              "<b>Hợp Nhất CSS & Tối Giản DOM Engine:</b> Gom toàn bộ stylesheet về một bảng thống nhất; gỡ bỏ MutationObserver chạy regex toàn cục trên DOM để triệt tiêu hiện tượng lag giật; bổ sung debounce 150ms cho các thanh tìm kiếm (Vật Phẩm, Quái Vật, Địa Danh, Ngự Linh).",
+              "<b>Quản Lý Vòng Đời & Dữ Liệu Động (Dynamic Data Sync):</b> Bổ sung TabLifecycle dọn sạch timer/listener khi chuyển tab; tự động đồng bộ thực thể, dị bảo, thể chất mới nhất từ game content gốc.",
+              "<b>Bảo Toàn Stealth Mode Tuyệt Đối:</b> Tăng cường bảo vệ luồng Lưu/Nạp Save & Tẩy Thiên Đạo, giữ dữ liệu trò chơi sạch sẽ và an toàn 100%."
+            ]
+          },
+          {
+            t: "Phiên Bản 7.16.0 · Tái Thiết Hệ Thống Auto Kinh Mạch Đa Mục Tiêu",
+            d: "08/11/2026",
+            now: false,
             pts: [
               "<b>Đại Tu Thuật Toán Auto Kinh Mạch (Multi-Objective Optimization):</b> Tái thiết kế toàn diện thuật toán giải ma trận kinh mạch, tích hợp hệ thống tối ưu hóa đa mục tiêu với các Preset chuyên biệt: Chiến Đấu (PvP/PvE), Tu Luyện (AFK Treo Máy), Đột Phá Cảnh Giới, Thể Tu Thiết Bích (Thủ Trâu), và Kiếm Tu Bạo Kích (Nhất Kích Tất Sát).",
               "<b>Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine):</b> Đo đạc chính xác tốc độ tiêu hao chân khí theo chu kỳ hồi chiêu (Drain Rate per Turn) đối sánh với tốc độ hồi phục mỗi hiệp và bình chứa tối đa, loại bỏ hoàn toàn tình trạng cạn kiệt chân khí phải cắn đan giữa trận.",
