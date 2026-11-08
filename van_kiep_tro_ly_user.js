@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.15.5
+// @version      7.16.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.5
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.16.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.15.5";
+      var TOOL_VER = "7.16.0";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5900,37 +5900,68 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           if (it.chieu) {
             const ch = it.chieu;
-            const dmgW =
-              ch.dang === "cong"
-                ? mode === "tu"
-                  ? 40
-                  : mode === "danh"
-                    ? 130
-                    : 80
-                : ch.dang === "khong_che"
-                  ? 65
-                  : 45;
-            p += (ch.uy || 1) * dmgW;
+            let dmgW = 80;
+            if (mode === "tu") dmgW = 20;
+            else if (mode === "dot_pha") dmgW = 35;
+            else if (mode === "tank") dmgW = 60;
+            else if (mode === "burst") dmgW = 180;
+            else if (mode === "danh") dmgW = 135;
+
+            let ctrlW = 45;
+            if (mode === "tank") ctrlW = 80;
+            else if (mode === "danh") ctrlW = 65;
+
+            p += (ch.uy || 1) * (ch.dang === "cong" ? dmgW : ctrlW);
             p += (ch.effects || []).length * 15;
-            if (ch.controlTurns) p += ch.controlTurns * 35;
-            if (ch.shieldTurns) p += ch.shieldTurns * 30;
+            if (ch.controlTurns) p += ch.controlTurns * (mode === "tank" ? 50 : 35);
+            if (ch.shieldTurns) p += ch.shieldTurns * (mode === "tank" || mode === "dot_pha" ? 60 : 30);
             if (ch.scope === "spread" || ch.scope === "all") p += 35;
             // Chiêu tốn nhiều linh lực bị khấu trừ để ưu tiên chiêu hiệu quả năng lượng cao
             const phiCost = ch.phi || 0;
-            p -= phiCost * 3.0;
+            p -= phiCost * (mode === "tu" ? 6.0 : 3.0);
             if (ch.hoi > 0) p += 10;
           }
           const bd = it.bi_dong || {};
-          const tocW = mode === "danh" ? 45 : mode === "tu" ? 320 : 130;
-          const dpW = mode === "danh" ? 35 : mode === "tu" ? 240 : 95;
+          let tocW = 130, dpW = 95, hpW = 110, hoTheW = 140, ktmW = 60, qiW = 55;
+          if (mode === "tu") {
+            tocW = 450;
+            dpW = 80;
+            qiW = 85;
+            hpW = 40;
+            hoTheW = 40;
+            ktmW = 40;
+          } else if (mode === "dot_pha") {
+            dpW = 550;
+            ktmW = 220;
+            hpW = 140;
+            hoTheW = 160;
+            tocW = 80;
+            qiW = 40;
+          } else if (mode === "tank") {
+            hpW = 280;
+            hoTheW = 320;
+            tocW = 40;
+            dpW = 30;
+            qiW = 50;
+          } else if (mode === "burst") {
+            tocW = 60;
+            dpW = 20;
+            qiW = 45;
+            hpW = 80;
+            hoTheW = 90;
+          } else if (mode === "danh") {
+            tocW = 45;
+            dpW = 35;
+            qiW = 55;
+          }
+
           p += (bd.toc_do || 0) * tocW;
           p += (bd.dot_pha || 0) * dpW;
-          p += (bd.khi_huyet || 0) * 110;
-          p += Math.min(0.3, bd.ho_the || 0) * 140;
-          p += (bd.phap_luc || 0) * 110;
-          if (bd.khang_tam_ma) p += bd.khang_tam_ma * 60;
-          // 7.14.8: Tâm pháp cho linh_luc đóng vai trò tối thượng gánh tải chiêu thức
-          if (it.linh_luc) p += it.linh_luc * (mode === "tu" ? 35 : 55);
+          p += (bd.khi_huyet || 0) * hpW;
+          p += Math.min(0.3, bd.ho_the || 0) * hoTheW;
+          p += (bd.phap_luc || 0) * (mode === "burst" ? 180 : 110);
+          if (bd.khang_tam_ma) p += bd.khang_tam_ma * ktmW;
+          if (it.linh_luc) p += it.linh_luc * qiW;
           return p;
         }
 
@@ -5972,9 +6003,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (r.thang) {
                 wins++;
                 fightScore +=
-                  mode === "danh"
+                  mode === "danh" || mode === "burst"
                     ? 100 + 15 * hpLeft + 60 / Math.max(1, r.nHiep)
-                    : 100 + 50 * hpLeft + 25 / Math.max(1, r.nHiep);
+                    : mode === "tank"
+                      ? 100 + 80 * hpLeft + 20 / Math.max(1, r.nHiep)
+                      : 100 + 50 * hpLeft + 25 / Math.max(1, r.nHiep);
               } else fightScore += 50 * dealt;
             }
             const thong = R.manh.filter((m) => m && m.thong).length;
@@ -6034,29 +6067,29 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             // a) Phạt thâm hụt chân khí mỗi hiệp (Drain Rate > llPerTurn): Chống hoàn toàn hiện tượng cạn chân khí phải cắn đan
             if (drainPerTurn > llPerTurn) {
               const def = drainPerTurn - llPerTurn;
-              llPenalty += def * (mode === "danh" ? 35 : 25) + Math.pow(def, 1.7) * 15;
+              llPenalty += def * (mode === "danh" || mode === "burst" ? 45 : 30) + Math.pow(def, 1.7) * 18;
             }
             // b) Phạt nếu chiêu chủ lực đơn lẻ ngốn quá 60% chân khí hồi mỗi hiệp
             if (llPerTurn < maxPhi * 0.9) {
               const def = maxPhi * 0.9 - llPerTurn;
-              llPenalty += def * (mode === "danh" ? 18.0 : 12.0);
+              llPenalty += def * (mode === "danh" || mode === "burst" ? 22.0 : 15.0);
             }
             // c) Phạt nếu dung lượng linh lực tối đa quá nông (không đủ đệm cho 1 vòng ra chiêu)
             if (llMax < maxPhi * 1.6) {
               const def = maxPhi * 1.6 - llMax;
-              llPenalty += def * 6.0;
+              llPenalty += def * 8.0;
             }
             // d) Khống chế trần số lượng chiêu thức (Skill Ceiling):
-            // Lấy trần từ S.hbMaxSkills (nếu có) hoặc mặc định là 3 chiêu khi tỉ lệ >= 0.6
+            // Lấy trần từ S.hbMaxSkills (nếu có) hoặc mặc định theo từng mode
             const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
               ? S.hbMaxSkills
-              : (S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
+              : (mode === "tu" ? 1 : S.hbRatio && S.hbRatio.t >= 0.6 ? 3 : 4);
             if (skillCap > 0 && costSkills.length > skillCap) {
               const ex = costSkills.length - skillCap;
-              llPenalty += ex * 260 + Math.pow(ex, 2) * 180;
+              llPenalty += ex * 280 + Math.pow(ex, 2) * 200;
             } else if (costSkills.length > 4) {
               const ex = costSkills.length - 4;
-              llPenalty += ex * 200 + Math.pow(ex, 2) * 120;
+              llPenalty += ex * 220 + Math.pow(ex, 2) * 140;
             }
 
             // e) Thưởng điểm "Chân Khí Viên Mãn · Tự Cấp Tự Túc" (Không cần cắn đan, tuần hoàn mượt mà)
@@ -6064,20 +6097,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (
               llPerTurn >= drainPerTurn * 1.15 &&
               llPerTurn >= maxPhi * 0.95 &&
-              costSkills.length >= 2 &&
-              (skillCap === 0 || costSkills.length <= skillCap)
+              (mode === "tu" || (costSkills.length >= 2 && (skillCap === 0 || costSkills.length <= skillCap)))
             ) {
-              llBonus += mode === "danh" ? 110 : 80;
+              llBonus += mode === "danh" || mode === "burst" ? 120 : 90;
             }
 
             // Điểm linh lực tổng quát
             const llScore =
-              (mode === "tu" ? 3.0 : mode === "danh" ? 9.0 : 7.0) * llPerTurn +
-              (mode === "tu" ? 1.0 : 1.8) * Math.min(300, llMax) -
+              (mode === "tu" ? 12.0 : mode === "danh" || mode === "burst" ? 9.0 : 7.0) * llPerTurn +
+              (mode === "tu" ? 2.5 : 1.8) * Math.min(300, llMax) -
               llPenalty +
               llBonus;
 
-            // 7.14.1: Tối ưu huyệt đạo: buff cực đại khi đặt chiêu mạnh lên huyệt, phạt nặng chiếm huyệt mà không thông
+            // 7.16.0: Tối ưu huyệt đạo: buff cực đại khi đặt món hợp preset lên huyệt, phạt nặng chiếm huyệt mà không thông
             let hyScore = 0;
             const usedCells = new Set();
             manh.forEach((p, idx) => {
@@ -6091,9 +6123,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (rm && rm.thong) {
                   const it = c.items.get(p.m.item);
                   const pwr = kmItemPower(it, mode);
-                  hyScore += 30 * q + 0.35 * pwr * q;
+                  let hyMult = 1.0;
+                  if (mode === "tu" && (it.bi_dong?.toc_do || it.linh_luc)) hyMult = 2.2;
+                  else if (mode === "dot_pha" && it.bi_dong?.dot_pha) hyMult = 2.6;
+                  else if (mode === "tank" && (it.bi_dong?.ho_the || it.bi_dong?.khi_huyet)) hyMult = 2.2;
+                  else if (mode === "burst" && it.chieu) hyMult = 2.4;
+                  hyScore += (35 * q + 0.40 * pwr * q) * hyMult;
                 } else {
-                  hyScore -= 80 * q; // chiếm huyệt mà không thông: phạt cực nặng
+                  hyScore -= 90 * q; // chiếm huyệt mà không thông: phạt cực nặng
                 }
               }
             });
@@ -6103,7 +6140,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 nv0.kinhMach.trangThai[h] === "thong" &&
                 !usedCells.has(h)
               ) {
-                hyScore -= 40; // ô huyệt mở được mà bị bỏ trống
+                hyScore -= 45; // ô huyệt mở được mà bị bỏ trống
               }
             }
 
@@ -6151,26 +6188,66 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const deadPenalty = S.full ? 0 : dead * 85;
 
             let s;
-            if (mode === "tu")
+            if (mode === "tu") {
+              // Case 2: Tu luyện AFK Treo máy: Tối đa hóa tốc độ tu vi, linh lực, triệt tiêu điểm nghịch
               s =
-                0.25 * fightScore +
-                0.25 * dmgScore +
-                500 * toc +
-                380 * dp +
+                0.15 * fightScore +
+                0.15 * dmgScore +
+                650 * toc +
+                120 * dp +
                 thong -
-                40 * ng +
+                60 * ng +
                 llScore;
-            else if (mode === "danh")
-              s = fightScore + dmgScore + 0.5 * thong - 4 * ng + llScore;
-            else
+            } else if (mode === "dot_pha") {
+              // Case 3: Đột phá Cảnh giới: Tối đa hóa tỉ lệ đột phá, kháng tâm ma, triệt tiêu điểm nghịch (0 điểm nghịch là hoàn mỹ)
+              const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
+              const hpSafe = Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+              s =
+                0.2 * fightScore +
+                0.2 * dmgScore +
+                950 * dp +
+                250 * ktm +
+                hpSafe +
+                thong -
+                90 * ng +
+                0.6 * llScore;
+            } else if (mode === "tank") {
+              // Case 4A: Thể Tu Thiết Bích (Thủ Trâu · Phản Đòn · Sinh Tồn)
+              const hoTheVal = Math.min(maxHoThe, curHoThe);
+              const hpLog = Math.log10(Math.max(10, P.khiHuyetToiDa || 100)) * 70;
+              const bodyHpVal = (R.bodyHp || 0) * 0.6;
+              s =
+                1.3 * fightScore +
+                0.5 * dmgScore +
+                hpLog +
+                bodyHpVal +
+                350 * hoTheVal +
+                thong -
+                15 * ng +
+                llScore;
+            } else if (mode === "burst") {
+              // Case 4B: Kiếm Tu Bạo Kích (Nhất Kích Tất Sát)
+              s =
+                fightScore +
+                1.7 * dmgScore +
+                0.9 * (uyMax || 0) +
+                0.5 * thong -
+                10 * ng +
+                llScore;
+            } else if (mode === "danh") {
+              // Case 1: Chiến đấu (PvP / PvE Đi ải)
+              s = fightScore + dmgScore + 0.5 * thong - 6 * ng + llScore;
+            } else {
+              // Cân bằng (bal)
               s =
                 fightScore +
                 0.5 * dmgScore +
-                45 * toc +
-                35 * dp +
+                55 * toc +
+                45 * dp +
                 0.5 * thong -
-                8 * ng +
+                10 * ng +
                 llScore;
+            }
             s +=
               hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
@@ -6388,12 +6465,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
             const toc = R.biDong.toc_do || 0,
               dp = R.biDong.dot_pha || 0;
-            const w =
-              mode === "tu"
-                ? [0.5, 70, 50, 0.4]
-                : mode === "danh"
-                  ? [1.5, 3, 2, 2.0]
-                  : [1, 18, 12, 1.2];
+            let w;
+            if (mode === "tu") w = [0.4, 90, 20, 0.2];
+            else if (mode === "dot_pha") w = [0.3, 10, 130, 0.3];
+            else if (mode === "tank") w = [1.0, 5, 5, 1.2];
+            else if (mode === "burst") w = [1.2, 5, 2, 2.8];
+            else if (mode === "danh") w = [1.5, 3, 2, 2.0];
+            else w = [1, 20, 15, 1.2];
             const thongCount = R.manh.filter((m) => m && m.thong).length;
             const deadCount = manh.length - thongCount;
 
@@ -6409,7 +6487,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 const rm = R.manh && R.manh[idx];
                 if (rm && rm.thong) {
                   const it = c.items.get(p.m.item);
-                  hyScore += 30 * q + 0.35 * kmItemPower(it, mode) * q;
+                  let hyMult = 1.0;
+                  if (mode === "tu" && (it.bi_dong?.toc_do || it.linh_luc)) hyMult = 2.0;
+                  else if (mode === "dot_pha" && it.bi_dong?.dot_pha) hyMult = 2.4;
+                  else if (mode === "tank" && (it.bi_dong?.ho_the || it.bi_dong?.khi_huyet)) hyMult = 2.0;
+                  else if (mode === "burst" && it.chieu) hyMult = 2.2;
+                  hyScore += (30 * q + 0.35 * kmItemPower(it, mode) * q) * hyMult;
                 } else {
                   hyScore -= 60 * q;
                 }
@@ -6504,6 +6587,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             for (const cnd of cand[id]) {
               if (cnd.touchesDanDien && cnd.isCP) {
                 let v = quick([cnd]);
+                if (mode === "tu" && (itAnchor.bi_dong?.toc_do || itAnchor.linh_luc)) v += 80;
+                else if (mode === "dot_pha" && itAnchor.bi_dong?.dot_pha) v += 100;
+                else if (mode === "tank" && (itAnchor.bi_dong?.ho_the || itAnchor.bi_dong?.khi_huyet)) v += 90;
+                else if (mode === "burst" && itAnchor.chieu) v += 90;
                 if (B && B.build && itAnchor && buildMatch(B.build, itAnchor)) {
                   v += 80;
                   const isCore =
@@ -6698,14 +6785,29 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (B && B.build && it && buildMatch(B.build, it)) {
                 w *= 1.35;
               }
-              if (needTam) {
-                if (isTam) w *= 3.5;
-                else if (hasCostSkill) w *= 0.25;
-              }
-              if (skillsFull && hasCostSkill) {
-                w *= 0.05;
-              } else if (curSkills < 2 && hasCostSkill && it && it.chieu && it.chieu.dang === "cong") {
-                w *= 2.5;
+              if (mode === "tu") {
+                if (isTam) w *= 4.5;
+                if (hasCostSkill) w *= 0.1;
+                if (it && (it.bi_dong?.toc_do || it.linh_luc)) w *= 3.0;
+              } else if (mode === "dot_pha") {
+                if (it && it.bi_dong?.dot_pha) w *= 5.0;
+                if (it && it.bi_dong?.khang_tam_ma) w *= 3.0;
+                if (hasCostSkill) w *= 0.35;
+              } else if (mode === "tank") {
+                if (it && (it.bi_dong?.ho_the || it.bi_dong?.khi_huyet)) w *= 3.5;
+                if (it && it.chieu && (it.chieu.shieldTurns || it.chieu.dang === "khong_che")) w *= 2.5;
+              } else if (mode === "burst") {
+                if (hasCostSkill && it.chieu.dang === "cong") w *= 3.5;
+              } else {
+                if (needTam) {
+                  if (isTam) w *= 3.5;
+                  else if (hasCostSkill) w *= 0.25;
+                }
+                if (skillsFull && hasCostSkill) {
+                  w *= 0.05;
+                } else if (curSkills < 2 && hasCostSkill && it && it.chieu && it.chieu.dang === "cong") {
+                  w *= 2.5;
+                }
               }
               weights.push(w);
               sum += w;
@@ -6760,8 +6862,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             for (let k = 0; k < pool.length; k += step) {
               const c = pool[k];
               const hyCount = hyOf(c);
-              const hyPref =
+              let hyPref =
                 hyCount > 0 ? (isHighVal ? 3.5 * hyCount : 0.8 * hyCount) : 0;
+              if (hyCount > 0 && itSmart) {
+                if (mode === "tu" && (itSmart.bi_dong?.toc_do || itSmart.linh_luc)) hyPref *= 2.5;
+                else if (mode === "dot_pha" && itSmart.bi_dong?.dot_pha) hyPref *= 3.0;
+                else if (mode === "tank" && (itSmart.bi_dong?.ho_the || itSmart.bi_dong?.khi_huyet)) hyPref *= 2.2;
+                else if (mode === "burst" && itSmart.chieu) hyPref *= 2.5;
+              }
               const conn = connectsToSpine(c, cpCells) ? 3.0 : -2.5;
               const khacPen = c.isKhacPha ? -1.2 : 0;
               const unfixable =
@@ -6812,6 +6920,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   // Tương sinh dồn vào chiêu công / kiếm tu:
                   let directMult = 3.5;
                   if (isSkillSmart) directMult += 4.0;
+                  if (mode === "burst") directMult += 5.0;
                   if (isBuildSmart) directMult += 6.5; // Thưởng đặc biệt cho Hướng Build (vd Kiếm Tu)
                   if (onHuyetSmart) directMult *= 1.6;
 
@@ -6823,7 +6932,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   synBonus +=
                     directMult * sDirect +
                     reverseMult * sReverse -
-                    8.0 * kDirect;
+                    (mode === "dot_pha" || mode === "tu" ? 12.0 : 8.0) * kDirect;
                 } else if (S.dir === "ma") {
                   synBonus += 6.0 * kDirect - 3.0 * (sDirect + sReverse);
                 }
@@ -18651,9 +18760,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           0: ["Không Giới Hạn (Tự Do)", 0],
         };
         const HB_MODE = {
-          bal: "Cân Bằng (Đánh + Tu Luyện)",
-          danh: "Ưu Tiên Đánh Nhau",
-          tu: "Ưu Tiên Tu Luyện / Đột Phá",
+          bal: "🎯 Cân Bằng (Chiến Đấu + Tu Luyện)",
+          danh: "⚔️ Ưu Tiên Chiến Đấu (PvP / PvE Đi Ải)",
+          tu: "🧘 Ưu Tiên Tu Luyện (AFK Treo Máy)",
+          dot_pha: "⚡ Ưu Tiên Đột Phá Cảnh Giới",
+          tank: "🛡️ Thể Tu Thiết Bích (Thủ Trâu · Phản Đòn)",
+          burst: "🗡️ Kiếm Tu Bạo Kích (Nhất Kích Tất Sát)",
         };
         const HB_ITERS = [
           [800, "Nhanh"],
@@ -18671,31 +18783,49 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             dt: "",
           },
           {
-            id: "burst",
-            name: "⚡ Bạo Sát Thần Tốc",
-            desc: "Dồn uy lực công kích, phá giáp, bộc phát sát thương hạ gục nhanh",
+            id: "pvp",
+            name: "⚔️ Chiến Đấu (PvP / PvE Đi Ải)",
+            desc: "Tối đa sát thương vòng chiêu, khống chế, kháng tính, bảo toàn chân khí bền vững",
             mode: "danh",
-            ratio: "55",
-            maxSkills: "4",
-            dt: "ef.sunder",
+            ratio: "64",
+            maxSkills: "3",
+            dt: "",
+          },
+          {
+            id: "cultivate",
+            name: "🧘 Tu Luyện (AFK Treo Máy)",
+            desc: "Tối đa tốc độ hấp thụ linh khí & tu vi, dồn toàn bộ huyệt vị cho exp, thông chuỗi tương sinh",
+            mode: "tu",
+            ratio: "73",
+            maxSkills: "0",
+            dt: "toc_do",
+          },
+          {
+            id: "breakthrough",
+            name: "⚡ Đột Phá Cảnh Giới",
+            desc: "Tối đa tỉ lệ đột phá thành công, triệt hạ tâm ma (0 điểm nghịch), hộ thể độ kiếp",
+            mode: "dot_pha",
+            ratio: "73",
+            maxSkills: "3",
+            dt: "dot_pha",
           },
           {
             id: "tank",
-            name: "🛡️ Bất Hoại Hộ Thể",
+            name: "🛡️ Thể Tu Thiết Bích",
             desc: "Dày hộ thể 60%, khí huyết dồi dào, hồi máu, thủ hộ trường sinh phản kích",
-            mode: "danh",
+            mode: "tank",
             ratio: "64",
             maxSkills: "3",
             dt: "ho_the",
           },
           {
-            id: "speed",
-            name: "🚀 Tốc Tu Đột Phá",
-            desc: "Tối đa tốc độ tu luyện, tỉ lệ đột phá, 70% Tâm Pháp dưỡng sinh kháng tâm ma",
-            mode: "tu",
-            ratio: "73",
+            id: "burst",
+            name: "🗡️ Kiếm Tu Bạo Kích",
+            desc: "Định tuyến kinh lộ từ đan điền ra kiếm pháp khí, nhất kích tất sát",
+            mode: "burst",
+            ratio: "55",
             maxSkills: "3",
-            dt: "toc_do",
+            dt: "ef.sunder",
           },
           {
             id: "control",
@@ -24588,9 +24718,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         const AU_KM_MO_MIN = 10; // chỉ tự mở ô khi lợi từ ngần này điểm (1 trận mẫu thắng thêm ≈ 11 điểm)
         const AU_KM_MIN_GAIN = 2; // chỉ đổi cách xếp khi tốt hơn ngần này điểm
         const AU_KM_MODE = [
-          ["bal", "Cân Bằng (Đánh + Tu Luyện)"],
-          ["danh", "Ưu Tiên Đánh Nhau"],
-          ["tu", "Ưu Tiên Tu Luyện / Đột Phá"],
+          ["bal", "🎯 Cân Bằng (Chiến Đấu + Tu Luyện)"],
+          ["danh", "⚔️ Ưu Tiên Chiến Đấu (PvP / PvE Đi Ải)"],
+          ["tu", "🧘 Ưu Tiên Tu Luyện (AFK Treo Máy)"],
+          ["dot_pha", "⚡ Ưu Tiên Đột Phá Cảnh Giới"],
+          ["tank", "🛡️ Thể Tu Thiết Bích (Thủ Trâu · Phản Đòn)"],
+          ["burst", "🗡️ Kiếm Tu Bạo Kích (Nhất Kích Tất Sát)"],
         ];
         const AU_KM_IT = [
           [1500, "Nhanh (1.500 vòng)"],
@@ -32905,9 +33038,21 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.15.5 · Tối Ưu Sự Kiện Tu Vi & Song Tu Cùng Đạo Lữ",
+            t: "Phiên Bản 7.16.0 · Tái Thiết Hệ Thống Auto Kinh Mạch Đa Mục Tiêu",
             d: "08/11/2026",
             now: true,
+            pts: [
+              "<b>Đại Tu Thuật Toán Auto Kinh Mạch (Multi-Objective Optimization):</b> Tái thiết kế toàn diện thuật toán giải ma trận kinh mạch, tích hợp hệ thống tối ưu hóa đa mục tiêu với các Preset chuyên biệt: Chiến Đấu (PvP/PvE), Tu Luyện (AFK Treo Máy), Đột Phá Cảnh Giới, Thể Tu Thiết Bích (Thủ Trâu), và Kiếm Tu Bạo Kích (Nhất Kích Tất Sát).",
+              "<b>Động Cơ Bền Vững Chân Khí (Qi Sustainability Engine):</b> Đo đạc chính xác tốc độ tiêu hao chân khí theo chu kỳ hồi chiêu (Drain Rate per Turn) đối sánh với tốc độ hồi phục mỗi hiệp và bình chứa tối đa, loại bỏ hoàn toàn tình trạng cạn kiệt chân khí phải cắn đan giữa trận.",
+              "<b>Tối Ưu Hóa & Đòn Bẩy Huyệt Đạo Tuyệt Đối:</b> Tự động nhận diện huyệt gốc kiếp này và huyệt mở thêm, áp dụng hệ số nhân thưởng cực đại (x2.0 - x2.5) khi bố trí các công pháp cốt lõi phù hợp với mục tiêu preset lên ô huyệt vị.",
+              "<b>Chuỗi Tương Sinh Ngũ Hành & Suy Giảm Phẩm Cấp:</b> Áp dụng chuẩn xác bảng trọng số zD [1, 2/3, 1/3, 0] theo chênh lệch phẩm cấp khi nối mạch tương sinh; ưu tiên định tuyến kinh lộ từ Đan Điền tới Pháp Khí cùng hệ để đạt tối đa hệ số kinh lộ.",
+              "<b>Hệ Thống Preset Mở Rộng:</b> Bổ sung chế độ Đột Phá Cảnh Giới (ưu tiên tỉ lệ đột phá, kháng tâm ma, triệt tiêu hoàn toàn điểm nghịch), Thể Tu Thiết Bích (kẹp trần hộ thể 60%, dồn khí huyết) và Kiếm Tu Bạo Kích (tối đa uy lực chiêu chủ lực mở màn).",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.15.5 · Tối Ưu Sự Kiện Tu Vi & Song Tu Cùng Đạo Lữ",
+            d: "08/11/2026",
+            now: false,
             pts: [
               "<b>Chuẩn Hóa Sự Kiện Tăng Tu Vi:</b> Nhận diện đầy đủ hơn 300 sự kiện, kỳ ngộ, bí cảnh, di tích, bế quan linh mạch, thải bổ và tu luyện theo năm; loại bỏ triệt để các biến cố quấy nhiễu và những sự kiện/lựa chọn gây trừ tu vi.",
               "<b>Sửa Lỗi Chọn Nhánh Đa Tầng (Multi-Stage Scenes):</b> Khắc phục lỗi scene bị undefined khiến Auto chọn sai nhánh ở các bí cảnh/di tích nhiều tầng, tự động đánh giá và chọn chuẩn xác nhánh mang lại tu vi dương cao nhất.",
