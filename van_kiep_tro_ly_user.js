@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.15.2
+// @version      7.15.3
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.3
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.15.2";
+      var TOOL_VER = "7.15.3";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -5664,6 +5664,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             huyet: 0,
             build: 0,
             bhuyet: 0,
+            bCore: 0,
           };
           const own = new Map();
           manh.forEach((p, i) => p.cells.forEach((x) => own.set(x, i)));
@@ -5780,6 +5781,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               if (itB && buildMatch(B.build, itB)) {
                 f.build++;
                 for (const c of p.cells) if (B.hy.has(c)) f.bhuyet++;
+                const isCore =
+                  itB.tran_phai ||
+                  (itB.pham_cap || 1) >= 4 ||
+                  (itB.tag || []).includes(B.build.k);
+                if (isCore) f.bCore++;
               }
             }
           });
@@ -5804,7 +5810,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 2.4 * f.lcGoc -
                 1.5 * f.lcKhac +
                 5 * f.huyet;
-            if (B.build) s += 14 * f.build + 5 * f.bhuyet;
+            if (B.build) s += 14 * f.build + 5 * f.bhuyet + 20 * (f.bCore || 0);
             return s * (S.biasK || 1);
           } catch (e) {
             return 0;
@@ -5829,7 +5835,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               cells: K.oCuaManh(g, m, c.items.get(m.item)) || [],
             }));
             const f = biasInfo(B, manh, best.R);
-            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Hướng xếp: <b>${DIR_TEN[S.dir || ""]}</b>${S.prio ? " · ưu tiên linh căn &amp; huyệt" : ""}${B.build ? " · Hướng Build: <b>" + esc(B.build.ten) + "</b> (" + f.build + " món đúng hướng đang thông, " + f.bhuyet + " ô của chúng nằm trên huyệt)" : ""}. Đường nối tương sinh: ${f.sinh} · tương khắc: ${f.khac} · ô hợp màu: ${num(f.hop, 1)} · ô đặt lên huyệt: ${f.huyet} · món cùng hệ linh căn: ${f.lc}.</div>`;
+            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Hướng xếp: <b>${DIR_TEN[S.dir || ""]}</b>${S.prio ? " · ưu tiên linh căn &amp; huyệt" : ""}${B.build ? " · Hướng Build: <b>" + esc(B.build.ten) + "</b> (" + f.build + " món đúng hướng đang thông, " + f.bhuyet + " ô trên huyệt" + (f.bCore ? ", <b class=\"vk-ok\">" + f.bCore + " món cốt lõi</b>" : "") + ")" : ""}. Đường nối tương sinh: ${f.sinh} · tương khắc: ${f.khac} · ô hợp màu: ${num(f.hop, 1)} · ô đặt lên huyệt: ${f.huyet} · món cùng hệ linh căn: ${f.lc}.</div>`;
           } catch (e) {
             return "";
           }
@@ -6494,9 +6500,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           // Giai đoạn 1: Khóa trục Đan Điền BẮT BUỘC bằng Công Pháp (ưu tiên tuyệt đối đúng màu, cấm lệch hệ)
           const anchorCandidates = [];
           for (const id of Object.keys(cand)) {
+            const itAnchor = c.items.get(id);
             for (const cnd of cand[id]) {
               if (cnd.touchesDanDien && cnd.isCP) {
-                const v = quick([cnd]);
+                let v = quick([cnd]);
+                if (B && B.build && itAnchor && buildMatch(B.build, itAnchor)) {
+                  v += 80;
+                  const isCore =
+                    itAnchor.tran_phai ||
+                    (itAnchor.pham_cap || 1) >= 4 ||
+                    (itAnchor.tag || []).includes(B.build.k);
+                  if (isCore) v += 120;
+                }
                 if (v > -400) anchorCandidates.push({ cnd, v });
               }
             }
@@ -6551,7 +6566,18 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                   continue;
                 }
 
-                const v = quick([...cur, cnd]);
+                let v = quick([...cur, cnd]);
+                if (B && B.build) {
+                  const itCnd = c.items.get(cnd.m.item);
+                  if (itCnd && buildMatch(B.build, itCnd)) {
+                    v += 20;
+                    const isCore =
+                      itCnd.tran_phai ||
+                      (itCnd.pham_cap || 1) >= 4 ||
+                      (itCnd.tag || []).includes(B.build.k);
+                    if (isCore) v += 35;
+                  }
+                }
                 if (!best || v > best.v) best = { v, cnd };
               }
             }
@@ -6621,7 +6647,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
           const itemsK = C().items;
 
-          // 7.14.8: Cân bằng trọng số vật phẩm (ưu tiên Tâm Pháp tăng linh_luc / bị động, chiêu thức chọn lọc)
+          // 7.14.8 & 7.15.3: Cân bằng trọng số vật phẩm (ưu tiên Tâm Pháp tăng linh_luc / bị động, Hướng Build & Món Cốt Lõi)
           const itemWeights = new Map();
           for (const id of ids) {
             const it = itemsK.get(id);
@@ -6631,6 +6657,14 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             if (it.chieu && (it.pham_cap || 1) >= 3) w += 15;
             if (it.linh_luc) w += it.linh_luc * 15;
             if (it.tag && it.tag.includes("nghich")) w += 45;
+            if (B && B.build && buildMatch(B.build, it)) {
+              w += 35;
+              const isCore =
+                it.tran_phai ||
+                (it.pham_cap || 1) >= 4 ||
+                (it.tag || []).includes(B.build.k);
+              if (isCore) w += 45;
+            }
             itemWeights.set(id, Math.max(5, w));
           }
 
@@ -6661,6 +6695,9 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               const isTam = it && hbCls(it) === "tam";
               const hasCostSkill = it && it.chieu && (it.chieu.phi || 0) > 0;
               
+              if (B && B.build && it && buildMatch(B.build, it)) {
+                w *= 1.35;
+              }
               if (needTam) {
                 if (isTam) w *= 3.5;
                 else if (hasCostSkill) w *= 0.25;
@@ -11423,10 +11460,57 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           prog(1, "Xong");
           return { cur, best };
         }
-        // Thử mở từng ô mở được rồi xếp lại để đo ô nào lợi nhất.
+        // 7.15.3: Đánh giá nhanh độ tiềm năng của ô chuẩn bị mở để ưu tiên dò chuyên sâu
+        function rankOpenCandidate(i, g, nv, hySet0) {
+          let score = 0;
+          if (hySet0 && hySet0.has(i)) score += 60;
+          const x = i % g.rong;
+          const y = Math.floor(i / g.rong);
+          const st = nv.kinhMach.trangThai;
+          const nb = [
+            x > 0 ? i - 1 : -1,
+            x < g.rong - 1 ? i + 1 : -1,
+            y > 0 ? i - g.rong : -1,
+            y < g.cao - 1 ? i + g.rong : -1,
+          ].filter((o) => o >= 0 && g.vung[o] >= 0);
+          let thongCount = 0;
+          for (const o of nb) {
+            if (st[o] === "thong") thongCount++;
+            if (o === g.danDien) score += 40;
+          }
+          score += thongCount * 15;
+          const cellMau = (nv.kinhMach.mau && nv.kinhMach.mau[i]) || "vo_sac";
+          const lc = (nv.linhCan && nv.linhCan.he) || [];
+          if (cellMau === "vo_sac") {
+            score += 15;
+          } else if (lc.includes(cellMau)) {
+            score += 25;
+          } else if (lc.some((h) => heTacDong(h, cellMau) > 0)) {
+            score += 15;
+          } else if (lc.some((h) => heTacDong(h, cellMau) < 0)) {
+            score -= 10;
+          }
+          return score;
+        }
+
+        // Thử mở từng ô mở được rồi xếp lại để đo ô nào lợi nhất (tối ưu hóa v7.15.3).
         async function kmOpenSearch(nv, mode, prog) {
           const open = kmOpenable(nv);
           if (!open.length) return { base: null, res: [] };
+          const K = S.core,
+            c = C();
+          const g = K.luoiKinhMach(c, nv);
+          const hy0 = hySet(g, nv.kinhMach);
+
+          // Sắp xếp các ô mở được theo tiềm năng thực tế
+          const scored = open.map((i) => ({
+            i,
+            pot: rankOpenCandidate(i, g, nv, hy0),
+          })).sort((a, b) => b.pot - a.pot);
+
+          // Nếu có nhiều hơn 5 ô mở được, lọc top 5 ô tiềm năng nhất để tôi luyện sâu
+          const candidatesToTest = scored.length > 5 ? scored.slice(0, 5) : scored;
+
           const nv0 = clone(nv);
           nv0.kinhMach.manh = [];
           const base = await anneal({
@@ -11434,11 +11518,12 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             mode,
             iters: 800,
             init: nv.kinhMach.manh,
-            onProg: (f) => prog(f / (open.length + 1), "Mốc hiện tại…"),
+            onProg: (f) =>
+              prog(f / (candidatesToTest.length + 1), "Mốc hiện tại…"),
           });
           const res = [];
-          for (let k = 0; k < open.length && !kmAborted(); k++) {
-            const i = open[k],
+          for (let k = 0; k < candidatesToTest.length && !kmAborted(); k++) {
+            const { i } = candidatesToTest[k],
               nvO = clone(nv0);
             nvO.kinhMach.trangThai[i] = "thong";
             const r = await anneal({
@@ -11448,8 +11533,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               init: base.manh,
               onProg: (f) =>
                 prog(
-                  (k + 1 + f) / (open.length + 1),
-                  `Thử ô ${k + 1}/${open.length}…`,
+                  (k + 1 + f) / (candidatesToTest.length + 1),
+                  `Thử ô ${k + 1}/${candidatesToTest.length}…`,
                 ),
             });
             res.push({ i, r, gain: r.score - base.score });
@@ -24096,6 +24181,122 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             nv.theChat,
           ]);
 
+        // 7.15.3: Hàm áp dụng toàn diện cách xếp kinh mạch (Tẩy ô + Đặt mảnh / 2 bộ) dùng chung cho cả Auto và nút Áp Dụng Xem Trước
+        async function auKmApplySolution(sols, cfg, st = null, force = false) {
+          const K = S.core;
+          let nv = nvNow();
+          if (!nv || !nv.kinhMach) return { ok: false, msg: "Chưa có kinh mạch." };
+          if (!sols || !sols.length) return { ok: false, msg: "Chưa có cách xếp để áp dụng." };
+
+          // 1. Tẩy ô nếu bật cfg.tayO
+          if (cfg && cfg.tayO) {
+            const allPlans = [];
+            const seenPlanCells = new Set();
+            for (const s of sols) {
+              const plans = s.recolorPlan || (s.best && s.best.recolorPlan);
+              if (Array.isArray(plans)) {
+                for (const p of plans) {
+                  if (!seenPlanCells.has(p.cell)) {
+                    seenPlanCells.add(p.cell);
+                    allPlans.push(p);
+                  }
+                }
+              }
+            }
+            for (const p of allPlans) {
+              if (st && st.stop) break;
+              let curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+              if (curDoiMau <= 0) {
+                const pillOrder = [
+                  { id: "item.tay_tuy_dan", bac: 1, name: "Tẩy Tủy Đan" },
+                  { id: "item.cai_menh_dan", bac: 2, name: "Cải Mệnh Đan" },
+                  { id: "item.dich_cot_dan", bac: 3, name: "Dịch Cốt Đan" },
+                ];
+                for (const pill of pillOrder) {
+                  const countInBag = (nv.tuiDo && nv.tuiDo[pill.id]) || 0;
+                  const canUse = K && K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
+                  if (countInBag > 0 && canUse > 0) {
+                    const useRes = auCall((gg) => gg.useItem(pill.id));
+                    if (useRes.ok) {
+                      auLog(`Đã dùng 1 viên ${pill.name} để nhận lượt chuyển hệ.`, "vk-ok");
+                      nv = nvNow();
+                      curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+                      break;
+                    }
+                  }
+                }
+              }
+              if (curDoiMau <= 0) {
+                auLog("Không còn lượt chuyển hệ và không có đan tẩy tủy trong túi để dùng.", "vk-mu");
+                break;
+              }
+              const r = auCall((gg) => gg.doiMauO(p.cell, p.toHe));
+              if (r.ok) {
+                if (st) st.recolorsDone = (st.recolorsDone || 0) + 1;
+                auLog(`🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`, "vk-ok");
+                nv = nvNow();
+              } else {
+                auLog(`Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`, "vk-mu");
+                break;
+              }
+            }
+            nv = nvNow();
+          }
+
+          // 2. Áp dụng kinh mạch (Hai bộ hoặc Một bộ)
+          if (cfg && cfg.two) {
+            const r = await kmApplyLoadouts(
+              sols.map((s) => s.best.manh),
+              { mo: !!cfg.moBo, keep: cfg.keep === "danh" ? 1 : 0 },
+            );
+            if (!r.ok) return r;
+            if (st) st.applied++;
+            auLog(r.msg, "vk-ok");
+            return { ok: true, msg: r.msg };
+          }
+
+          const s0 = sols[0];
+          const gain = (s0.bestSim || s0.best).score - s0.cur.score;
+          if (!force && (s0.best.same || gain < AU_KM_MIN_GAIN)) {
+            auLog(
+              "Cách đang xếp đã là tốt nhất Tool tìm được (điểm " +
+                num(s0.cur.score, 0) +
+                ").",
+              "vk-ok",
+            );
+            return { ok: true, msg: "Cách đang xếp đã là tốt nhất." };
+          }
+
+          const r = await kmApplyDiff(s0.best.manh);
+          if (!r.ok) return r;
+          if (st) st.applied++;
+          if (r.same) {
+            const txtSame = "Kinh mạch đã chuẩn xác như cách xếp, không cần đổi.";
+            auLog(txtSame, "vk-ok");
+            return { ok: true, msg: txtSame };
+          }
+          const txt =
+            "Đã xếp lại kinh mạch: điểm " +
+            num(s0.cur.score, 0) +
+            " → " +
+            num((s0.bestSim || s0.best).score, 0) +
+            ", thắng trận mẫu " +
+            s0.cur.wins +
+            "/" +
+            s0.cur.n +
+            " → " +
+            s0.best.wins +
+            "/" +
+            s0.best.n +
+            " (gỡ " +
+            r.removed +
+            ", đặt " +
+            r.added +
+            ").";
+          auLog(txt, "vk-ok");
+          return { ok: true, msg: txt };
+        }
+
         // Một lượt: (mở ô nếu bật) → tìm cách xếp → áp dụng. Trả về { ok, note } | { stop } | { retry }.
         async function auKmPass(st) {
           const cfg = AU.cfg.km,
@@ -24237,122 +24438,11 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             st.label = "Áp dụng vào game";
             auPaintSoon();
 
-            // 3.1) Thực hiện tẩy ô vào game nếu được bật
-            if (cfg.tayO) {
-              const allPlans = [];
-              const seenPlanCells = new Set();
-              for (const s of sols) {
-                if (Array.isArray(s.recolorPlan)) {
-                  for (const p of s.recolorPlan) {
-                    if (!seenPlanCells.has(p.cell)) {
-                      seenPlanCells.add(p.cell);
-                      allPlans.push(p);
-                    }
-                  }
-                }
-              }
-              for (const p of allPlans) {
-                if (st.stop) break;
-                // Nếu chưa có lượt tẩy chờ sẵn, tự động dùng đan Tẩy Tủy / Cải Mệnh / Dịch Cốt trong túi nếu còn
-                let curDoiMau =
-                  (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
-                if (curDoiMau <= 0) {
-                  const pillOrder = [
-                    { id: "item.tay_tuy_dan", bac: 1, name: "Tẩy Tủy Đan" },
-                    { id: "item.cai_menh_dan", bac: 2, name: "Cải Mệnh Đan" },
-                    { id: "item.dich_cot_dan", bac: 3, name: "Dịch Cốt Đan" },
-                  ];
-                  for (const pill of pillOrder) {
-                    const countInBag = (nv.tuiDo && nv.tuiDo[pill.id]) || 0;
-                    const canUse = K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
-                    if (countInBag > 0 && canUse > 0) {
-                      const useRes = auCall((gg) => gg.useItem(pill.id));
-                      if (useRes.ok) {
-                        auLog(
-                          `Đã dùng 1 viên ${pill.name} để nhận lượt chuyển hệ.`,
-                          "vk-ok",
-                        );
-                        nv = nvNow();
-                        curDoiMau =
-                          (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
-                        break;
-                      }
-                    }
-                  }
-                }
-
-                if (curDoiMau <= 0) {
-                  auLog(
-                    "Không còn lượt chuyển hệ và không có đan tẩy tủy trong túi để dùng.",
-                    "vk-mu",
-                  );
-                  break;
-                }
-
-                const r = auCall((gg) => gg.doiMauO(p.cell, p.toHe));
-                if (r.ok) {
-                  st.recolorsDone = (st.recolorsDone || 0) + 1;
-                  auLog(
-                    `🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`,
-                    "vk-ok",
-                  );
-                  nv = nvNow();
-                } else {
-                  auLog(
-                    `Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`,
-                    "vk-mu",
-                  );
-                  break;
-                }
-              }
-              nv = nvNow();
+            const appRes = await auKmApplySolution(sols, cfg, st, false);
+            if (!appRes.ok) {
+              return /bận/i.test(appRes.msg) ? { retry: appRes.msg } : { stop: appRes.msg };
             }
-            if (cfg.two) {
-              const r = await kmApplyLoadouts(
-                sols.map((s) => s.best.manh),
-                { mo: !!cfg.moBo, keep: cfg.keep === "danh" ? 1 : 0 },
-              );
-              if (!r.ok)
-                return /bận/i.test(r.msg) ? { retry: r.msg } : { stop: r.msg };
-              st.applied++;
-              auLog(r.msg, "vk-ok");
-              return { ok: true, note: r.msg };
-            }
-            const s0 = sols[0],
-              gain = s0.best.score - s0.cur.score;
-            if (s0.best.same || gain < AU_KM_MIN_GAIN) {
-              auLog(
-                "Cách đang xếp đã là tốt nhất Tool tìm được (điểm " +
-                  num(s0.cur.score, 0) +
-                  ").",
-                "vk-ok",
-              );
-              return { ok: true, note: "Cách đang xếp đã là tốt nhất." };
-            }
-            const r = await kmApplyDiff(s0.best.manh);
-            if (!r.ok)
-              return /bận/i.test(r.msg) ? { retry: r.msg } : { stop: r.msg };
-            st.applied++;
-            const txt =
-              "Đã xếp lại kinh mạch: điểm " +
-              num(s0.cur.score, 0) +
-              " → " +
-              num(s0.best.score, 0) +
-              ", thắng trận mẫu " +
-              s0.cur.wins +
-              "/" +
-              s0.cur.n +
-              " → " +
-              s0.best.wins +
-              "/" +
-              s0.best.n +
-              " (gỡ " +
-              r.removed +
-              ", đặt " +
-              r.added +
-              ").";
-            auLog(txt, "vk-ok");
-            return { ok: true, note: txt };
+            return { ok: true, note: appRes.msg };
           } finally {
             restore();
           }
@@ -24541,14 +24631,102 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               danh: "Bộ Đánh",
               tu: "Bộ Tu Luyện",
             };
+            const cfg = AU.cfg.km;
+            let recolorHtml = "";
+            const allPlans = [];
+            const seenCells = new Set();
+            for (const s of Pv.sols) {
+              const plans = s.recolorPlan || (s.best && s.best.recolorPlan);
+              if (Array.isArray(plans)) {
+                for (const p of plans) {
+                  if (!seenCells.has(p.cell)) {
+                    seenCells.add(p.cell);
+                    allPlans.push(p);
+                  }
+                }
+              }
+            }
+            if (allPlans.length > 0) {
+              recolorHtml = `
+                <div style="margin-top:10px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:8px 12px">
+                  <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:#3b82f6;font-size:13px">
+                    <span>🎨</span> <span>Kế Hoạch Tẩy Ô Đề Xuất (${allPlans.length} ô):</span>
+                  </div>
+                  <div class="vk-mu" style="font-size:11.5px;margin-top:2px">Sẽ tự động chuyển hệ khi bấm Áp Dụng (tự cắn đan trong túi nếu hết lượt):</div>
+                  <div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
+                    ${allPlans.map((p) => `
+                      <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span style="font-weight:600">📍 Ô Cột ${p.col}, Hàng ${p.row}:</span>
+                        <span style="color:var(--mut)">Hệ ${esc(HE_VI[p.fromHe] || p.fromHe)}</span>
+                        <span>➜</span>
+                        <b style="color:#10b981">Hệ ${esc(HE_VI[p.toHe] || p.toHe)}</b>
+                        <span class="vk-mu">(khớp «${esc(p.itTen)}»)</span>
+                      </div>
+                    `).join("")}
+                  </div>
+                </div>
+              `;
+            }
+
+            const isAlreadyBest =
+              Pv.sols.every((s) => s.best.same) && allPlans.length === 0;
+            const applyBtnHtml = `
+              <div style="margin-top:12px">
+                <button class="vk-btn au-go" id="au-km-apply-prev" style="width:100%;padding:10px 14px;font-size:13.5px;font-weight:bold;background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 2px 8px rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;gap:8px">
+                  <span>✅</span> <span>${isAlreadyBest ? "Kinh Mạch Đã Tối Ưu (Bấm Để Áp Dụng Lại)" : "Áp Dụng Ngay Cách Xếp Này Vào Game"}</span>
+                </button>
+              </div>
+            `;
+
             box.innerHTML =
               '<div class="vk-mu" style="font-size:12px;margin-top:8px">Kết quả lần tính gần nhất (ảnh là cách xếp Tool chọn; "Đang xếp" là lúc bắt đầu tính).</div>' +
+              recolorHtml +
               Pv.sols
                 .map(
                   (s, k) =>
                     `<div style="margin-top:10px"><b>${Pv.modes.length > 1 ? k + 1 + ". " : ""}${esc(nm[Pv.modes[k]] || Pv.modes[k])}</b>${s.best.same ? ' <span class="vk-mu" style="font-size:12px">(giữ nguyên cách đang xếp)</span>' : ""}${drawGrid(Pv.nv, s.best.manh)}${statRows(s.cur, s.bestSim || s.best)}</div>`,
                 )
-                .join("");
+                .join("") +
+              applyBtnHtml;
+
+            const applyBtn = box.querySelector("#au-km-apply-prev");
+            if (applyBtn) {
+              applyBtn.onclick = async () => {
+                applyBtn.disabled = true;
+                applyBtn.innerHTML =
+                  "<span>⏳</span> <span>Đang áp dụng vào game…</span>";
+                try {
+                  const res = await auKmApplySolution(Pv.sols, cfg, null, true);
+                  if (res && res.ok) {
+                    UI.notify("Đã áp dụng thành công cách xếp vào game!");
+                    const nvAfter = nvNow();
+                    Pv.nv = nvAfter;
+                    for (let idx = 0; idx < Pv.sols.length; idx++) {
+                      try {
+                        Pv.sols[idx].cur = evalCurrent(nvAfter, Pv.modes[idx]);
+                        Pv.sols[idx].best.same = true;
+                      } catch (e) {}
+                    }
+                    drawTabs();
+                    auPaintSoon();
+                    auKmPreview();
+                  } else {
+                    UI.notify(
+                      "Không thể áp dụng: " +
+                        ((res && (res.msg || res.err)) || "Game bận"),
+                    );
+                  }
+                } catch (err) {
+                  UI.notify("Lỗi khi áp dụng: " + (err.message || err));
+                } finally {
+                  if (applyBtn) {
+                    applyBtn.disabled = false;
+                    applyBtn.innerHTML =
+                      "<span>✅</span> <span>Áp Dụng Ngay Cách Xếp Này Vào Game</span>";
+                  }
+                }
+              };
+            }
           } catch (e) {
             box.innerHTML = errBox(e);
           }
@@ -32101,9 +32279,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.15.2 · Nâng Cấp Auto Tu Luyện & Tùy Chọn Săn Yêu Toàn Diện",
+            t: "Phiên Bản 7.15.3 · Nâng Cấp Toàn Diện Auto Kinh Mạch & 1-Click Apply",
             d: "08/11/2026",
             now: true,
+            pts: [
+              "<b>1-Click Áp Dụng Từ Xem Trước (Instant 1-Click Apply):</b> Bổ sung nút <i>✅ Áp Dụng Ngay Cách Xếp Này Vào Game</i> trực tiếp trong khung Xem Trước (An Toàn); tự động thực hiện cả chu trình Tẩy Ô chuyển hệ (tự dùng đan trong túi nếu hết lượt) lẫn áp dụng cách xếp/bộ vào game chỉ với 1 lần chạm mà không cần chạy lại solver từ đầu.",
+              "<b>Hiển Thị Kế Hoạch Tẩy Ô Trực Quan:</b> Khung Xem Trước liệt kê chi tiết danh sách từng ô kinh mạch đề xuất chuyển hệ (Tọa độ Cột/Hàng, hệ cũ sang hệ mới, khớp công pháp nào), giúp đạo hữu kiểm soát 100% tài nguyên trước khi quyết định.",
+              "<b>Tối Ưu Tốc Độ Dò Mở Ô (kmOpenSearch):</b> Áp dụng thuật toán xếp hạng tiềm năng (Heuristic Ranking) ưu tiên top các ô giáp Đan Điền, ô Huyệt Đạo và hợp hệ linh căn để tôi luyện sâu (Anneal); loại bỏ hoàn toàn tình trạng giật lag/đơ giao diện khi có nhiều ô mở được, tăng tốc độ dò gấp 2-3 lần.",
+              "<b>Ưu Tiên Món Cốt Lõi Hướng Build:</b> Nâng cao trọng số nhận diện công pháp/pháp khí cốt lõi của hướng build (Trấn phái, phẩm cao, đúng tông môn/nguyên tố) trong cả khởi tạo Tham Lam (Greedy) lẫn tôi luyện ngẫu nhiên (Anneal), bảo đảm AI không bỏ sót tuyệt kỹ trấn phái chỉ vì chênh lệch điểm vụn vặt."
+            ],
+          },
+          {
+            t: "Phiên Bản 7.15.2 · Nâng Cấp Auto Tu Luyện & Tùy Chọn Săn Yêu Toàn Diện",
+            d: "08/11/2026",
+            now: false,
             pts: [
               "<b>Chế Độ Săn Yêu Đột Phá (Boss Đầu Đàn):</b> Bổ sung tùy chọn mục tiêu săn yêu linh hoạt: <i>👑 Ưu Tiên Lùng Đầu Đàn (Nhận Tu Vi x3 & Rơi Đồ x1.5 · Tự lùi về thường nếu nguy hiểm)</i>, <i>🐾 Chỉ Săn Yêu Thường (An toàn · 1 lượt)</i>, <i>🔥 Chỉ Săn Đầu Đàn (Bỏ qua thú thường)</i>. Tự động nhận diện và tính toán nguy cơ chiến đấu trước khi quyết định.",
               "<b>Tự Động Trị Thương & Tĩnh Dưỡng Lành Thể (Auto Duong Thuong):</b> Khi thương thế chạm ngưỡng (Thương nhẹ/Thương nặng), Tool tự động kiểm tra và nuốt ngay đan dược chữa thương trong túi (Hồi Xuân Đan, Sinh Cơ Đan, Cửu Chuyển Kim Đan...); nếu hết đan dược sẽ tự động tạm bế quan 1 năm tĩnh dưỡng để vết thương hoàn toàn lành lặn và tích thêm tu vi, sau đó tự động tiếp tục đi săn mà không bị dừng Auto.",
