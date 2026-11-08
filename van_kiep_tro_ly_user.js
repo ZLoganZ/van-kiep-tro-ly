@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.15.4
+// @version      7.15.5
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.4
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.15.5
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.15.4";
+      var TOOL_VER = "7.15.5";
       var MOD_CSS_EXTRA = `
  
 .nk-nav { grid-template-columns:repeat(2,1fr); }
@@ -21775,6 +21775,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             neHac: true,
             danhAi: true,
             uuTienSuKienTuVi: true,
+            autoSongTu: true,
             sanMucTieu: "uu_tien_dau_dan",
             autoDuongThuong: true,
             uuTienCapNen: true,
@@ -21995,7 +21996,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           return total;
         }
 
-        // ── Kiểm tra và phân tích sự kiện tăng tu vi (Kỳ ngộ, Bí cảnh, Di tích...)
+        // ── Kiểm tra và phân tích sự kiện tăng tu vi (Kỳ ngộ, Bí cảnh, Di tích, Song Tu...)
         const _tuViEncCache = new Map();
         function encGivesTuVi(encId) {
           if (!encId) return 0;
@@ -22010,34 +22011,86 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             _tuViEncCache.set(encId, 0);
             return 0;
           }
+
           let maxTv = 0;
-          function walk(obj) {
-            if (!obj || typeof obj !== "object") return;
-            if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
-              const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
-              if (Number.isFinite(v) && v > maxTv) maxTv = v;
-            }
-            if (
-              obj.start_chain &&
-              typeof obj.start_chain === "string" &&
-              Cc &&
-              Cc.chains
-            ) {
-              const chDef = Cc.chains.get(obj.start_chain);
-              if (chDef && chDef.steps) {
-                for (const stp of Object.values(chDef.steps)) {
-                  if (stp && stp.encounter && stp.encounter !== encId) {
-                    const stpTv = encGivesTuVi(stp.encounter);
-                    if (stpTv > maxTv) maxTv = stpTv;
+          const visitedChains = new Set();
+
+          function evalEffs(effs) {
+            if (!Array.isArray(effs)) return 0;
+            let tv = 0;
+            for (const eff of effs) {
+              if (!eff || typeof eff !== "object") continue;
+              if (eff.tu_vi !== undefined || eff.tuVi !== undefined) {
+                const v = Number(
+                  eff.tu_vi !== undefined ? eff.tu_vi : eff.tuVi,
+                );
+                if (Number.isFinite(v) && v > 0) tv += v;
+              }
+              if (eff.song_tu) tv += 5.0; // Song Tu tăng ~5% tiểu cảnh giới (rất lớn)
+              if (eff.tu_luyen) {
+                const nam = Number(eff.tu_luyen.nam) || 1;
+                const hs = Number(eff.tu_luyen.he_so) || 1;
+                tv += nam * hs;
+              }
+              if (eff.be_quan_linh_mach) tv += 2.0;
+              if (eff.thai_bo) tv += 3.0;
+              if (
+                eff.start_chain &&
+                typeof eff.start_chain === "string" &&
+                !visitedChains.has(eff.start_chain) &&
+                Cc &&
+                Cc.chains
+              ) {
+                visitedChains.add(eff.start_chain);
+                const chDef = Cc.chains.get(eff.start_chain);
+                if (chDef && chDef.steps) {
+                  for (const stp of Object.values(chDef.steps)) {
+                    if (stp && stp.encounter && stp.encounter !== encId) {
+                      const stpTv = encGivesTuVi(stp.encounter);
+                      if (stpTv > tv) tv = stpTv;
+                    }
                   }
                 }
               }
             }
-            for (const v of Object.values(obj)) {
-              if (typeof v === "object") walk(v);
+            return tv;
+          }
+
+          function scanChoice(ch) {
+            if (!ch || typeof ch !== "object") return 0;
+            let cTv = evalEffs(ch.effects);
+            if (ch.success) {
+              const sEff = Array.isArray(ch.success)
+                ? ch.success
+                : ch.success.effects;
+              cTv = Math.max(cTv, evalEffs(sEff));
+            }
+            if (ch.partial) {
+              const pEff = Array.isArray(ch.partial)
+                ? ch.partial
+                : ch.partial.effects;
+              cTv = Math.max(cTv, evalEffs(pEff));
+            }
+            return cTv;
+          }
+
+          if (Array.isArray(enc.choices)) {
+            for (const ch of enc.choices) {
+              const v = scanChoice(ch);
+              if (v > maxTv) maxTv = v;
             }
           }
-          walk(enc);
+          if (enc.scenes && typeof enc.scenes === "object") {
+            for (const sc of Object.values(enc.scenes)) {
+              if (sc && Array.isArray(sc.choices)) {
+                for (const ch of sc.choices) {
+                  const v = scanChoice(ch);
+                  if (v > maxTv) maxTv = v;
+                }
+              }
+            }
+          }
+
           _tuViEncCache.set(encId, maxTv);
           return maxTv;
         }
@@ -22049,52 +22102,117 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const nonThoat = availableChoices.filter((c) => !c.thoat);
           if (!nonThoat.length) return null;
 
-          // 1. Tìm lựa chọn mang lại nhiều tu_vi trực tiếp nhất
-          let bestChoice = null;
-          let maxTv = 0;
+          // Xử lý đặc thù cho Song Tu: Ưu tiên chọn "Song tu một năm" nhận tu vi trực tiếp
+          if (encDef.id === "ev.song_tu") {
+            const cYear = nonThoat.find((c) => /song tu một năm/i.test(c.text));
+            if (cYear && cYear.available !== false)
+              return { choice: cYear, tv: 50 };
+            const cNhapDinh = nonThoat.find((c) => /nhập định/i.test(c.text));
+            if (cNhapDinh && cNhapDinh.available !== false)
+              return { choice: cNhapDinh, tv: 20 };
+          }
 
-          // Nếu đang ở scene cụ thể thì lấy danh sách choices của scene đó
+          // Xác định chính xác scene hiện tại (nếu caller chưa truyền thì lấy trực tiếp từ state game)
+          const curScene =
+            activeScene ||
+            (G().state &&
+              G().state.run &&
+              G().state.run.active &&
+              G().state.run.active.scene) ||
+            null;
+
           const sceneChoices =
-            activeScene && encDef.scenes && encDef.scenes[activeScene]
-              ? encDef.scenes[activeScene].choices
+            curScene && encDef.scenes && encDef.scenes[curScene]
+              ? encDef.scenes[curScene].choices
               : null;
           const choiceDefs = sceneChoices || encDef.choices || [];
+
+          function evalObjScore(obj) {
+            if (!obj || typeof obj !== "object") return 0;
+            let sc = 0;
+            if (Array.isArray(obj)) {
+              for (const it of obj) sc += evalObjScore(it);
+              return sc;
+            }
+            if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
+              const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
+              if (Number.isFinite(v)) {
+                // Thưởng điểm cao cho tu vi dương, phạt rất nặng tu vi âm (tránh các nhánh trừ tu vi)
+                sc += v > 0 ? v * 10 : v * 60;
+              }
+            }
+            if (obj.song_tu) sc += 50;
+            if (obj.tu_luyen) {
+              const n = Number(obj.tu_luyen.nam) || 1;
+              const hs = Number(obj.tu_luyen.he_so) || 1;
+              sc += n * hs * 8;
+            }
+            if (obj.be_quan_linh_mach) sc += 20;
+            if (obj.thai_bo) sc += 25;
+            if (obj.tam_ma) sc -= Number(obj.tam_ma) * 15;
+            if (obj.injury) sc -= 25;
+            return sc;
+          }
+
+          function scoreChoiceDef(def) {
+            if (!def || typeof def !== "object") return 0;
+            let sc = evalObjScore(def.effects);
+            if (def.success) {
+              const sEff = Array.isArray(def.success)
+                ? def.success
+                : def.success.effects;
+              sc = Math.max(sc, evalObjScore(sEff));
+            }
+            if (def.partial) {
+              const pEff = Array.isArray(def.partial)
+                ? def.partial
+                : def.partial.effects;
+              sc = Math.max(sc, evalObjScore(pEff));
+            }
+            if (def.failure) {
+              const fEff = Array.isArray(def.failure)
+                ? def.failure
+                : def.failure.effects;
+              const scFail = evalObjScore(fEff);
+              if (scFail < 0) sc += scFail * 0.5; // Phạt nếu thất bại gây trừ tu vi/chấn thương
+            }
+            // Nếu dẫn sang scene kế tiếp, quét các nhánh scene đó tìm tu vi tiềm năng
+            if (def.scene && encDef.scenes && encDef.scenes[def.scene]) {
+              const nextSc = encDef.scenes[def.scene];
+              if (Array.isArray(nextSc.choices)) {
+                let maxNext = 0;
+                for (const nc of nextSc.choices) {
+                  let nsc = evalObjScore(nc.effects);
+                  if (nc.success) {
+                    const nsEff = Array.isArray(nc.success)
+                      ? nc.success
+                      : nc.success.effects;
+                    nsc = Math.max(nsc, evalObjScore(nsEff));
+                  }
+                  if (nsc > maxNext) maxNext = nsc;
+                }
+                sc += maxNext * 0.8;
+              }
+            }
+            return sc;
+          }
+
+          let bestChoice = null;
+          let bestScore = -Infinity;
 
           for (const ch of nonThoat) {
             const defChoice = choiceDefs[ch.index];
             if (!defChoice) continue;
 
-            let chTv = 0;
-            function checkObj(obj) {
-              if (!obj || typeof obj !== "object") return;
-              if (obj.tu_vi !== undefined || obj.tuVi !== undefined) {
-                const v = Number(
-                  obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi,
-                );
-                if (Number.isFinite(v) && v > chTv) chTv = v;
-              }
-              for (const v of Object.values(obj)) {
-                if (typeof v === "object") checkObj(v);
-              }
-            }
-            checkObj(defChoice);
-
-            if (
-              defChoice.scene &&
-              encDef.scenes &&
-              encDef.scenes[defChoice.scene]
-            ) {
-              checkObj(encDef.scenes[defChoice.scene]);
-            }
-
-            if (chTv > maxTv) {
-              maxTv = chTv;
+            const score = scoreChoiceDef(defChoice);
+            if (score > bestScore) {
+              bestScore = score;
               bestChoice = ch;
             }
           }
 
-          if (bestChoice && maxTv > 0) {
-            return { choice: bestChoice, tv: maxTv };
+          if (bestChoice && bestScore > 0) {
+            return { choice: bestChoice, tv: bestScore };
           }
 
           // 2. Nếu chưa có nhánh nào có tu_vi trực tiếp ngay ở bước này (hoặc là bước dẫn tới scene khác):
@@ -22103,17 +22221,19 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const txt = c.text || "";
             return (
               c.check ||
-              /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh|bước|quan sát|chiêm ngưỡng|soi|xem xét/i.test(
+              /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh|bước|quan sát|chiêm ngưỡng|soi|xem xét|ngồi|nhập định|dưỡng|hộ pháp/i.test(
                 txt,
               )
             );
           });
           if (advanceChoice) return { choice: advanceChoice, tv: 0 };
 
-          // 3. Tránh các lựa chọn bỏ cuộc / rời đi / hẹn dịp khác
+          // 3. Tránh các lựa chọn bỏ cuộc / rời đi / hẹn dịp khác / từ chối
           const activeChoice = nonThoat.find((c) => {
             const txt = c.text || "";
-            return !/rời|bỏ|thôi|hẹn|không thèm|quay về|trở về|chạy/i.test(txt);
+            return !/rời|bỏ|thôi|hẹn|không thèm|quay về|trở về|chạy|cáo từ/i.test(
+              txt,
+            );
           });
 
           return { choice: activeChoice || nonThoat[0], tv: 0 };
@@ -24198,7 +24318,13 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const cs = (v.choices || []).filter((c) => c.available);
           if (encGivesTuVi(v.id) > 0) {
             const encDef = C().encounters && C().encounters.get(v.id);
-            const bestTv = findBestTuViChoice(encDef, cs, v.scene);
+            const activeScene =
+              (G().state &&
+                G().state.run &&
+                G().state.run.active &&
+                G().state.run.active.scene) ||
+              null;
+            const bestTv = findBestTuViChoice(encDef, cs, activeScene);
             if (bestTv && bestTv.choice) return bestTv.choice;
             const nonThoat = cs.filter((c) => !c.thoat);
             if (nonThoat.length > 0) return nonThoat[0];
@@ -25169,6 +25295,31 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             return Math.floor(b.left) - Math.floor(a.left) || a.y - b.y;
           });
         }
+        // Helper kiểm tra xem sự kiện có phải biến cố quấy nhiễu ngẫu nhiên (không phải đích đến trên bản đồ)
+        function isBienCoEnc(encId) {
+          if (!encId) return false;
+          if (
+            /^ev\.(tam_ma_|bq_|bc_|lq_|at_|dc_|tho_nguyen|truy_na|the_cuc|an_tinh)/i.test(
+              encId,
+            )
+          )
+            return true;
+          try {
+            const Cc = C();
+            const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+            if (
+              encDef &&
+              (encDef.bien_co ||
+                encDef.loai === "bien_co" ||
+                (encDef.tags &&
+                  encDef.tags.noi &&
+                  encDef.tags.noi.includes("bien_co")))
+            )
+              return true;
+          } catch (e) {}
+          return false;
+        }
+
         // Tìm các sự kiện / địa danh / node có thể tăng tu vi xung quanh
         function auFindTuViSpots(c, cfg, st) {
           const g = G(),
@@ -25177,6 +25328,38 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           const out = [];
           const seenEncs = new Set();
           const maxY = cfg.maxY || 3;
+
+          // 0. Ưu tiên kiểm tra Song Tu cùng Đạo Lữ (Hồi chiêu 5 năm · Lượng tu vi cực lớn +5% tiểu cảnh giới)
+          if (cfg.autoSongTu !== false && run.npc) {
+            for (const [npcId, npc] of Object.entries(run.npc)) {
+              if (!npc || !npc.song || npc.danhPhan !== "dao_lu") continue;
+              const blocked =
+                TT.core && typeof TT.core.dualBlock === "function"
+                  ? TT.core.dualBlock(c, npcId)
+                  : run.nhanVat &&
+                    run.nhanVat.dualYear != null &&
+                    run.nam - run.nhanVat.dualYear < 5
+                    ? "chưa hồi chiêu"
+                    : undefined;
+              if (blocked === undefined) {
+                const estGain =
+                  TT.core && typeof TT.core.dualGain === "function"
+                    ? TT.core.dualGain(c)
+                    : 5.0;
+                out.push({
+                  slot: run.viTri,
+                  y: 0,
+                  encId: "ev.song_tu",
+                  npcId: npcId,
+                  tv: estGain,
+                  ten: "Song Tu cùng " + (npc.ten || "Đạo Lữ"),
+                  source: "song_tu",
+                  d: null,
+                });
+                break;
+              }
+            }
+          }
 
           // 1. Lấy danh sách các ô có thể đi tới trong bán kính maxY năm
           const reachable = new Map();
@@ -25201,6 +25384,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 if (Array.isArray(acts)) {
                   for (const a of acts) {
                     if (!a || !a.id || a.lockedReason) continue;
+                    if (isBienCoEnc(a.id)) continue;
                     const encKey = a.id + "@" + slotStr;
                     if (seenEncs.has(encKey)) continue;
                     if (
@@ -25247,6 +25431,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                 continue;
 
               const encId = n.encounter;
+              if (isBienCoEnc(encId)) continue;
               const encKey = encId + "@" + slotStr;
               if (seenEncs.has(encKey)) continue;
               if (
@@ -25330,7 +25515,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               ];
 
               for (const encId of allPlaceEncs) {
-                if (!encId) continue;
+                if (!encId || isBienCoEnc(encId)) continue;
                 const encKey = encId + "@" + slotStr;
                 if (seenEncs.has(encKey)) continue;
                 if (
@@ -25391,6 +25576,8 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
           }
 
           return out.sort((a, b) => {
+            if (a.source === "song_tu" && b.source !== "song_tu") return -1;
+            if (a.source !== "song_tu" && b.source === "song_tu") return 1;
             const aHere =
               String(a.slot) === String(run.viTri) ||
               String(a.slot) === String(run.oNoi);
@@ -26167,57 +26354,69 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
                     st.skipEnc.add(targetTv.encId);
                     st.skipEnc.add(encKey);
                   } else {
-                    // Nếu chưa vào nơi chốn thì vào nơi chốn trước để g.chooseActivity không bị lỗi "Không ở nơi chốn nào"
-                    if (String(run.oNoi) !== String(targetTv.slot)) {
-                      if (typeof g.enterPlace === "function") {
-                        try {
-                          g.enterPlace(String(targetTv.slot));
-                        } catch (ePlace) {}
-                      }
-                      if (typeof g.enterNode === "function") {
-                        try {
-                          g.enterNode(String(targetTv.slot));
-                        } catch (eNode) {}
-                      }
-                      const rEnter = G().state && G().state.run;
-                      if (
-                        rEnter &&
-                        (rEnter.active || rEnter.tran || rEnter.bienCo)
-                      ) {
-                        st.tried = 0;
-                        return null;
-                      }
-                    }
-
-                    // Kích hoạt sự kiện
+                    // Kích hoạt sự kiện tu vi tùy theo nguồn (song_tu, node bản đồ, nơi chốn, hoặc hoạt động)
                     auLog(
-                      `⚡ Tham gia sự kiện tăng tu vi «${targetTv.ten}» (+${targetTv.tv} tu vi kỳ vọng)...`,
+                      `⚡ Tham gia sự kiện tăng tu vi «${targetTv.ten}» (+${num(targetTv.tv)} tu vi kỳ vọng)...`,
                       "vk-ok",
                     );
-                    let rAct = auCall(() => {
-                      if (
-                        targetTv.source === "activity" &&
-                        typeof g.chooseActivity === "function"
-                      ) {
-                        try {
-                          g.chooseActivity(targetTv.encId);
-                        } catch (e1) {
-                          if (typeof g.doAction === "function")
-                            g.doAction(targetTv.encId);
-                          else throw e1;
+
+                    let rAct = { ok: false };
+                    if (targetTv.source === "song_tu") {
+                      rAct = auCall(() => {
+                        if (
+                          TT.core &&
+                          typeof TT.core.openVisit === "function"
+                        ) {
+                          g.act((ctx) =>
+                            TT.core.openVisit(ctx, targetTv.npcId, "dual"),
+                          );
+                        } else if (typeof g.chooseActivity === "function") {
+                          g.chooseActivity("ev.song_tu");
                         }
-                      } else if (typeof g.chooseActivity === "function") {
-                        try {
-                          g.chooseActivity(targetTv.encId);
-                        } catch (e2) {
-                          if (typeof g.doAction === "function")
-                            g.doAction(targetTv.encId);
-                          else throw e2;
+                      });
+                    } else if (targetTv.source === "node") {
+                      rAct = auCall(() => {
+                        if (typeof g.enterNode === "function") {
+                          g.enterNode(String(targetTv.slot));
                         }
-                      } else if (typeof g.doAction === "function") {
-                        g.doAction(targetTv.encId);
+                      });
+                    } else if (targetTv.source === "noiChon") {
+                      if (String(run.oNoi) !== String(targetTv.slot)) {
+                        if (typeof g.enterPlace === "function") {
+                          try {
+                            g.enterPlace(String(targetTv.slot));
+                          } catch (ePlace) {}
+                        }
                       }
-                    });
+                      rAct = auCall(() => {
+                        if (typeof g.chooseActivity === "function") {
+                          try {
+                            g.chooseActivity(targetTv.encId);
+                          } catch (e1) {
+                            if (typeof g.doAction === "function")
+                              g.doAction(targetTv.encId);
+                            else throw e1;
+                          }
+                        } else if (typeof g.doAction === "function") {
+                          g.doAction(targetTv.encId);
+                        }
+                      });
+                    } else {
+                      // targetTv.source === "activity"
+                      rAct = auCall(() => {
+                        if (typeof g.chooseActivity === "function") {
+                          try {
+                            g.chooseActivity(targetTv.encId);
+                          } catch (e2) {
+                            if (typeof g.doAction === "function")
+                              g.doAction(targetTv.encId);
+                            else throw e2;
+                          }
+                        } else if (typeof g.doAction === "function") {
+                          g.doAction(targetTv.encId);
+                        }
+                      });
+                    }
 
                     const rAfter = G().state && G().state.run;
                     if (
@@ -26418,6 +26617,51 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
             const bPills = findPhaBinhCanhPills(nv);
             for (const p of bPills) {
               autoBreak.push(p.id);
+            }
+          }
+
+          // 4.5. Tự động kiểm tra và ưu tiên Song Tu cùng Đạo Lữ (khi hồi chiêu 5 năm hoàn tất)
+          if (cfg.autoSongTu !== false && run.npc) {
+            let readyDaoLuId = null;
+            let readyDaoLuNpc = null;
+            for (const [npcId, npc] of Object.entries(run.npc)) {
+              if (!npc || !npc.song || npc.danhPhan !== "dao_lu") continue;
+              const blocked =
+                TT.core && typeof TT.core.dualBlock === "function"
+                  ? TT.core.dualBlock(ctxLite(), npcId)
+                  : run.nhanVat &&
+                    run.nhanVat.dualYear != null &&
+                    run.nam - run.nhanVat.dualYear < 5
+                    ? "chưa hồi chiêu"
+                    : undefined;
+              if (blocked === undefined) {
+                readyDaoLuId = npcId;
+                readyDaoLuNpc = npc;
+                break;
+              }
+            }
+            if (readyDaoLuId && readyDaoLuNpc) {
+              const estGain =
+                TT.core && typeof TT.core.dualGain === "function"
+                  ? TT.core.dualGain(ctxLite())
+                  : 5.0;
+              auLog(
+                `❤️ Phát hiện Đạo Lữ «${readyDaoLuNpc.ten}» đã sẵn sàng Song Tu (+${num(estGain)} tu vi, giảm 5 tâm ma)! Tự động mời song tu...`,
+                "vk-ok",
+              );
+              const rSongTu = auCall(() => {
+                if (TT.core && typeof TT.core.openVisit === "function") {
+                  g.act((ctx) =>
+                    TT.core.openVisit(ctx, readyDaoLuId, "dual"),
+                  );
+                } else if (typeof g.chooseActivity === "function") {
+                  g.chooseActivity("ev.song_tu");
+                }
+              });
+              if (rSongTu.ok) {
+                st.tried = 0;
+                return null;
+              }
             }
           }
 
@@ -28105,6 +28349,10 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
               "au-tl-tu-vi-events",
               c.uuTienSuKienTuVi !== false,
             );
+            c.autoSongTu = ck(
+              "au-tl-song-tu",
+              c.autoSongTu !== false,
+            );
             c.sanMucTieu = sel(
               "au-tl-san-target",
               c.sanMucTieu || "uu_tien_dau_dan",
@@ -29399,6 +29647,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
       <div id="au-tl-be-quan-box" style="display:${!isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
         <div style="font-weight:700;color:var(--acc);margin-bottom:6px">⚙️ Cài Đặt Bế Quan (Nhập Định)</div>
         <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-cult-pills" ${c.useCultPills !== false ? "checked" : ""}> Tự nuốt Đan Tu Luyện trong túi khi bế quan</label>
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-song-tu" ${c.autoSongTu !== false ? "checked" : ""} style="margin-top:3px"><span><b>❤️ Tự Động Song Tu Cùng Đạo Lữ (Hồi Chiêu 5 Năm · +5% Tu Vi/Lần)</b> <span class="vk-mu" style="font-size:11px">(Khi có Đạo Lữ và hồi chiêu 5 năm hoàn tất, Auto sẽ tự động thực hiện Song Tu 1 năm để nhận lượng lớn tu vi, giảm 5 điểm Tâm Ma và thắt chặt tình cảm)</span></span></label>
       </div>
 
       <!-- KHỐI TÙY CHỌN ĐÁNH QUÁI (SĂN YÊU) -->
@@ -29419,7 +29668,7 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-uu-tien-cap-nen" ${c.uuTienCapNen !== false ? "checked" : ""} style="margin-top:3px"><span><b>🎯 Ưu Tiên Bãi Săn Sát Cảnh Giới Nhân Vật (Tối Ưu Tu Vi)</b> <span class="vk-mu" style="font-size:11px">(Chọn bãi hoang dã có cấp cảnh giới sát nhân vật nhất để nhận được lượng tu vi lớn nhất mỗi trận)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc... tự chọn Bỏ Đi khi gặp để không bị trừ Khí Vận)</span></span></label>
         <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-danh-ai" ${c.danhAi !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tự Đánh AI Khi Không Cho Tốc Chiến (Trận Thắng)</b> <span class="vk-mu" style="font-size:11px">(Dùng Siêu AI VIP tự đánh khi game khóa nút Tốc Chiến)</span></span></label>
-        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-tu-vi-events" ${c.uuTienSuKienTuVi !== false ? "checked" : ""} style="margin-top:3px"><span><b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi (Kỳ Ngộ, Bí Cảnh, Di Tích...)</b> <span class="vk-mu" style="font-size:11px">(Khi phát hiện sự kiện / kỳ ngộ / bí cảnh quanh đây có thể nhận nhiều tu vi, Auto sẽ ưu tiên tới tham gia trước khi săn quái để tu luyện nhanh nhất)</span></span></label>
+        <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-tu-vi-events" ${c.uuTienSuKienTuVi !== false ? "checked" : ""} style="margin-top:3px"><span><b>⚡ Ưu Tiên Tham Gia Sự Kiện Tăng Tu Vi (Kỳ Ngộ, Bí Cảnh, Di Tích, Song Tu...)</b> <span class="vk-mu" style="font-size:11px">(Khi phát hiện sự kiện / kỳ ngộ / bí cảnh / Song Tu quanh đây có thể nhận nhiều tu vi, Auto sẽ ưu tiên tới tham gia trước khi săn quái để tối ưu tốc độ tu luyện)</span></span></label>
         <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-kt" ${c.kt ? "checked" : ""}> Kiểm Tra Sức Trước Khi Chạy (thắng chắc từ ${Math.round(AU_KT * 100)}% yêu thú mẫu)</label>
         <button class="vk-btn sec" id="au-tl-chk-hunt" style="margin-top:6px;width:100%">🔍 Xem Sức Đánh & Các Bãi Săn Quanh Đây</button>
         <div id="au-tl-hunt-info" style="margin-top:6px"></div>
@@ -32656,9 +32905,20 @@ table.vk-t th { text-transform:none; letter-spacing:.2px; }
 
         var LOG = [
           {
-            t: "Phiên Bản 7.15.4 · Siêu AI Tác Chiến VIP Đỉnh Cao & Giao Diện Trực Quan",
+            t: "Phiên Bản 7.15.5 · Tối Ưu Sự Kiện Tu Vi & Song Tu Cùng Đạo Lữ",
             d: "08/11/2026",
             now: true,
+            pts: [
+              "<b>Chuẩn Hóa Sự Kiện Tăng Tu Vi:</b> Nhận diện đầy đủ hơn 300 sự kiện, kỳ ngộ, bí cảnh, di tích, bế quan linh mạch, thải bổ và tu luyện theo năm; loại bỏ triệt để các biến cố quấy nhiễu và những sự kiện/lựa chọn gây trừ tu vi.",
+              "<b>Sửa Lỗi Chọn Nhánh Đa Tầng (Multi-Stage Scenes):</b> Khắc phục lỗi scene bị undefined khiến Auto chọn sai nhánh ở các bí cảnh/di tích nhiều tầng, tự động đánh giá và chọn chuẩn xác nhánh mang lại tu vi dương cao nhất.",
+              "<b>Tích Hợp Tự Động Song Tu Cùng Đạo Lữ:</b> Tự động phát hiện khi hồi chiêu 5 năm hoàn tất, chủ động mời Đạo Lữ Song Tu (ở cả chế độ Bế Quan &amp; Đánh Quái) để nhận 5% tu vi tiểu cảnh giới (x2 nếu có mảnh Hợp Hoan), giảm 5 điểm Tâm Ma và gia tăng tình cảm.",
+              "<b>Kích Hoạt Node Sự Kiện Chuẩn Xác:</b> Sử dụng trực tiếp enterNode cho các node trên bản đồ thế giới, tránh lỗi do gọi sai hàm hoạt động nơi chốn.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.15.4 · Siêu AI Tác Chiến VIP Đỉnh Cao & Giao Diện Trực Quan",
+            d: "08/11/2026",
+            now: false,
             pts: [
               "<b>Chiến Thuật Nhắm Mục Tiêu Thông Minh (Tactical Targeting):</b> Tự động tính toán mức độ đe dọa (Địch đang nộ chuẩn bị đại chiêu, quái sắp chết cần dứt điểm sớm, Boss/Tinh Anh, Khắc Hệ Ngũ Hành) và cho phép tùy chọn 4 chiến thuật: <i>🧠 Tối Ưu Chiến Thuật</i>, <i>👑 Ưu Tiên Trùm / Thủ Lĩnh</i>, <i>🎯 Diệt Kẻ Yếu Trước</i>, <i>🔥 Tương Khắc Ngũ Hành</i>.",
               "<b>Dứt Điểm Thông Minh (Smart Finisher):</b> Nhận diện chính xác khi địch chỉ còn tàn huyết trong tầm đòn đánh cơ bản; tự động tung Quyền Cước (<code>danh_thuong</code>) 0 linh lực để kết liễu ngay lập tức mà không lãng phí mana hay thời gian hồi của các đại chiêu quý giá.",
