@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.20.0
+// @version      7.20.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.20.0";
+      var TOOL_VER = "7.20.1";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -2503,7 +2503,8 @@ table.au-tb tr:last-child td {
               return a + b.toUpperCase();
             });
           }
-          var SEL = "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
+          var SEL =
+            "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
           function fixNode(root) {
             if (!root || !root.isConnected) return;
             try {
@@ -2546,7 +2547,13 @@ table.au-tb tr:last-child td {
           var r = s % 60;
           var h = Math.floor(m / 60);
           if (h > 0) {
-            return h + ":" + String(m % 60).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+            return (
+              h +
+              ":" +
+              String(m % 60).padStart(2, "0") +
+              ":" +
+              String(r).padStart(2, "0")
+            );
           }
           return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
         }
@@ -2643,7 +2650,8 @@ table.au-tb tr:last-child td {
             win &&
             win.classList.contains("vkx-wide");
 
-          var vertical = typeof isVertical === "boolean" ? isVertical : !!isWideGroups;
+          var vertical =
+            typeof isVertical === "boolean" ? isVertical : !!isWideGroups;
           var isInitial = !gliderEl.classList.contains("active");
           var noTransition = !!immediate || isInitial;
 
@@ -2652,11 +2660,13 @@ table.au-tb tr:last-child td {
           }
 
           if (vertical) {
-            gliderEl.style.transform = "translate3d(0, " + targetBtn.offsetTop + "px, 0)";
+            gliderEl.style.transform =
+              "translate3d(0, " + targetBtn.offsetTop + "px, 0)";
             gliderEl.style.height = h + "px";
             gliderEl.style.width = "";
           } else {
-            gliderEl.style.transform = "translate3d(" + targetBtn.offsetLeft + "px, 0, 0)";
+            gliderEl.style.transform =
+              "translate3d(" + targetBtn.offsetLeft + "px, 0, 0)";
             gliderEl.style.width = w + "px";
             gliderEl.style.height = "";
           }
@@ -2815,7 +2825,8 @@ table.au-tb tr:last-child td {
         var qHits = win.querySelector("#vkx-qbar-hits");
         api.toggleQuickSearch = function (forceOpen) {
           if (!qBar) return;
-          if (win.classList.contains("vkx-minimized")) api.toggleMinimize(false);
+          if (win.classList.contains("vkx-minimized"))
+            api.toggleMinimize(false);
           if (api._section !== "tl") api.setSection("tl");
           var open =
             typeof forceOpen === "boolean"
@@ -2824,7 +2835,8 @@ table.au-tb tr:last-child td {
           qBar.classList.toggle("on", open);
           if (open && qInp) {
             qInp.value = "";
-            if (typeof api._onQuickSearch === "function") api._onQuickSearch("");
+            if (typeof api._onQuickSearch === "function")
+              api._onQuickSearch("");
             setTimeout(function () {
               try {
                 qInp.focus();
@@ -2990,7 +3002,11 @@ table.au-tb tr:last-child td {
           if (e.altKey && (e.key === "t" || e.key === "T")) {
             e.preventDefault();
             api.toggle();
-          } else if (e.altKey && (e.key === "m" || e.key === "M") && api.isOpen()) {
+          } else if (
+            e.altKey &&
+            (e.key === "m" || e.key === "M") &&
+            api.isOpen()
+          ) {
             e.preventDefault();
             api.toggleMinimize();
           }
@@ -7182,7 +7198,7 @@ table.au-tb tr:last-child td {
                 console.warn("[VKX] Tab cleanup err:", e);
               }
             }
-          }
+          },
         };
 
         // Quản lý Storage tập trung (hỗ trợ migration an toàn từ các key cũ)
@@ -7223,7 +7239,7 @@ table.au-tb tr:last-child td {
             try {
               localStorage.removeItem(k);
             } catch (e) {}
-          }
+          },
         };
 
         const S = { core: null, best: null, abort: false, kmAbort: false };
@@ -7823,7 +7839,9 @@ table.au-tb tr:last-child td {
             );
           progress("Đang nối lõi game…");
           const core = await buildCore(TT);
-          try { syncDynamicGameData(); } catch (e) {}
+          try {
+            syncDynamicGameData();
+          } catch (e) {}
           return core;
         }
 
@@ -7846,17 +7864,18 @@ table.au-tb tr:last-child td {
               curResolve = null;
               if (fn) fn();
             };
-            return () => new Promise((resolve) => {
-              curResolve = resolve;
-              ch.port2.postMessage(null);
-            });
+            return () =>
+              new Promise((resolve) => {
+                curResolve = resolve;
+                ch.port2.postMessage(null);
+              });
           }
           return () => new Promise((resolve) => setTimeout(resolve, 0));
         })();
 
         // Bộ sinh số giả ngẫu nhiên PRNG mulberry32 tốc độ cao, phân bổ đều chu kỳ 2^32
         function createMulberry32(seed0) {
-          let a = (seed0 >>> 0) || 12345;
+          let a = seed0 >>> 0 || 12345;
           return function () {
             a = (a + 0x6d2b79f5) >>> 0;
             let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -7884,15 +7903,31 @@ table.au-tb tr:last-child td {
             if (!content) return;
 
             // 1. Đồng bộ NL_META
-            if (content.items && typeof content.items.values === "function" && typeof NL_META === "object") {
+            if (
+              content.items &&
+              typeof content.items.values === "function" &&
+              typeof NL_META === "object"
+            ) {
               for (const it of content.items.values()) {
                 if (!it || !it.id) continue;
                 if (!NL_META[it.id]) {
                   if (it.ngu_linh) {
-                    const loai = Array.isArray(it.ngu_linh.loai) ? it.ngu_linh.loai[0] : (it.ngu_linh.loai || "thu");
+                    const loai = Array.isArray(it.ngu_linh.loai)
+                      ? it.ngu_linh.loai[0]
+                      : it.ngu_linh.loai || "thu";
                     NL_META[it.id] = [it.loai || "lieu", loai];
-                  } else if (it.tag && (it.tag.includes("hon") || it.tag.includes("thi") || it.tag.includes("trung") || it.tag.includes("khoi_loi") || it.tag.includes("thu"))) {
-                    const tag = it.tag.find((t) => ["hon", "thi", "trung", "khoi_loi", "thu"].includes(t)) || "thu";
+                  } else if (
+                    it.tag &&
+                    (it.tag.includes("hon") ||
+                      it.tag.includes("thi") ||
+                      it.tag.includes("trung") ||
+                      it.tag.includes("khoi_loi") ||
+                      it.tag.includes("thu"))
+                  ) {
+                    const tag =
+                      it.tag.find((t) =>
+                        ["hon", "thi", "trung", "khoi_loi", "thu"].includes(t),
+                      ) || "thu";
                     NL_META[it.id] = [it.loai || "lieu", tag];
                   }
                 }
@@ -7900,11 +7935,19 @@ table.au-tb tr:last-child td {
             }
 
             // 2. Đồng bộ NL_ENEMY
-            if (content.enemies && typeof content.enemies.values === "function" && Array.isArray(NL_ENEMY)) {
+            if (
+              content.enemies &&
+              typeof content.enemies.values === "function" &&
+              Array.isArray(NL_ENEMY)
+            ) {
               const knownEnemyIds = new Set(NL_ENEMY.map((e) => e.id));
               for (const en of content.enemies.values()) {
                 if (!en || !en.id || knownEnemyIds.has(en.id)) continue;
-                if (en.ngu_linh || (en.loai && (en.loai.includes("thu") || en.loai.includes("yeu_thu")))) {
+                if (
+                  en.ngu_linh ||
+                  (en.loai &&
+                    (en.loai.includes("thu") || en.loai.includes("yeu_thu")))
+                ) {
                   NL_ENEMY.push({
                     id: en.id,
                     ten: en.ten || en.id,
@@ -7924,7 +7967,10 @@ table.au-tb tr:last-child td {
 
             // 3. Đồng bộ THE_CHAT_DB
             if (content.theChat && typeof THE_CHAT_DB === "object") {
-              const tcEntries = typeof content.theChat.values === "function" ? content.theChat.values() : Object.values(content.theChat);
+              const tcEntries =
+                typeof content.theChat.values === "function"
+                  ? content.theChat.values()
+                  : Object.values(content.theChat);
               for (const tc of tcEntries) {
                 if (!tc || !tc.id || THE_CHAT_DB[tc.id]) continue;
                 THE_CHAT_DB[tc.id] = {
@@ -7940,7 +7986,12 @@ table.au-tb tr:last-child td {
             }
 
             // 4. Đồng bộ DIBAO.ev
-            if (content.encounters && typeof content.encounters.values === "function" && typeof DIBAO === "object" && Array.isArray(DIBAO.ev)) {
+            if (
+              content.encounters &&
+              typeof content.encounters.values === "function" &&
+              typeof DIBAO === "object" &&
+              Array.isArray(DIBAO.ev)
+            ) {
               const knownDibaoIds = new Set(DIBAO.ev.map((e) => e.id));
               for (const enc of content.encounters.values()) {
                 if (!enc || !enc.id || knownDibaoIds.has(enc.id)) continue;
@@ -8007,7 +8058,11 @@ table.au-tb tr:last-child td {
           if (!opts) {
             const now = Date.now();
             const sig = `${st.run.nam}_${st.run.thang}_${st.run.viTri}_${st.run.tuVi}_${st.run.canhGioi}_${st.run.oNoi || ""}_${st.run.active ? 1 : 0}_${st.run.tran ? 1 : 0}`;
-            if (_cachedCtx && _cachedCtxSig === sig && (now - _cachedCtxTime < 400)) {
+            if (
+              _cachedCtx &&
+              _cachedCtxSig === sig &&
+              now - _cachedCtxTime < 400
+            ) {
               return _cachedCtx;
             }
           }
@@ -8431,7 +8486,7 @@ table.au-tb tr:last-child td {
               cells: K.oCuaManh(g, m, c.items.get(m.item)) || [],
             }));
             const f = biasInfo(B, manh, best.R);
-            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Hướng xếp: <b>${DIR_TEN[S.dir || ""]}</b>${S.prio ? " · ưu tiên linh căn &amp; huyệt" : ""}${B.build ? " · Hướng Build: <b>" + esc(B.build.ten) + "</b> (" + f.build + " món đúng hướng đang thông, " + f.bhuyet + " ô trên huyệt" + (f.bCore ? ", <b class=\"vk-ok\">" + f.bCore + " món cốt lõi</b>" : "") + ")" : ""}. Đường nối tương sinh: ${f.sinh} · tương khắc: ${f.khac} · ô hợp màu: ${num(f.hop, 1)} · ô đặt lên huyệt: ${f.huyet} · món cùng hệ linh căn: ${f.lc}.</div>`;
+            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Hướng xếp: <b>${DIR_TEN[S.dir || ""]}</b>${S.prio ? " · ưu tiên linh căn &amp; huyệt" : ""}${B.build ? " · Hướng Build: <b>" + esc(B.build.ten) + "</b> (" + f.build + " món đúng hướng đang thông, " + f.bhuyet + " ô trên huyệt" + (f.bCore ? ', <b class="vk-ok">' + f.bCore + " món cốt lõi</b>" : "") + ")" : ""}. Đường nối tương sinh: ${f.sinh} · tương khắc: ${f.khac} · ô hợp màu: ${num(f.hop, 1)} · ô đặt lên huyệt: ${f.huyet} · món cùng hệ linh căn: ${f.lc}.</div>`;
           } catch (e) {
             return "";
           }
@@ -8509,8 +8564,12 @@ table.au-tb tr:last-child td {
 
             p += (ch.uy || 1) * (ch.dang === "cong" ? dmgW : ctrlW);
             p += (ch.effects || []).length * 15;
-            if (ch.controlTurns) p += ch.controlTurns * (mode === "tank" ? 50 : 35);
-            if (ch.shieldTurns) p += ch.shieldTurns * (mode === "tank" || mode === "dot_pha" ? 60 : 30);
+            if (ch.controlTurns)
+              p += ch.controlTurns * (mode === "tank" ? 50 : 35);
+            if (ch.shieldTurns)
+              p +=
+                ch.shieldTurns *
+                (mode === "tank" || mode === "dot_pha" ? 60 : 30);
             if (ch.scope === "spread" || ch.scope === "all") p += 35;
             // Chiêu tốn nhiều linh lực bị khấu trừ để ưu tiên chiêu hiệu quả năng lượng cao
             const phiCost = ch.phi || 0;
@@ -8518,7 +8577,12 @@ table.au-tb tr:last-child td {
             if (ch.hoi > 0) p += 10;
           }
           const bd = it.bi_dong || {};
-          let tocW = 130, dpW = 95, hpW = 110, hoTheW = 140, ktmW = 60, qiW = 55;
+          let tocW = 130,
+            dpW = 95,
+            hpW = 110,
+            hoTheW = 140,
+            ktmW = 60,
+            qiW = 55;
           if (mode === "tu") {
             tocW = 450;
             dpW = 80;
@@ -8572,7 +8636,10 @@ table.au-tb tr:last-child td {
             p += 150;
             if (it.tag && it.tag.includes(build.k)) p += 90;
           }
-          const isSkill = !!(it.chieu && ((it.chieu.phi || 0) > 0 || (it.chieu.uy || 0) > 0));
+          const isSkill = !!(
+            it.chieu &&
+            ((it.chieu.phi || 0) > 0 || (it.chieu.uy || 0) > 0)
+          );
           if (mode === "danh" || mode === "burst") {
             if (isSkill) {
               p += 200 + (it.chieu.uy || 0) * 1.6;
@@ -8581,7 +8648,8 @@ table.au-tb tr:last-child td {
           } else if (mode === "dot_pha") {
             const dp = (it.bi_dong && it.bi_dong.dot_pha) || 0;
             p += dp * 1800;
-            if (it.bi_dong && it.bi_dong.khang_tam_ma) p += it.bi_dong.khang_tam_ma * 350;
+            if (it.bi_dong && it.bi_dong.khang_tam_ma)
+              p += it.bi_dong.khang_tam_ma * 350;
           } else if (mode === "tu") {
             const spd = (it.bi_dong && it.bi_dong.toc_do) || 0;
             const ll = it.linh_luc || 0;
@@ -8600,7 +8668,8 @@ table.au-tb tr:last-child td {
           const regen = P.linhLucMoiLuot || 0;
           let qi = maxQi;
           const skills = (sortedSkills || []).filter(
-            (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+            (x) =>
+              x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
           );
           const numSkills = skills.length;
           const cd = new Int32Array(numSkills);
@@ -8654,7 +8723,9 @@ table.au-tb tr:last-child td {
         // 3. Chấm điểm chân khí chuẩn xác: Phạt lũy tiến khi kẹt chiêu & Thưởng lớn khi tuần hoàn hoàn hảo
         function calcQiScore(P, sortedSkills, mode, turns = 15) {
           const sim = simulateQiCycle(P, sortedSkills, turns);
-          const costSkills = (sortedSkills || []).filter((x) => (x.phi || 0) > 0);
+          const costSkills = (sortedSkills || []).filter(
+            (x) => (x.phi || 0) > 0,
+          );
           const maxPhi = costSkills.length
             ? Math.max(...costSkills.map((x) => x.phi || 0))
             : 0;
@@ -8750,7 +8821,10 @@ table.au-tb tr:last-child td {
           });
 
           return (manh) => {
-            const key = manh.map((p) => p.key).sort().join("|");
+            const key = manh
+              .map((p) => p.key)
+              .sort()
+              .join("|");
             if (cache.has(key)) return cache.get(key);
 
             nvWork.kinhMach.manh = manh.map((p) => p.m);
@@ -8765,7 +8839,9 @@ table.au-tb tr:last-child td {
 
             // Đánh giá chiêu thức thực tế (Rotation)
             const chieuList = (P.chieu || []).filter(
-              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+              (x) =>
+                x &&
+                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
             );
             const sortedSkills = chieuList.slice().sort((a, b) => {
               const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
@@ -8773,7 +8849,7 @@ table.au-tb tr:last-child td {
               return uyB - uyA;
             });
 
-            const rotWeights = [1.0, 0.70, 0.35, 0.10];
+            const rotWeights = [1.0, 0.7, 0.35, 0.1];
             let effectiveRotDmg = 0;
             for (let i = 0; i < sortedSkills.length; i++) {
               const w = i < rotWeights.length ? rotWeights[i] : 0.0;
@@ -8865,11 +8941,13 @@ table.au-tb tr:last-child td {
 
             // Combat Power Proxy (Tầng 1): Ước tính sức chiến đấu nhanh từ Effective HP & Sát thương
             const effHoThe = Math.min(maxHoThe, curHoThe);
-            const effHp = (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
+            const effHp =
+              (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
             const hpLog = Math.log10(Math.max(10, effHp)) * 55;
             let proxyFight = 0;
             if (mode === "danh" || mode === "burst") {
-              proxyFight = 1.35 * dmgScore + 0.85 * hpLog + (P.tocDo || 0) * 0.2;
+              proxyFight =
+                1.35 * dmgScore + 0.85 * hpLog + (P.tocDo || 0) * 0.2;
             } else if (mode === "tank") {
               proxyFight = 0.5 * dmgScore + 1.8 * hpLog + 300 * effHoThe;
             } else if (mode === "tu") {
@@ -8892,7 +8970,8 @@ table.au-tb tr:last-child td {
                 llScore;
             } else if (mode === "dot_pha") {
               const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
-              const hpSafe = Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+              const hpSafe =
+                Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
               s =
                 0.2 * proxyFight +
                 0.2 * dmgScore +
@@ -9005,7 +9084,9 @@ table.au-tb tr:last-child td {
 
             // Đánh giá chiêu thức thực tế (Rotation)
             const chieuList = (P.chieu || []).filter(
-              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+              (x) =>
+                x &&
+                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
             );
             const sortedSkills = chieuList.slice().sort((a, b) => {
               const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
@@ -9013,7 +9094,7 @@ table.au-tb tr:last-child td {
               return uyB - uyA;
             });
 
-            const rotWeights = [1.0, 0.70, 0.35, 0.10];
+            const rotWeights = [1.0, 0.7, 0.35, 0.1];
             let effectiveRotDmg = 0;
             for (let i = 0; i < sortedSkills.length; i++) {
               const w = i < rotWeights.length ? rotWeights[i] : 0.0;
@@ -9114,7 +9195,8 @@ table.au-tb tr:last-child td {
                 llScore;
             } else if (mode === "dot_pha") {
               const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
-              const hpSafe = Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+              const hpSafe =
+                Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
               s =
                 0.2 * fightScore +
                 0.2 * dmgScore +
@@ -9126,7 +9208,8 @@ table.au-tb tr:last-child td {
                 0.6 * llScore;
             } else if (mode === "tank") {
               const hoTheVal = Math.min(maxHoThe, curHoThe);
-              const hpLog = Math.log10(Math.max(10, P.khiHuyetToiDa || 100)) * 70;
+              const hpLog =
+                Math.log10(Math.max(10, P.khiHuyetToiDa || 100)) * 70;
               const bodyHpVal = (R.bodyHp || 0) * 0.6;
               s =
                 1.3 * fightScore +
@@ -9192,7 +9275,9 @@ table.au-tb tr:last-child td {
             "|" +
             (km0.mau || []).join(",") +
             "|" +
-            ((km0.huyetGoc || []).join(",") + ":" + ((km0.huyetThem || []).join(","))) +
+            ((km0.huyetGoc || []).join(",") +
+              ":" +
+              (km0.huyetThem || []).join(",")) +
             "|" +
             bagKeys;
           if (_candCacheVal && _candCacheSig === sig) {
@@ -9309,11 +9394,11 @@ table.au-tb tr:last-child td {
                   // Bitmask O(1) BigInt
                   let cellMask = 0n;
                   for (let i = 0; i < cells.length; i++) {
-                    cellMask |= (1n << BigInt(cells[i]));
+                    cellMask |= 1n << BigInt(cells[i]);
                   }
                   let adjMask = 0n;
                   for (const adjCell of adj) {
-                    adjMask |= (1n << BigInt(adjCell));
+                    adjMask |= 1n << BigInt(adjCell);
                   }
 
                   const aff = cells.length
@@ -9350,7 +9435,13 @@ table.au-tb tr:last-child td {
         }
 
         // Thuật toán BFS tìm đường đi ngắn nhất trên ma trận ô thông
-        function findBridgePathBFS(g, st, startCell, targetAdjSet, blockedMask) {
+        function findBridgePathBFS(
+          g,
+          st,
+          startCell,
+          targetAdjSet,
+          blockedMask,
+        ) {
           const queue = [startCell];
           const visited = new Set([startCell]);
           const parent = new Map();
@@ -9374,7 +9465,11 @@ table.au-tb tr:last-child td {
             for (const nb of neighbors) {
               if (visited.has(nb)) continue;
               if (g.vung[nb] < 0 || st[nb] !== "thong") continue;
-              if ((blockedMask & (1n << BigInt(nb))) !== 0n && !targetAdjSet.has(nb)) continue;
+              if (
+                (blockedMask & (1n << BigInt(nb))) !== 0n &&
+                !targetAdjSet.has(nb)
+              )
+                continue;
 
               visited.add(nb);
               parent.set(nb, curr);
@@ -9421,12 +9516,14 @@ table.au-tb tr:last-child td {
             const P = K.taoBenTa(nvWork, c);
 
             const chieuList = (P.chieu || []).filter(
-              (x) => x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+              (x) =>
+                x &&
+                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
             );
-            const sortedQ = chieuList.slice().sort(
-              (a, b) => (b.uyLuc || b.uy || 0) - (a.uyLuc || a.uy || 0),
-            );
-            const qWeights = [1.0, 0.70, 0.35, 0.10];
+            const sortedQ = chieuList
+              .slice()
+              .sort((a, b) => (b.uyLuc || b.uy || 0) - (a.uyLuc || a.uy || 0));
+            const qWeights = [1.0, 0.7, 0.35, 0.1];
             let rotUy = 0;
             for (let i = 0; i < sortedQ.length; i++) {
               const wt = i < qWeights.length ? qWeights[i] : 0.0;
@@ -9463,7 +9560,8 @@ table.au-tb tr:last-child td {
                 const rm = R.manh && R.manh[idx];
                 if (rm && rm.thong) {
                   const it = c.items.get(p.m.item);
-                  hyScore += 30 * q + 0.3 * acupointPriority(it, mode, B.build) * q;
+                  hyScore +=
+                    30 * q + 0.3 * acupointPriority(it, mode, B.build) * q;
                 } else {
                   hyScore -= 60 * q;
                 }
@@ -9504,7 +9602,8 @@ table.au-tb tr:last-child td {
                   p &&
                   p.recolorableCount > 0 &&
                   (p.unfixableCount || 0) === 0;
-                if (m.mau >= 1.25 || canRecolor) colorScore += canRecolor ? 15 : 25;
+                if (m.mau >= 1.25 || canRecolor)
+                  colorScore += canRecolor ? 15 : 25;
                 else if (m.mau < 1.0) colorScore -= 20 * (1.1 - m.mau);
               }
             });
@@ -9537,10 +9636,22 @@ table.au-tb tr:last-child td {
 
           const dX = g.danDien % g.rong;
           const dY = Math.floor(g.danDien / g.rong);
-          if (dX > 0) { flowAccessible.add(g.danDien - 1); flowMask |= (1n << BigInt(g.danDien - 1)); }
-          if (dX < g.rong - 1) { flowAccessible.add(g.danDien + 1); flowMask |= (1n << BigInt(g.danDien + 1)); }
-          if (dY > 0) { flowAccessible.add(g.danDien - g.rong); flowMask |= (1n << BigInt(g.danDien - g.rong)); }
-          if (dY < g.cao - 1) { flowAccessible.add(g.danDien + g.rong); flowMask |= (1n << BigInt(g.danDien + g.rong)); }
+          if (dX > 0) {
+            flowAccessible.add(g.danDien - 1);
+            flowMask |= 1n << BigInt(g.danDien - 1);
+          }
+          if (dX < g.rong - 1) {
+            flowAccessible.add(g.danDien + 1);
+            flowMask |= 1n << BigInt(g.danDien + 1);
+          }
+          if (dY > 0) {
+            flowAccessible.add(g.danDien - g.rong);
+            flowMask |= 1n << BigInt(g.danDien - g.rong);
+          }
+          if (dY < g.cao - 1) {
+            flowAccessible.add(g.danDien + g.rong);
+            flowMask |= 1n << BigInt(g.danDien + g.rong);
+          }
 
           const addPieceToFlow = (p) => {
             usedMask |= p.cellMask;
@@ -9551,7 +9662,7 @@ table.au-tb tr:last-child td {
                   nv0.kinhMach.trangThai[adjCell] === "thong"
                 ) {
                   flowAccessible.add(adjCell);
-                  flowMask |= (1n << BigInt(adjCell));
+                  flowMask |= 1n << BigInt(adjCell);
                 }
               }
             }
@@ -9570,7 +9681,10 @@ table.au-tb tr:last-child td {
               .sort((a, b) => {
                 const itA = c.items.get(a),
                   itB = c.items.get(b);
-                return acupointPriority(itB, mode, B.build) - acupointPriority(itA, mode, B.build);
+                return (
+                  acupointPriority(itB, mode, B.build) -
+                  acupointPriority(itA, mode, B.build)
+                );
               });
 
             const placedHuyet = [];
@@ -9587,11 +9701,14 @@ table.au-tb tr:last-child td {
                 for (const cnd of cand[id]) {
                   if (!cnd.cells.includes(h)) continue;
                   if ((placedHuyetMask & cnd.cellMask) !== 0n) continue;
-                  const conflictScore = isTayO ? (cnd.unfixableCount || 0) : cnd.conflictCount;
+                  const conflictScore = isTayO
+                    ? cnd.unfixableCount || 0
+                    : cnd.conflictCount;
                   if (conflictScore > 0) continue;
 
                   const itCnd = c.items.get(id);
-                  let prio = acupointPriority(itCnd, mode, B.build) + cnd.aff * 10;
+                  let prio =
+                    acupointPriority(itCnd, mode, B.build) + cnd.aff * 10;
                   if (prio > bestScore) {
                     bestScore = prio;
                     bestCnd = cnd;
@@ -9618,21 +9735,36 @@ table.au-tb tr:last-child td {
                 }
               }
 
-              const path = findBridgePathBFS(g, nv0.kinhMach.trangThai, g.danDien, targetAdjSet, placedHuyetMask);
+              const path = findBridgePathBFS(
+                g,
+                nv0.kinhMach.trangThai,
+                g.danDien,
+                targetAdjSet,
+                placedHuyetMask,
+              );
               if (path && path.length > 0) {
                 let bridgePieces = [];
                 let bridgeMask = 0n;
                 let bridgeFlow = new Set(flowAccessible);
 
-                const cpPool = sortedPool.filter((id) => {
-                  const it = c.items.get(id);
-                  return it && it.loai === "cong_phap" && !placedHuyetIds.has(id);
-                }).sort((a, b) => {
-                  const itA = c.items.get(a), itB = c.items.get(b);
-                  const isTamA = hbCls(itA) === "tam" ? 1 : 0;
-                  const isTamB = hbCls(itB) === "tam" ? 1 : 0;
-                  return (isTamB * 50 + (itB.linh_luc || 0) * 10) - (isTamA * 50 + (itA.linh_luc || 0) * 10);
-                });
+                const cpPool = sortedPool
+                  .filter((id) => {
+                    const it = c.items.get(id);
+                    return (
+                      it && it.loai === "cong_phap" && !placedHuyetIds.has(id)
+                    );
+                  })
+                  .sort((a, b) => {
+                    const itA = c.items.get(a),
+                      itB = c.items.get(b);
+                    const isTamA = hbCls(itA) === "tam" ? 1 : 0;
+                    const isTamB = hbCls(itB) === "tam" ? 1 : 0;
+                    return (
+                      isTamB * 50 +
+                      (itB.linh_luc || 0) * 10 -
+                      (isTamA * 50 + (itA.linh_luc || 0) * 10)
+                    );
+                  });
 
                 let connectedToTarget = false;
                 for (let stepIdx = 0; stepIdx < path.length; stepIdx++) {
@@ -9648,10 +9780,14 @@ table.au-tb tr:last-child td {
                       if (!cnd.cells.includes(stepCell)) continue;
                       if ((placedHuyetMask & cnd.cellMask) !== 0n) continue;
                       if ((bridgeMask & cnd.cellMask) !== 0n) continue;
-                      const canConnect = cnd.touchesDanDien || cnd.cells.some((x) => bridgeFlow.has(x));
+                      const canConnect =
+                        cnd.touchesDanDien ||
+                        cnd.cells.some((x) => bridgeFlow.has(x));
                       if (!canConnect) continue;
 
-                      const conflictScore = isTayO ? (cnd.unfixableCount || 0) : cnd.conflictCount;
+                      const conflictScore = isTayO
+                        ? cnd.unfixableCount || 0
+                        : cnd.conflictCount;
                       if (conflictScore > 0) continue;
 
                       const itCnd = c.items.get(id);
@@ -9668,7 +9804,11 @@ table.au-tb tr:last-child td {
                     bridgePieces.push(bestBridge);
                     bridgeMask |= bestBridge.cellMask;
                     for (const a of bestBridge.adj) bridgeFlow.add(a);
-                    if (placedHuyet.some((hP) => hP.cells.some((x) => bridgeFlow.has(x)))) {
+                    if (
+                      placedHuyet.some((hP) =>
+                        hP.cells.some((x) => bridgeFlow.has(x)),
+                      )
+                    ) {
                       connectedToTarget = true;
                       break;
                     }
@@ -9696,10 +9836,22 @@ table.au-tb tr:last-child td {
             flowAccessible.clear();
             flowMask = 0n;
             usedMask = 0n;
-            if (dX > 0) { flowAccessible.add(g.danDien - 1); flowMask |= (1n << BigInt(g.danDien - 1)); }
-            if (dX < g.rong - 1) { flowAccessible.add(g.danDien + 1); flowMask |= (1n << BigInt(g.danDien + 1)); }
-            if (dY > 0) { flowAccessible.add(g.danDien - g.rong); flowMask |= (1n << BigInt(g.danDien - g.rong)); }
-            if (dY < g.cao - 1) { flowAccessible.add(g.danDien + g.rong); flowMask |= (1n << BigInt(g.danDien + g.rong)); }
+            if (dX > 0) {
+              flowAccessible.add(g.danDien - 1);
+              flowMask |= 1n << BigInt(g.danDien - 1);
+            }
+            if (dX < g.rong - 1) {
+              flowAccessible.add(g.danDien + 1);
+              flowMask |= 1n << BigInt(g.danDien + 1);
+            }
+            if (dY > 0) {
+              flowAccessible.add(g.danDien - g.rong);
+              flowMask |= 1n << BigInt(g.danDien - g.rong);
+            }
+            if (dY < g.cao - 1) {
+              flowAccessible.add(g.danDien + g.rong);
+              flowMask |= 1n << BigInt(g.danDien + g.rong);
+            }
 
             const anchorCandidates = [];
             for (const id of Object.keys(cand)) {
@@ -9707,11 +9859,25 @@ table.au-tb tr:last-child td {
               for (const cnd of cand[id]) {
                 if (cnd.touchesDanDien && cnd.isCP) {
                   let v = quick([cnd]);
-                  if (mode === "tu" && (itAnchor.bi_dong?.toc_do || itAnchor.linh_luc)) v += 80;
-                  else if (mode === "dot_pha" && itAnchor.bi_dong?.dot_pha) v += 100;
-                  else if (mode === "tank" && (itAnchor.bi_dong?.ho_the || itAnchor.bi_dong?.khi_huyet)) v += 90;
+                  if (
+                    mode === "tu" &&
+                    (itAnchor.bi_dong?.toc_do || itAnchor.linh_luc)
+                  )
+                    v += 80;
+                  else if (mode === "dot_pha" && itAnchor.bi_dong?.dot_pha)
+                    v += 100;
+                  else if (
+                    mode === "tank" &&
+                    (itAnchor.bi_dong?.ho_the || itAnchor.bi_dong?.khi_huyet)
+                  )
+                    v += 90;
                   else if (mode === "burst" && itAnchor.chieu) v += 90;
-                  if (B && B.build && itAnchor && buildMatch(B.build, itAnchor)) {
+                  if (
+                    B &&
+                    B.build &&
+                    itAnchor &&
+                    buildMatch(B.build, itAnchor)
+                  ) {
                     v += 80;
                     const isCore =
                       itAnchor.tran_phai ||
@@ -9728,7 +9894,8 @@ table.au-tb tr:last-child td {
                 ? (a.cnd.unfixableCount || 0) === 0
                 : a.cnd.conflictCount === 0,
             );
-            const anchorPool = cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
+            const anchorPool =
+              cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
             anchorPool.sort((a, b) => b.v - a.v);
 
             const anchorIdx = altSeed && anchorPool.length > 1 ? 1 : 0;
@@ -9763,13 +9930,15 @@ table.au-tb tr:last-child td {
                 if (altSeed && isLowPrio && cnd.hyCount > 0) continue;
 
                 const conflictScore = isTayO
-                  ? (cnd.unfixableCount || 0)
+                  ? cnd.unfixableCount || 0
                   : cnd.conflictCount;
                 if (
                   conflictScore > 0 &&
                   cand[id].some(
                     (other) =>
-                      (isTayO ? (other.unfixableCount || 0) : other.conflictCount) === 0 &&
+                      (isTayO
+                        ? other.unfixableCount || 0
+                        : other.conflictCount) === 0 &&
                       (usedMask & other.cellMask) === 0n,
                   )
                 ) {
@@ -9827,7 +9996,10 @@ table.au-tb tr:last-child td {
           const topCandidates = [];
           const pushTopCandidate = (cfg, score) => {
             if (!cfg || !cfg.length) return;
-            const k = cfg.map((p) => p.key).sort().join("|");
+            const k = cfg
+              .map((p) => p.key)
+              .sort()
+              .join("|");
             if (topCandidates.some((x) => x.k === k)) return;
             topCandidates.push({ cfg: cfg.slice(), score, k });
             topCandidates.sort((a, b) => b.score - a.score);
@@ -9884,7 +10056,9 @@ table.au-tb tr:last-child td {
             if (!fList.length) return null;
             if (fList.length === 1) return fList[0];
 
-            let curTamCells = 0, curTotCells = 0, curSkills = 0;
+            let curTamCells = 0,
+              curTotCells = 0,
+              curSkills = 0;
             if (currentPieces && currentPieces.length) {
               for (const p of currentPieces) {
                 const itP = itemsK.get(p.m.item);
@@ -9894,9 +10068,16 @@ table.au-tb tr:last-child td {
                 if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
               }
             }
-            const targetRatio = S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
-            const needTam = curTotCells > 0 ? (curTamCells / curTotCells < targetRatio) : true;
-            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (targetRatio >= 0.6 ? 3 : 4);
+            const targetRatio =
+              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
+            const needTam =
+              curTotCells > 0 ? curTamCells / curTotCells < targetRatio : true;
+            const skillCap =
+              S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+                ? S.hbMaxSkills
+                : targetRatio >= 0.6
+                  ? 3
+                  : 4;
             const skillsFull = skillCap > 0 && curSkills >= skillCap;
 
             let sum = 0;
@@ -9906,7 +10087,8 @@ table.au-tb tr:last-child td {
               let w = itemWeights.get(id) || 5;
               const cls = hbCls(it);
               if (needTam && cls === "tam") w *= 1.8;
-              if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0) w *= 0.15;
+              if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0)
+                w *= 0.15;
               weights.push(w);
               sum += w;
             }
@@ -9922,10 +10104,21 @@ table.au-tb tr:last-child td {
             const pool = cand[id] || [];
             if (!pool.length) return null;
             const itSmart = itemsK.get(id);
-            const isSkillSmart = !!(itSmart && itSmart.chieu && (itSmart.chieu.phi || 0) > 0);
-            const isBuildSmart = !!(B && B.build && itSmart && buildMatch(B.build, itSmart));
+            const isSkillSmart = !!(
+              itSmart &&
+              itSmart.chieu &&
+              (itSmart.chieu.phi || 0) > 0
+            );
+            const isBuildSmart = !!(
+              B &&
+              B.build &&
+              itSmart &&
+              buildMatch(B.build, itSmart)
+            );
 
-            let curTamCells = 0, curTotCells = 0, curSkills = 0;
+            let curTamCells = 0,
+              curTotCells = 0,
+              curSkills = 0;
             for (const p of currentPieces) {
               const itP = itemsK.get(p.m.item);
               if (!itP) continue;
@@ -9933,9 +10126,16 @@ table.au-tb tr:last-child td {
               if (hbCls(itP) === "tam") curTamCells += p.cells.length;
               if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
             }
-            const targetRatio = S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
-            const needTam = curTotCells > 0 ? (curTamCells / curTotCells < targetRatio) : true;
-            const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (targetRatio >= 0.6 ? 3 : 4);
+            const targetRatio =
+              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
+            const needTam =
+              curTotCells > 0 ? curTamCells / curTotCells < targetRatio : true;
+            const skillCap =
+              S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+                ? S.hbMaxSkills
+                : targetRatio >= 0.6
+                  ? 3
+                  : 4;
             const skillsFull = skillCap > 0 && curSkills >= skillCap;
 
             const curUsedMask = getUsedMask(currentPieces);
@@ -9948,7 +10148,7 @@ table.au-tb tr:last-child td {
               const onHuyetSmart = q > 0;
               let hyPref = 0;
               if (q > 0) {
-                hyPref += (30 * q + (itemWeights.get(id) || 10) * 0.45);
+                hyPref += 30 * q + (itemWeights.get(id) || 10) * 0.45;
               }
 
               let matchBonus = 0;
@@ -9956,7 +10156,8 @@ table.au-tb tr:last-child td {
               if (skillsFull && isSkillSmart) matchBonus -= 45;
 
               let conflictPen = 0;
-              if (c.conflictsWithDanDien) conflictPen += (S.dir === "ma" ? -12 : 30);
+              if (c.conflictsWithDanDien)
+                conflictPen += S.dir === "ma" ? -12 : 30;
               let conn = 0;
               if (c.touchesDanDien) conn += 8.0;
               else if (connectsToSpineMask(c, cpAdjMask)) conn += 4.5;
@@ -9966,10 +10167,14 @@ table.au-tb tr:last-child td {
               if (c.isCP && c.hasKhacTungO) khacPen += 8.0;
 
               let synBonus = 0;
-              const hsSmart = ((itSmart && itSmart.he) || []).filter((h) => h && h !== "vo_sac");
+              const hsSmart = ((itSmart && itSmart.he) || []).filter(
+                (h) => h && h !== "vo_sac",
+              );
               for (const p of currentPieces) {
                 const itP = itemsK.get(p.m.item);
-                const hsP = ((itP && itP.he) || []).filter((h) => h && h !== "vo_sac");
+                const hsP = ((itP && itP.he) || []).filter(
+                  (h) => h && h !== "vo_sac",
+                );
                 let sDirect = 0,
                   sReverse = 0,
                   kDirect = 0;
@@ -9995,12 +10200,14 @@ table.au-tb tr:last-child td {
 
                   let reverseMult = 2.5;
                   if (itP && itP.chieu) reverseMult += 3.0;
-                  if (B && B.build && itP && buildMatch(B.build, itP)) reverseMult += 5.0;
+                  if (B && B.build && itP && buildMatch(B.build, itP))
+                    reverseMult += 5.0;
 
                   synBonus +=
                     directMult * sDirect +
                     reverseMult * sReverse -
-                    (mode === "dot_pha" || mode === "tu" ? 12.0 : 8.0) * kDirect;
+                    (mode === "dot_pha" || mode === "tu" ? 12.0 : 8.0) *
+                      kDirect;
                 } else if (S.dir === "ma") {
                   synBonus += 6.0 * kDirect - 3.0 * (sDirect + sReverse);
                 }
@@ -10096,8 +10303,13 @@ table.au-tb tr:last-child td {
               if (candA.length && candB.length) {
                 const newB = candA[Math.floor(rnd() * candA.length)];
                 const newA = candB[Math.floor(rnd() * candB.length)];
-                const testNext = next.filter((_, idx) => idx !== i && idx !== j);
-                if (!overlaps(testNext, newA) && !overlaps([...testNext, newA], newB)) {
+                const testNext = next.filter(
+                  (_, idx) => idx !== i && idx !== j,
+                );
+                if (
+                  !overlaps(testNext, newA) &&
+                  !overlaps([...testNext, newA], newB)
+                ) {
                   next[i] = newA;
                   next[j] = newB;
                 }
@@ -10111,7 +10323,12 @@ table.au-tb tr:last-child td {
                 const itP = itemsK.get(p.m.item);
                 if (!itP) continue;
                 const prio = acupointPriority(itP, mode, B.build);
-                if ((p.hyCount || 0) === 0 && (prio >= 80 || (itP.pham_cap || 1) >= 3 || (itP.chieu && (itP.chieu.phi || 0) > 0))) {
+                if (
+                  (p.hyCount || 0) === 0 &&
+                  (prio >= 80 ||
+                    (itP.pham_cap || 1) >= 3 ||
+                    (itP.chieu && (itP.chieu.phi || 0) > 0))
+                ) {
                   nonHuyetElite.push({ idx, p, itP, prio });
                 }
                 if ((p.hyCount || 0) > 0) {
@@ -10127,11 +10344,17 @@ table.au-tb tr:last-child td {
 
                 if (targetElite.prio > targetLower.prio) {
                   const eliteCandPool = cand[targetElite.p.m.item] || [];
-                  const lowerHyCells = targetLower.p.cells.filter((x) => hy0.has(x));
-                  const testNext = next.filter((_, idx) => idx !== targetElite.idx && idx !== targetLower.idx);
+                  const lowerHyCells = targetLower.p.cells.filter((x) =>
+                    hy0.has(x),
+                  );
+                  const testNext = next.filter(
+                    (_, idx) =>
+                      idx !== targetElite.idx && idx !== targetLower.idx,
+                  );
 
                   for (const eliteCand of eliteCandPool) {
-                    if (!eliteCand.cells.some((x) => lowerHyCells.includes(x))) continue;
+                    if (!eliteCand.cells.some((x) => lowerHyCells.includes(x)))
+                      continue;
                     if (overlaps(testNext, eliteCand)) continue;
 
                     const lowerCandPool = cand[targetLower.p.m.item] || [];
@@ -10154,12 +10377,20 @@ table.au-tb tr:last-child td {
               }
             } else if (r < 0.64) {
               const usedCells = new Set(next.flatMap((p) => p.cells));
-              const emptyHuyet = [...hy0].filter((h) => g.vung[h] >= 0 && !usedCells.has(h));
+              const emptyHuyet = [...hy0].filter(
+                (h) => g.vung[h] >= 0 && !usedCells.has(h),
+              );
               if (emptyHuyet.length) {
-                const targetH = emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
+                const targetH =
+                  emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
                 const f = free();
                 let found = null;
-                const sortedF = f.slice().sort((a, b) => (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0));
+                const sortedF = f
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0),
+                  );
                 for (const fid of sortedF) {
                   const arr = cand[fid] || [];
                   for (const c of arr) {
@@ -10222,7 +10453,10 @@ table.au-tb tr:last-child td {
             }
 
             if (stagnantCount >= 45) {
-              reheatTempBonus = Math.min(T0 * 0.45, (T0 * (1 - it / iters) + 5) * 1.5);
+              reheatTempBonus = Math.min(
+                T0 * 0.45,
+                (T0 * (1 - it / iters) + 5) * 1.5,
+              );
               stagnantCount = 0;
             }
           }
@@ -10279,10 +10513,10 @@ table.au-tb tr:last-child td {
             let mask = 0n;
             const dX = g.danDien % g.rong;
             const dY = Math.floor(g.danDien / g.rong);
-            if (dX > 0) mask |= (1n << BigInt(g.danDien - 1));
-            if (dX < g.rong - 1) mask |= (1n << BigInt(g.danDien + 1));
-            if (dY > 0) mask |= (1n << BigInt(g.danDien - g.rong));
-            if (dY < g.cao - 1) mask |= (1n << BigInt(g.danDien + g.rong));
+            if (dX > 0) mask |= 1n << BigInt(g.danDien - 1);
+            if (dX < g.rong - 1) mask |= 1n << BigInt(g.danDien + 1);
+            if (dY > 0) mask |= 1n << BigInt(g.danDien - g.rong);
+            if (dY < g.cao - 1) mask |= 1n << BigInt(g.danDien + g.rong);
 
             for (const p of currentPieces) {
               if (p.isCP) {
@@ -10367,10 +10601,14 @@ table.au-tb tr:last-child td {
                 const isSideStatBetter =
                   (nextEval.wins || 0) >= currentWins &&
                   nextEval.s >= currentScore - 2.0 &&
-                  ((nextEval.P?.linhLucMoiLuot || 0) > (currentEval.P?.linhLucMoiLuot || 0) ||
-                    (nextEval.P?.khiHuyetToiDa || 0) > (currentEval.P?.khiHuyetToiDa || 0) ||
-                    (nextEval.R?.biDong?.toc_do || 0) > (currentEval.R?.biDong?.toc_do || 0) ||
-                    (nextEval.R?.biDong?.dot_pha || 0) > (currentEval.R?.biDong?.dot_pha || 0));
+                  ((nextEval.P?.linhLucMoiLuot || 0) >
+                    (currentEval.P?.linhLucMoiLuot || 0) ||
+                    (nextEval.P?.khiHuyetToiDa || 0) >
+                      (currentEval.P?.khiHuyetToiDa || 0) ||
+                    (nextEval.R?.biDong?.toc_do || 0) >
+                      (currentEval.R?.biDong?.toc_do || 0) ||
+                    (nextEval.R?.biDong?.dot_pha || 0) >
+                      (currentEval.R?.biDong?.dot_pha || 0));
 
                 if (isScoreBetter || isSideStatBetter) {
                   const evalDiff = nextEval.s - currentScore;
@@ -10496,7 +10734,9 @@ table.au-tb tr:last-child td {
               );
               for (const nA of candA) {
                 for (const nB of candB) {
-                  const testCur = cur.filter((_, idx) => idx !== i && idx !== j);
+                  const testCur = cur.filter(
+                    (_, idx) => idx !== i && idx !== j,
+                  );
                   if (!overl(testCur, nA) && !overl([...testCur, nA], nB)) {
                     const nx = cur.slice();
                     nx[i] = nA;
@@ -10586,7 +10826,8 @@ table.au-tb tr:last-child td {
               ),
             );
             for (const x of used) tot.add(x);
-            const pct = tot.size > 0 ? Math.round((used.size / tot.size) * 100) : 100;
+            const pct =
+              tot.size > 0 ? Math.round((used.size / tot.size) * 100) : 100;
             return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Độ phủ lưới: <b>${used.size}/${tot.size}</b> ô (<b>${pct}%</b>)${used.size < tot.size ? " · túi chưa đủ món vừa hình để lấp hết ô còn lại" : " · đã lấp đầy hoàn hảo"}.</div>`;
           } catch (e) {
             return "";
@@ -11347,7 +11588,8 @@ table.au-tb tr:last-child td {
           if (runningList.length > 0) {
             UI.updateMiniStatus("Đang chạy: " + runningList.join(" | "), () => {
               if (AU.run && AU.run.running) auStop("Dừng từ thanh trạng thái");
-              if (typeof combatAutoActive !== "undefined") combatAutoActive = false;
+              if (typeof combatAutoActive !== "undefined")
+                combatAutoActive = false;
               refreshMiniStatus();
             });
           } else {
@@ -12180,7 +12422,8 @@ table.au-tb tr:last-child td {
                 const inf = W.info(slot);
                 if (inf) {
                   if (inf.ten) res = inf.ten;
-                  else if (inf.diaDanh && inf.diaDanh.ten) res = inf.diaDanh.ten;
+                  else if (inf.diaDanh && inf.diaDanh.ten)
+                    res = inf.diaDanh.ten;
                 }
               }
               if (!res && typeof W.diaDanh === "function") {
@@ -14996,13 +15239,16 @@ table.au-tb tr:last-child td {
           const hy0 = hySet(g, nv.kinhMach);
 
           // Sắp xếp các ô mở được theo tiềm năng thực tế
-          const scored = open.map((i) => ({
-            i,
-            pot: rankOpenCandidate(i, g, nv, hy0),
-          })).sort((a, b) => b.pot - a.pot);
+          const scored = open
+            .map((i) => ({
+              i,
+              pot: rankOpenCandidate(i, g, nv, hy0),
+            }))
+            .sort((a, b) => b.pot - a.pot);
 
           // Nếu có nhiều hơn 5 ô mở được, lọc top 5 ô tiềm năng nhất để tôi luyện sâu
-          const candidatesToTest = scored.length > 5 ? scored.slice(0, 5) : scored;
+          const candidatesToTest =
+            scored.length > 5 ? scored.slice(0, 5) : scored;
 
           const nv0 = clone(nv);
           nv0.kinhMach.manh = [];
@@ -15527,11 +15773,7 @@ table.au-tb tr:last-child td {
               num(Math.max(0, ...(a.P.chieu || []).map((x) => x.phi || 0))),
               num(Math.max(0, ...(b.P.chieu || []).map((x) => x.phi || 0))),
             ],
-            [
-              "Vòng chiêu & Linh lực",
-              llBalanceStr(a.P),
-              llBalanceStr(b.P),
-            ],
+            ["Vòng chiêu & Linh lực", llBalanceStr(a.P), llBalanceStr(b.P)],
             ["Tu luyện", tuStr(spdA, a.R), tuStr(spdB, b.R)],
             [
               "Đột phá",
@@ -22132,7 +22374,10 @@ table.au-tb tr:last-child td {
           0: ["Không Ép Tỉ Lệ", null],
         };
         const HB_MAX_SKILLS = {
-          3: ["2–3 Chiêu (Tinh Hoa · Tự Cung Chân Khí · Không Cắn Đan) [Khuyên Dùng]", 3],
+          3: [
+            "2–3 Chiêu (Tinh Hoa · Tự Cung Chân Khí · Không Cắn Đan) [Khuyên Dùng]",
+            3,
+          ],
           4: ["3–4 Chiêu (Đa Năng · Công Thủ Toàn Diện)", 4],
           0: ["Không Giới Hạn (Tự Do)", 0],
         };
@@ -22665,11 +22910,23 @@ table.au-tb tr:last-child td {
           };
           const tam = fill(sel.by.tam, tamB, [sel.by.tam.find((x) => x.fam)]);
           const cong = (x) => x.it.chieu && x.it.chieu.dang === "cong";
-          const maxSkills = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (T >= 0.6 ? 3 : 4);
+          const maxSkills =
+            S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : T >= 0.6
+                ? 3
+                : 4;
           const first = [
             sel.by.dau.find(cong),
             sel.by.pk.find(cong),
-            maxSkills > 2 ? sel.by.dau.find((x) => x.it.chieu && (x.it.chieu.dang === "thu" || x.it.chieu.dang === "hoi_phuc")) : null,
+            maxSkills > 2
+              ? sel.by.dau.find(
+                  (x) =>
+                    x.it.chieu &&
+                    (x.it.chieu.dang === "thu" ||
+                      x.it.chieu.dang === "hoi_phuc"),
+                )
+              : null,
             sel.by.bv[0],
           ].filter(Boolean);
           const chAll = [...sel.by.dau, ...sel.by.pk, ...sel.by.bv].sort(
@@ -22797,7 +23054,12 @@ table.au-tb tr:last-child td {
             throw new Error(
               "Không có món nào khớp bộ lọc. Nới khoảng phẩm, bỏ lọc nguyên tố, hoặc chọn nguồn đồ trong game.",
             );
-          const restore = auKmPin({ ...AU.cfg.km, kb: b.k, ratio: F.ratio, maxSkills: F.maxSkills });
+          const restore = auKmPin({
+            ...AU.cfg.km,
+            kb: b.k,
+            ratio: F.ratio,
+            maxSkills: F.maxSkills,
+          });
           S.hbLite = true;
           try {
             const res = await optimizeMode(
@@ -23114,7 +23376,10 @@ table.au-tb tr:last-child td {
             if (!P || !P.chieu) return 0;
             return P.chieu
               .filter((x) => x && x.dang !== undefined && (x.phi || 0) > 0)
-              .reduce((a, x) => a + (x.phi || 0) / Math.max(1, (x.hoi || 0) + 1), 0);
+              .reduce(
+                (a, x) => a + (x.phi || 0) / Math.max(1, (x.hoi || 0) + 1),
+                0,
+              );
           };
           const curDrain = calcDrain(cur.P);
           const newDrain = calcDrain(res.P);
@@ -23365,17 +23630,19 @@ table.au-tb tr:last-child td {
               const it = Cc.items.get(m.item);
               if (it && it.chieu && (it.chieu.phi || 0) > 0) {
                 curCostSkills.push(it);
-                curDrain += (it.chieu.phi || 0) / Math.max(1, (it.chieu.hoi || 0) + 1);
+                curDrain +=
+                  (it.chieu.phi || 0) / Math.max(1, (it.chieu.hoi || 0) + 1);
               }
             }
           }
           curDrain = Math.round(curDrain * 10) / 10;
-          let curRegen = 0, curMaxLl = 0;
+          let curRegen = 0,
+            curMaxLl = 0;
           try {
             if (S.core && S.core.tinhKinhMach) {
               const rCur = S.core.tinhKinhMach(nv, Cc);
               curRegen = rCur.linhLuc || 0;
-              curMaxLl = rCur.linhLucToiDa || (curRegen * 3);
+              curMaxLl = rCur.linhLucToiDa || curRegen * 3;
             }
           } catch (e) {}
 
@@ -23438,8 +23705,8 @@ table.au-tb tr:last-child td {
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
-          <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:${bFit.color || '#3b82f6'}22;color:${bFit.color || '#3b82f6'};border:1px solid ${bFit.color || '#3b82f6'}55">
-            ${bFit.badge || 'Khả Dụng'}
+          <span style="padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:${bFit.color || "#3b82f6"}22;color:${bFit.color || "#3b82f6"};border:1px solid ${bFit.color || "#3b82f6"}55">
+            ${bFit.badge || "Khả Dụng"}
           </span>
         </div>
       </div>
@@ -23497,7 +23764,7 @@ table.au-tb tr:last-child td {
       <details open style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">
         <summary style="font-size:13px;font-weight:600;color:var(--txt);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
           <span>🔧 Tùy Chọn Nâng Cao (Hai Bộ, Mở Ô, Tẩy Ô, Theo Dõi)</span>
-          <span style="font-size:11.5px;font-weight:normal" class="vk-mu">Mở ô: <b class="${cfg.mo ? 'vk-ok' : ''}">${cfg.mo ? 'Bật' : 'Tắt'}</b> · Tẩy ô: <b class="${cfg.tayO ? 'vk-ok' : ''}">${cfg.tayO ? 'Bật' : 'Tắt'}</b></span>
+          <span style="font-size:11.5px;font-weight:normal" class="vk-mu">Mở ô: <b class="${cfg.mo ? "vk-ok" : ""}">${cfg.mo ? "Bật" : "Tắt"}</b> · Tẩy ô: <b class="${cfg.tayO ? "vk-ok" : ""}">${cfg.tayO ? "Bật" : "Tắt"}</b></span>
         </summary>
         <div style="margin-top:8px;padding-left:6px">
           <div style="margin:6px 0 2px"><b style="font-size:12.5px">Hai Bộ Kinh Mạch</b> <span class="vk-mu" style="font-size:11px">(đang có ${slots}/3 bộ)</span></div>
@@ -23538,8 +23805,8 @@ table.au-tb tr:last-child td {
       </div>
       <div style="margin-top:5px;font-size:12px;color:var(--txt);display:flex;gap:12px;flex-wrap:wrap">
         <span>⚙️ Thiết lập nâng cao:</span>
-        <span class="${cfg.mo ? 'vk-ok' : 'vk-mu'}">Mở ô: <b>${cfg.mo ? 'BẬT (tối đa ' + cfg.moMax + ')' : 'TẮT'}</b></span>
-        <span class="${cfg.tayO ? 'vk-ok' : 'vk-mu'}">Tẩy ô: <b>${cfg.tayO ? 'BẬT (tối đa ' + (cfg.tayMax || 3) + ')' : 'TẮT'}</b></span>
+        <span class="${cfg.mo ? "vk-ok" : "vk-mu"}">Mở ô: <b>${cfg.mo ? "BẬT (tối đa " + cfg.moMax + ")" : "TẮT"}</b></span>
+        <span class="${cfg.tayO ? "vk-ok" : "vk-mu"}">Tẩy ô: <b>${cfg.tayO ? "BẬT (tối đa " + (cfg.tayMax || 3) + ")" : "TẮT"}</b></span>
         <span class="vk-mu">(Bật/Tắt ngay tại mục <b>Tùy Chọn Nâng Cao</b> ở trên)</span>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px">
@@ -25599,7 +25866,12 @@ table.au-tb tr:last-child td {
           return maxTv;
         }
 
-        function findBestTuViChoice(encDef, availableChoices, activeScene, opt) {
+        function findBestTuViChoice(
+          encDef,
+          availableChoices,
+          activeScene,
+          opt,
+        ) {
           if (!encDef || !availableChoices || !availableChoices.length)
             return null;
 
@@ -25897,7 +26169,8 @@ table.au-tb tr:last-child td {
           }
           if (AU.cfg.km.v715 !== 1) {
             AU.cfg.km.v715 = 1;
-            if (!AU.cfg.km.ratio || AU.cfg.km.ratio === "55") AU.cfg.km.ratio = "64";
+            if (!AU.cfg.km.ratio || AU.cfg.km.ratio === "55")
+              AU.cfg.km.ratio = "64";
             if (AU.cfg.km.maxSkills == null) AU.cfg.km.maxSkills = "3";
           }
           AU.cfg.rr.lh = !!AU.cfg.rr.lh;
@@ -25971,7 +26244,9 @@ table.au-tb tr:last-child td {
             AU.cfg.tl.uuTienCapNen = true;
           if (AU.cfg.san) {
             AU.cfg.san.sanMucTieu =
-              AU.cfg.san.sanMucTieu || AU.cfg.tl.sanMucTieu || "uu_tien_dau_dan";
+              AU.cfg.san.sanMucTieu ||
+              AU.cfg.tl.sanMucTieu ||
+              "uu_tien_dau_dan";
             if (typeof AU.cfg.san.autoDuongThuong !== "boolean")
               AU.cfg.san.autoDuongThuong = true;
             if (typeof AU.cfg.san.uuTienCapNen !== "boolean")
@@ -26305,7 +26580,9 @@ table.au-tb tr:last-child td {
               return score;
             };
 
-            const sortedFoes = [...liveFoes].sort((a, b) => scoreFoe(b) - scoreFoe(a));
+            const sortedFoes = [...liveFoes].sort(
+              (a, b) => scoreFoe(b) - scoreFoe(a),
+            );
             const bestFoe = sortedFoes[0];
 
             if (!target) {
@@ -26354,7 +26631,11 @@ table.au-tb tr:last-child td {
           // 2B. THOÁT HIỂM & THIÊU ĐỐT CỨU MẠNG KHẨN CẤP (Emergency Escape & Life-Burst)
           const hpRatio = ta.khiHuyet / Math.max(1, ta.khiHuyetToiDa);
 
-          if (cfg.emergencyEscape && hpRatio < 0.16 && !failedActions.has("bo_chay")) {
+          if (
+            cfg.emergencyEscape &&
+            hpRatio < 0.16 &&
+            !failedActions.has("bo_chay")
+          ) {
             const escapeBlockFn =
               (core &&
                 core["combat/actions"] &&
@@ -26390,7 +26671,7 @@ table.au-tb tr:last-child td {
 
           if (
             cfg.emergencyThieuDot !== false &&
-            hpRatio < 0.20 &&
+            hpRatio < 0.2 &&
             !ta.thieuDot &&
             !failedActions.has("thieu_dot")
           ) {
@@ -26636,8 +26917,8 @@ table.au-tb tr:last-child td {
             canUseItem &&
             cfg.smartCc !== false &&
             !target.khongChe &&
-            ((target.controlImmunity == null || target.controlImmunity <= 0) &&
-              (!target.mienDen || target.mienDen < (tran.hiep || 1)))
+            (target.controlImmunity == null || target.controlImmunity <= 0) &&
+            (!target.mienDen || target.mienDen < (tran.hiep || 1))
           ) {
             const foeIntent = target.yDinh || "";
             const isHeavyAttack =
@@ -26677,7 +26958,9 @@ table.au-tb tr:last-child td {
           if (
             canUseItem &&
             cfg.useAttackTalismans !== false &&
-            (isBossOrElite || (ta.linhLuc || 0) < 15 || (target.khiHuyet || 0) < 120)
+            (isBossOrElite ||
+              (ta.linhLuc || 0) < 15 ||
+              (target.khiHuyet || 0) < 120)
           ) {
             const maxGrade = cfg.talismanGrade || 5;
             let bestAtkTalisman = null;
@@ -26706,7 +26989,11 @@ table.au-tb tr:last-child td {
                   } catch (e) {}
                 }
                 let tScore = it.tran.chieu.uy || 10;
-                if (it.tran.chieu.he && target.he && typeof heTacDongFn === "function") {
+                if (
+                  it.tran.chieu.he &&
+                  target.he &&
+                  typeof heTacDongFn === "function"
+                ) {
                   try {
                     if (heTacDongFn(it.tran.chieu.he, target.he) === -1) {
                       tScore *= 1.35;
@@ -27017,7 +27304,8 @@ table.au-tb tr:last-child td {
               if (
                 targetHasDebuff &&
                 (c.devour ||
-                  (Array.isArray(c.markTriggers) && c.markTriggers.length > 0) ||
+                  (Array.isArray(c.markTriggers) &&
+                    c.markTriggers.length > 0) ||
                   /kích nổ|trảm|tuyệt sát|phệ hồn|đoạt mệnh|thiên phạt/i.test(
                     c.ten || "",
                   ) ||
@@ -27109,10 +27397,8 @@ table.au-tb tr:last-child td {
               failedActions.add("danh_thuong");
             else if (act.loai === "muc_tieu")
               failedActions.add("muc_tieu:" + act.ma);
-            else if (act.loai === "thieu_dot")
-              failedActions.add("thieu_dot");
-            else if (act.loai === "bo_chay")
-              failedActions.add("bo_chay");
+            else if (act.loai === "thieu_dot") failedActions.add("thieu_dot");
+            else if (act.loai === "bo_chay") failedActions.add("bo_chay");
 
             if (act.loai === "ket_luot") break;
           }
@@ -27247,11 +27533,7 @@ table.au-tb tr:last-child td {
           const g = G();
           const run = g && g.state && g.state.run;
           const tran = run && run.tran;
-          const inCombat = !!(
-            tran &&
-            tran.daGiaoChien &&
-            !tran.ketThuc
-          );
+          const inCombat = !!(tran && tran.daGiaoChien && !tran.ketThuc);
           const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
 
           if (!inCombat || cfg.autoCombatOverlay === false) {
@@ -28052,24 +28334,38 @@ table.au-tb tr:last-child td {
 
             if (v.id === "ev.san_yeu") {
               const cBoss = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
-              const cNorm = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text));
+              const cNorm = cs.find(
+                (x) => !x.thoat && !/đầu đàn/i.test(x.text),
+              );
 
               if (sanMucTieu === "chi_dau_dan") {
-                if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+                if (
+                  cBoss &&
+                  (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))
+                ) {
                   return cBoss;
                 }
                 const leave = cs.find((x) => x.thoat);
                 if (leave) return leave;
               } else if (sanMucTieu === "thuong") {
-                if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+                if (
+                  cNorm &&
+                  (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))
+                ) {
                   return cNorm;
                 }
               } else {
                 // uu_tien_dau_dan (Mặc định)
-                if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+                if (
+                  cBoss &&
+                  (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))
+                ) {
                   return cBoss;
                 }
-                if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+                if (
+                  cNorm &&
+                  (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))
+                ) {
                   return cNorm;
                 }
               }
@@ -28097,15 +28393,25 @@ table.au-tb tr:last-child td {
             }
 
             if (v.id === "ev.san_yeu_thu") {
-              const c = cs.find((x) => !x.thoat && /săn|chiến|đánh/i.test(x.text));
+              const c = cs.find(
+                (x) => !x.thoat && /săn|chiến|đánh/i.test(x.text),
+              );
               if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
             }
 
             if (v.id === "ev.tm_yeu_dau_dan") {
-              const cHelp = cs.find((x) => !x.thoat && /cùng.*ra tay/i.test(x.text));
-              const cDirect = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
+              const cHelp = cs.find(
+                (x) => !x.thoat && /cùng.*ra tay/i.test(x.text),
+              );
+              const cDirect = cs.find(
+                (x) => !x.thoat && /đầu đàn/i.test(x.text),
+              );
               const pickTm = cHelp || cDirect;
-              if (pickTm && (!pickTm.risk || auColorOK(pickTm.risk.level, opt.mau))) return pickTm;
+              if (
+                pickTm &&
+                (!pickTm.risk || auColorOK(pickTm.risk.level, opt.mau))
+              )
+                return pickTm;
             }
 
             if (v.id === "ev.ls_bay_yeu_thu") {
@@ -28347,7 +28653,12 @@ table.au-tb tr:last-child td {
           S.kmBuild = b ? b.k : "";
           const rt = HB_RATIO[c.ratio];
           S.hbRatio = rt && rt[1] != null ? { t: rt[1], w: HB_RATIO_W } : null;
-          S.hbMaxSkills = c.maxSkills != null ? Number(c.maxSkills) : (rt && rt[1] >= 0.6 ? 3 : 4);
+          S.hbMaxSkills =
+            c.maxSkills != null
+              ? Number(c.maxSkills)
+              : rt && rt[1] >= 0.6
+                ? 3
+                : 4;
           S.hbLite = false;
           return () => {
             Object.assign(S, old);
@@ -28372,8 +28683,10 @@ table.au-tb tr:last-child td {
         async function auKmApplySolution(sols, cfg, st = null, force = false) {
           const K = S.core;
           let nv = nvNow();
-          if (!nv || !nv.kinhMach) return { ok: false, msg: "Chưa có kinh mạch." };
-          if (!sols || !sols.length) return { ok: false, msg: "Chưa có cách xếp để áp dụng." };
+          if (!nv || !nv.kinhMach)
+            return { ok: false, msg: "Chưa có kinh mạch." };
+          if (!sols || !sols.length)
+            return { ok: false, msg: "Chưa có cách xếp để áp dụng." };
 
           // 1. Tẩy ô nếu bật cfg.tayO
           if (cfg && cfg.tayO) {
@@ -28401,29 +28714,43 @@ table.au-tb tr:last-child td {
                 ];
                 for (const pill of pillOrder) {
                   const countInBag = (nv.tuiDo && nv.tuiDo[pill.id]) || 0;
-                  const canUse = K && K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
+                  const canUse =
+                    K && K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
                   if (countInBag > 0 && canUse > 0) {
                     const useRes = auCall((gg) => gg.useItem(pill.id));
                     if (useRes.ok) {
-                      auLog(`Đã dùng 1 viên ${pill.name} để nhận lượt chuyển hệ.`, "vk-ok");
+                      auLog(
+                        `Đã dùng 1 viên ${pill.name} để nhận lượt chuyển hệ.`,
+                        "vk-ok",
+                      );
                       nv = nvNow();
-                      curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+                      curDoiMau =
+                        (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
                       break;
                     }
                   }
                 }
               }
               if (curDoiMau <= 0) {
-                auLog("Không còn lượt chuyển hệ và không có đan tẩy tủy trong túi để dùng.", "vk-mu");
+                auLog(
+                  "Không còn lượt chuyển hệ và không có đan tẩy tủy trong túi để dùng.",
+                  "vk-mu",
+                );
                 break;
               }
               const r = auCall((gg) => gg.doiMauO(p.cell, p.toHe));
               if (r.ok) {
                 if (st) st.recolorsDone = (st.recolorsDone || 0) + 1;
-                auLog(`🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`, "vk-ok");
+                auLog(
+                  `🎨 Đã tẩy ô (Cột ${p.col}, Hàng ${p.row}) từ hệ ${HE_VI[p.fromHe] || p.fromHe} sang ${HE_VI[p.toHe] || p.toHe} để khớp công pháp «${p.itTen}».`,
+                  "vk-ok",
+                );
                 nv = nvNow();
               } else {
-                auLog(`Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`, "vk-mu");
+                auLog(
+                  `Không tẩy được ô (Cột ${p.col}, Hàng ${p.row}): ${r.err || "thất bại"}`,
+                  "vk-mu",
+                );
                 break;
               }
             }
@@ -28458,7 +28785,8 @@ table.au-tb tr:last-child td {
           if (!r.ok) return r;
           if (st) st.applied++;
           if (r.same) {
-            const txtSame = "Kinh mạch đã chuẩn xác như cách xếp, không cần đổi.";
+            const txtSame =
+              "Kinh mạch đã chuẩn xác như cách xếp, không cần đổi.";
             auLog(txtSame, "vk-ok");
             return { ok: true, msg: txtSame };
           }
@@ -28627,7 +28955,9 @@ table.au-tb tr:last-child td {
 
             const appRes = await auKmApplySolution(sols, cfg, st, false);
             if (!appRes.ok) {
-              return /bận/i.test(appRes.msg) ? { retry: appRes.msg } : { stop: appRes.msg };
+              return /bận/i.test(appRes.msg)
+                ? { retry: appRes.msg }
+                : { stop: appRes.msg };
             }
             return { ok: true, note: appRes.msg };
           } finally {
@@ -28841,7 +29171,9 @@ table.au-tb tr:last-child td {
                   </div>
                   <div class="vk-mu" style="font-size:11.5px;margin-top:2px">Sẽ tự động chuyển hệ khi bấm Áp Dụng (tự cắn đan trong túi nếu hết lượt):</div>
                   <div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
-                    ${allPlans.map((p) => `
+                    ${allPlans
+                      .map(
+                        (p) => `
                       <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         <span style="font-weight:600">📍 Ô Cột ${p.col}, Hàng ${p.row}:</span>
                         <span style="color:var(--mut)">Hệ ${esc(HE_VI[p.fromHe] || p.fromHe)}</span>
@@ -28849,7 +29181,9 @@ table.au-tb tr:last-child td {
                         <b style="color:#10b981">Hệ ${esc(HE_VI[p.toHe] || p.toHe)}</b>
                         <span class="vk-mu">(khớp «${esc(p.itTen)}»)</span>
                       </div>
-                    `).join("")}
+                    `,
+                      )
+                      .join("")}
                   </div>
                 </div>
               `;
@@ -29058,8 +29392,8 @@ table.au-tb tr:last-child td {
                 TT.core && typeof TT.core.dualBlock === "function"
                   ? TT.core.dualBlock(c, npcId)
                   : run.nhanVat &&
-                    run.nhanVat.dualYear != null &&
-                    run.nam - run.nhanVat.dualYear < 5
+                      run.nhanVat.dualYear != null &&
+                      run.nam - run.nhanVat.dualYear < 5
                     ? "chưa hồi chiêu"
                     : undefined;
               if (blocked === undefined) {
@@ -29485,7 +29819,10 @@ table.au-tb tr:last-child td {
             auSanSpotOK(c, run.viTri, cfg) &&
             g.canDo("ev.san_yeu")
           ) {
-            if (cfg.sanMucTieu === "chi_dau_dan" && auHuntLeft(run, run.viTri) < 1.5) {
+            if (
+              cfg.sanMucTieu === "chi_dau_dan" &&
+              auHuntLeft(run, run.viTri) < 1.5
+            ) {
               st.bad.add(run.viTri);
               auLog(
                 "Nơi này không đủ 2 lượt săn cho Đầu Đàn, tìm nơi khác...",
@@ -30203,7 +30540,10 @@ table.au-tb tr:last-child td {
               auSanSpotOK(cLite, run.viTri, cfg) &&
               g.canDo("ev.san_yeu")
             ) {
-              if (cfg.sanMucTieu === "chi_dau_dan" && auHuntLeft(run, run.viTri) < 1.5) {
+              if (
+                cfg.sanMucTieu === "chi_dau_dan" &&
+                auHuntLeft(run, run.viTri) < 1.5
+              ) {
                 st.bad.add(run.viTri);
                 auLog(
                   "Nơi này không đủ 2 lượt săn cho Đầu Đàn, tìm nơi khác...",
@@ -30352,8 +30692,8 @@ table.au-tb tr:last-child td {
                 TT.core && typeof TT.core.dualBlock === "function"
                   ? TT.core.dualBlock(ctxLite(), npcId)
                   : run.nhanVat &&
-                    run.nhanVat.dualYear != null &&
-                    run.nam - run.nhanVat.dualYear < 5
+                      run.nhanVat.dualYear != null &&
+                      run.nam - run.nhanVat.dualYear < 5
                     ? "chưa hồi chiêu"
                     : undefined;
               if (blocked === undefined) {
@@ -30373,9 +30713,7 @@ table.au-tb tr:last-child td {
               );
               const rSongTu = auCall(() => {
                 if (TT.core && typeof TT.core.openVisit === "function") {
-                  g.act((ctx) =>
-                    TT.core.openVisit(ctx, readyDaoLuId, "dual"),
-                  );
+                  g.act((ctx) => TT.core.openVisit(ctx, readyDaoLuId, "dual"));
                 } else if (typeof g.chooseActivity === "function") {
                   g.chooseActivity("ev.song_tu");
                 }
@@ -32123,10 +32461,7 @@ table.au-tb tr:last-child td {
               "au-tl-tu-vi-events",
               c.uuTienSuKienTuVi !== false,
             );
-            c.autoSongTu = ck(
-              "au-tl-song-tu",
-              c.autoSongTu !== false,
-            );
+            c.autoSongTu = ck("au-tl-song-tu", c.autoSongTu !== false);
             c.sanMucTieu = sel(
               "au-tl-san-target",
               c.sanMucTieu || "uu_tien_dau_dan",
@@ -32200,12 +32535,24 @@ table.au-tb tr:last-child td {
             c.smartCc = ck("au-tc-cc", c.smartCc);
             c.saveFamiliars = ck("au-tc-familiars", c.saveFamiliars);
             c.autoNormalAttack = ck("au-tc-normal-attack", c.autoNormalAttack);
-            c.smartFinisher = ck("au-tc-smart-finisher", c.smartFinisher !== false);
-            c.useAttackTalismans = ck("au-tc-talisman-attack", c.useAttackTalismans !== false);
+            c.smartFinisher = ck(
+              "au-tc-smart-finisher",
+              c.smartFinisher !== false,
+            );
+            c.useAttackTalismans = ck(
+              "au-tc-talisman-attack",
+              c.useAttackTalismans !== false,
+            );
             c.comboSequence = ck("au-tc-combo", c.comboSequence);
             c.useBurstPill = ck("au-tc-burst-pill", c.useBurstPill !== false);
-            c.emergencyThieuDot = ck("au-tc-thieu-dot", c.emergencyThieuDot !== false);
-            c.emergencyEscape = ck("au-tc-emergency-escape", !!c.emergencyEscape);
+            c.emergencyThieuDot = ck(
+              "au-tc-thieu-dot",
+              c.emergencyThieuDot !== false,
+            );
+            c.emergencyEscape = ck(
+              "au-tc-emergency-escape",
+              !!c.emergencyEscape,
+            );
             c.autoThaMang = ck("au-tc-auto-tha", c.autoThaMang !== false);
             c.autoEnemyEscape = ck(
               "au-tc-enemy-escape",
@@ -32239,7 +32586,11 @@ table.au-tb tr:last-child td {
               ),
             );
             c.ratio = pick("au-km-ratio", Object.keys(HB_RATIO), c.ratio);
-            c.maxSkills = pick("au-km-maxskills", Object.keys(HB_MAX_SKILLS), c.maxSkills != null ? String(c.maxSkills) : "3");
+            c.maxSkills = pick(
+              "au-km-maxskills",
+              Object.keys(HB_MAX_SKILLS),
+              c.maxSkills != null ? String(c.maxSkills) : "3",
+            );
             c.bk = AU_KM_BK;
             c.prio = ck("au-km-prio", c.prio);
             c.two = ck("au-km-two", c.two);
@@ -33561,7 +33912,10 @@ table.au-tb tr:last-child td {
         "🩸 Tế Huyết Bản Mệnh (Đốt Thọ & Khí Huyết)",
         [
           ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên, không tự tế huyết)"],
-          ["boss", "👑 Chỉ khi gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)"],
+          [
+            "boss",
+            "👑 Chỉ khi gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)",
+          ],
           ["emergency", "🚨 Chỉ khi nguy cấp (Khí huyết < 35% trước Boss)"],
           ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
         ],
@@ -36692,30 +37046,30 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: 'Phiên Bản 7.20.0 · Đại Tu Hiệu Năng O(1), Thuật Toán Kinh Mạch 3.0 & Tiện Ích UI/UX',
-            d: '09/11/2026',
+            t: "Phiên Bản 7.20.0 · Đại Tu Hiệu Năng O(1), Thuật Toán Kinh Mạch 3.0 & Tiện Ích UI/UX",
+            d: "09/11/2026",
             now: true,
             pts: [
-              '<b>Tăng Tốc 80% Động Cơ Kinh Mạch (Signature Memoization & O(1) Bitmask Spine):</b> Bổ sung bộ nhớ đệm chữ ký trạng thái cho <code>buildCandidates</code> và <code>benchEnemies</code>, kết hợp kiểm tra liên thông trục Đan Điền – Tâm Pháp bằng phép toán bit <code>(cpAdjMask &amp; cn.cellMask) !== 0n</code> trong O(1), triệt tiêu hoàn toàn độ trễ khởi tạo lặp lại qua các pha Greedy, Simulated Annealing và Hill-Climbing Polish.',
-              '<b>Khắc Phục Triệt Để Lỗi Ghi Đè Hàm <code>stripDead</code> &amp; Lấp Đầy Khe Hở:</b> Hợp nhất hàm <code>stripDead</code> và <code>coverNote</code> bị định nghĩa trùng lặp, khôi phục trọn vẹn pha <code>smartFillRemainingGaps</code> sau khi lọc mảnh đứt mạch và đối sánh chữ ký mảnh ghép chuẩn xác để không bỏ sót cấu hình tối ưu.',
-              '<b>Siêu AI Tác Chiến 2.0 (Liên Hoàn Phá Giáp ➔ Nuke & Quản Trị Tế Huyết Bản Mệnh):</b> Tự động ưu tiên tung kỹ năng Phá Giáp / Ấn Ký / Suy Yếu mở màn trước khi dồn Đại Chiêu; bổ sung cơ chế kiểm soát chiêu Bản Mệnh Tế Huyết (chống hao thọ nguyên ngoài ý muốn) với nút chuyển đổi nhanh <code>🩸 Tế Huyết</code> trực tiếp trên thanh chiến đấu nổi (Tắt / Boss / Bật) giúp người chơi linh hoạt quyết định xả đại chiêu khi gặp Boss mạnh.',
-              '<b>Auto Săn Dị Bảo Tự Động Bù Đan Khảo Nghiệm:</b> Khi đến điểm Dị Bảo yêu cầu kiểm định chỉ số (Thần Thức, Ngộ Tính, Cơ Duyên...), Auto tự động rà soát túi đồ và nuốt đan dược tăng chỉ số tương ứng để vượt ngưỡng khảo nghiệm trước khi tiến vào đoạt bảo.',
-              '<b>Tối Ưu Song Tu Với Đạo Lữ (Chế Độ Đánh Quái):</b> Khi gặp Đạo Lữ ở nhánh Đánh Quái Săn Yêu, Auto luôn ưu tiên chọn «Song tu một năm» nhận tu vi trực tiếp, triệt để không chọn «Song tu, cùng nhập định» để không làm gián đoạn chuỗi săn quái hoặc kẹt vào phiên bế quan.',
-              '<b>Chế Độ Thu Nhỏ Thanh Nổi (Window Shade) &amp; Tìm Nhanh Tab (<code>Ctrl+K</code>):</b> Bổ sung nút Thu Nhỏ (<code>—</code> / đúp chuột tiêu đề / <code>Alt+M</code>) giúp thu gọn cửa sổ thành thanh nổi siêu gọn không che màn hình game; thêm thanh Tìm Nhanh Chức Năng (<code>🔎</code> / <code>Ctrl+K</code>), bộ đếm thời gian thực <code>⏱ MM:SS</code> trên Mini Status Bar và phím tắt toàn cục <code>Alt+T</code>.'
-            ]
+              "<b>Tăng Tốc 80% Động Cơ Kinh Mạch (Signature Memoization & O(1) Bitmask Spine):</b> Bổ sung bộ nhớ đệm chữ ký trạng thái cho <code>buildCandidates</code> và <code>benchEnemies</code>, kết hợp kiểm tra liên thông trục Đan Điền – Tâm Pháp bằng phép toán bit <code>(cpAdjMask &amp; cn.cellMask) !== 0n</code> trong O(1), triệt tiêu hoàn toàn độ trễ khởi tạo lặp lại qua các pha Greedy, Simulated Annealing và Hill-Climbing Polish.",
+              "<b>Khắc Phục Triệt Để Lỗi Ghi Đè Hàm <code>stripDead</code> &amp; Lấp Đầy Khe Hở:</b> Hợp nhất hàm <code>stripDead</code> và <code>coverNote</code> bị định nghĩa trùng lặp, khôi phục trọn vẹn pha <code>smartFillRemainingGaps</code> sau khi lọc mảnh đứt mạch và đối sánh chữ ký mảnh ghép chuẩn xác để không bỏ sót cấu hình tối ưu.",
+              "<b>Siêu AI Tác Chiến 2.0 (Liên Hoàn Phá Giáp ➔ Nuke & Quản Trị Tế Huyết Bản Mệnh):</b> Tự động ưu tiên tung kỹ năng Phá Giáp / Ấn Ký / Suy Yếu mở màn trước khi dồn Đại Chiêu; bổ sung cơ chế kiểm soát chiêu Bản Mệnh Tế Huyết (chống hao thọ nguyên ngoài ý muốn) với nút chuyển đổi nhanh <code>🩸 Tế Huyết</code> trực tiếp trên thanh chiến đấu nổi (Tắt / Boss / Bật) giúp người chơi linh hoạt quyết định xả đại chiêu khi gặp Boss mạnh.",
+              "<b>Auto Săn Dị Bảo Tự Động Bù Đan Khảo Nghiệm:</b> Khi đến điểm Dị Bảo yêu cầu kiểm định chỉ số (Thần Thức, Ngộ Tính, Cơ Duyên...), Auto tự động rà soát túi đồ và nuốt đan dược tăng chỉ số tương ứng để vượt ngưỡng khảo nghiệm trước khi tiến vào đoạt bảo.",
+              "<b>Tối Ưu Song Tu Với Đạo Lữ (Chế Độ Đánh Quái):</b> Khi gặp Đạo Lữ ở nhánh Đánh Quái Săn Yêu, Auto luôn ưu tiên chọn «Song tu một năm» nhận tu vi trực tiếp, triệt để không chọn «Song tu, cùng nhập định» để không làm gián đoạn chuỗi săn quái hoặc kẹt vào phiên bế quan.",
+              "<b>Chế Độ Thu Nhỏ Thanh Nổi (Window Shade) &amp; Tìm Nhanh Tab (<code>Ctrl+K</code>):</b> Bổ sung nút Thu Nhỏ (<code>—</code> / đúp chuột tiêu đề / <code>Alt+M</code>) giúp thu gọn cửa sổ thành thanh nổi siêu gọn không che màn hình game; thêm thanh Tìm Nhanh Chức Năng (<code>🔎</code> / <code>Ctrl+K</code>), bộ đếm thời gian thực <code>⏱ MM:SS</code> trên Mini Status Bar và phím tắt toàn cục <code>Alt+T</code>.",
+            ],
           },
           {
-            t: 'Phiên Bản 7.19.0 · Đại Tu Toàn Diện UI/UX & Giao Diện Tu Tiên',
-            d: '09/11/2026',
+            t: "Phiên Bản 7.19.0 · Đại Tu Toàn Diện UI/UX & Giao Diện Tu Tiên",
+            d: "09/11/2026",
             now: false,
             pts: [
-              '<b>Kiến trúc Stylesheet 6 tầng:</b> Hợp nhất 4 khối CSS phân mảnh thành UI_CSS tinh gọn với CSS Variables, Responsive clamp(), và GPU composite.',
-              '<b>4 Theme Tu Tiên Dark Fantasy Mới:</b> Ra mắt U Minh Ma Vực (Mặc định), Thanh Hư Kiếm, Cửu U Huyết Ma, và Tử Lôi Thiên đạt chuẩn tương phản WCAG AAA.',
-              '<b>Thanh điều hướng Glider chuyển động:</b> Vạch sáng trượt GPU translate3d theo nhịp chuyển tab mượt mà, hỗ trợ cả thanh ngang và thanh dọc Widescreen.',
-              '<b>Chuyển cảnh cửa sổ 0.25s:</b> Cửa sổ mở/đóng êm ái với hiệu ứng mờ ảo và scale, phím Escape đóng nhanh, không che chắn khu vực game.',
-              '<b>Công thái học cảm ứng di động:</b> Vùng chạm các nút bấm và tab mở rộng đạt chuẩn WCAG >= 42-44px trên thiết bị cảm ứng.',
-              '<b>Bảo toàn 100% Core Logic & Stealth:</b> Toàn bộ 188 DOM IDs, 26 CSS Classes, 20 CORE_REQUIRED game hooks, giải kinh mạch BFS và vòng lặp Auto giữ nguyên vẹn tuyệt đối.'
-            ]
+              "<b>Kiến trúc Stylesheet 6 tầng:</b> Hợp nhất 4 khối CSS phân mảnh thành UI_CSS tinh gọn với CSS Variables, Responsive clamp(), và GPU composite.",
+              "<b>4 Theme Tu Tiên Dark Fantasy Mới:</b> Ra mắt U Minh Ma Vực (Mặc định), Thanh Hư Kiếm, Cửu U Huyết Ma, và Tử Lôi Thiên đạt chuẩn tương phản WCAG AAA.",
+              "<b>Thanh điều hướng Glider chuyển động:</b> Vạch sáng trượt GPU translate3d theo nhịp chuyển tab mượt mà, hỗ trợ cả thanh ngang và thanh dọc Widescreen.",
+              "<b>Chuyển cảnh cửa sổ 0.25s:</b> Cửa sổ mở/đóng êm ái với hiệu ứng mờ ảo và scale, phím Escape đóng nhanh, không che chắn khu vực game.",
+              "<b>Công thái học cảm ứng di động:</b> Vùng chạm các nút bấm và tab mở rộng đạt chuẩn WCAG >= 42-44px trên thiết bị cảm ứng.",
+              "<b>Bảo toàn 100% Core Logic & Stealth:</b> Toàn bộ 188 DOM IDs, 26 CSS Classes, 20 CORE_REQUIRED game hooks, giải kinh mạch BFS và vòng lặp Auto giữ nguyên vẹn tuyệt đối.",
+            ],
           },
           {
             t: "Phiên Bản 7.18.0 · Đại Tu Động Cơ Kinh Mạch 2.0 & Tuần Hoàn Chân Khí",
@@ -36728,8 +37082,8 @@ table.au-tb tr:last-child td {
               "<b>Gỡ Bỏ Rào Cản Greedy & Tối Ưu Hóa SkillCap:</b> Thay thế mức phạt thô xung đột màu bằng điểm hệ số m.mau thực tế; gỡ bỏ rào cản skillCap đối với các mảnh mang bị động và linh lực tốt mà không gây kẹt chân khí.",
               "<b>Pha Lấp Đầy Cuối (Smart Gap-Packing) & Sắp Xếp Heuristic Polish:</b> Sắp xếp ứng viên toàn bản đồ trước khi leo đồi; bổ sung smartFillRemainingGaps quét sạch ô trống và nhét thêm mọi món hợp lệ trong túi, triệt tiêu hoàn toàn hiện tượng bỏ hoang ô kinh mạch.",
               "<b>Đột Biến Hoán Đổi Huyệt Đạo (Acupoint Swap Move):</b> Bổ sung toán tử đột biến chuyên biệt trong Simulated Annealing chủ động đưa mảnh phẩm cao ngoài huyệt hoán đổi với mảnh yếu hơn đang chiếm huyệt.",
-              "<b>Độc Lập Tiến Trình:</b> Tách biệt hoàn toàn cờ hủy S.kmAbort khỏi S.abort khi chuyển tab, cho phép Auto Kinh Mạch chạy ngầm mượt mà không bị ngắt quãng."
-            ]
+              "<b>Độc Lập Tiến Trình:</b> Tách biệt hoàn toàn cờ hủy S.kmAbort khỏi S.abort khi chuyển tab, cho phép Auto Kinh Mạch chạy ngầm mượt mà không bị ngắt quãng.",
+            ],
           },
           {
             t: "Phiên Bản 7.17.0 · Trùng Tu Toàn Diện Kiến Trúc & Động Cơ Kinh Mạch 2.0",
@@ -36742,8 +37096,8 @@ table.au-tb tr:last-child td {
               "<b>Thanh Trạng Thái Auto Tinh Gọn (Mini Status Bar):</b> Tích hợp thanh trạng thái nổi trực quan hiển thị theo thời gian thực các tác vụ Auto đang chạy (Tu Luyện, Săn Dị Bảo, Săn Yêu, Buôn Bán, Tác Chiến) kèm nút Tạm Dừng nhanh một chạm.",
               "<b>Hợp Nhất CSS & Tối Giản DOM Engine:</b> Gom toàn bộ stylesheet về một bảng thống nhất; gỡ bỏ MutationObserver chạy regex toàn cục trên DOM để triệt tiêu hiện tượng lag giật; bổ sung debounce 150ms cho các thanh tìm kiếm (Vật Phẩm, Quái Vật, Địa Danh, Ngự Linh).",
               "<b>Quản Lý Vòng Đời & Dữ Liệu Động (Dynamic Data Sync):</b> Bổ sung TabLifecycle dọn sạch timer/listener khi chuyển tab; tự động đồng bộ thực thể, dị bảo, thể chất mới nhất từ game content gốc.",
-              "<b>Bảo Toàn Stealth Mode Tuyệt Đối:</b> Tăng cường bảo vệ luồng Lưu/Nạp Save & Tẩy Thiên Đạo, giữ dữ liệu trò chơi sạch sẽ và an toàn 100%."
-            ]
+              "<b>Bảo Toàn Stealth Mode Tuyệt Đối:</b> Tăng cường bảo vệ luồng Lưu/Nạp Save & Tẩy Thiên Đạo, giữ dữ liệu trò chơi sạch sẽ và an toàn 100%.",
+            ],
           },
           {
             t: "Phiên Bản 7.16.0 · Tái Thiết Hệ Thống Auto Kinh Mạch Đa Mục Tiêu",
@@ -36788,7 +37142,7 @@ table.au-tb tr:last-child td {
               "<b>1-Click Áp Dụng Từ Xem Trước (Instant 1-Click Apply):</b> Bổ sung nút <i>✅ Áp Dụng Ngay Cách Xếp Này Vào Game</i> trực tiếp trong khung Xem Trước (An Toàn); tự động thực hiện cả chu trình Tẩy Ô chuyển hệ (tự dùng đan trong túi nếu hết lượt) lẫn áp dụng cách xếp/bộ vào game chỉ với 1 lần chạm mà không cần chạy lại solver từ đầu.",
               "<b>Hiển Thị Kế Hoạch Tẩy Ô Trực Quan:</b> Khung Xem Trước liệt kê chi tiết danh sách từng ô kinh mạch đề xuất chuyển hệ (Tọa độ Cột/Hàng, hệ cũ sang hệ mới, khớp công pháp nào), giúp đạo hữu kiểm soát 100% tài nguyên trước khi quyết định.",
               "<b>Tối Ưu Tốc Độ Dò Mở Ô (kmOpenSearch):</b> Áp dụng thuật toán xếp hạng tiềm năng (Heuristic Ranking) ưu tiên top các ô giáp Đan Điền, ô Huyệt Đạo và hợp hệ linh căn để tôi luyện sâu (Anneal); loại bỏ hoàn toàn tình trạng giật lag/đơ giao diện khi có nhiều ô mở được, tăng tốc độ dò gấp 2-3 lần.",
-              "<b>Ưu Tiên Món Cốt Lõi Hướng Build:</b> Nâng cao trọng số nhận diện công pháp/pháp khí cốt lõi của hướng build (Trấn phái, phẩm cao, đúng tông môn/nguyên tố) trong cả khởi tạo Tham Lam (Greedy) lẫn tôi luyện ngẫu nhiên (Anneal), bảo đảm AI không bỏ sót tuyệt kỹ trấn phái chỉ vì chênh lệch điểm vụn vặt."
+              "<b>Ưu Tiên Món Cốt Lõi Hướng Build:</b> Nâng cao trọng số nhận diện công pháp/pháp khí cốt lõi của hướng build (Trấn phái, phẩm cao, đúng tông môn/nguyên tố) trong cả khởi tạo Tham Lam (Greedy) lẫn tôi luyện ngẫu nhiên (Anneal), bảo đảm AI không bỏ sót tuyệt kỹ trấn phái chỉ vì chênh lệch điểm vụn vặt.",
             ],
           },
           {
@@ -36800,7 +37154,7 @@ table.au-tb tr:last-child td {
               "<b>Tự Động Trị Thương & Tĩnh Dưỡng Lành Thể (Auto Duong Thuong):</b> Khi thương thế chạm ngưỡng (Thương nhẹ/Thương nặng), Tool tự động kiểm tra và nuốt ngay đan dược chữa thương trong túi (Hồi Xuân Đan, Sinh Cơ Đan, Cửu Chuyển Kim Đan...); nếu hết đan dược sẽ tự động tạm bế quan 1 năm tĩnh dưỡng để vết thương hoàn toàn lành lặn và tích thêm tu vi, sau đó tự động tiếp tục đi săn mà không bị dừng Auto.",
               "<b>Thuật Toán Đánh Giá Bãi Săn Thông Minh (Smart Hunt Spots):</b> Tích hợp đọc Cấp Nền (cảnh giới yêu thú của ô hoang dã), ưu tiên các bãi săn có cấp cảnh giới sát với nhân vật nhất để tối đa hóa tu vi nhận được mỗi trận; đồng thời tối ưu hóa khoảng cách di chuyển để tiết kiệm thọ nguyên tối đa.",
               "<b>Hỗ Trợ Mở Rộng Kỳ Ngộ Săn Thú:</b> Xử lý mượt mà và thông minh tất cả các biến thể sự kiện săn yêu trong game: <code>ev.san_yeu</code>, <code>ev.truy_tim_dau_dan</code>, <code>ev.truy_tim_yeu</code>, <code>ev.san_yeu_thu</code>, <code>ev.tm_yeu_dau_dan</code> (Yêu đầu đàn quấy sơn môn), <code>ev.ls_bay_yeu_thu</code> (Cứu thú trong bẫy tích phúc phận/khí vận).",
-              "<b>Tương Thích Bản Cập Nhật Mới Nhất:</b> Đồng bộ các cập nhật hệ thống của game (chỉ số tốc độ tu luyện thụ động của công pháp Khôi Lỗi Ngự Linh, điều chỉnh mở thẳng bảng treo thưởng, các mở khóa Luân Hồi thiên mệnh chọn linh căn/thể chất)."
+              "<b>Tương Thích Bản Cập Nhật Mới Nhất:</b> Đồng bộ các cập nhật hệ thống của game (chỉ số tốc độ tu luyện thụ động của công pháp Khôi Lỗi Ngự Linh, điều chỉnh mở thẳng bảng treo thưởng, các mở khóa Luân Hồi thiên mệnh chọn linh căn/thể chất).",
             ],
           },
           {
@@ -36810,7 +37164,7 @@ table.au-tb tr:last-child td {
             pts: [
               "<b>Sửa Lỗi ReferenceError testNext:</b> Khắc phục triệt để lỗi <code>Cannot access testNext before initialization</code> trong nhánh hoán đổi đồ của thuật toán Tôi Luyện Luyện Kim (Annealing), giúp Auto Kinh Mạch và Xem Trước chạy trơn tru 100%.",
               "<b>Khắc Phục Lỗi Hiển Thị Banner Hướng Build:</b> Sửa lỗi hiển thị số món trên kinh mạch và trong túi bị 0 dù nhân vật đã có trang bị, nay liên kết chuẩn xác với <code>buildFit</code> của hướng build.",
-              "<b>Nổi Bật Tùy Chọn Auto Tẩy Ô (Đổi Hệ Ô):</b> Mở sẵn mục Tùy Chọn Nâng Cao, hiển thị trạng thái Bật/Tắt rõ ràng kèm ghi chú tự động cắn đan Tẩy Tủy / Cải Mệnh / Dịch Cốt từ túi đồ."
+              "<b>Nổi Bật Tùy Chọn Auto Tẩy Ô (Đổi Hệ Ô):</b> Mở sẵn mục Tùy Chọn Nâng Cao, hiển thị trạng thái Bật/Tắt rõ ràng kèm ghi chú tự động cắn đan Tẩy Tủy / Cải Mệnh / Dịch Cốt từ túi đồ.",
             ],
           },
           {
@@ -36823,7 +37177,7 @@ table.au-tb tr:last-child td {
               "<b>Thi Hành Nghiêm Ngặt Tỉ Lệ Tâm Pháp : Chiến Pháp (Strict Progressive Penalty):</b> Khắc phục triệt để hiện tượng solver bất chấp tỉ lệ để nhét chiêu. Chuyển sang hàm phạt luỹ tiến cực mạnh khi thiếu Tâm Pháp, đảm bảo khi chọn <b>6 : 4</b> hoặc <b>7 : 3</b> thì ít nhất 60%–70% diện tích kinh mạch được dành trọn vẹn cho các Tâm Pháp nuôi chân khí và chỉ số nền.",
               "<b>Bổ Sung Tùy Chọn 'Giới Hạn Chiêu Thức Chủ Động' (Skill Ceiling):</b> Cho phép người dùng giới hạn cứng số lượng chiêu thức (Mặc định: <i>2–3 Chiêu Tinh Hoa · Tự Cấp Chân Khí Không Cần Cắn Đan</i>). Solver tập trung tối đa vào 2 đòn công kích chủ lực mạnh nhất + 1 chiêu thủ/hồi phục, cấm spam chiêu thừa thãi làm loãng kinh mạch.",
               "<b>Đồng Bộ Hóa Toàn Diện Vào Hạt Giống Greedy & Annealing Mutation:</b> Tích hợp kiểm tra tỉ lệ Tâm:Chiến và bền vững chân khí ngay từ hạt giống ban đầu (Greedy). Trong Simulated Annealing, tăng x3.5 lần xác suất bốc Tâm Pháp khi đang thiếu và khóa bốc chiêu thức khi đã đủ trần chiêu.",
-              "<b>Bổ Sung Tỉ Lệ Mới 7 : 3 (Đại Tu Tâm Pháp):</b> Dành riêng cho đạo hữu theo trường phái tốc tu, dưỡng sinh, kháng tâm ma bế quan nhanh và chân khí vô tận."
+              "<b>Bổ Sung Tỉ Lệ Mới 7 : 3 (Đại Tu Tâm Pháp):</b> Dành riêng cho đạo hữu theo trường phái tốc tu, dưỡng sinh, kháng tâm ma bế quan nhanh và chân khí vô tận.",
             ],
           },
           {
@@ -36832,7 +37186,7 @@ table.au-tb tr:last-child td {
             now: false,
             pts: [
               "<b>Quy Nhất Tùy Chọn Tẩy Ô Vào Đúng Khối Chức Năng:</b> Xóa bỏ ô tích trùng lặp thừa thãi ở khung 'Cài Đặt Chung', giữ lại duy nhất 1 vị trí chuẩn mực và trực quan tại khối <b>Tẩy Ô (Đổi Hệ Ô)</b> trong khung 'Auto Kinh Mạch' (nơi hiển thị số lượt chuyển hệ còn lại và số ô tẩy tối đa mỗi lần chạy).",
-              "<b>Giao Diện Tinh Gọn, Thống Nhất:</b> Loại bỏ hoàn toàn sự rườm rà và các nguy cơ xung đột đồng bộ giữa nhiều ô tích, giúp đạo hữu dễ dàng quản lý và cài đặt tính năng Tẩy Ô."
+              "<b>Giao Diện Tinh Gọn, Thống Nhất:</b> Loại bỏ hoàn toàn sự rườm rà và các nguy cơ xung đột đồng bộ giữa nhiều ô tích, giúp đạo hữu dễ dàng quản lý và cài đặt tính năng Tẩy Ô.",
             ],
           },
           {
@@ -36841,7 +37195,7 @@ table.au-tb tr:last-child td {
             now: false,
             pts: [
               "<b>Sửa Lỗi Đồng Bộ Checkbox Tẩy Ô:</b> Khắc phục triệt để lỗi xung đột logic khiến người dùng không thể bỏ chọn (uncheck) ô tích <i>'Tự Động Tẩy Ô Để Khớp Công Pháp Tối Đa'</i>. Trước đây toán tử OR (<code>||</code>) giữa ô tích tại 'Cài Đặt Chung' và 'Auto Kinh Mạch' khiến việc bỏ chọn một bên bị bên kia tự động kích hoạt trở lại.",
-              "<b>Cơ Chế Đồng Bộ Hai Chiều Linh Hoạt:</b> Nay khi đạo hữu tích hoặc bỏ chọn ở bất kỳ vị trí nào ('Cài Đặt Chung' hoặc 'Auto Kinh Mạch'), cả hai ô đều tự động đồng bộ trạng thái ngay lập tức và lưu cấu hình chuẩn xác vào hệ thống."
+              "<b>Cơ Chế Đồng Bộ Hai Chiều Linh Hoạt:</b> Nay khi đạo hữu tích hoặc bỏ chọn ở bất kỳ vị trí nào ('Cài Đặt Chung' hoặc 'Auto Kinh Mạch'), cả hai ô đều tự động đồng bộ trạng thái ngay lập tức và lưu cấu hình chuẩn xác vào hệ thống.",
             ],
           },
           {
@@ -36852,7 +37206,7 @@ table.au-tb tr:last-child td {
               "<b>Cân Bằng Tiêu Hao & Hồi Phục Linh Lực Thực Chiến:</b> Thuật toán tự động đo lường tương quan giữa Linh Lực hồi mỗi lượt / dung lượng tối đa và chi phí thi triển của các chiêu thức. Phạt nặng cấu hình 'đói linh lực' (không đủ linh lực xuất chiêu lớn, phải cắn đan dược trong trận). Thưởng lớn cấu hình 'Tự Cân Bằng Hoàn Hảo' (hồi phục dư dả, xoay chiêu mượt mà 100% không cần nuốt đan).",
               "<b>Đánh Giá Sát Thương Vòng Chiêu (Rotation) Thay Vì Cộng Dồn Thô:</b> Loại bỏ hiện tượng nhồi nhét 7–9 chiêu thức làm loãng kinh mạch. Áp dụng trọng số sát thương thực chiến giảm dần theo thứ tự ưu tiên (chiêu 1: 100%, chiêu 2: 65%, chiêu 3: 35%...). Phạt nặng hiện tượng bội thực chiêu (>4 active skills) để nhường đất kinh mạch cho các Tâm Pháp tăng mạnh Khí Huyết %, Hộ Thể %, Pháp Lực % và Tốc Độ.",
               "<b>Nâng Tầm Trọng Số Tâm Pháp Hồi Linh Lực:</b> Nâng mạnh điểm thưởng của các mảnh có thuộc tính <code>linh_luc</code> và chỉ số bị động trong <code>kmItemPower</code> và <code>itemWeights</code>, giúp máy ưu tiên ghép các Tâm Pháp cao cấp gánh tải linh lực cho toàn bộ hệ thống.",
-              "<b>Bổ Sung Dòng 'Vòng Chiêu & Linh Lực' Trên Bảng So Sánh:</b> Trực quan hóa tình trạng tiêu hao năng lượng của bản kinh mạch (Dư dả không cần đan / Vừa đủ / Thiếu hụt) để đạo hữu đánh giá độ bền bỉ ngay tức thì."
+              "<b>Bổ Sung Dòng 'Vòng Chiêu & Linh Lực' Trên Bảng So Sánh:</b> Trực quan hóa tình trạng tiêu hao năng lượng của bản kinh mạch (Dư dả không cần đan / Vừa đủ / Thiếu hụt) để đạo hữu đánh giá độ bền bỉ ngay tức thì.",
             ],
           },
           {
@@ -36861,7 +37215,7 @@ table.au-tb tr:last-child td {
             now: false,
             pts: [
               "<b>Sửa Lỗi 'B is not defined':</b> Khai báo đầy đủ biến ngữ cảnh <code>const B = biasCtx(nv0, g)</code> trong thuật toán Simulated Annealing (<code>anneal</code>), đảm bảo bộ lọc thông minh <code>smart</code> đánh giá chính xác độ tương sinh công pháp theo hướng build (Kiếm Tu...) mà không bị lỗi crash ngắt ngang tiến trình Auto.",
-              "<b>Tối Ưu & Bảo Đảm Toàn Vẹn Thuật Toán:</b> Kiểm toán toàn diện phạm vi biến trong chuỗi thuật toán Auto Kinh Mạch (<code>greedy</code>, <code>anneal</code>, <code>makeEval</code>, <code>findOptimalRecolors</code>), đảm bảo Auto Kinh Mạch chạy trơn tru, ổn định và chính xác 100%."
+              "<b>Tối Ưu & Bảo Đảm Toàn Vẹn Thuật Toán:</b> Kiểm toán toàn diện phạm vi biến trong chuỗi thuật toán Auto Kinh Mạch (<code>greedy</code>, <code>anneal</code>, <code>makeEval</code>, <code>findOptimalRecolors</code>), đảm bảo Auto Kinh Mạch chạy trơn tru, ổn định và chính xác 100%.",
             ],
           },
           {
@@ -36870,7 +37224,7 @@ table.au-tb tr:last-child td {
             now: false,
             pts: [
               "<b>Sửa Lỗi 'isTayO is not defined':</b> Nâng phạm vi khai báo biến <code>isTayO</code> lên đầu hàm <code>greedy</code> và <code>makeEval</code>, khắc phục triệt để lỗi tham chiếu ngoài phạm vi khiến tiến trình Auto Kinh Mạch (xem trước / chạy) bị dừng đột ngột.",
-              "<b>Tích Hợp Tẩy Ô Vào Hàm Đánh Giá Luyện Kim (makeEval):</b> Cho phép thuật toán Simulated Annealing chủ động cộng điểm thưởng cho các vị trí công pháp đặt trên ô tẩy được, giúp tìm ra cấu hình kinh mạch đột phá sát thương cao nhất có thể."
+              "<b>Tích Hợp Tẩy Ô Vào Hàm Đánh Giá Luyện Kim (makeEval):</b> Cho phép thuật toán Simulated Annealing chủ động cộng điểm thưởng cho các vị trí công pháp đặt trên ô tẩy được, giúp tìm ra cấu hình kinh mạch đột phá sát thương cao nhất có thể.",
             ],
           },
           {
@@ -36883,7 +37237,7 @@ table.au-tb tr:last-child td {
               "<b>Dồn Trọng Số Tương Sinh Vào Chiêu Công & Hướng Build (Đặc Biệt Kiếm Tu):</b>",
               "&nbsp;&nbsp;• <b>Thưởng Lớn Cho Món Nhận Tương Sinh:</b> Nâng cấp thuật toán đánh giá tương sinh trong Annealing & Quick: khi một chiêu công mạnh (như các chiêu kiếm của Kiếm Tu) được các công pháp láng giềng (ví dụ Thổ sinh Kim) tiếp sức, hệ số thưởng được nhân lên gấp 3–8 lần so với món bị động thông thường.",
               "&nbsp;&nbsp;• <b>Khuếch Đại Tương Sinh Trên Huyệt:</b> Chiêu công nằm trên Huyệt Đạo đồng thời nhận tương sinh từ nhiều hướng sẽ được cộng điểm đột phá, khuyến khích máy tự động bao bọc công pháp tương sinh quanh trục chiêu chính.",
-              "<b>Đồng Bộ Tùy Chọn Tẩy Ô Lên Card Cài Đặt Chung:</b> Bổ sung ô tích bật Tẩy Ô ngay tại khung <i>'Hướng Build · Cài Đặt Chung'</i> giúp đạo hữu thao tác nhanh chóng và dễ thấy nhất."
+              "<b>Đồng Bộ Tùy Chọn Tẩy Ô Lên Card Cài Đặt Chung:</b> Bổ sung ô tích bật Tẩy Ô ngay tại khung <i>'Hướng Build · Cài Đặt Chung'</i> giúp đạo hữu thao tác nhanh chóng và dễ thấy nhất.",
             ],
           },
           {
