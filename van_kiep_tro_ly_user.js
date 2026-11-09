@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.20.2
+// @version      7.21.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.2
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.21.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.20.2";
+      var TOOL_VER = "7.21.0";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -7698,6 +7698,26 @@ table.au-tb tr:last-child td {
           // Lưới kinh mạch: khuonCua(content, nhânVật). ctx có đủ .items nên truyền thẳng được.
           const KM = R["character/kinh_mach"];
           K.luoiKinhMach = (c, nv) => KM.khuonCua(c, nv);
+          if (KM) {
+            for (const fn of [
+              "heTungO",
+              "acupointsOf",
+              "baseAcupoints",
+              "doHop",
+              "hopHe",
+              "hopKinhLo",
+              "sinh",
+              "khac",
+              "coTuongSinhNoiTai",
+              "coTuongKhacNoiTai",
+              "heDoiDuoc",
+              "tayConLai",
+            ]) {
+              if (typeof KM[fn] === "function" && !K[fn]) {
+                K[fn] = KM[fn].bind(KM);
+              }
+            }
+          }
           // Hằng đọc sống từ game (hằng khai 'export let' đổi theo độ khó), không chép ra biến lúc nạp.
           const live = (name, mod, key) =>
             Object.defineProperty(K, name, {
@@ -8540,126 +8560,258 @@ table.au-tb tr:last-child td {
           return s;
         }
 
+        // ── ĐỘNG CƠ KINH MẠCH 4.0 (MULTI-TOPOLOGY · LNS RUIN & RECREATE · EXACT CORE MECHANICS) ──
+        // Kiểm tra tương thích Kinh Lộ chuẩn hàm dGt / hopKinhLo của mã nguồn game:
+        // Hai mảnh hợp kinh lộ khi trùng hệ gốc HOẶC hệ mảnh trước tương sinh ra hệ mảnh sau.
+        function hopHeGame(a, b) {
+          if (!a || !b) return false;
+          if (S.core && typeof S.core.hopHe === "function") {
+            try {
+              return !!S.core.hopHe(a, b);
+            } catch (e) {}
+          }
+          if (a === "vo_sac" || b === "vo_sac") return a === b;
+          const ga = gocHe(a),
+            gb = gocHe(b);
+          return ga === gb || SINH_HE[ga] === gb;
+        }
+        function hopKinhLoHe(heArrA, heArrB) {
+          if (!heArrA || !heArrB || !heArrA.length || !heArrB.length) return false;
+          if (S.core && typeof S.core.hopKinhLo === "function") {
+            try {
+              return !!S.core.hopKinhLo(heArrA, heArrB);
+            } catch (e) {}
+          }
+          return heArrA.some((a) => heArrB.some((b) => hopHeGame(a, b)));
+        }
+        function doHopCellGame(cellHe, pieceHe) {
+          const c = cellHe || "vo_sac",
+            p = pieceHe || "vo_sac";
+          if (S.core && typeof S.core.doHop === "function") {
+            try {
+              const v = S.core.doHop(c, p);
+              if (Number.isFinite(v)) return v;
+            } catch (e) {}
+          }
+          if (c === "vo_sac") return p === "vo_sac" ? 1.0 : 0.5;
+          if (p === "vo_sac") return 0.5;
+          if (c === p) return 1.0;
+          return gocHe(c) === gocHe(p) ? 0.5 : 0.0;
+        }
+
+        // Đánh giá tổng giá trị mảnh khi ĐƯỢC THÔNG trên bàn kinh mạch
         function kmItemPower(it, mode = "bal") {
           if (!it) return 0;
           let p = 0;
           const ph = it.pham_cap || 1;
-          const phTable = [0, 6, 18, 40, 85, 150, 240, 350];
-          p += phTable[Math.min(ph, phTable.length - 1)] || ph * 15;
-          if (it.tag && it.tag.includes("nghich")) p += 160;
-          if (it.loai === "cong_phap") p += 20;
+          const phTable = [0, 8, 22, 48, 95, 165, 260, 380, 520];
+          p += phTable[Math.min(ph, phTable.length - 1)] || ph * 18;
+          if (it.tag && it.tag.includes("nghich")) p += 170;
+          if (it.tran_phai) p += 95;
+          if (it.loai === "cong_phap") p += 24;
+
+          const hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
+          if (hs.length > 1) {
+            let noiSinh = false;
+            if (S.core && typeof S.core.coTuongSinhNoiTai === "function") {
+              try {
+                noiSinh = !!S.core.coTuongSinhNoiTai(hs);
+              } catch (e) {}
+            } else {
+              noiSinh = hs.some((a) => hs.some((b) => heTacDong(a, b) > 0));
+            }
+            if (noiSinh) p += 35;
+          }
 
           if (it.chieu) {
             const ch = it.chieu;
-            let dmgW = 80;
-            if (mode === "tu") dmgW = 20;
-            else if (mode === "dot_pha") dmgW = 35;
-            else if (mode === "tank") dmgW = 60;
-            else if (mode === "burst") dmgW = 180;
-            else if (mode === "danh") dmgW = 135;
+            let dmgW = 85;
+            if (mode === "tu") dmgW = 24;
+            else if (mode === "dot_pha") dmgW = 38;
+            else if (mode === "tank") dmgW = 65;
+            else if (mode === "burst") dmgW = 195;
+            else if (mode === "danh") dmgW = 145;
 
-            let ctrlW = 45;
-            if (mode === "tank") ctrlW = 80;
-            else if (mode === "danh") ctrlW = 65;
+            let ctrlW = 50;
+            if (mode === "tank") ctrlW = 85;
+            else if (mode === "danh") ctrlW = 72;
 
             p += (ch.uy || 1) * (ch.dang === "cong" ? dmgW : ctrlW);
-            p += (ch.effects || []).length * 15;
+            p += (ch.effects || []).length * 18;
             if (ch.controlTurns)
-              p += ch.controlTurns * (mode === "tank" ? 50 : 35);
+              p += ch.controlTurns * (mode === "tank" ? 55 : 38);
             if (ch.shieldTurns)
               p +=
                 ch.shieldTurns *
-                (mode === "tank" || mode === "dot_pha" ? 60 : 30);
-            if (ch.scope === "spread" || ch.scope === "all") p += 35;
-            // Chiêu tốn nhiều linh lực bị khấu trừ để ưu tiên chiêu hiệu quả năng lượng cao
+                (mode === "tank" || mode === "dot_pha" ? 65 : 35);
+            if (ch.scope === "spread" || ch.scope === "all") p += 38;
             const phiCost = ch.phi || 0;
-            p -= phiCost * (mode === "tu" ? 6.0 : 3.0);
+            p -= phiCost * (mode === "tu" ? 4.5 : 2.2);
             if (ch.hoi > 0) p += 10;
           }
+
           const bd = it.bi_dong || {};
-          let tocW = 130,
-            dpW = 95,
-            hpW = 110,
-            hoTheW = 140,
-            ktmW = 60,
-            qiW = 55;
+          let tocW = 140,
+            dpW = 100,
+            hpW = 115,
+            hoTheW = 150,
+            ktmW = 65,
+            qiW = 62;
           if (mode === "tu") {
-            tocW = 450;
-            dpW = 80;
-            qiW = 85;
-            hpW = 40;
-            hoTheW = 40;
-            ktmW = 40;
+            tocW = 520;
+            dpW = 90;
+            qiW = 95;
+            hpW = 45;
+            hoTheW = 45;
+            ktmW = 45;
           } else if (mode === "dot_pha") {
-            dpW = 550;
-            ktmW = 220;
-            hpW = 140;
-            hoTheW = 160;
-            tocW = 80;
-            qiW = 40;
-          } else if (mode === "tank") {
-            hpW = 280;
-            hoTheW = 320;
-            tocW = 40;
-            dpW = 30;
+            dpW = 620;
+            ktmW = 250;
+            hpW = 150;
+            hoTheW = 175;
+            tocW = 85;
             qiW = 50;
-          } else if (mode === "burst") {
-            tocW = 60;
-            dpW = 20;
-            qiW = 45;
-            hpW = 80;
-            hoTheW = 90;
-          } else if (mode === "danh") {
+          } else if (mode === "tank") {
+            hpW = 300;
+            hoTheW = 350;
             tocW = 45;
             dpW = 35;
+            qiW = 58;
+          } else if (mode === "burst") {
+            tocW = 65;
+            dpW = 25;
             qiW = 55;
+            hpW = 85;
+            hoTheW = 95;
+          } else if (mode === "danh") {
+            tocW = 50;
+            dpW = 40;
+            qiW = 65;
           }
 
           p += (bd.toc_do || 0) * tocW;
           p += (bd.dot_pha || 0) * dpW;
           p += (bd.khi_huyet || 0) * hpW;
-          p += Math.min(0.3, bd.ho_the || 0) * hoTheW;
-          p += (bd.phap_luc || 0) * (mode === "burst" ? 180 : 110);
+          p += Math.min(0.35, bd.ho_the || 0) * hoTheW;
+          p += (bd.phap_luc || 0) * (mode === "burst" ? 190 : 120);
           if (bd.khang_tam_ma) p += bd.khang_tam_ma * ktmW;
           if (it.linh_luc) p += it.linh_luc * qiW;
+
+          const cs = bd.chi_so || {};
+          for (const [k, val] of Object.entries(cs)) {
+            if (!val) continue;
+            let cw = 10;
+            if (mode === "tu" && (k === "ngo_tinh" || k === "can_cot" || k === "khi_van")) cw = 28;
+            else if (mode === "dot_pha" && (k === "dao_tam" || k === "can_cot" || k === "than_thuc" || k === "khi_van")) cw = 32;
+            else if (mode === "tank" && (k === "can_cot" || k === "dao_tam")) cw = 24;
+            else if ((mode === "danh" || mode === "burst") && (k === "than_phap" || k === "than_thuc" || k === "can_cot")) cw = 20;
+            p += val * cw;
+          }
           return p;
         }
 
-        // ── ĐỘNG CƠ KINH MẠCH 2.0 (MERIDIAN OPTIMIZER 2.0) ──
-        // 1. Acupoint Priority: Đánh giá độ ưu tiên hưởng Huyệt Đạo của vật phẩm
+        // Đánh giá RIÊNG phần sức mạnh ĐƯỢC NHÂN HỆ SỐ (heSo = mau * huyet * sinhKhac * noiTai * kinhLo * fit)
+        // Theo đúng code lõi game (character/kinh_mach):
+        // - NHÂN heSo: linh_luc, chieu (uy lực, khiên, khống chế), bi_dong.khi_huyet, bi_dong.ho_the, bi_dong.phap_luc, bi_dong.chi_so.
+        // - KHÔNG NHÂN heSo (chỉ cần thông): bi_dong.toc_do, bi_dong.dot_pha, bi_dong.khang_tam_ma, bi_dong.an_tuc.
+        function kmScalablePower(it, mode = "bal", build = null) {
+          if (!it) return 0;
+          let sp = 0;
+          const bd = it.bi_dong || {};
+          const cs = bd.chi_so || {};
+
+          // 1. Linh lực (luôn nhân heSo và quyết định cả vòng chiêu lẫn tốc độ vận hành)
+          if (it.linh_luc > 0) {
+            const llW =
+              mode === "tu"
+                ? 75
+                : mode === "dot_pha"
+                  ? 55
+                  : mode === "burst" || mode === "danh"
+                    ? 62
+                    : 58;
+            sp += it.linh_luc * llW;
+          }
+
+          // 2. Chiêu thức chủ động (uy lực nhân trực tiếp với heSo)
+          if (it.chieu && ((it.chieu.uy || 0) > 0 || (it.chieu.phi || 0) > 0)) {
+            const ch = it.chieu;
+            let uyW = 140;
+            if (mode === "burst") uyW = 260;
+            else if (mode === "danh") uyW = 210;
+            else if (mode === "tank") uyW = 115;
+            else if (mode === "tu") uyW = 65;
+            else if (mode === "dot_pha") uyW = 80;
+
+            const isAtk = ch.dang === "cong";
+            sp += (ch.uy || 0.8) * (isAtk ? uyW : uyW * 0.72);
+            if (ch.shieldTurns)
+              sp += ch.shieldTurns * (mode === "tank" || mode === "dot_pha" ? 70 : 35);
+            if (ch.controlTurns)
+              sp += ch.controlTurns * (mode === "tank" || mode === "danh" ? 55 : 30);
+            sp += (ch.effects || []).length * 22;
+          }
+
+          // 3. Chỉ số bị động nhân heSo (khi_huyet, ho_the, phap_luc)
+          if (bd.khi_huyet) {
+            const hpW = mode === "tank" ? 340 : mode === "dot_pha" ? 190 : 140;
+            sp += bd.khi_huyet * hpW;
+          }
+          if (bd.ho_the) {
+            const htW = mode === "tank" ? 680 : mode === "dot_pha" ? 420 : 260;
+            sp += Math.min(0.4, bd.ho_the) * htW;
+          }
+          if (bd.phap_luc) {
+            const plW = mode === "burst" ? 380 : mode === "danh" ? 310 : 220;
+            sp += bd.phap_luc * plW;
+          }
+
+          // 4. Lục duy chi_so (nhân heSo, cực kỳ quan trọng cho cả Tu Luyện, Đột Phá và Chiến Đấu)
+          for (const [k, val] of Object.entries(cs)) {
+            if (!val) continue;
+            let cw = 18;
+            if (mode === "tu") {
+              if (k === "ngo_tinh") cw = 55;
+              else if (k === "can_cot" || k === "khi_van") cw = 32;
+            } else if (mode === "dot_pha") {
+              if (k === "dao_tam" || k === "can_cot") cw = 52;
+              else if (k === "than_thuc" || k === "khi_van") cw = 38;
+            } else if (mode === "tank") {
+              if (k === "can_cot" || k === "dao_tam") cw = 36;
+            } else {
+              if (k === "than_phap" || k === "than_thuc" || k === "can_cot") cw = 28;
+            }
+            sp += val * cw;
+          }
+
+          // Nếu mảnh hoàn toàn KHÔNG có thuộc tính nào nhân heSo (chỉ thuần toc_do / dot_pha / khang_tam_ma),
+          // trả về giá trị rất nhỏ để nhường Huyệt Đạo và ô màu đẹp cho mảnh có nhân hệ số!
+          if (sp <= 1e-3) return 2;
+
+          // Thưởng bậc phẩm và hướng build CHỈ KHI mảnh thực sự có thuộc tính nhân heSo
+          const ph = it.pham_cap || 1;
+          sp *= 0.85 + 0.18 * ph;
+          if (it.tag && it.tag.includes("nghich")) sp += 120;
+          if (it.tran_phai) sp += 90;
+          if (build && buildMatch(build, it)) {
+            sp *= 1.35;
+            if (it.tag && it.tag.includes(build.k)) sp += 75;
+          }
+          return sp;
+        }
+
+        // 1. Acupoint Priority 4.0: Chỉ ưu tiên đặt lên Huyệt Đạo (×2.0 + 0.25*(k-1)) những mảnh thực sự NHÂN HỆ SỐ!
         function acupointPriority(it, mode, build) {
           if (!it) return 0;
-          let p = Math.pow(it.pham_cap || 1, 2.2) * 30;
-          if (it.tag && it.tag.includes("nghich")) p += 160;
-          if (it.tran_phai) p += 130;
-          if (build && buildMatch(build, it)) {
-            p += 150;
-            if (it.tag && it.tag.includes(build.k)) p += 90;
+          const sp = kmScalablePower(it, mode, build);
+          if (sp <= 10) {
+            // Mảnh thuần tốc độ tu luyện / đột phá / kháng tâm ma không nhân hệ số:
+            // chỉ giữ độ ưu tiên tối thiểu để không bao giờ tranh Huyệt với mảnh nhân hệ số!
+            return 8 + (it.pham_cap || 1) * 1.5;
           }
-          const isSkill = !!(
-            it.chieu &&
-            ((it.chieu.phi || 0) > 0 || (it.chieu.uy || 0) > 0)
-          );
-          if (mode === "danh" || mode === "burst") {
-            if (isSkill) {
-              p += 200 + (it.chieu.uy || 0) * 1.6;
-              if ((it.pham_cap || 1) >= 4) p += 120;
-            }
-          } else if (mode === "dot_pha") {
-            const dp = (it.bi_dong && it.bi_dong.dot_pha) || 0;
-            p += dp * 1800;
-            if (it.bi_dong && it.bi_dong.khang_tam_ma)
-              p += it.bi_dong.khang_tam_ma * 350;
-          } else if (mode === "tu") {
-            const spd = (it.bi_dong && it.bi_dong.toc_do) || 0;
-            const ll = it.linh_luc || 0;
-            p += spd * 1200 + ll * 45;
-          } else if (mode === "tank") {
-            const ht = (it.bi_dong && it.bi_dong.ho_the) || 0;
-            const hp = (it.bi_dong && it.bi_dong.khi_huyet) || 0;
-            p += ht * 700 + hp * 0.25;
-          }
-          return p;
+          const cellCnt = Math.max(1, hbCells(it) || 3);
+          const densityMult = 1 / Math.pow(cellCnt, 0.22);
+          return sp * densityMult;
         }
 
         // 2. 15-Turn Qi Cycle Simulator: Mô phỏng vòng quay chân khí 15 hiệp thực tế
@@ -8736,20 +8888,20 @@ table.au-tb tr:last-child td {
           const isCombat = mode === "danh" || mode === "burst";
 
           if (sim.qiStallTurns > 0 || sim.qiDeficit > 0) {
-            const stallMult = isCombat ? 140 : 100;
-            const defMult = isCombat ? 20 : 14;
+            const stallMult = isCombat ? 135 : 95;
+            const defMult = isCombat ? 18 : 12;
             llPenalty +=
               sim.qiStallTurns * stallMult +
-              Math.pow(sim.qiStallTurns, 1.85) * 85 +
+              Math.pow(sim.qiStallTurns, 1.8) * 75 +
               sim.qiDeficit * defMult;
           }
 
           if (maxPhi > 0) {
-            if (regen < maxPhi * 0.85) {
-              llPenalty += (maxPhi * 0.85 - regen) * (isCombat ? 25.0 : 16.0);
+            if (regen < maxPhi * 0.8) {
+              llPenalty += (maxPhi * 0.8 - regen) * (isCombat ? 22.0 : 14.0);
             }
-            if (maxQi < maxPhi * 1.5) {
-              llPenalty += (maxPhi * 1.5 - maxQi) * 8.0;
+            if (maxQi < maxPhi * 1.35) {
+              llPenalty += (maxPhi * 1.35 - maxQi) * 7.0;
             }
           }
 
@@ -8757,7 +8909,7 @@ table.au-tb tr:last-child td {
             S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
               ? S.hbMaxSkills
               : mode === "tu"
-                ? 1
+                ? 2
                 : S.hbRatio && S.hbRatio.t >= 0.6
                   ? 3
                   : 4;
@@ -8765,30 +8917,27 @@ table.au-tb tr:last-child td {
           if (skillCap > 0 && costSkills.length > skillCap) {
             const ex = costSkills.length - skillCap;
             if (sim.qiStallTurns > 0) {
-              llPenalty += ex * 250 + Math.pow(ex, 2) * 180;
+              llPenalty += ex * 220 + Math.pow(ex, 2) * 150;
+            } else if (S.hbLite) {
+              llPenalty += ex * 18;
             } else {
-              llPenalty += ex * 15;
-            }
-          } else if (costSkills.length > 4) {
-            const ex = costSkills.length - 4;
-            if (sim.qiStallTurns > 0) {
-              llPenalty += ex * 200 + Math.pow(ex, 2) * 120;
-            } else {
-              llPenalty += ex * 10;
+              // Khi xếp từ túi đồ thực tế mà chân khí hoàn toàn dư dả (0 lượt kẹt chiêu),
+              // không phạt nặng việc lắp thêm chiêu có ích.
+              llPenalty += ex * 4;
             }
           }
 
           let llBonus = 0;
           if (sim.qiStallTurns === 0 && sim.qiDeficit === 0) {
             if (costSkills.length >= 1) {
-              llBonus += isCombat ? 160 : 110;
-              if (sim.skillsCast >= 7) llBonus += 50;
+              llBonus += isCombat ? 165 : 110;
+              if (sim.skillsCast >= 7) llBonus += 55;
             }
           }
 
           const baseLl =
-            (mode === "tu" ? 12.0 : isCombat ? 9.0 : 7.0) * regen +
-            (mode === "tu" ? 2.5 : 1.8) * Math.min(300, maxQi);
+            (mode === "tu" ? 12.5 : isCombat ? 9.5 : 7.5) * regen +
+            (mode === "tu" ? 2.6 : 1.9) * Math.min(350, maxQi);
 
           return {
             score: baseLl - llPenalty + llBonus,
@@ -8798,7 +8947,191 @@ table.au-tb tr:last-child td {
           };
         }
 
-        // Tầng 1 (Fast Proxy Evaluation): Tính nhanh điểm số qua chỉ số thực của P và R mà không chạy mô phỏng 9 trận đấu thật
+        // Hàm tính điểm đồng bộ giữa Tầng 1 (Fast Proxy) và Tầng 2 (Full Combat Simulation)
+        function computeMeridianCommonScore(
+          nv0,
+          nvWork,
+          g0,
+          hy0,
+          B,
+          capX,
+          maxHoThe,
+          ngW,
+          mode,
+          manh,
+          R,
+          P,
+          c,
+        ) {
+          const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
+          const thong = R.manh.filter((m) => m && m.thong).length;
+          const dead = R.manh.filter((m) => m && !m.thong).length;
+          const toc = R.biDong.toc_do || 0,
+            dp = R.biDong.dot_pha || 0;
+          const ng = (R.diemNghich || 0) * ngW;
+
+          // Đánh giá chiêu thức thực tế (Rotation) + Chu kỳ sát thương 15 hiệp
+          const chieuList = (P.chieu || []).filter(
+            (x) =>
+              x &&
+              ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+          );
+          const sortedSkills = chieuList.slice().sort((a, b) => {
+            const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
+            const uyB = b.uyLuc || (b.uy || 0) * (P.phapLuc || 1);
+            return uyB - uyA;
+          });
+
+          const rotWeights = [1.0, 0.72, 0.42, 0.18, 0.08];
+          let effectiveRotDmg = 0;
+          for (let i = 0; i < sortedSkills.length; i++) {
+            const w = i < rotWeights.length ? rotWeights[i] : 0.04;
+            const skillDmg =
+              sortedSkills[i].uyLuc ||
+              (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
+            effectiveRotDmg += skillDmg * w;
+          }
+          const uyMax = sortedSkills.length
+            ? sortedSkills[0].uyLuc ||
+              (sortedSkills[0].uy || 0) * (P.phapLuc || 1)
+            : 0;
+
+          const qiRes = calcQiScore(P, sortedSkills, mode, 15);
+          const llScore = qiRes.score;
+
+          // Sát thương chuẩn hóa theo Pháp Lực cơ sở của cảnh giới để phản ánh nhạy bén cả log lẫn tỉ lệ tuyến tính
+          const baseSp = Math.max(
+            20,
+            (capX && capX.base) || P.phapLuc || 50,
+          );
+          const relRot = effectiveRotDmg / baseSp;
+          const relMax = uyMax / baseSp;
+          const relCycle = (qiRes.sim.cycleTotalDmg || 0) / (baseSp * 8);
+          const dmgScore =
+            Math.log10(Math.max(10, effectiveRotDmg)) * 38 +
+            Math.log10(Math.max(10, uyMax)) * 24 +
+            Math.min(280, relRot * 28 + relMax * 18 + relCycle * 32);
+
+          // Huyệt đạo & Khuếch đại hệ số thực tế (heSo Amplification)
+          let hyScore = 0;
+          let heSoAmpScore = 0;
+          let connectedCells = 0;
+          const usedCells = new Set();
+          const bBuild = B ? B.build : null;
+
+          manh.forEach((p, idx) => {
+            p.cells.forEach((x) => usedCells.add(x));
+            const rm = R.manh && R.manh[idx];
+            const isThong = !!(rm && rm.thong);
+            const it = c.items.get(p.m.item);
+            if (isThong) {
+              connectedCells += p.cells.length;
+              const scPwr = kmScalablePower(it, mode, bBuild);
+              const heSo = (rm && rm.heSo) || 1.0;
+              // Thưởng trực tiếp cho mức khuếch đại heSo thực tế trên các mảnh nhân hệ số!
+              heSoAmpScore += (heSo - 0.85) * scPwr * 0.42;
+            }
+            const q =
+              p.hyCount !== undefined
+                ? p.hyCount
+                : p.cells.filter((x) => hy0.has(x)).length;
+            if (q > 0) {
+              if (isThong) {
+                const pwr = acupointPriority(it, mode, bBuild);
+                if (pwr <= 20) {
+                  // Phạt nhẹ khi đặt mảnh không nhân hệ số (thuần toc_do/dot_pha) chiếm chỗ Huyệt Đạo
+                  hyScore -= 15 * q;
+                } else {
+                  hyScore += 32 * q + 0.36 * pwr * (1 + 0.25 * (q - 1));
+                }
+              } else {
+                hyScore -= 95 * q;
+              }
+            }
+          });
+          for (const h of hy0) {
+            if (
+              g0.vung[h] >= 0 &&
+              nv0.kinhMach.trangThai[h] === "thong" &&
+              !usedCells.has(h)
+            ) {
+              hyScore -= 48;
+            }
+          }
+
+          const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
+          let hoThePenalty = 0;
+          if (curHoThe > maxHoThe) {
+            const excess = curHoThe - maxHoThe;
+            hoThePenalty =
+              200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
+          }
+
+          let kinhLoBonus = 0;
+          (R.manh || []).forEach((m) => {
+            if (
+              m &&
+              m.thong &&
+              m.item &&
+              m.item.loai === "phap_khi" &&
+              m.kinhLo > 1
+            ) {
+              const pkScale = Math.max(
+                1,
+                kmScalablePower(m.item, mode, bBuild) / 80,
+              );
+              kinhLoBonus += (m.kinhLo - 1) * (55 + 18 * Math.min(4, pkScale));
+            }
+          });
+
+          let colorScore = 0;
+          (R.manh || []).forEach((m, idx) => {
+            if (m && m.thong) {
+              const p = manh[idx];
+              const it = m.item;
+              const scPwr = kmScalablePower(it, mode, bBuild);
+              const scaleFactor = scPwr > 20 ? 1.0 + Math.min(1.5, scPwr / 250) : 0.25;
+              const canRecolor =
+                isTayO &&
+                p &&
+                p.recolorableCount > 0 &&
+                (p.unfixableCount || 0) === 0;
+              if (m.mau >= 1.25 || canRecolor) {
+                colorScore += (canRecolor ? 22 : 30) * scaleFactor;
+              } else if (m.mau < 1.0) {
+                colorScore -= 16 * (1.075 - m.mau) * scaleFactor;
+              }
+              if (p && p.causesCellNghich && S.dir !== "ma") {
+                colorScore -= mode === "dot_pha" ? 75 : 35;
+              }
+            }
+          });
+
+          const deadPenalty = S.full ? 0 : dead * 95;
+          const densityBonus = connectedCells * 3.2 + thong * 9.0;
+
+          return {
+            thong,
+            dead,
+            toc,
+            dp,
+            ng,
+            dmgScore,
+            uyMax,
+            effectiveRotDmg,
+            llScore,
+            hyScore,
+            heSoAmpScore,
+            hoThePenalty,
+            kinhLoBonus,
+            colorScore,
+            deadPenalty,
+            densityBonus,
+            curHoThe,
+          };
+        }
+
+        // Tầng 1 (Fast Proxy Evaluation): Tính nhanh điểm số qua chỉ số thực của P và R + Ước lượng đối kháng chuẩn xác
         function makeFastEval(nv0, mode) {
           nv0 = lnPrep(nv0);
           const K = S.core,
@@ -8808,13 +9141,24 @@ table.au-tb tr:last-child td {
             hy0 = hySet(g0, nv0.kinhMach),
             B = biasCtx(nv0, g0),
             capX = capCtxOf(nv0),
-            ngW = S.dir === "ma" ? 0.4 : 1,
+            ngW = S.dir === "ma" ? 0.35 : 1,
             maxHoThe =
               0.6 +
               ((nv0.theChat &&
                 nv0.theChat.dac_tinh &&
                 nv0.theChat.dac_tinh.ho_the_tran) ||
                 0);
+          const enemies = benchEnemies(nv0.canhGioi, nv0.tieuCanhGioi || 0);
+          let avgEnemyHp = 500,
+            avgEnemyDps = 50;
+          if (enemies && enemies.length) {
+            avgEnemyHp =
+              enemies.reduce((a, x) => a + ((x.E && x.E.khiHuyetToiDa) || 500), 0) /
+              enemies.length;
+            avgEnemyDps =
+              enemies.reduce((a, x) => a + ((x.E && x.E.phapLuc) || 50), 0) /
+              enemies.length;
+          }
 
           const nvWork = Object.assign({}, nv0, {
             kinhMach: Object.assign({}, nv0.kinhMach, { manh: [] }),
@@ -8831,192 +9175,133 @@ table.au-tb tr:last-child td {
             const R = K.tinhKinhMach(nvWork, c),
               P = K.taoBenTa(nvWork, c);
 
-            const thong = R.manh.filter((m) => m && m.thong).length;
-            const dead = R.manh.filter((m) => m && !m.thong).length;
-            const toc = R.biDong.toc_do || 0,
-              dp = R.biDong.dot_pha || 0;
-            const ng = (R.diemNghich || 0) * ngW;
-
-            // Đánh giá chiêu thức thực tế (Rotation)
-            const chieuList = (P.chieu || []).filter(
-              (x) =>
-                x &&
-                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+            const cm = computeMeridianCommonScore(
+              nv0,
+              nvWork,
+              g0,
+              hy0,
+              B,
+              capX,
+              maxHoThe,
+              ngW,
+              mode,
+              manh,
+              R,
+              P,
+              c,
             );
-            const sortedSkills = chieuList.slice().sort((a, b) => {
-              const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
-              const uyB = b.uyLuc || (b.uy || 0) * (P.phapLuc || 1);
-              return uyB - uyA;
-            });
 
-            const rotWeights = [1.0, 0.7, 0.35, 0.1];
-            let effectiveRotDmg = 0;
-            for (let i = 0; i < sortedSkills.length; i++) {
-              const w = i < rotWeights.length ? rotWeights[i] : 0.0;
-              const skillDmg =
-                sortedSkills[i].uyLuc ||
-                (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
-              effectiveRotDmg += skillDmg * w;
-            }
-            const uyMax = sortedSkills.length
-              ? sortedSkills[0].uyLuc ||
-                (sortedSkills[0].uy || 0) * (P.phapLuc || 1)
-              : 0;
-            const dmgScore =
-              Math.log10(Math.max(10, effectiveRotDmg)) * 40 +
-              Math.log10(Math.max(10, uyMax)) * 25;
-
-            // 15-Turn Qi Cycle Simulator
-            const qiRes = calcQiScore(P, sortedSkills, mode, 15);
-            const llScore = qiRes.score;
-
-            // Huyệt đạo
-            let hyScore = 0;
-            const usedCells = new Set();
-            manh.forEach((p, idx) => {
-              p.cells.forEach((x) => usedCells.add(x));
-              const q =
-                p.hyCount !== undefined
-                  ? p.hyCount
-                  : p.cells.filter((x) => hy0.has(x)).length;
-              if (q > 0) {
-                const rm = R.manh && R.manh[idx];
-                if (rm && rm.thong) {
-                  const it = c.items.get(p.m.item);
-                  const pwr = acupointPriority(it, mode, B.build);
-                  hyScore += 35 * q + 0.35 * pwr * q;
-                } else {
-                  hyScore -= 90 * q;
-                }
-              }
-            });
-            for (const h of hy0) {
-              if (
-                g0.vung[h] >= 0 &&
-                nv0.kinhMach.trangThai[h] === "thong" &&
-                !usedCells.has(h)
-              ) {
-                hyScore -= 45;
-              }
-            }
-
-            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
-            let hoThePenalty = 0;
-            if (curHoThe > maxHoThe) {
-              const excess = curHoThe - maxHoThe;
-              hoThePenalty =
-                200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
-            }
-
-            let kinhLoBonus = 0;
-            (R.manh || []).forEach((m) => {
-              if (
-                m &&
-                m.thong &&
-                m.item &&
-                m.item.loai === "phap_khi" &&
-                m.kinhLo > 1
-              ) {
-                kinhLoBonus += (m.kinhLo - 1) * 60;
-              }
-            });
-
-            let colorScore = 0;
-            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
-            (R.manh || []).forEach((m, idx) => {
-              if (m && m.thong) {
-                const p = manh[idx];
-                const canRecolor =
-                  isTayO &&
-                  p &&
-                  p.recolorableCount > 0 &&
-                  (p.unfixableCount || 0) === 0;
-                if (m.mau >= 1.25 || canRecolor)
-                  colorScore += canRecolor ? 25 : 35;
-                else if (m.mau < 1.0) colorScore -= 20 * (1.1 - m.mau);
-              }
-            });
-
-            const deadPenalty = S.full ? 0 : dead * 85;
-
-            // Combat Power Proxy (Tầng 1): Ước tính sức chiến đấu nhanh từ Effective HP & Sát thương
-            const effHoThe = Math.min(maxHoThe, curHoThe);
+            // Combat Power Proxy: Ước tính tỉ lệ thắng & trao đổi sát thương với chuẩn địch cùng cảnh giới
+            const effHoThe = Math.min(maxHoThe, cm.curHoThe);
             const effHp =
               (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
             const hpLog = Math.log10(Math.max(10, effHp)) * 55;
+            const ttkEnemy = avgEnemyHp / Math.max(1, cm.effectiveRotDmg || P.phapLuc || 10);
+            const ttkSelf = effHp / Math.max(1, avgEnemyDps * 1.35);
+            const duelRatio = Math.min(3.5, ttkSelf / Math.max(0.5, ttkEnemy));
+            const duelProxy = duelRatio * 180;
+
             let proxyFight = 0;
             if (mode === "danh" || mode === "burst") {
               proxyFight =
-                1.35 * dmgScore + 0.85 * hpLog + (P.tocDo || 0) * 0.2;
+                1.25 * cm.dmgScore +
+                0.8 * hpLog +
+                0.85 * duelProxy +
+                (P.tocDo || 0) * 0.25;
             } else if (mode === "tank") {
-              proxyFight = 0.5 * dmgScore + 1.8 * hpLog + 300 * effHoThe;
+              proxyFight =
+                0.55 * cm.dmgScore +
+                1.75 * hpLog +
+                0.75 * duelProxy +
+                320 * effHoThe;
             } else if (mode === "tu") {
-              proxyFight = 0.2 * dmgScore + 0.3 * hpLog;
+              proxyFight = 0.22 * cm.dmgScore + 0.3 * hpLog + 0.25 * duelProxy;
             } else if (mode === "dot_pha") {
-              proxyFight = 0.25 * dmgScore + 0.4 * hpLog;
+              proxyFight = 0.28 * cm.dmgScore + 0.45 * hpLog + 0.3 * duelProxy;
             } else {
-              proxyFight = dmgScore + hpLog;
+              proxyFight = cm.dmgScore + hpLog + 0.7 * duelProxy;
             }
 
             let s;
             if (mode === "tu") {
+              const realSpd =
+                K.tocDoTuLuyen && typeof K.tocDoTuLuyen === "function"
+                  ? K.tocDoTuLuyen(nvWork, c) || 0
+                  : 0;
               s =
                 0.15 * proxyFight +
-                0.15 * dmgScore +
-                650 * toc +
-                120 * dp +
-                thong -
-                60 * ng +
-                llScore;
+                0.15 * cm.dmgScore +
+                720 * cm.toc +
+                (realSpd > 0 ? realSpd * 180 : 0) +
+                130 * cm.dp +
+                cm.thong -
+                65 * cm.ng +
+                cm.llScore;
             } else if (mode === "dot_pha") {
               const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
               const hpSafe =
-                Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+                Math.min(1.6, (P.khiHuyetToiDa || 100) / 1000) * 45;
               s =
-                0.2 * proxyFight +
-                0.2 * dmgScore +
-                950 * dp +
-                250 * ktm +
+                0.22 * proxyFight +
+                0.2 * cm.dmgScore +
+                1050 * cm.dp +
+                280 * ktm +
                 hpSafe +
-                thong -
-                90 * ng +
-                0.6 * llScore;
+                cm.thong -
+                110 * cm.ng +
+                0.65 * cm.llScore;
             } else if (mode === "tank") {
-              const hoTheVal = Math.min(maxHoThe, curHoThe);
-              const bodyHpVal = (R.bodyHp || 0) * 0.6;
+              const hoTheVal = Math.min(maxHoThe, cm.curHoThe);
+              const bodyHpVal = (R.bodyHp || 0) * 0.65;
               s =
                 1.3 * proxyFight +
-                0.5 * dmgScore +
+                0.5 * cm.dmgScore +
                 hpLog +
                 bodyHpVal +
-                350 * hoTheVal +
-                thong -
-                15 * ng +
-                llScore;
+                380 * hoTheVal +
+                cm.thong -
+                18 * cm.ng +
+                cm.llScore;
             } else if (mode === "burst") {
               s =
                 proxyFight +
-                1.7 * dmgScore +
-                0.9 * (uyMax || 0) +
-                0.5 * thong -
-                10 * ng +
-                llScore;
+                1.75 * cm.dmgScore +
+                0.9 * (cm.uyMax || 0) +
+                0.5 * cm.thong -
+                12 * cm.ng +
+                cm.llScore;
             } else if (mode === "danh") {
-              s = proxyFight + dmgScore + 0.5 * thong - 6 * ng + llScore;
-            } else {
               s =
                 proxyFight +
-                0.5 * dmgScore +
-                55 * toc +
-                45 * dp +
-                0.5 * thong -
-                10 * ng +
-                llScore;
+                1.1 * cm.dmgScore +
+                0.5 * cm.thong -
+                8 * cm.ng +
+                cm.llScore;
+            } else {
+              const realSpd =
+                K.tocDoTuLuyen && typeof K.tocDoTuLuyen === "function"
+                  ? K.tocDoTuLuyen(nvWork, c) || 0
+                  : 0;
+              s =
+                proxyFight +
+                0.55 * cm.dmgScore +
+                65 * cm.toc +
+                (realSpd > 0 ? realSpd * 25 : 0) +
+                50 * cm.dp +
+                0.5 * cm.thong -
+                12 * cm.ng +
+                cm.llScore;
             }
             s +=
-              hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
+              cm.hyScore +
+              cm.heSoAmpScore -
+              cm.hoThePenalty +
+              cm.kinhLoBonus +
+              cm.colorScore +
+              cm.densityBonus -
+              cm.deadPenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
-            if (S.hbRatio) s -= hbRatioPenalty(manh, R);
+            if (S.hbRatio) s -= hbRatioPenalty(manh, R, nv0);
             if (S.full) s += 20 * manh.reduce((a, p) => a + p.cells.length, 0);
 
             const out = { s, proxyFight, P, R };
@@ -9035,7 +9320,7 @@ table.au-tb tr:last-child td {
             hy0 = hySet(g0, nv0.kinhMach),
             B = biasCtx(nv0, g0),
             capX = capCtxOf(nv0),
-            ngW = S.dir === "ma" ? 0.4 : 1,
+            ngW = S.dir === "ma" ? 0.35 : 1,
             maxHoThe =
               0.6 +
               ((nv0.theChat &&
@@ -9061,189 +9346,124 @@ table.au-tb tr:last-child td {
               wins = 0;
             for (const { E } of enemies) {
               const r = fight(P, E);
-              const hpLeft = r.khiHuyetThapNhat / P.khiHuyetToiDa;
+              const hpLeft = Math.max(
+                0,
+                (r.khiHuyetThapNhat || 0) / Math.max(1, P.khiHuyetToiDa || 1),
+              );
               const dealt = Math.min(
                 1,
-                ((r.stTa || 0) * Math.max(1, r.nHiep)) / E.khiHuyetToiDa,
+                ((r.stTa || 0) * Math.max(1, r.nHiep)) /
+                  Math.max(1, E.khiHuyetToiDa || 1),
               );
               if (r.thang) {
                 wins++;
                 fightScore +=
                   mode === "danh" || mode === "burst"
-                    ? 100 + 15 * hpLeft + 60 / Math.max(1, r.nHiep)
+                    ? 105 + 18 * hpLeft + 65 / Math.max(1, r.nHiep)
                     : mode === "tank"
-                      ? 100 + 80 * hpLeft + 20 / Math.max(1, r.nHiep)
-                      : 100 + 50 * hpLeft + 25 / Math.max(1, r.nHiep);
-              } else fightScore += 50 * dealt;
+                      ? 105 + 85 * hpLeft + 22 / Math.max(1, r.nHiep)
+                      : 105 + 52 * hpLeft + 28 / Math.max(1, r.nHiep);
+              } else fightScore += 52 * dealt;
             }
-            const thong = R.manh.filter((m) => m && m.thong).length;
-            const dead = R.manh.filter((m) => m && !m.thong).length;
-            const toc = R.biDong.toc_do || 0,
-              dp = R.biDong.dot_pha || 0;
-            const ng = (R.diemNghich || 0) * ngW;
 
-            // Đánh giá chiêu thức thực tế (Rotation)
-            const chieuList = (P.chieu || []).filter(
-              (x) =>
-                x &&
-                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+            const cm = computeMeridianCommonScore(
+              nv0,
+              nvWork,
+              g0,
+              hy0,
+              B,
+              capX,
+              maxHoThe,
+              ngW,
+              mode,
+              manh,
+              R,
+              P,
+              c,
             );
-            const sortedSkills = chieuList.slice().sort((a, b) => {
-              const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
-              const uyB = b.uyLuc || (b.uy || 0) * (P.phapLuc || 1);
-              return uyB - uyA;
-            });
-
-            const rotWeights = [1.0, 0.7, 0.35, 0.1];
-            let effectiveRotDmg = 0;
-            for (let i = 0; i < sortedSkills.length; i++) {
-              const w = i < rotWeights.length ? rotWeights[i] : 0.0;
-              const skillDmg =
-                sortedSkills[i].uyLuc ||
-                (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
-              effectiveRotDmg += skillDmg * w;
-            }
-            const uyMax = sortedSkills.length
-              ? sortedSkills[0].uyLuc ||
-                (sortedSkills[0].uy || 0) * (P.phapLuc || 1)
-              : 0;
-            const dmgScore =
-              Math.log10(Math.max(10, effectiveRotDmg)) * 40 +
-              Math.log10(Math.max(10, uyMax)) * 25;
-
-            // 15-Turn Qi Cycle Simulator
-            const qiRes = calcQiScore(P, sortedSkills, mode, 15);
-            const llScore = qiRes.score;
-
-            let hyScore = 0;
-            const usedCells = new Set();
-            manh.forEach((p, idx) => {
-              p.cells.forEach((x) => usedCells.add(x));
-              const q =
-                p.hyCount !== undefined
-                  ? p.hyCount
-                  : p.cells.filter((x) => hy0.has(x)).length;
-              if (q > 0) {
-                const rm = R.manh && R.manh[idx];
-                if (rm && rm.thong) {
-                  const it = c.items.get(p.m.item);
-                  const pwr = acupointPriority(it, mode, B.build);
-                  hyScore += 35 * q + 0.35 * pwr * q;
-                } else {
-                  hyScore -= 90 * q;
-                }
-              }
-            });
-            for (const h of hy0) {
-              if (
-                g0.vung[h] >= 0 &&
-                nv0.kinhMach.trangThai[h] === "thong" &&
-                !usedCells.has(h)
-              ) {
-                hyScore -= 45;
-              }
-            }
-
-            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
-            let hoThePenalty = 0;
-            if (curHoThe > maxHoThe) {
-              const excess = curHoThe - maxHoThe;
-              hoThePenalty =
-                200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
-            }
-
-            let kinhLoBonus = 0;
-            (R.manh || []).forEach((m) => {
-              if (
-                m &&
-                m.thong &&
-                m.item &&
-                m.item.loai === "phap_khi" &&
-                m.kinhLo > 1
-              ) {
-                kinhLoBonus += (m.kinhLo - 1) * 60;
-              }
-            });
-
-            let colorScore = 0;
-            const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
-            (R.manh || []).forEach((m, idx) => {
-              if (m && m.thong) {
-                const p = manh[idx];
-                const canRecolor =
-                  isTayO &&
-                  p &&
-                  p.recolorableCount > 0 &&
-                  (p.unfixableCount || 0) === 0;
-                if (m.mau >= 1.25 || canRecolor)
-                  colorScore += canRecolor ? 25 : 35;
-                else if (m.mau < 1.0) colorScore -= 20 * (1.1 - m.mau);
-              }
-            });
-
-            const deadPenalty = S.full ? 0 : dead * 85;
 
             let s;
             if (mode === "tu") {
+              const realSpd =
+                K.tocDoTuLuyen && typeof K.tocDoTuLuyen === "function"
+                  ? K.tocDoTuLuyen(nvWork, c) || 0
+                  : 0;
               s =
                 0.15 * fightScore +
-                0.15 * dmgScore +
-                650 * toc +
-                120 * dp +
-                thong -
-                60 * ng +
-                llScore;
+                0.15 * cm.dmgScore +
+                720 * cm.toc +
+                (realSpd > 0 ? realSpd * 180 : 0) +
+                130 * cm.dp +
+                cm.thong -
+                65 * cm.ng +
+                cm.llScore;
             } else if (mode === "dot_pha") {
               const ktm = (R.biDong && R.biDong.khang_tam_ma) || 0;
               const hpSafe =
-                Math.min(1.5, (P.khiHuyetToiDa || 100) / 1000) * 40;
+                Math.min(1.6, (P.khiHuyetToiDa || 100) / 1000) * 45;
               s =
-                0.2 * fightScore +
-                0.2 * dmgScore +
-                950 * dp +
-                250 * ktm +
+                0.22 * fightScore +
+                0.2 * cm.dmgScore +
+                1050 * cm.dp +
+                280 * ktm +
                 hpSafe +
-                thong -
-                90 * ng +
-                0.6 * llScore;
+                cm.thong -
+                110 * cm.ng +
+                0.65 * cm.llScore;
             } else if (mode === "tank") {
-              const hoTheVal = Math.min(maxHoThe, curHoThe);
+              const hoTheVal = Math.min(maxHoThe, cm.curHoThe);
               const hpLog =
                 Math.log10(Math.max(10, P.khiHuyetToiDa || 100)) * 70;
-              const bodyHpVal = (R.bodyHp || 0) * 0.6;
+              const bodyHpVal = (R.bodyHp || 0) * 0.65;
               s =
                 1.3 * fightScore +
-                0.5 * dmgScore +
+                0.5 * cm.dmgScore +
                 hpLog +
                 bodyHpVal +
-                350 * hoTheVal +
-                thong -
-                15 * ng +
-                llScore;
+                380 * hoTheVal +
+                cm.thong -
+                18 * cm.ng +
+                cm.llScore;
             } else if (mode === "burst") {
               s =
                 fightScore +
-                1.7 * dmgScore +
-                0.9 * (uyMax || 0) +
-                0.5 * thong -
-                10 * ng +
-                llScore;
+                1.75 * cm.dmgScore +
+                0.9 * (cm.uyMax || 0) +
+                0.5 * cm.thong -
+                12 * cm.ng +
+                cm.llScore;
             } else if (mode === "danh") {
-              s = fightScore + dmgScore + 0.5 * thong - 6 * ng + llScore;
-            } else {
               s =
                 fightScore +
-                0.5 * dmgScore +
-                55 * toc +
-                45 * dp +
-                0.5 * thong -
-                10 * ng +
-                llScore;
+                1.1 * cm.dmgScore +
+                0.5 * cm.thong -
+                8 * cm.ng +
+                cm.llScore;
+            } else {
+              const realSpd =
+                K.tocDoTuLuyen && typeof K.tocDoTuLuyen === "function"
+                  ? K.tocDoTuLuyen(nvWork, c) || 0
+                  : 0;
+              s =
+                fightScore +
+                0.55 * cm.dmgScore +
+                65 * cm.toc +
+                (realSpd > 0 ? realSpd * 25 : 0) +
+                50 * cm.dp +
+                0.5 * cm.thong -
+                12 * cm.ng +
+                cm.llScore;
             }
             s +=
-              hyScore - hoThePenalty + kinhLoBonus + colorScore - deadPenalty;
+              cm.hyScore +
+              cm.heSoAmpScore -
+              cm.hoThePenalty +
+              cm.kinhLoBonus +
+              cm.colorScore +
+              cm.densityBonus -
+              cm.deadPenalty;
             s += biasScore(B, manh, R) + capScore(capX, R);
-            if (S.hbRatio) s -= hbRatioPenalty(manh, R);
+            if (S.hbRatio) s -= hbRatioPenalty(manh, R, nv0);
             if (S.full) s += 20 * manh.reduce((a, p) => a + p.cells.length, 0);
             const out = { s, wins, P, R };
             cache.set(key, out);
@@ -9251,7 +9471,7 @@ table.au-tb tr:last-child td {
           };
         }
 
-        // Bitmask O(1), Khắc phục góc xoay đa hệ & Bộ nhớ đệm chữ ký trạng thái (Candidate Cache)
+        // Bitmask O(1), Khắc phục góc xoay đa hệ (heTungO) & Bộ nhớ đệm chữ ký trạng thái (Candidate Cache)
         let _candCacheSig = "";
         let _candCacheVal = null;
         function buildCandidates(nv0) {
@@ -9296,6 +9516,8 @@ table.au-tb tr:last-child td {
           const hy0 = hySet(g, nv0.kinhMach);
           const mauK = (nv0.kinhMach && nv0.kinhMach.mau) || [];
           const cand = {};
+          const ddX = g.danDien % g.rong;
+          const ddY = Math.floor(g.danDien / g.rong);
 
           for (const id of pool) {
             const it = c.items.get(id),
@@ -9304,6 +9526,7 @@ table.au-tb tr:last-child td {
             const isCP = it.loai === "cong_phap";
             const hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
             const pwr = kmItemPower(it);
+            const scalablePwr = kmScalablePower(it, "bal", null);
 
             for (let xoay = 0; xoay < 4; xoay++) {
               let cellElements = null;
@@ -9324,27 +9547,46 @@ table.au-tb tr:last-child td {
                   if (!cells || !cells.length) continue;
 
                   // Khóa chống trùng bảo toàn góc xoay đa hệ
-                  const sortedCells = [...cells].sort((a, b) => a - b);
-                  const elemKey = cellElements ? cellElements.join(",") : xoay;
-                  const key = id + ":" + sortedCells.join(",") + ":" + elemKey;
-                  if (seen.has(key)) continue;
-                  seen.add(key);
+                  const cellPairs = cells.map((cellIdx, idx) => ({
+                    cellIdx,
+                    he:
+                      cellElements && cellElements[idx]
+                        ? cellElements[idx]
+                        : hs[0] || "vo_sac",
+                  }));
+                  cellPairs.sort((a, b) => a.cellIdx - b.cellIdx);
+                  const sigKey =
+                    id +
+                    ":" +
+                    cellPairs.map((cp) => cp.cellIdx + "." + cp.he).join(",");
+                  if (seen.has(sigKey)) continue;
+                  seen.add(sigKey);
 
-                  // Tiền tính toán thuộc tính hình học & liên thông
+                  const key = id + ":" + x + "," + y + "," + xoay;
+
+                  // Tiền tính toán thuộc tính hình học, hệ từng ô & liên thông
                   const hyCount = cells.filter((cIdx) => hy0.has(cIdx)).length;
                   let touchesDanDien = false;
                   let matchCount = 0,
                     partialCount = 0,
                     conflictCount = 0,
+                    khacCellCount = 0,
                     recolorableCount = 0,
                     unfixableCount = 0;
+                  let hopSum = 0;
+                  let minDanDienDist = 999;
                   const adj = new Set();
+                  const cellHe = new Array(cells.length);
+                  const cellHeByIdx = new Map();
                   const lcHe = (nv0.linhCan && nv0.linhCan.he) || [];
 
                   for (let i = 0; i < cells.length; i++) {
                     const cellIdx = cells[i];
                     const cx = cellIdx % g.rong;
                     const cy = Math.floor(cellIdx / g.rong);
+                    const dist = Math.abs(cx - ddX) + Math.abs(cy - ddY);
+                    if (dist < minDanDienDist) minDanDienDist = dist;
+
                     if (cx > 0) adj.add(cellIdx - 1);
                     if (cx < g.rong - 1) adj.add(cellIdx + 1);
                     if (cy > 0) adj.add(cellIdx - g.rong);
@@ -9364,18 +9606,18 @@ table.au-tb tr:last-child td {
                       cellElements && cellElements[i]
                         ? cellElements[i]
                         : hs[0] || "vo_sac";
-                    if (pieceHe === "vo_sac") {
-                      if (mColor === "vo_sac") matchCount++;
-                      else partialCount++;
-                    } else if (mColor === pieceHe) {
+                    cellHe[i] = pieceHe;
+                    cellHeByIdx.set(cellIdx, pieceHe);
+
+                    const hopVal = doHopCellGame(mColor, pieceHe);
+                    hopSum += hopVal;
+                    if (hopVal >= 0.99) {
                       matchCount++;
-                    } else if (
-                      mColor === "vo_sac" ||
-                      gocHe(mColor) === gocHe(pieceHe)
-                    ) {
+                    } else if (hopVal >= 0.49) {
                       partialCount++;
                     } else {
                       conflictCount++;
+                      if (oKhac(mColor, pieceHe)) khacCellCount++;
                       const canRecolor =
                         cellIdx !== g.danDien &&
                         g.vung[cellIdx] >= 0 &&
@@ -9401,27 +9643,37 @@ table.au-tb tr:last-child td {
                     adjMask |= 1n << BigInt(adjCell);
                   }
 
-                  const aff = cells.length
-                    ? (matchCount * 1.0 + partialCount * 0.5) / cells.length
-                    : 0.4;
+                  const aff = cells.length ? hopSum / cells.length : 0.5;
+                  const exactMauMult = 0.85 + 0.45 * aff;
+                  // Luật game (ja): mảnh nằm QUÁ NỬA trên ô khắc nó thì +1 điểm nghịch
+                  const causesCellNghich = khacCellCount * 2 > cells.length;
                   const isKhacPha = conflictCount > 0;
 
                   cand[id].push({
                     m,
+                    rong: g.rong,
                     cells,
+                    cellHe,
+                    cellHeByIdx,
+                    hs,
                     key,
                     id,
                     isCP,
                     pwr,
+                    scalablePwr,
                     hyCount,
                     touchesDanDien,
+                    danDienDist: minDanDienDist,
                     adj: [...adj],
                     cellMask,
                     adjMask,
                     aff,
+                    exactMauMult,
                     matchCount,
                     partialCount,
                     conflictCount,
+                    khacCellCount,
+                    causesCellNghich,
                     recolorableCount,
                     unfixableCount,
                     isKhacPha,
@@ -9434,17 +9686,123 @@ table.au-tb tr:last-child td {
           return _candCacheVal;
         }
 
-        // Thuật toán BFS tìm đường đi ngắn nhất trên ma trận ô thông
+        // Helper tính nhanh mặt nạ liên thông (thong) và điểm khớp (Articulation Points) bằng BigInt Bitmask O(N)
+        function getDanDienAdjMask(g, st) {
+          let mask = 0n;
+          const dX = g.danDien % g.rong;
+          const dY = Math.floor(g.danDien / g.rong);
+          const nbs = [];
+          if (dX > 0) nbs.push(g.danDien - 1);
+          if (dX < g.rong - 1) nbs.push(g.danDien + 1);
+          if (dY > 0) nbs.push(g.danDien - g.rong);
+          if (dY < g.cao - 1) nbs.push(g.danDien + g.rong);
+          for (const nb of nbs) {
+            if (g.vung[nb] >= 0 && (!st || st[nb] === "thong")) {
+              mask |= 1n << BigInt(nb);
+            }
+          }
+          return mask;
+        }
+
+        function computeFlowBitmask(manh, ddAdjMask, skipIdx = -1) {
+          let reachMask = ddAdjMask;
+          const n = manh.length;
+          let added = true;
+          const cpConnected = new Uint8Array(n);
+          while (added) {
+            added = false;
+            for (let i = 0; i < n; i++) {
+              if (i === skipIdx || cpConnected[i]) continue;
+              const p = manh[i];
+              if (p.isCP && (p.cellMask & reachMask) !== 0n) {
+                cpConnected[i] = 1;
+                reachMask |= p.adjMask;
+                added = true;
+              }
+            }
+          }
+          let connectedCount = 0,
+            deadCount = 0;
+          for (let i = 0; i < n; i++) {
+            if (i === skipIdx) continue;
+            const p = manh[i];
+            if (cpConnected[i] || (p.cellMask & reachMask) !== 0n) {
+              connectedCount++;
+            } else {
+              deadCount++;
+            }
+          }
+          return { reachMask, connectedCount, deadCount };
+        }
+
+        // Tính điểm tương sinh / tương khắc theo TỪNG Ô CHẠM NHAU giữa hai mảnh cA và cB (chuẩn hàm tinhKinhMach của game)
+        function calcPairCellSynergy(cA, itA, cB, itB) {
+          if (!cA || !cB || (cA.adjMask & cB.cellMask) === 0n) {
+            return { aGenB: 0, bGenA: 0, aKhacB: 0, bKhacA: 0, touches: 0 };
+          }
+          let aGenB = 0,
+            bGenA = 0,
+            aKhacB = 0,
+            bKhacA = 0,
+            touches = 0;
+          const slackForB = genSlack(itB, itA);
+          const slackForA = genSlack(itA, itB);
+          const mapB = cB.cellHeByIdx;
+          const rong = cA.rong || 9;
+          if (!mapB) return { aGenB, bGenA, aKhacB, bKhacA, touches };
+
+          for (let i = 0; i < cA.cells.length; i++) {
+            const cellA = cA.cells[i];
+            const heA = (cA.cellHe && cA.cellHe[i]) || "vo_sac";
+            if (heA === "vo_sac") continue;
+            const cx = cellA % rong;
+            const nbs = [
+              cx > 0 ? cellA - 1 : -1,
+              cx < rong - 1 ? cellA + 1 : -1,
+              cellA - rong,
+              cellA + rong,
+            ];
+            for (let k = 0; k < 4; k++) {
+              const nb = nbs[k];
+              if (nb < 0) continue;
+              const heB = mapB.get(nb);
+              if (!heB || heB === "vo_sac") continue;
+              touches++;
+              const dAB = heTacDong(heA, heB);
+              if (dAB > 0) {
+                if (slackForB > aGenB) aGenB = slackForB;
+              } else if (dAB < 0) {
+                aKhacB = 1;
+              }
+              const dBA = heTacDong(heB, heA);
+              if (dBA > 0) {
+                if (slackForA > bGenA) bGenA = slackForA;
+              } else if (dBA < 0) {
+                bKhacA = 1;
+              }
+            }
+          }
+          return { aGenB, bGenA, aKhacB, bKhacA, touches };
+        }
+
+        // Thuật toán BFS đa nguồn tìm đường nối ngắn nhất từ tập ô đã thông (startSet) tới tập ô đích (targetAdjSet)
         function findBridgePathBFS(
           g,
           st,
-          startCell,
+          startCells,
           targetAdjSet,
           blockedMask,
         ) {
-          const queue = [startCell];
-          const visited = new Set([startCell]);
+          const starts = Array.isArray(startCells) ? startCells : [startCells];
+          const queue = [];
+          const visited = new Set();
           const parent = new Map();
+          for (const s of starts) {
+            if (s >= 0 && !visited.has(s)) {
+              visited.add(s);
+              queue.push(s);
+            }
+          }
           let foundTarget = -1;
 
           while (queue.length > 0) {
@@ -9479,179 +9837,59 @@ table.au-tb tr:last-child td {
 
           if (foundTarget === -1) return null;
 
+          const startSet = new Set(starts);
           const path = [];
           let curr = foundTarget;
-          while (curr !== startCell) {
+          while (!startSet.has(curr) && parent.has(curr)) {
             path.push(curr);
             curr = parent.get(curr);
+          }
+          if (!startSet.has(curr) && curr !== g.danDien) {
+            path.push(curr);
           }
           path.reverse();
           return path;
         }
 
-        // Tham lam tối ưu kép: Acupoint-First Reverse Bridging (Seed A) & Spine-First Bảo Tồn Huyệt (Seed B)
-        async function greedy(nv0, mode, altSeed = false) {
+        // Khởi tạo Đa Hạt Giống (Multi-Topology Seeding Engine: 5 chiến lược hình học khác nhau)
+        async function greedy(nv0, mode, seedVariant = 0) {
           nv0 = lnPrep(nv0);
+          const vIdx =
+            typeof seedVariant === "boolean"
+              ? seedVariant
+                ? 1
+                : 0
+              : Number(seedVariant) || 0;
           const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
           const K = S.core,
             c = C(),
             { cand, g } = buildCandidates(nv0),
             B = biasCtx(nv0, g),
+            bBuild = B ? B.build : null,
             hy0 = hySet(g, nv0.kinhMach),
-            maxHoThe =
-              0.6 +
-              ((nv0.theChat &&
-                nv0.theChat.dac_tinh &&
-                nv0.theChat.dac_tinh.ho_the_tran) ||
-                0);
+            fastEv = makeFastEval(nv0, mode);
 
-          const capX = capCtxOf(nv0);
-          const nvWork = Object.assign({}, nv0, {
-            kinhMach: Object.assign({}, nv0.kinhMach, { manh: [] }),
-          });
-
-          const quick = (manh) => {
-            nvWork.kinhMach.manh = manh.map((p) => p.m);
-            const R = K.tinhKinhMach(nvWork, c);
-            const P = K.taoBenTa(nvWork, c);
-
-            const chieuList = (P.chieu || []).filter(
-              (x) =>
-                x &&
-                ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
-            );
-            const sortedQ = chieuList
-              .slice()
-              .sort((a, b) => (b.uyLuc || b.uy || 0) - (a.uyLuc || a.uy || 0));
-            const qWeights = [1.0, 0.7, 0.35, 0.1];
-            let rotUy = 0;
-            for (let i = 0; i < sortedQ.length; i++) {
-              const wt = i < qWeights.length ? qWeights[i] : 0.0;
-              rotUy += ((sortedQ[i].uyLuc || sortedQ[i].uy || 0) / 10) * wt;
-            }
-            const uyMax = sortedQ.length
-              ? (sortedQ[0].uyLuc || sortedQ[0].uy || 0) / 10
-              : 0;
-
-            const qiRes = calcQiScore(P, sortedQ, mode, 15);
-            const llScoreQ = qiRes.score;
-
-            const toc = R.biDong.toc_do || 0,
-              dp = R.biDong.dot_pha || 0;
-            let w;
-            if (mode === "tu") w = [0.4, 90, 20, 0.2];
-            else if (mode === "dot_pha") w = [0.3, 10, 130, 0.3];
-            else if (mode === "tank") w = [1.0, 5, 5, 1.2];
-            else if (mode === "burst") w = [1.2, 5, 2, 2.8];
-            else if (mode === "danh") w = [1.5, 3, 2, 2.0];
-            else w = [1, 20, 15, 1.2];
-            const thongCount = R.manh.filter((m) => m && m.thong).length;
-            const deadCount = manh.length - thongCount;
-
-            let hyScore = 0;
-            const usedCells = new Set();
-            manh.forEach((p, idx) => {
-              p.cells.forEach((x) => usedCells.add(x));
-              const q =
-                p.hyCount !== undefined
-                  ? p.hyCount
-                  : p.cells.filter((x) => hy0.has(x)).length;
-              if (q > 0) {
-                const rm = R.manh && R.manh[idx];
-                if (rm && rm.thong) {
-                  const it = c.items.get(p.m.item);
-                  hyScore +=
-                    30 * q + 0.3 * acupointPriority(it, mode, B.build) * q;
-                } else {
-                  hyScore -= 60 * q;
-                }
-              }
-            });
-            for (const h of hy0) {
-              if (
-                g.vung[h] >= 0 &&
-                nv0.kinhMach.trangThai[h] === "thong" &&
-                !usedCells.has(h)
-              ) {
-                hyScore -= 25;
-              }
-            }
-            const curHoThe = (R.biDong && R.biDong.ho_the) || 0;
-            const hoThePenalty =
-              curHoThe > maxHoThe ? 150 * (curHoThe - maxHoThe) : 0;
-
-            let kinhLoBonus = 0;
-            (R.manh || []).forEach((m) => {
-              if (
-                m &&
-                m.thong &&
-                m.item &&
-                m.item.loai === "phap_khi" &&
-                m.kinhLo > 1
-              ) {
-                kinhLoBonus += (m.kinhLo - 1) * 40;
-              }
-            });
-
-            let colorScore = 0;
-            (R.manh || []).forEach((m, idx) => {
-              if (m && m.thong) {
-                const p = manh[idx];
-                const canRecolor =
-                  isTayO &&
-                  p &&
-                  p.recolorableCount > 0 &&
-                  (p.unfixableCount || 0) === 0;
-                if (m.mau >= 1.25 || canRecolor)
-                  colorScore += canRecolor ? 15 : 25;
-                else if (m.mau < 1.0) colorScore -= 20 * (1.1 - m.mau);
-              }
-            });
-
-            const ratioPenaltyQ = S.hbRatio ? hbRatioPenalty(manh, R) : 0;
-            return (
-              w[0] * (P.linhLucMoiLuot || R.linhLuc || 0) +
-              w[1] * toc +
-              w[2] * dp +
-              w[3] * rotUy +
-              (mode === "danh" ? 0.8 * uyMax : 0) +
-              hyScore +
-              kinhLoBonus +
-              colorScore -
-              hoThePenalty +
-              llScoreQ -
-              ratioPenaltyQ -
-              6 * (R.diemNghich || 0) * (S.dir === "ma" ? 0.4 : 1) +
-              biasScore(B, manh, R) +
-              capScore(capX, R) +
-              (S.full ? 3 * manh.reduce((a, p) => a + p.cells.length, 0) : 0) -
-              (deadCount > 0 && !S.full ? 90 * deadCount + 500 : 0)
-            );
-          };
+          const quick = (manh) => fastEv(manh).s;
 
           let cur = [];
           const flowAccessible = new Set();
           let flowMask = 0n;
           let usedMask = 0n;
+          const ddAdjMask = getDanDienAdjMask(g, nv0.kinhMach.trangThai);
 
-          const dX = g.danDien % g.rong;
-          const dY = Math.floor(g.danDien / g.rong);
-          if (dX > 0) {
-            flowAccessible.add(g.danDien - 1);
-            flowMask |= 1n << BigInt(g.danDien - 1);
-          }
-          if (dX < g.rong - 1) {
-            flowAccessible.add(g.danDien + 1);
-            flowMask |= 1n << BigInt(g.danDien + 1);
-          }
-          if (dY > 0) {
-            flowAccessible.add(g.danDien - g.rong);
-            flowMask |= 1n << BigInt(g.danDien - g.rong);
-          }
-          if (dY < g.cao - 1) {
-            flowAccessible.add(g.danDien + g.rong);
-            flowMask |= 1n << BigInt(g.danDien + g.rong);
-          }
+          const resetFlow = () => {
+            cur = [];
+            flowAccessible.clear();
+            flowMask = ddAdjMask;
+            usedMask = 0n;
+            const dX = g.danDien % g.rong;
+            const dY = Math.floor(g.danDien / g.rong);
+            if (dX > 0) flowAccessible.add(g.danDien - 1);
+            if (dX < g.rong - 1) flowAccessible.add(g.danDien + 1);
+            if (dY > 0) flowAccessible.add(g.danDien - g.rong);
+            if (dY < g.cao - 1) flowAccessible.add(g.danDien + g.rong);
+          };
+          resetFlow();
 
           const addPieceToFlow = (p) => {
             usedMask |= p.cellMask;
@@ -9671,102 +9909,143 @@ table.au-tb tr:last-child td {
           const openHy = [...hy0].filter(
             (h) => g.vung[h] >= 0 && nv0.kinhMach.trangThai[h] === "thong",
           );
-
           let seedSuccess = false;
 
-          // SEED A: Acupoint-First Reverse Bridging
-          if (!altSeed && openHy.length > 0) {
+          // CHIẾN LƯỢC 0 & 2: Acupoint-Steiner Multi-Bridge (Đặt mảnh nhân hệ số cao nhất lên Huyệt Đạo trước, bắc cầu Steiner từ Đan Điền)
+          if ((vIdx === 0 || vIdx === 2) && openHy.length > 0) {
             const sortedPool = Object.keys(cand)
               .filter((id) => cand[id].length > 0)
               .sort((a, b) => {
                 const itA = c.items.get(a),
                   itB = c.items.get(b);
                 return (
-                  acupointPriority(itB, mode, B.build) -
-                  acupointPriority(itA, mode, B.build)
+                  acupointPriority(itB, mode, bBuild) -
+                  acupointPriority(itA, mode, bBuild)
                 );
               });
+
+            // Chỉ lấy các món thực sự có thuộc tính nhân heSo lên Huyệt
+            const scalablePool = sortedPool.filter((id) => {
+              const it = c.items.get(id);
+              return kmScalablePower(it, mode, bBuild) > 20;
+            });
+            const huyetPool = scalablePool.length ? scalablePool : sortedPool;
 
             const placedHuyet = [];
             let placedHuyetMask = 0n;
             const placedHuyetIds = new Set();
 
-            for (const h of openHy) {
+            // Sắp xếp Huyệt gần Đan Điền trước để dễ bắc cầu liên hoàn
+            const sortedHy = openHy.slice().sort((a, b) => {
+              const da =
+                Math.abs((a % g.rong) - (g.danDien % g.rong)) +
+                Math.abs(Math.floor(a / g.rong) - Math.floor(g.danDien / g.rong));
+              const db =
+                Math.abs((b % g.rong) - (g.danDien % g.rong)) +
+                Math.abs(Math.floor(b / g.rong) - Math.floor(g.danDien / g.rong));
+              return vIdx === 2 ? db - da : da - db;
+            });
+
+            const maxHyTargets = vIdx === 2 ? Math.min(2, sortedHy.length) : Math.min(4, sortedHy.length);
+
+            for (const h of sortedHy) {
               if ((placedHuyetMask & (1n << BigInt(h))) !== 0n) continue;
               let bestCnd = null;
               let bestScore = -1e9;
 
-              for (const id of sortedPool) {
+              for (const id of huyetPool) {
                 if (placedHuyetIds.has(id)) continue;
+                const itCnd = c.items.get(id);
+                const basePrio = acupointPriority(itCnd, mode, bBuild);
+                if (basePrio < bestScore * 0.45) break;
+
                 for (const cnd of cand[id]) {
                   if (!cnd.cells.includes(h)) continue;
                   if ((placedHuyetMask & cnd.cellMask) !== 0n) continue;
-                  const conflictScore = isTayO
-                    ? cnd.unfixableCount || 0
-                    : cnd.conflictCount;
-                  if (conflictScore > 0) continue;
 
-                  const itCnd = c.items.get(id);
-                  let prio =
-                    acupointPriority(itCnd, mode, B.build) + cnd.aff * 10;
+                  // Không còn lọc cứng conflictCount > 0! Thay bằng điểm hệ số thực tế:
+                  const hyMult = 2.0 + 0.25 * (cnd.hyCount - 1);
+                  const effMau =
+                    isTayO && (cnd.unfixableCount || 0) === 0
+                      ? 1.3
+                      : cnd.exactMauMult;
+                  const nghichPen =
+                    cnd.causesCellNghich && S.dir !== "ma"
+                      ? mode === "dot_pha"
+                        ? 320
+                        : 140
+                      : 0;
+                  const distBonus = Math.max(0, 10 - cnd.danDienDist) * 4;
+                  const prio =
+                    basePrio * (effMau * (hyMult / 2.0)) +
+                    cnd.hyCount * 55 +
+                    distBonus -
+                    nghichPen -
+                    (isTayO ? cnd.unfixableCount * 15 : cnd.conflictCount * 8);
+
                   if (prio > bestScore) {
                     bestScore = prio;
                     bestCnd = cnd;
                   }
                 }
-                if (bestCnd) break;
               }
 
               if (bestCnd) {
                 placedHuyet.push(bestCnd);
                 placedHuyetMask |= bestCnd.cellMask;
                 placedHuyetIds.add(bestCnd.id);
-                if (placedHuyet.length >= 3) break;
+                if (placedHuyet.length >= maxHyTargets) break;
               }
             }
 
             if (placedHuyet.length > 0) {
-              const targetAdjSet = new Set();
-              for (const p of placedHuyet) {
-                for (const a of p.adj) {
+              // Bắc cầu tuần tự từ mạng lưới Đan Điền tới từng mảnh Huyệt Đạo
+              let bridgePieces = [];
+              let bridgeMask = 0n;
+              let bridgeFlow = new Set(flowAccessible);
+              let currentStarts = [g.danDien];
+
+              const cpPool = Object.keys(cand)
+                .filter((id) => {
+                  const it = c.items.get(id);
+                  return (
+                    it && it.loai === "cong_phap" && !placedHuyetIds.has(id)
+                  );
+                })
+                .sort((a, b) => {
+                  const itA = c.items.get(a),
+                    itB = c.items.get(b);
+                  return kmItemPower(itB, mode) - kmItemPower(itA, mode);
+                });
+
+              for (const hPiece of placedHuyet) {
+                if (
+                  hPiece.touchesDanDien ||
+                  hPiece.cells.some((x) => bridgeFlow.has(x))
+                ) {
+                  if (hPiece.isCP) {
+                    for (const a of hPiece.adj) bridgeFlow.add(a);
+                    currentStarts.push(...hPiece.cells);
+                  }
+                  continue;
+                }
+
+                const targetAdjSet = new Set();
+                for (const a of hPiece.adj) {
                   if (g.vung[a] >= 0 && nv0.kinhMach.trangThai[a] === "thong") {
                     targetAdjSet.add(a);
                   }
                 }
-              }
+                const path = findBridgePathBFS(
+                  g,
+                  nv0.kinhMach.trangThai,
+                  currentStarts,
+                  targetAdjSet,
+                  placedHuyetMask | bridgeMask,
+                );
+                if (!path || !path.length) continue;
 
-              const path = findBridgePathBFS(
-                g,
-                nv0.kinhMach.trangThai,
-                g.danDien,
-                targetAdjSet,
-                placedHuyetMask,
-              );
-              if (path && path.length > 0) {
-                let bridgePieces = [];
-                let bridgeMask = 0n;
-                let bridgeFlow = new Set(flowAccessible);
-
-                const cpPool = sortedPool
-                  .filter((id) => {
-                    const it = c.items.get(id);
-                    return (
-                      it && it.loai === "cong_phap" && !placedHuyetIds.has(id)
-                    );
-                  })
-                  .sort((a, b) => {
-                    const itA = c.items.get(a),
-                      itB = c.items.get(b);
-                    const isTamA = hbCls(itA) === "tam" ? 1 : 0;
-                    const isTamB = hbCls(itB) === "tam" ? 1 : 0;
-                    return (
-                      isTamB * 50 +
-                      (itB.linh_luc || 0) * 10 -
-                      (isTamA * 50 + (itA.linh_luc || 0) * 10)
-                    );
-                  });
-
-                let connectedToTarget = false;
+                const itTarget = c.items.get(hPiece.m.item);
                 for (let stepIdx = 0; stepIdx < path.length; stepIdx++) {
                   const stepCell = path[stepIdx];
                   if ((bridgeMask & (1n << BigInt(stepCell))) !== 0n) continue;
@@ -9776,6 +10055,8 @@ table.au-tb tr:last-child td {
 
                   for (const id of cpPool) {
                     if (bridgePieces.some((p) => p.m.item === id)) continue;
+                    const itCnd = c.items.get(id);
+                    const isKinhLoMatch = hopKinhLoHe(itCnd.he || [], hPiece.hs || []);
                     for (const cnd of cand[id]) {
                       if (!cnd.cells.includes(stepCell)) continue;
                       if ((placedHuyetMask & cnd.cellMask) !== 0n) continue;
@@ -9785,14 +10066,27 @@ table.au-tb tr:last-child td {
                         cnd.cells.some((x) => bridgeFlow.has(x));
                       if (!canConnect) continue;
 
-                      const conflictScore = isTayO
-                        ? cnd.unfixableCount || 0
-                        : cnd.conflictCount;
-                      if (conflictScore > 0) continue;
+                      // Đếm xem mảnh cầu nối này phủ được bao nhiêu bước trên path
+                      let stepsCovered = 0;
+                      for (let k = stepIdx; k < path.length; k++) {
+                        if (cnd.cells.includes(path[k])) stepsCovered++;
+                      }
+                      const touchesTarget =
+                        (cnd.adjMask & hPiece.cellMask) !== 0n;
+                      const syn = touchesTarget
+                        ? calcPairCellSynergy(cnd, itCnd, hPiece, itTarget)
+                        : { aGenB: 0, aKhacB: 0 };
 
-                      const itCnd = c.items.get(id);
-                      let sc = (itCnd.linh_luc || 0) * 8 + cnd.aff * 15;
-                      if (hbCls(itCnd) === "tam") sc += 25;
+                      let sc =
+                        kmItemPower(itCnd, mode) * 0.25 +
+                        cnd.exactMauMult * 30 +
+                        stepsCovered * 28 +
+                        (touchesTarget ? 65 : 0) +
+                        (isKinhLoMatch ? 35 : 0) +
+                        syn.aGenB * 55 -
+                        syn.aKhacB * (S.dir === "ma" ? -30 : 45) -
+                        (cnd.causesCellNghich && S.dir !== "ma" ? 60 : 0);
+
                       if (sc > bestBScore) {
                         bestBScore = sc;
                         bestBridge = cnd;
@@ -9804,172 +10098,146 @@ table.au-tb tr:last-child td {
                     bridgePieces.push(bestBridge);
                     bridgeMask |= bestBridge.cellMask;
                     for (const a of bestBridge.adj) bridgeFlow.add(a);
-                    if (
-                      placedHuyet.some((hP) =>
-                        hP.cells.some((x) => bridgeFlow.has(x)),
-                      )
-                    ) {
-                      connectedToTarget = true;
+                    currentStarts.push(...bestBridge.cells);
+                    if (hPiece.cells.some((x) => bridgeFlow.has(x))) {
+                      if (hPiece.isCP) {
+                        for (const a of hPiece.adj) bridgeFlow.add(a);
+                        currentStarts.push(...hPiece.cells);
+                      }
                       break;
                     }
                   }
                 }
+              }
 
-                if (connectedToTarget || bridgePieces.length > 0) {
-                  for (const b of bridgePieces) {
-                    cur.push(b);
-                    addPieceToFlow(b);
-                  }
-                  for (const hP of placedHuyet) {
-                    cur.push(hP);
-                    addPieceToFlow(hP);
-                  }
-                  seedSuccess = true;
+              for (const b of bridgePieces) {
+                cur.push(b);
+                addPieceToFlow(b);
+              }
+              for (const hP of placedHuyet) {
+                if (
+                  hP.touchesDanDien ||
+                  (flowMask & hP.cellMask) !== 0n ||
+                  (flowMask & hP.adjMask) !== 0n
+                ) {
+                  cur.push(hP);
+                  addPieceToFlow(hP);
                 }
               }
+              if (cur.length > 0) seedSuccess = true;
             }
           }
 
-          // SEED B: Spine-First Bảo Tồn Huyệt (hoặc Fallback khi Seed A không có đường)
+          // CHIẾN LƯỢC 1, 3, 4 (hoặc Fallback): Spine-First / Non-Scaling Trunk / Randomized Anchor
           if (!seedSuccess) {
-            cur = [];
-            flowAccessible.clear();
-            flowMask = 0n;
-            usedMask = 0n;
-            if (dX > 0) {
-              flowAccessible.add(g.danDien - 1);
-              flowMask |= 1n << BigInt(g.danDien - 1);
-            }
-            if (dX < g.rong - 1) {
-              flowAccessible.add(g.danDien + 1);
-              flowMask |= 1n << BigInt(g.danDien + 1);
-            }
-            if (dY > 0) {
-              flowAccessible.add(g.danDien - g.rong);
-              flowMask |= 1n << BigInt(g.danDien - g.rong);
-            }
-            if (dY < g.cao - 1) {
-              flowAccessible.add(g.danDien + g.rong);
-              flowMask |= 1n << BigInt(g.danDien + g.rong);
-            }
-
+            resetFlow();
             const anchorCandidates = [];
             for (const id of Object.keys(cand)) {
               const itAnchor = c.items.get(id);
               for (const cnd of cand[id]) {
                 if (cnd.touchesDanDien && cnd.isCP) {
                   let v = quick([cnd]);
-                  if (
-                    mode === "tu" &&
-                    (itAnchor.bi_dong?.toc_do || itAnchor.linh_luc)
-                  )
-                    v += 80;
-                  else if (mode === "dot_pha" && itAnchor.bi_dong?.dot_pha)
-                    v += 100;
-                  else if (
-                    mode === "tank" &&
-                    (itAnchor.bi_dong?.ho_the || itAnchor.bi_dong?.khi_huyet)
-                  )
-                    v += 90;
-                  else if (mode === "burst" && itAnchor.chieu) v += 90;
-                  if (
-                    B &&
-                    B.build &&
-                    itAnchor &&
-                    buildMatch(B.build, itAnchor)
-                  ) {
-                    v += 80;
-                    const isCore =
-                      itAnchor.tran_phai ||
-                      (itAnchor.pham_cap || 1) >= 4 ||
-                      (itAnchor.tag || []).includes(B.build.k);
-                    if (isCore) v += 120;
+                  if (vIdx === 3) {
+                    // Chiến lược 3: Ưu tiên công pháp không nhân hệ số (toc_do / dot_pha) hoặc nhiều nhánh làm thân cây quanh Đan Điền, chừa Huyệt Đạo lại!
+                    const isPurePassive =
+                      kmScalablePower(itAnchor, mode, bBuild) <= 15;
+                    if (isPurePassive && cnd.hyCount === 0) v += 140;
+                    if (cnd.hyCount > 0 && isPurePassive) v -= 120;
+                    v += cnd.adj.length * 8;
                   }
-                  if (v > -400) anchorCandidates.push({ cnd, v });
+                  if (!cnd.causesCellNghich) v += 35;
+                  anchorCandidates.push({ cnd, v });
                 }
               }
             }
-            const cleanAnchors = anchorCandidates.filter((a) =>
-              isTayO
-                ? (a.cnd.unfixableCount || 0) === 0
-                : a.cnd.conflictCount === 0,
-            );
-            const anchorPool =
-              cleanAnchors.length > 0 ? cleanAnchors : anchorCandidates;
-            anchorPool.sort((a, b) => b.v - a.v);
-
-            const anchorIdx = altSeed && anchorPool.length > 1 ? 1 : 0;
-            if (anchorPool.length > 0) {
-              const anchor = anchorPool[anchorIdx].cnd;
+            anchorCandidates.sort((a, b) => b.v - a.v);
+            if (anchorCandidates.length > 0) {
+              const pickIdx =
+                vIdx === 4 && anchorCandidates.length > 2
+                  ? 2
+                  : vIdx === 1 && anchorCandidates.length > 1
+                    ? 1
+                    : 0;
+              const anchor = anchorCandidates[pickIdx].cnd;
               cur.push(anchor);
               addPieceToFlow(anchor);
             }
           }
 
-          // Lan tỏa mạng lưới lấp kín ma trận
+          // Lan tỏa mạng lưới lấp kín ma trận (nhanh & không chặn cứng lệch màu đơn lẻ)
+          const rndG = createMulberry32(1000 + vIdx * 7919);
           let curS = quick(cur);
-          for (let round = 0; round < 45; round++) {
-            let best = null;
+          for (let round = 0; round < 48; round++) {
+            const topChoices = [];
 
             for (const id of Object.keys(cand)) {
               if (cur.some((p) => p.m.item === id)) continue;
               const itCnd = c.items.get(id);
-              const isLowPrio = acupointPriority(itCnd, mode, B.build) < 80;
+              const acPrio = acupointPriority(itCnd, mode, bBuild);
+              const isNonScaling = acPrio <= 20;
 
+              // Tiền lọc tối đa 8 vị trí tốt nhất của mỗi món để tăng tốc độ lan tỏa
+              const validForItem = [];
               for (const cnd of cand[id]) {
-                // Kiểm tra chồng lấn O(1) BigInt
                 if ((usedMask & cnd.cellMask) !== 0n) continue;
-
                 const canConnect =
                   cnd.touchesDanDien ||
                   (flowMask & cnd.cellMask) !== 0n ||
                   (flowMask & cnd.adjMask) !== 0n;
                 if (!canConnect && !S.full) continue;
 
-                // Bảo tồn ô huyệt đạo: cấm mảnh phẩm thấp chiếm ô huyệt khi túi còn đồ tốt
-                if (altSeed && isLowPrio && cnd.hyCount > 0) continue;
+                // Tránh đặt mảnh không nhân hệ số đè lên Huyệt Đạo ở những vòng đầu
+                if (isNonScaling && cnd.hyCount > 0 && round < 12) continue;
 
-                const conflictScore = isTayO
-                  ? cnd.unfixableCount || 0
-                  : cnd.conflictCount;
-                if (
-                  conflictScore > 0 &&
-                  cand[id].some(
-                    (other) =>
-                      (isTayO
-                        ? other.unfixableCount || 0
-                        : other.conflictCount) === 0 &&
-                      (usedMask & other.cellMask) === 0n,
-                  )
-                ) {
-                  continue;
-                }
+                const preSc =
+                  cnd.hyCount * (isNonScaling ? -25 : acPrio * 0.4 + 45) +
+                  cnd.exactMauMult * 30 +
+                  (cnd.isCP ? cnd.adj.length * 2.5 : 0) -
+                  (cnd.causesCellNghich && S.dir !== "ma" ? 55 : 0);
+                validForItem.push({ cnd, preSc });
+              }
+              if (!validForItem.length) continue;
+              validForItem.sort((a, b) => b.preSc - a.preSc);
+              const limitK = vIdx === 4 ? 4 : 3;
 
+              for (let k = 0; k < Math.min(limitK, validForItem.length); k++) {
+                const cnd = validForItem[k].cnd;
                 let v = quick([...cur, cnd]);
-                if (B && B.build && buildMatch(B.build, itCnd)) {
-                  v += 20;
-                  const isCore =
-                    itCnd.tran_phai ||
-                    (itCnd.pham_cap || 1) >= 4 ||
-                    (itCnd.tag || []).includes(B.build.k);
-                  if (isCore) v += 35;
+                if (vIdx === 2 && cur.length > 0) {
+                  // Chiến lược 2: Thưởng đậm cho tương sinh trực tiếp vào mảnh chủ lực đầu tiên
+                  const carry = cur[0];
+                  const itCarry = c.items.get(carry.m.item);
+                  const syn = calcPairCellSynergy(cnd, itCnd, carry, itCarry);
+                  v += syn.aGenB * 65;
+                } else if (vIdx === 3) {
+                  // Chiến lược 3: Thưởng mật độ diện tích ô để xếp kín khít các mảnh lớn
+                  v += cnd.cells.length * 8;
                 }
-
-                if (!best || v > best.v) best = { v, cnd };
+                topChoices.push({ v, cnd });
               }
             }
 
-            if (!best || best.v <= curS + 1e-9) break;
+            if (!topChoices.length) break;
+            topChoices.sort((a, b) => b.v - a.v);
+            const best =
+              vIdx === 4 && topChoices.length > 1 && rndG() < 0.35
+                ? topChoices[1].v > curS
+                  ? topChoices[1]
+                  : topChoices[0]
+                : topChoices[0];
+
+            if (!best || best.v <= curS - 2.0) break;
             cur.push(best.cnd);
             addPieceToFlow(best.cnd);
             curS = best.v;
-            if (round % 3 === 0) await sleep0();
+            if (round % 4 === 0) await sleep0();
           }
 
           return cur.map((p) => ({ ...p.m }));
         }
 
-        // Tối ưu hóa luyện kim Simulated Annealing với toán tử Acupoint Swap Move
+        // Tối ưu hóa luyện kim Simulated Annealing 4.0:
+        // Tích hợp LNS Ruin & Recreate, Displace & Insert (Ejection Chain), Acupoint Promotion & Per-Cell Synergy
         async function anneal({
           nv0,
           mode,
@@ -9986,8 +10254,10 @@ table.au-tb tr:last-child td {
           const ev = fastEv;
           const { cand, g } = buildCandidates(nv0);
           const B = biasCtx(nv0, g);
+          const bBuild = B ? B.build : null;
           const ids = Object.keys(cand).filter((k) => cand[k].length);
           const hy0 = hySet(g, nv0.kinhMach);
+          const ddAdjMask = getDanDienAdjMask(g, nv0.kinhMach.trangThai);
           const hyOf = (cn) =>
             cn.hyCount !== undefined
               ? cn.hyCount
@@ -10003,10 +10273,9 @@ table.au-tb tr:last-child td {
             if (topCandidates.some((x) => x.k === k)) return;
             topCandidates.push({ cfg: cfg.slice(), score, k });
             topCandidates.sort((a, b) => b.score - a.score);
-            if (topCandidates.length > 12) topCandidates.pop();
+            if (topCandidates.length > 24) topCandidates.pop();
           };
 
-          // Overlaps & Spine Connectivity O(1) BigInt Bitmask
           const getUsedMask = (manh, skip = -1) => {
             let usedMask = 0n;
             for (let i = 0; i < manh.length; i++) {
@@ -10018,39 +10287,36 @@ table.au-tb tr:last-child td {
             return (getUsedMask(manh, skip) & c.cellMask) !== 0n;
           };
 
-          const getCpAdjMask = (manh) => {
-            let mask = 0n;
-            for (let i = 0; i < manh.length; i++) {
-              if (manh[i].isCP) mask |= manh[i].adjMask;
-            }
-            return mask;
-          };
-
-          const connectsToSpineMask = (cn, cpAdjMask) => {
-            return cn.touchesDanDien || (cpAdjMask & cn.cellMask) !== 0n;
-          };
-
           const itemsK = C().items;
 
           const itemWeights = new Map();
+          const itemAcPrio = new Map();
           for (const id of ids) {
             const it = itemsK.get(id);
             const pwr = kmItemPower(it, mode);
+            const acP = acupointPriority(it, mode, bBuild);
+            itemAcPrio.set(id, acP);
             const ph = it.pham_cap || 1;
-            let w = Math.pow(ph, 1.8) * 8 + pwr * 0.45;
-            if (it.chieu && (it.pham_cap || 1) >= 3) w += 15;
-            if (it.linh_luc) w += it.linh_luc * 15;
-            if (it.tag && it.tag.includes("nghich")) w += 45;
-            if (B && B.build && buildMatch(B.build, it)) {
-              w += 35;
+            let w = Math.pow(ph, 1.85) * 9 + pwr * 0.48 + acP * 0.15;
+            if (it.chieu && (it.pham_cap || 1) >= 3) w += 18;
+            if (it.linh_luc) w += it.linh_luc * 18;
+            if (it.tag && it.tag.includes("nghich")) w += 50;
+            if (bBuild && buildMatch(bBuild, it)) {
+              w += 40;
               const isCore =
                 it.tran_phai ||
                 (it.pham_cap || 1) >= 4 ||
-                (it.tag || []).includes(B.build.k);
-              if (isCore) w += 45;
+                (it.tag || []).includes(bBuild.k);
+              if (isCore) w += 55;
             }
             itemWeights.set(id, Math.max(5, w));
           }
+
+          // Tổng số ô Tâm Pháp tối đa thực có trong túi đồ (để không ép tỉ lệ ảo vượt quá túi đồ)
+          const totalBagTamCells = ids.reduce((acc, id) => {
+            const it = itemsK.get(id);
+            return acc + (it && hbCls(it) === "tam" ? hbCells(it) : 0);
+          }, 0);
 
           const pickWeightedFree = (fList, currentPieces) => {
             if (!fList.length) return null;
@@ -10064,18 +10330,21 @@ table.au-tb tr:last-child td {
                 const itP = itemsK.get(p.m.item);
                 if (!itP) continue;
                 curTotCells += p.cells.length;
-                if (hbCls(itP) === "tam") curTamCells += p.cells.length;
+                if (hbCls(itP) === "tam" || hbCls(itP) === "bv")
+                  curTamCells += p.cells.length;
                 if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
               }
             }
-            const targetRatio =
-              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
+            const rawTargetRatio =
+              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.55;
             const needTam =
-              curTotCells > 0 ? curTamCells / curTotCells < targetRatio : true;
+              curTotCells > 0 &&
+              curTamCells < totalBagTamCells &&
+              curTamCells / curTotCells < rawTargetRatio;
             const skillCap =
               S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
                 ? S.hbMaxSkills
-                : targetRatio >= 0.6
+                : rawTargetRatio >= 0.6
                   ? 3
                   : 4;
             const skillsFull = skillCap > 0 && curSkills >= skillCap;
@@ -10086,9 +10355,9 @@ table.au-tb tr:last-child td {
               const it = itemsK.get(id);
               let w = itemWeights.get(id) || 5;
               const cls = hbCls(it);
-              if (needTam && cls === "tam") w *= 1.8;
+              if (needTam && (cls === "tam" || cls === "bv")) w *= 1.5;
               if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0)
-                w *= 0.15;
+                w *= 0.35;
               weights.push(w);
               sum += w;
             }
@@ -10100,6 +10369,7 @@ table.au-tb tr:last-child td {
             return fList[fList.length - 1];
           };
 
+          // Hàm định vị mảnh thông minh 4.0: Tính đúng tương sinh từng ô (cellHe), Kinh Lộ (hopKinhLoHe), và giữ Huyệt cho mảnh nhân hệ số
           const smart = (id, currentPieces) => {
             const pool = cand[id] || [];
             if (!pool.length) return null;
@@ -10110,36 +10380,25 @@ table.au-tb tr:last-child td {
               (itSmart.chieu.phi || 0) > 0
             );
             const isBuildSmart = !!(
-              B &&
-              B.build &&
+              bBuild &&
               itSmart &&
-              buildMatch(B.build, itSmart)
+              buildMatch(bBuild, itSmart)
             );
-
-            let curTamCells = 0,
-              curTotCells = 0,
-              curSkills = 0;
-            for (const p of currentPieces) {
-              const itP = itemsK.get(p.m.item);
-              if (!itP) continue;
-              curTotCells += p.cells.length;
-              if (hbCls(itP) === "tam") curTamCells += p.cells.length;
-              if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
-            }
-            const targetRatio =
-              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
-            const needTam =
-              curTotCells > 0 ? curTamCells / curTotCells < targetRatio : true;
-            const skillCap =
-              S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
-                ? S.hbMaxSkills
-                : targetRatio >= 0.6
-                  ? 3
-                  : 4;
-            const skillsFull = skillCap > 0 && curSkills >= skillCap;
+            const acPrioSmart = itemAcPrio.get(id) || 0;
+            const isNonScalingSmart = acPrioSmart <= 20;
 
             const curUsedMask = getUsedMask(currentPieces);
-            const cpAdjMask = getCpAdjMask(currentPieces);
+            const flowState = computeFlowBitmask(currentPieces, ddAdjMask);
+            const reachMask = flowState.reachMask;
+
+            // Mặt nạ các mảnh hiện đang đứt mạch (nếu mảnh mới là CP và chạm cả reachMask lẫn mảnh đứt mạch thì thưởng lớn vì nối thông cầu!)
+            let disconnectedMask = 0n;
+            for (const p of currentPieces) {
+              if ((p.cellMask & reachMask) === 0n) {
+                disconnectedMask |= p.cellMask;
+              }
+            }
+
             let best = null,
               bs = -1e9;
             for (const c of pool) {
@@ -10148,83 +10407,88 @@ table.au-tb tr:last-child td {
               const onHuyetSmart = q > 0;
               let hyPref = 0;
               if (q > 0) {
-                hyPref += 30 * q + (itemWeights.get(id) || 10) * 0.45;
+                if (isNonScalingSmart) {
+                  // Tránh đặt mảnh thuần tốc độ/đột phá (không nhân hệ số) chiếm Huyệt Đạo
+                  hyPref -= 38 * q;
+                } else {
+                  hyPref += 28 * q + acPrioSmart * 0.32 * (1 + 0.25 * (q - 1));
+                }
               }
 
-              let matchBonus = 0;
-              if (needTam && hbCls(itSmart) === "tam") matchBonus += 25;
-              if (skillsFull && isSkillSmart) matchBonus -= 45;
-
-              let conflictPen = 0;
-              if (c.conflictsWithDanDien)
-                conflictPen += S.dir === "ma" ? -12 : 30;
               let conn = 0;
-              if (c.touchesDanDien) conn += 8.0;
-              else if (connectsToSpineMask(c, cpAdjMask)) conn += 4.5;
-              else conn -= 12.0;
+              const isConnectedNow = (c.cellMask & reachMask) !== 0n;
+              if (c.touchesDanDien) {
+                conn += c.isCP ? 18.0 : 8.0;
+              } else if (isConnectedNow) {
+                conn += c.isCP ? 12.0 : 9.0;
+              } else {
+                conn -= 45.0;
+              }
 
-              let khacPen = 0;
-              if (c.isCP && c.hasKhacTungO) khacPen += 8.0;
+              // Thưởng đặc biệt nếu công pháp này cứu (bắc cầu nối thông) các mảnh đang bị đứt mạch!
+              if (
+                c.isCP &&
+                isConnectedNow &&
+                disconnectedMask !== 0n &&
+                (c.adjMask & disconnectedMask) !== 0n
+              ) {
+                conn += 65.0;
+              }
+
+              let colorAndNghich = (c.exactMauMult - 0.85) * 42.0;
+              if (c.causesCellNghich && S.dir !== "ma") {
+                colorAndNghich -= mode === "dot_pha" ? 55.0 : 28.0;
+              }
 
               let synBonus = 0;
-              const hsSmart = ((itSmart && itSmart.he) || []).filter(
-                (h) => h && h !== "vo_sac",
-              );
+              const hsSmart = c.hs || [];
               for (const p of currentPieces) {
+                if ((c.adjMask & p.cellMask) === 0n) continue;
                 const itP = itemsK.get(p.m.item);
-                const hsP = ((itP && itP.he) || []).filter(
-                  (h) => h && h !== "vo_sac",
-                );
-                let sDirect = 0,
-                  sReverse = 0,
-                  kDirect = 0;
-                for (const a of hsSmart) {
-                  for (const b of hsP) {
-                    if (heTacDong(a, b) > 0) {
-                      const m = genSlack(itP, itSmart);
-                      if (m > sDirect) sDirect = m;
-                    } else if (heTacDong(b, a) > 0) {
-                      const m = genSlack(itSmart, itP);
-                      if (m > sReverse) sReverse = m;
-                    } else if (heTacDong(a, b) < 0 || heTacDong(b, a) < 0) {
-                      kDirect = 1;
-                    }
-                  }
-                }
+                const syn = calcPairCellSynergy(c, itSmart, p, itP);
+
                 if (S.dir === "tien" || !S.dir) {
-                  let directMult = 3.5;
-                  if (isSkillSmart) directMult += 4.0;
-                  if (mode === "burst") directMult += 5.0;
-                  if (isBuildSmart) directMult += 6.5;
-                  if (onHuyetSmart) directMult *= 1.6;
+                  let recvMult = 6.0;
+                  if (isSkillSmart) recvMult += 6.5;
+                  if (mode === "burst") recvMult += 7.0;
+                  if (isBuildSmart) recvMult += 8.0;
+                  if (onHuyetSmart) recvMult *= 1.65;
 
-                  let reverseMult = 2.5;
-                  if (itP && itP.chieu) reverseMult += 3.0;
-                  if (B && B.build && itP && buildMatch(B.build, itP))
-                    reverseMult += 5.0;
+                  let giveMult = 4.5;
+                  if (itP && itP.chieu) giveMult += 5.5;
+                  if ((p.hyCount || 0) > 0) giveMult *= 1.5;
+                  if (bBuild && itP && buildMatch(bBuild, itP)) giveMult += 6.5;
 
+                  const khacPen = mode === "dot_pha" || mode === "tu" ? 16.0 : 10.0;
                   synBonus +=
-                    directMult * sDirect +
-                    reverseMult * sReverse -
-                    (mode === "dot_pha" || mode === "tu" ? 12.0 : 8.0) *
-                      kDirect;
+                    recvMult * syn.bGenA +
+                    giveMult * syn.aGenB -
+                    khacPen * (syn.aKhacB + syn.bKhacA);
                 } else if (S.dir === "ma") {
-                  synBonus += 6.0 * kDirect - 3.0 * (sDirect + sReverse);
+                  const isNghichA = !!(itSmart && itSmart.tag && itSmart.tag.includes("nghich"));
+                  const isNghichB = !!(itP && itP.tag && itP.tag.includes("nghich"));
+                  synBonus +=
+                    (isNghichA ? 14.0 : 6.0) * syn.bKhacA +
+                    (isNghichB ? 14.0 : 6.0) * syn.aKhacB +
+                    4.0 * (syn.aGenB + syn.bGenA);
                 }
-                if (!c.isCP && p.isCP && hsSmart.some((h) => hsP.includes(h))) {
-                  synBonus += 3.5;
+
+                // Thưởng chuẩn Kinh Lộ (hopKinhLoHe: trùng hệ gốc hoặc tương sinh giữa Công Pháp và Pháp Khí)
+                if (!c.isCP && p.isCP && hopKinhLoHe(p.hs, hsSmart)) {
+                  synBonus += 14.0;
+                } else if (c.isCP && !p.isCP && hopKinhLoHe(hsSmart, p.hs)) {
+                  synBonus += 14.0;
+                } else if (c.isCP && p.isCP && hopKinhLoHe(p.hs, hsSmart)) {
+                  synBonus += 5.5;
                 }
               }
 
               const sc =
-                (c.aff || 0.4) * 6.0 +
-                matchBonus -
-                conflictPen +
+                colorAndNghich +
                 conn +
                 hyPref +
-                khacPen +
                 synBonus +
-                0.25 * rnd();
+                0.8 * rnd();
               if (sc > bs) {
                 bs = sc;
                 best = c;
@@ -10244,7 +10508,7 @@ table.au-tb tr:last-child td {
           let curS = ev(cur).s,
             best = cur,
             bestS = curS;
-          const T0 = init && init.length ? 15 : 50;
+          const T0 = init && init.length ? 22 : 60;
           let stagnantCount = 0;
           let reheatTempBonus = 0;
           pushTopCandidate(best, bestS);
@@ -10255,7 +10519,7 @@ table.au-tb tr:last-child td {
               onProg && onProg(it / iters, label);
               await yieldToMain();
             }
-            let T = Math.max(0.3, T0 * (1 - it / iters)) + reheatTempBonus;
+            let T = Math.max(0.35, T0 * (1 - it / iters)) + reheatTempBonus;
             if (reheatTempBonus > 0) reheatTempBonus *= 0.94;
 
             const next = cur.slice();
@@ -10263,27 +10527,176 @@ table.au-tb tr:last-child td {
             const free = () =>
               ids.filter((id) => !next.some((p) => p.m.item === id));
 
-            if (next.length === 0 || r < 0.16) {
+            if (next.length === 0 || r < 0.14) {
+              // OP 1: Smart Insert Free Piece
               const f = free();
               if (!f.length) continue;
               const id = pickWeightedFree(f, next);
               const c = smart(id, next);
               if (!c || overlaps(next, c)) continue;
               next.push(c);
-            } else if (r < 0.28) {
-              const i = Math.floor(rnd() * next.length);
-              const c0 = next[i];
-              const rots = (cand[c0.m.item] || []).filter(
-                (c) =>
-                  c !== c0 &&
-                  Math.abs(c.m.x - c0.m.x) <= 1 &&
-                  Math.abs(c.m.y - c0.m.y) <= 1,
+            } else if (r < 0.30) {
+              // OP 2: Displace & Insert (Ejection Chain) — Đẩy mảnh vướng ra để nhét mảnh xịn vào, rồi xếp lại mảnh bị đẩy!
+              const f = free();
+              if (!f.length) continue;
+              const id = pickWeightedFree(f, next);
+              const pool = cand[id] || [];
+              if (!pool.length) continue;
+
+              // Chọn 1 vị trí tốt của món mới (ưu tiên phủ huyệt hoặc hợp màu cao, chỉ đè lên tối đa 2 mảnh hiện tại)
+              const acP = itemAcPrio.get(id) || 0;
+              const goodPlacements = [];
+              for (const cnd of pool) {
+                let ovCount = 0;
+                for (let k = 0; k < next.length; k++) {
+                  if ((next[k].cellMask & cnd.cellMask) !== 0n) {
+                    ovCount++;
+                    if (ovCount > 2) break;
+                  }
+                }
+                if (ovCount <= 2) {
+                  const sc =
+                    cnd.hyCount * (acP > 20 ? 60 : -15) +
+                    cnd.exactMauMult * 35 -
+                    ovCount * 12;
+                  goodPlacements.push({ cnd, sc });
+                }
+              }
+              if (!goodPlacements.length) continue;
+              goodPlacements.sort((a, b) => b.sc - a.sc);
+              const pickK = Math.min(5, goodPlacements.length);
+              const chosen = goodPlacements[Math.floor(rnd() * pickK)].cnd;
+
+              const evictedIds = [];
+              const kept = [];
+              for (const p of next) {
+                if ((p.cellMask & chosen.cellMask) !== 0n) {
+                  evictedIds.push(p.m.item);
+                } else {
+                  kept.push(p);
+                }
+              }
+              kept.push(chosen);
+              // Lắp lại các mảnh vừa bị đẩy ra vào khoảng trống còn lại
+              for (const evId of evictedIds) {
+                const reC = smart(evId, kept);
+                if (reC && !overlaps(kept, reC)) {
+                  kept.push(reC);
+                }
+              }
+              next.length = 0;
+              next.push(...kept);
+            } else if (r < 0.45) {
+              // OP 3: Ruin & Recreate (Large Neighborhood Search - LNS) — Giải tỏa cụm 2–3 mảnh kề nhau và tái cấu trúc cục bộ!
+              if (next.length < 2) continue;
+              const pivotIdx = Math.floor(rnd() * next.length);
+              const pivot = next[pivotIdx];
+              const removeSet = new Set([pivotIdx]);
+
+              // Tìm các mảnh kề hoặc gần pivot
+              const nearList = [];
+              for (let k = 0; k < next.length; k++) {
+                if (k === pivotIdx) continue;
+                const p = next[k];
+                const isAdj = (pivot.adjMask & p.cellMask) !== 0n;
+                const dist =
+                  Math.abs(pivot.m.x - p.m.x) + Math.abs(pivot.m.y - p.m.y);
+                nearList.push({ k, d: isAdj ? 0 : dist });
+              }
+              nearList.sort((a, b) => a.d - b.d);
+              const ruinCount = Math.min(
+                nearList.length,
+                rnd() < 0.5 ? 1 : 2,
               );
-              if (!rots.length) continue;
-              const c = rots[Math.floor(rnd() * rots.length)];
-              if (overlaps(next, c, i)) continue;
-              next[i] = c;
-            } else if (r < 0.38) {
+              for (let u = 0; u < ruinCount; u++) {
+                removeSet.add(nearList[u].k);
+              }
+
+              const rebuilt = next.filter((_, idx) => !removeSet.has(idx));
+              const availIds = ids.filter(
+                (id) => !rebuilt.some((p) => p.m.item === id),
+              );
+              // Sắp xếp ngẫu nhiên có trọng số để lấp đầy vùng vừa giải tỏa bằng tổ hợp mảnh mới tối ưu hơn
+              const candidatesToPack = [];
+              const tempPool = availIds.slice();
+              const maxPack = Math.min(tempPool.length, ruinCount + 3);
+              for (let u = 0; u < maxPack; u++) {
+                const pid = pickWeightedFree(tempPool, rebuilt);
+                if (!pid) break;
+                candidatesToPack.push(pid);
+                const idxRm = tempPool.indexOf(pid);
+                if (idxRm >= 0) tempPool.splice(idxRm, 1);
+              }
+              for (const pid of candidatesToPack) {
+                const c = smart(pid, rebuilt);
+                if (c && !overlaps(rebuilt, c)) {
+                  rebuilt.push(c);
+                }
+              }
+              next.length = 0;
+              next.push(...rebuilt);
+            } else if (r < 0.58) {
+              // OP 4: Acupoint Promotion & Carry Upgrade — Đưa mảnh nhân hệ số cao (trong túi hoặc ngoài huyệt) lên thẳng Huyệt Đạo!
+              const onHuyetLower = [];
+              for (let idx = 0; idx < next.length; idx++) {
+                const p = next[idx];
+                if ((p.hyCount || 0) > 0) {
+                  const prio = itemAcPrio.get(p.m.item) || 0;
+                  onHuyetLower.push({ idx, p, prio });
+                }
+              }
+              // Tìm ứng viên mạnh chưa lên huyệt (cả trên bàn lẫn trong túi)
+              const elitePool = [];
+              for (let idx = 0; idx < next.length; idx++) {
+                const p = next[idx];
+                if ((p.hyCount || 0) === 0) {
+                  const prio = itemAcPrio.get(p.m.item) || 0;
+                  if (prio > 40) elitePool.push({ id: p.m.item, idx, prio });
+                }
+              }
+              for (const fid of free()) {
+                const prio = itemAcPrio.get(fid) || 0;
+                if (prio > 40) elitePool.push({ id: fid, idx: -1, prio });
+              }
+
+              if (elitePool.length > 0 && onHuyetLower.length > 0) {
+                elitePool.sort((a, b) => b.prio - a.prio);
+                onHuyetLower.sort((a, b) => a.prio - b.prio);
+                const targetElite =
+                  elitePool[Math.floor(rnd() * Math.min(3, elitePool.length))];
+                const targetLower = onHuyetLower[0];
+
+                if (targetElite.prio > targetLower.prio * 1.05) {
+                  const lowerHyCells = targetLower.p.cells.filter((x) =>
+                    hy0.has(x),
+                  );
+                  const testNext = next.filter(
+                    (_, idx) =>
+                      idx !== targetElite.idx && idx !== targetLower.idx,
+                  );
+                  const eliteCands = (cand[targetElite.id] || []).filter(
+                    (cnd) =>
+                      cnd.cells.some((x) => lowerHyCells.includes(x)) &&
+                      !overlaps(testNext, cnd),
+                  );
+                  if (eliteCands.length > 0) {
+                    eliteCands.sort(
+                      (a, b) =>
+                        b.exactMauMult * b.hyCount - a.exactMauMult * a.hyCount,
+                    );
+                    const chosenElite = eliteCands[0];
+                    const rebuilt = [...testNext, chosenElite];
+                    const reLower = smart(targetLower.p.m.item, rebuilt);
+                    if (reLower && !overlaps(rebuilt, reLower)) {
+                      rebuilt.push(reLower);
+                    }
+                    next.length = 0;
+                    next.push(...rebuilt);
+                  }
+                }
+              }
+            } else if (r < 0.70) {
+              // OP 5: Pairwise Swap — Hoán đổi vùng vị trí giữa 2 mảnh
               if (next.length < 2) continue;
               const i = Math.floor(rnd() * next.length);
               let j = Math.floor(rnd() * next.length);
@@ -10314,126 +10727,91 @@ table.au-tb tr:last-child td {
                   next[j] = newB;
                 }
               }
-            } else if (r < 0.52) {
-              // Toán tử đột biến Acupoint Swap Move: hoán đổi mảnh phẩm cao ngoài huyệt lên ô huyệt
-              const nonHuyetElite = [];
-              const onHuyetLower = [];
-              for (let idx = 0; idx < next.length; idx++) {
-                const p = next[idx];
-                const itP = itemsK.get(p.m.item);
-                if (!itP) continue;
-                const prio = acupointPriority(itP, mode, B.build);
-                if (
-                  (p.hyCount || 0) === 0 &&
-                  (prio >= 80 ||
-                    (itP.pham_cap || 1) >= 3 ||
-                    (itP.chieu && (itP.chieu.phi || 0) > 0))
-                ) {
-                  nonHuyetElite.push({ idx, p, itP, prio });
-                }
-                if ((p.hyCount || 0) > 0) {
-                  onHuyetLower.push({ idx, p, itP, prio });
-                }
-              }
-
-              if (nonHuyetElite.length > 0 && onHuyetLower.length > 0) {
-                nonHuyetElite.sort((a, b) => b.prio - a.prio);
-                onHuyetLower.sort((a, b) => a.prio - b.prio);
-                const targetElite = nonHuyetElite[0];
-                const targetLower = onHuyetLower[0];
-
-                if (targetElite.prio > targetLower.prio) {
-                  const eliteCandPool = cand[targetElite.p.m.item] || [];
-                  const lowerHyCells = targetLower.p.cells.filter((x) =>
-                    hy0.has(x),
-                  );
-                  const testNext = next.filter(
-                    (_, idx) =>
-                      idx !== targetElite.idx && idx !== targetLower.idx,
-                  );
-
-                  for (const eliteCand of eliteCandPool) {
-                    if (!eliteCand.cells.some((x) => lowerHyCells.includes(x)))
-                      continue;
-                    if (overlaps(testNext, eliteCand)) continue;
-
-                    const lowerCandPool = cand[targetLower.p.m.item] || [];
-                    const nextWithElite = [...testNext, eliteCand];
-                    let foundLowerCand = null;
-                    for (const lowerCand of lowerCandPool) {
-                      if (!overlaps(nextWithElite, lowerCand)) {
-                        foundLowerCand = lowerCand;
-                        break;
-                      }
-                    }
-
-                    if (foundLowerCand) {
-                      next[targetElite.idx] = eliteCand;
-                      next[targetLower.idx] = foundLowerCand;
-                      break;
-                    }
-                  }
-                }
-              }
-            } else if (r < 0.64) {
-              const usedCells = new Set(next.flatMap((p) => p.cells));
-              const emptyHuyet = [...hy0].filter(
-                (h) => g.vung[h] >= 0 && !usedCells.has(h),
-              );
-              if (emptyHuyet.length) {
-                const targetH =
-                  emptyHuyet[Math.floor(rnd() * emptyHuyet.length)];
-                const f = free();
-                let found = null;
-                const sortedF = f
-                  .slice()
-                  .sort(
-                    (a, b) =>
-                      (itemWeights.get(b) || 0) - (itemWeights.get(a) || 0),
-                  );
-                for (const fid of sortedF) {
-                  const arr = cand[fid] || [];
-                  for (const c of arr) {
-                    if (c.cells.includes(targetH) && !overlaps(next, c)) {
-                      found = c;
-                      break;
-                    }
-                  }
-                  if (found) break;
-                }
-                if (found) next.push(found);
-              }
-            } else if (r < 0.74) {
+            } else if (r < 0.80) {
+              // OP 6: In-Place Rotation & Micro-Slide (tối ưu hệ từng ô heTungO và màu ô lân cận)
               const i = Math.floor(rnd() * next.length);
               const c0 = next[i];
               const nb = (cand[c0.m.item] || []).filter(
                 (c) =>
                   c !== c0 &&
                   Math.abs(c.m.x - c0.m.x) <= 2 &&
-                  Math.abs(c.m.y - c0.m.y) <= 2,
+                  Math.abs(c.m.y - c0.m.y) <= 2 &&
+                  !overlaps(next, c, i),
               );
               if (!nb.length) continue;
               const c = nb[Math.floor(rnd() * nb.length)];
-              if (overlaps(next, c, i)) continue;
               next[i] = c;
-            } else if (r < 0.84) {
-              next.splice(Math.floor(rnd() * next.length), 1);
             } else if (r < 0.92) {
-              const i = Math.floor(rnd() * next.length);
-              const id = next[i].m.item;
-              const testNext = next.filter((_, idx) => idx !== i);
-              const c = smart(id, testNext);
-              if (!c || overlaps(testNext, c)) continue;
-              next[i] = c;
-            } else {
-              const i = Math.floor(rnd() * next.length);
+              // OP 7: Articulation-Safe Replace / Relocate (Ưu tiên đổi mảnh lá không làm đứt mạch toàn nhánh)
+              const nonCutIndices = [];
+              const baseFlow = computeFlowBitmask(next, ddAdjMask);
+              for (let k = 0; k < next.length; k++) {
+                const fSkip = computeFlowBitmask(next, ddAdjMask, k);
+                if (fSkip.deadCount <= baseFlow.deadCount) {
+                  nonCutIndices.push(k);
+                }
+              }
+              const i =
+                nonCutIndices.length > 0 && rnd() < 0.8
+                  ? nonCutIndices[Math.floor(rnd() * nonCutIndices.length)]
+                  : Math.floor(rnd() * next.length);
+
               const f = free();
-              if (!f.length) continue;
               const testNext = next.filter((_, idx) => idx !== i);
-              const id = pickWeightedFree(f, testNext);
-              const c = smart(id, testNext);
-              if (!c || overlaps(testNext, c)) continue;
-              next[i] = c;
+              if (f.length > 0 && rnd() < 0.65) {
+                const id = pickWeightedFree(f, testNext);
+                const c = smart(id, testNext);
+                if (!c || overlaps(testNext, c)) continue;
+                testNext.push(c);
+                // Thử nhét lại cả mảnh cũ nếu còn vừa chỗ
+                const cOld = smart(next[i].m.item, testNext);
+                if (cOld && !overlaps(testNext, cOld)) testNext.push(cOld);
+                next.length = 0;
+                next.push(...testNext);
+              } else {
+                const id = next[i].m.item;
+                const c = smart(id, testNext);
+                if (!c || overlaps(testNext, c)) continue;
+                next[i] = c;
+              }
+            } else {
+              // OP 8: Connectivity Repair hoặc Prune mảnh lá yếu nhất
+              const flowNow = computeFlowBitmask(next, ddAdjMask);
+              if (flowNow.deadCount > 0) {
+                // Nếu có mảnh đứt mạch, tìm 1 công pháp trong túi bắc cầu hoặc dịch mảnh đứt mạch về vùng thông
+                const cpFree = free().filter((id) => {
+                  const it = itemsK.get(id);
+                  return it && it.loai === "cong_phap";
+                });
+                if (cpFree.length > 0) {
+                  const id = pickWeightedFree(cpFree, next);
+                  const c = smart(id, next);
+                  if (c && !overlaps(next, c)) next.push(c);
+                } else {
+                  const deadIdx = next.findIndex(
+                    (p) => (p.cellMask & flowNow.reachMask) === 0n,
+                  );
+                  if (deadIdx >= 0) {
+                    const id = next[deadIdx].m.item;
+                    const testNext = next.filter((_, idx) => idx !== deadIdx);
+                    const c = smart(id, testNext);
+                    if (c && !overlaps(testNext, c)) testNext.push(c);
+                    next.length = 0;
+                    next.push(...testNext);
+                  }
+                }
+              } else if (next.length > 1) {
+                // Xóa thử 1 mảnh lá không làm đứt mạch
+                const leafIndices = [];
+                for (let k = 0; k < next.length; k++) {
+                  const fSkip = computeFlowBitmask(next, ddAdjMask, k);
+                  if (fSkip.deadCount === 0) leafIndices.push(k);
+                }
+                const rmIdx = leafIndices.length
+                  ? leafIndices[Math.floor(rnd() * leafIndices.length)]
+                  : Math.floor(rnd() * next.length);
+                next.splice(rmIdx, 1);
+              }
             }
 
             const e = ev(next);
@@ -10452,10 +10830,10 @@ table.au-tb tr:last-child td {
               stagnantCount++;
             }
 
-            if (stagnantCount >= 45) {
+            if (stagnantCount >= 40) {
               reheatTempBonus = Math.min(
-                T0 * 0.45,
-                (T0 * (1 - it / iters) + 5) * 1.5,
+                T0 * 0.5,
+                (T0 * (1 - it / iters) + 6) * 1.5,
               );
               stagnantCount = 0;
             }
@@ -10463,7 +10841,7 @@ table.au-tb tr:last-child td {
 
           pushTopCandidate(best, bestS);
 
-          // TẦNG 2: Full Simulation trên Top Candidates để chọn cấu hình thực chiến mạnh nhất
+          // TẦNG 2: Full Simulation trên toàn bộ 24 Top Candidates để chọn cấu hình thực chiến mạnh nhất
           let finalBest = best;
           let finalEval = fullEv(best);
           let finalBestScore = finalEval.s;
@@ -10488,7 +10866,7 @@ table.au-tb tr:last-child td {
           };
         }
 
-        // Pha lấp đầy thông minh: quét sạch các ô trống và nhét thêm mọi món hợp lệ còn trong túi
+        // Pha lấp đầy thông minh 4.0: Quét sạch các ô trống + Trượt 1 bước (1-Step Slide-and-Pack) để nhét thêm mọi món hợp lệ
         function smartFillRemainingGaps(nv0, cur, ev) {
           const K = S.core,
             c = C(),
@@ -10503,22 +10881,16 @@ table.au-tb tr:last-child td {
 
           const { cand } = buildCandidates(nv0);
           const allIds = Object.keys(cand).filter((k) => cand[k].length);
+          const ddAdjMask = getDanDienAdjMask(g, nv0.kinhMach.trangThai);
 
           let usedMask = 0n;
           for (const p of currentPieces) {
             usedMask |= p.cellMask;
           }
 
-          const getFlowAccessibleMask = () => {
-            let mask = 0n;
-            const dX = g.danDien % g.rong;
-            const dY = Math.floor(g.danDien / g.rong);
-            if (dX > 0) mask |= 1n << BigInt(g.danDien - 1);
-            if (dX < g.rong - 1) mask |= 1n << BigInt(g.danDien + 1);
-            if (dY > 0) mask |= 1n << BigInt(g.danDien - g.rong);
-            if (dY < g.cao - 1) mask |= 1n << BigInt(g.danDien + g.rong);
-
-            for (const p of currentPieces) {
+          const getFlowAccessibleMask = (pieces = currentPieces) => {
+            let mask = ddAdjMask;
+            for (const p of pieces) {
               if (p.isCP) {
                 mask |= p.adjMask;
               }
@@ -10528,7 +10900,8 @@ table.au-tb tr:last-child td {
 
           let flowMask = getFlowAccessibleMask();
 
-          for (let pass = 0; pass < 20; pass++) {
+          // Vòng 1: Lấp trực tiếp các món vừa khít vào ô trống
+          for (let pass = 0; pass < 24; pass++) {
             const placedItemIds = new Set(currentPieces.map((p) => p.m.item));
             const remainingIds = allIds.filter((id) => !placedItemIds.has(id));
             if (!remainingIds.length) break;
@@ -10536,25 +10909,7 @@ table.au-tb tr:last-child td {
             remainingIds.sort((a, b) => {
               const itA = itemsK.get(a),
                 itB = itemsK.get(b);
-              const clsA = hbCls(itA),
-                clsB = hbCls(itB);
-              let pA = (clsA === "tam" ? 50 : 0) + (itA.linh_luc || 0) * 10;
-              let pB = (clsB === "tam" ? 50 : 0) + (itB.linh_luc || 0) * 10;
-              if (itA.bi_dong) {
-                pA +=
-                  (itA.bi_dong.toc_do || 0) * 200 +
-                  (itA.bi_dong.dot_pha || 0) * 150 +
-                  (itA.bi_dong.ho_the || 0) * 100;
-              }
-              if (itB.bi_dong) {
-                pB +=
-                  (itB.bi_dong.toc_do || 0) * 200 +
-                  (itB.bi_dong.dot_pha || 0) * 150 +
-                  (itB.bi_dong.ho_the || 0) * 100;
-              }
-              pA += (itA.hinh?.length || 1) * 5;
-              pB += (itB.hinh?.length || 1) * 5;
-              return pB - pA;
+              return kmItemPower(itB) - kmItemPower(itA);
             });
 
             let bestCandidate = null;
@@ -10564,28 +10919,30 @@ table.au-tb tr:last-child td {
             for (const id of remainingIds) {
               const pool = cand[id] || [];
               const sortedCandidates = pool
-                .filter((c) => (usedMask & c.cellMask) === 0n)
+                .filter((cnd) => (usedMask & cnd.cellMask) === 0n)
                 .filter(
-                  (c) =>
-                    c.touchesDanDien ||
-                    (flowMask & c.cellMask) !== 0n ||
-                    (flowMask & c.adjMask) !== 0n,
+                  (cnd) =>
+                    cnd.touchesDanDien ||
+                    (flowMask & cnd.cellMask) !== 0n ||
+                    (flowMask & cnd.adjMask) !== 0n,
                 )
                 .sort((a, b) => {
                   const scA =
                     a.hyCount * 40 +
-                    a.matchCount * 15 -
-                    (isTayO ? a.unfixableCount * 20 : a.conflictCount * 10);
+                    a.exactMauMult * 25 -
+                    (a.causesCellNghich ? 35 : 0) -
+                    (isTayO ? a.unfixableCount * 15 : a.conflictCount * 8);
                   const scB =
                     b.hyCount * 40 +
-                    b.matchCount * 15 -
-                    (isTayO ? b.unfixableCount * 20 : b.conflictCount * 10);
+                    b.exactMauMult * 25 -
+                    (b.causesCellNghich ? 35 : 0) -
+                    (isTayO ? b.unfixableCount * 15 : b.conflictCount * 8);
                   return scB - scA;
                 })
-                .slice(0, 30);
+                .slice(0, 32);
 
-              for (const c of sortedCandidates) {
-                const testPieces = [...currentPieces, c];
+              for (const cnd of sortedCandidates) {
+                const testPieces = [...currentPieces, cnd];
                 const nextEval = ev(testPieces);
 
                 const lastIdx = testPieces.length - 1;
@@ -10600,7 +10957,7 @@ table.au-tb tr:last-child td {
                 const isScoreBetter = nextEval.s > currentScore + 1e-4;
                 const isSideStatBetter =
                   (nextEval.wins || 0) >= currentWins &&
-                  nextEval.s >= currentScore - 2.0 &&
+                  nextEval.s >= currentScore - 3.0 &&
                   ((nextEval.P?.linhLucMoiLuot || 0) >
                     (currentEval.P?.linhLucMoiLuot || 0) ||
                     (nextEval.P?.khiHuyetToiDa || 0) >
@@ -10614,7 +10971,7 @@ table.au-tb tr:last-child td {
                   const evalDiff = nextEval.s - currentScore;
                   if (evalDiff > bestCandidateScore) {
                     bestCandidateScore = evalDiff;
-                    bestCandidate = c;
+                    bestCandidate = cnd;
                     bestCandidateEval = nextEval;
                   }
                 }
@@ -10633,17 +10990,88 @@ table.au-tb tr:last-child td {
             currentEval = bestCandidateEval;
           }
 
+          // Vòng 2: 1-Step Slide-and-Pack — Trượt nhẹ 1 mảnh đang đặt sang ô trống kề bên để mở chỗ nhét thêm 1 món mới từ túi!
+          for (let slidePass = 0; slidePass < 6; slidePass++) {
+            const placedItemIds = new Set(currentPieces.map((p) => p.m.item));
+            const remainingIds = allIds
+              .filter((id) => !placedItemIds.has(id))
+              .sort(
+                (a, b) =>
+                  kmItemPower(itemsK.get(b)) - kmItemPower(itemsK.get(a)),
+              )
+              .slice(0, 8);
+            if (!remainingIds.length) break;
+
+            let slideImproved = false;
+            for (const newId of remainingIds) {
+              const newPool = (cand[newId] || []).slice(0, 45);
+              for (const newCnd of newPool) {
+                // Tìm mảnh duy nhất đang bị chồng lấn với newCnd
+                let ovIdx = -1,
+                  ovCount = 0;
+                for (let i = 0; i < currentPieces.length; i++) {
+                  if ((currentPieces[i].cellMask & newCnd.cellMask) !== 0n) {
+                    ovIdx = i;
+                    ovCount++;
+                    if (ovCount > 1) break;
+                  }
+                }
+                if (ovCount !== 1 || ovIdx < 0) continue;
+
+                const movingPiece = currentPieces[ovIdx];
+                const maskWithoutMoving =
+                  (usedMask & ~movingPiece.cellMask) | newCnd.cellMask;
+                const altMoves = (cand[movingPiece.m.item] || []).filter(
+                  (alt) =>
+                    alt !== movingPiece &&
+                    (alt.cellMask & maskWithoutMoving) === 0n &&
+                    Math.abs(alt.m.x - movingPiece.m.x) <= 3 &&
+                    Math.abs(alt.m.y - movingPiece.m.y) <= 3,
+                );
+                if (!altMoves.length) continue;
+
+                for (let k = 0; k < Math.min(8, altMoves.length); k++) {
+                  const testPieces = currentPieces.slice();
+                  testPieces[ovIdx] = altMoves[k];
+                  testPieces.push(newCnd);
+                  const flowCheck = computeFlowBitmask(testPieces, ddAdjMask);
+                  if (flowCheck.deadCount > 0) continue;
+
+                  const nextEval = ev(testPieces);
+                  if (
+                    nextEval.s > currentScore + 0.5 &&
+                    (nextEval.wins || 0) >= currentWins
+                  ) {
+                    currentPieces = testPieces;
+                    usedMask = 0n;
+                    for (const p of currentPieces) usedMask |= p.cellMask;
+                    flowMask = getFlowAccessibleMask();
+                    currentScore = nextEval.s;
+                    currentWins = nextEval.wins || 0;
+                    currentEval = nextEval;
+                    slideImproved = true;
+                    break;
+                  }
+                }
+                if (slideImproved) break;
+              }
+              if (slideImproved) break;
+            }
+            if (!slideImproved) break;
+          }
+
           return currentPieces;
         }
 
-        // Tinh chỉnh cuối (leo đồi chuyên sâu): thử Xoay, Trượt, Hoán đổi, Lấp ô toàn bản đồ
+        // Tinh chỉnh cuối (Leo Đồi Chuyên Sâu 4.0): Xoay, Dịch toàn bản đồ, Hoán đổi mọi cặp Huyệt/Kề, Thay thế Đồ Trong Túi & Lấp Kín Khe Hở
         async function polish(nv0, mode, res, onProg, customEval) {
           const isTayO = !!(AU.cfg && AU.cfg.km && AU.cfg.km.tayO);
           const enemies = benchEnemies(nv0.canhGioi, nv0.tieuCanhGioi || 0),
             ev = customEval || makeEval(nv0, enemies, mode);
           const { cand, g } = buildCandidates(nv0),
             ids = Object.keys(cand).filter((k) => cand[k].length);
-          const rnd = createMulberry32(777);
+          const itemsK = C().items;
+          const ddAdjMask = getDanDienAdjMask(g, nv0.kinhMach.trangThai);
           const toP = (m) =>
             (cand[m.item] || []).find(
               (c) => c.m.x === m.x && c.m.y === m.y && c.m.xoay === m.xoay,
@@ -10664,18 +11092,20 @@ table.au-tb tr:last-child td {
             let improved = false;
             onProg && onProg(round / 6);
 
+            // 1. Xoay & Dịch chuyển vi mô từng mảnh tại chỗ
             for (let i = 0; i < cur.length && !over(); i++) {
               const c0 = cur[i];
               const rots = (cand[c0.m.item] || []).filter(
                 (c) =>
                   c !== c0 &&
-                  Math.abs(c.m.x - c0.m.x) <= 1 &&
-                  Math.abs(c.m.y - c0.m.y) <= 1 &&
+                  Math.abs(c.m.x - c0.m.x) <= 2 &&
+                  Math.abs(c.m.y - c0.m.y) <= 2 &&
                   !overl(cur, c, i),
               );
               for (const cn of rots) {
                 const nx = cur.slice();
                 nx[i] = cn;
+                if (computeFlowBitmask(nx, ddAdjMask).deadCount > 0) continue;
                 const e = ev(nx);
                 if (e.s > curS + 1e-9) {
                   cur = nx;
@@ -10687,25 +11117,29 @@ table.au-tb tr:last-child td {
               await yieldToMain();
             }
 
+            // 2. Dịch chuyển toàn bản đồ cho từng mảnh
             for (let i = 0; i < cur.length && !over(); i++) {
               const cands = (cand[cur[i].m.item] || [])
                 .filter((cn) => cn !== cur[i] && !overl(cur, cn, i))
                 .sort((a, b) => {
                   const scA =
                     a.hyCount * 40 +
-                    a.matchCount * 15 -
-                    (isTayO ? a.unfixableCount * 20 : a.conflictCount * 10);
+                    a.exactMauMult * 25 -
+                    (a.causesCellNghich ? 35 : 0) -
+                    (isTayO ? a.unfixableCount * 15 : a.conflictCount * 8);
                   const scB =
                     b.hyCount * 40 +
-                    b.matchCount * 15 -
-                    (isTayO ? b.unfixableCount * 20 : b.conflictCount * 10);
+                    b.exactMauMult * 25 -
+                    (b.causesCellNghich ? 35 : 0) -
+                    (isTayO ? b.unfixableCount * 15 : b.conflictCount * 8);
                   return scB - scA;
                 })
-                .slice(0, 30);
+                .slice(0, 32);
 
               for (const cn of cands) {
                 const nx = cur.slice();
                 nx[i] = cn;
+                if (computeFlowBitmask(nx, ddAdjMask).deadCount > 0) continue;
                 const e = ev(nx);
                 if (e.s > curS + 1e-9) {
                   cur = nx;
@@ -10716,48 +11150,138 @@ table.au-tb tr:last-child td {
               await yieldToMain();
             }
 
+            // 3. Hoán đổi toàn diện các cặp mảnh (ưu tiên cặp có Huyệt Đạo hoặc kề nhau)
             if (cur.length >= 2 && !over()) {
-              const i = Math.floor(rnd() * cur.length);
-              let j = Math.floor(rnd() * cur.length);
-              if (i === j) j = (j + 1) % cur.length;
-              const cA = cur[i],
-                cB = cur[j];
-              const candA = (cand[cA.m.item] || []).filter(
-                (c) =>
-                  Math.abs(c.m.x - cB.m.x) <= 2 &&
-                  Math.abs(c.m.y - cB.m.y) <= 2,
-              );
-              const candB = (cand[cB.m.item] || []).filter(
-                (c) =>
-                  Math.abs(c.m.x - cA.m.x) <= 2 &&
-                  Math.abs(c.m.y - cA.m.y) <= 2,
-              );
-              for (const nA of candA) {
-                for (const nB of candB) {
+              for (let i = 0; i < cur.length && !over(); i++) {
+                for (let j = i + 1; j < cur.length && !over(); j++) {
+                  const cA = cur[i],
+                    cB = cur[j];
+                  const isRelevantPair =
+                    (cA.hyCount || 0) > 0 ||
+                    (cB.hyCount || 0) > 0 ||
+                    (cA.adjMask & cB.cellMask) !== 0n;
+                  if (!isRelevantPair && round > 1) continue;
+
                   const testCur = cur.filter(
                     (_, idx) => idx !== i && idx !== j,
                   );
-                  if (!overl(testCur, nA) && !overl([...testCur, nA], nB)) {
+                  const baseMask = testCur.reduce(
+                    (acc, p) => acc | p.cellMask,
+                    0n,
+                  );
+                  const candAAtB = (cand[cA.m.item] || [])
+                    .filter(
+                      (c) =>
+                        (c.cellMask & baseMask) === 0n &&
+                        Math.abs(c.m.x - cB.m.x) <= 2 &&
+                        Math.abs(c.m.y - cB.m.y) <= 2,
+                    )
+                    .slice(0, 8);
+                  const candBAtA = (cand[cB.m.item] || [])
+                    .filter(
+                      (c) =>
+                        (c.cellMask & baseMask) === 0n &&
+                        Math.abs(c.m.x - cA.m.x) <= 2 &&
+                        Math.abs(c.m.y - cA.m.y) <= 2,
+                    )
+                    .slice(0, 8);
+
+                  let pairSwapped = false;
+                  for (const nB of candAAtB) {
+                    for (const nA of candBAtA) {
+                      if ((nA.cellMask & nB.cellMask) !== 0n) continue;
+                      const nx = cur.slice();
+                      nx[i] = nA;
+                      nx[j] = nB;
+                      if (computeFlowBitmask(nx, ddAdjMask).deadCount > 0)
+                        continue;
+                      const e = ev(nx);
+                      if (e.s > curS + 1e-9) {
+                        cur = nx;
+                        curS = e.s;
+                        improved = true;
+                        pairSwapped = true;
+                        break;
+                      }
+                    }
+                    if (pairSwapped) break;
+                  }
+                }
+                await yieldToMain();
+              }
+            }
+
+            // 4. Thay thế mảnh đang đặt bằng mảnh tốt hơn còn dư trong túi (Bag-to-Board Upgrade Swap)
+            if (!over()) {
+              const placedSet = new Set(cur.map((p) => p.m.item));
+              const unplacedIds = ids
+                .filter((id) => !placedSet.has(id))
+                .sort(
+                  (a, b) =>
+                    kmItemPower(itemsK.get(b), mode) -
+                    kmItemPower(itemsK.get(a), mode),
+                )
+                .slice(0, 12);
+
+              for (let i = 0; i < cur.length && !over(); i++) {
+                const oldP = cur[i];
+                const maskWithoutI = cur.reduce(
+                  (acc, p, idx) => (idx === i ? acc : acc | p.cellMask),
+                  0n,
+                );
+                for (const uid of unplacedIds) {
+                  if (cur.some((p) => p.m.item === uid)) continue;
+                  const topForUid = (cand[uid] || [])
+                    .filter(
+                      (c) =>
+                        (c.cellMask & maskWithoutI) === 0n &&
+                        (Math.abs(c.m.x - oldP.m.x) <= 3 &&
+                          Math.abs(c.m.y - oldP.m.y) <= 3),
+                    )
+                    .sort(
+                      (a, b) =>
+                        b.hyCount * 40 +
+                        b.exactMauMult * 25 -
+                        (a.hyCount * 40 + a.exactMauMult * 25),
+                    )
+                    .slice(0, 6);
+
+                  let upgraded = false;
+                  for (const newC of topForUid) {
                     const nx = cur.slice();
-                    nx[i] = nA;
-                    nx[j] = nB;
+                    nx[i] = newC;
+                    if (computeFlowBitmask(nx, ddAdjMask).deadCount > 0)
+                      continue;
                     const e = ev(nx);
                     if (e.s > curS + 1e-9) {
                       cur = nx;
                       curS = e.s;
                       improved = true;
+                      upgraded = true;
                       break;
                     }
                   }
+                  if (upgraded) break;
                 }
-                if (improved) break;
+              }
+              await yieldToMain();
+            }
+
+            // 5. Lấp kín các ô trống mở ra sau mỗi vòng tinh chỉnh
+            const packed = smartFillRemainingGaps(nv0, cur, ev);
+            if (packed.length !== cur.length) {
+              const ePack = ev(packed);
+              if (ePack.s >= curS - 1e-4) {
+                cur = packed;
+                curS = ePack.s;
+                improved = true;
               }
             }
 
             if (!improved) break;
           }
 
-          // Lấp kín các ô trống còn lại bằng Smart Gap-Packing
+          // Lấp kín lần cuối bằng Smart Gap-Packing
           cur = smartFillRemainingGaps(nv0, cur, ev);
 
           const e = ev(cur);
@@ -15086,64 +15610,111 @@ table.au-tb tr:last-child td {
               ".",
           };
         }
-        // 7.14.1: Tìm cách xếp tối ưu toàn diện (Dual-Seed Annealing + Polish chuyên sâu)
+        // 7.21.0: Tìm cách xếp tối ưu toàn diện 4.0 (5-Topology Seeding + Multi-Start LNS Annealing + Deep Polish)
         async function kmSolve(nv, mode, iters, prog) {
           const nv0 = clone(nv);
           nv0.kinhMach.manh = [];
           const cur = evalCurrent(nv, mode);
-          prog(0.02, "Xếp nhanh hình học…");
+          prog(0.02, "Khởi tạo 5 cấu trúc hình học…");
 
-          // Hạt giống 1: Tham lam chính đạo theo trục Công Pháp Đan Điền
-          const g0 = await greedy(nv0, mode, false);
-          if (kmAborted()) return null;
+          // Khởi tạo 5 hạt giống hình học đa dạng (Huyệt-Steiner, Xương Sống Kinh Lộ, Cụm Tương Sinh, Thân Cây Mật Độ Cao, GRASP Đa Điểm Neo)
+          const seedConfigs = [];
+          const seenSigs = new Set();
+          const sigOfManh = (arr) =>
+            (arr || [])
+              .map((m) => `${m.item}:${m.x},${m.y},${m.xoay}`)
+              .sort()
+              .join("|");
 
-          // Hạt giống 2: Nếu bộ đang xếp của người chơi hợp lệ và thông mạch tốt thì tận dụng, ngược lại dùng hạt giống tham lam biến thể
-          const hasGoodCur =
+          for (let sv = 0; sv < 5; sv++) {
+            const gSeed = await greedy(nv0, mode, sv);
+            if (kmAborted()) return null;
+            const sKey = sigOfManh(gSeed);
+            if (gSeed && gSeed.length && !seenSigs.has(sKey)) {
+              seenSigs.add(sKey);
+              const nvTmp = clone(nv0);
+              nvTmp.kinhMach.manh = gSeed;
+              const evSeed = evalCurrent(nvTmp, mode);
+              seedConfigs.push({ manh: gSeed, score: evSeed.score, sv });
+            }
+          }
+
+          if (
             cur &&
-            cur.score > 80 &&
-            (cur.R.manh || []).every((m) => !m || m.thong);
-          const g1 = hasGoodCur ? cur.manh : await greedy(nv0, mode, true);
-          if (kmAborted()) return null;
+            cur.manh &&
+            cur.manh.length &&
+            !(cur.R.manh || []).some((m) => m && !m.thong)
+          ) {
+            const cKey = sigOfManh(cur.manh);
+            if (!seenSigs.has(cKey)) {
+              seenSigs.add(cKey);
+              seedConfigs.push({ manh: cur.manh, score: cur.score, sv: 99 });
+            }
+          }
 
-          prog(0.08, "Tìm từ trục xương sống…");
-          const a = await anneal({
+          seedConfigs.sort((a, b) => b.score - a.score);
+          const topSeeds = seedConfigs.slice(0, 3);
+          while (topSeeds.length < 3) {
+            topSeeds.push({
+              manh: topSeeds[0] ? topSeeds[0].manh : [],
+              score: -1e9,
+              sv: topSeeds.length,
+            });
+          }
+
+          prog(0.08, "Luyện kim nhánh 1 (Huyệt & Cầu Nối)…");
+          const a1 = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters * 0.65),
-            init: g0,
+            iters: Math.round(iters * 0.45),
+            init: topSeeds[0].manh,
             seed: 12345,
-            onProg: (f) => prog(0.08 + f * 0.32, "Tìm từ trục xương sống…"),
+            onProg: (f) =>
+              prog(0.08 + f * 0.24, "Luyện kim nhánh 1 (Huyệt & Cầu Nối)…"),
           });
           if (kmAborted()) return null;
 
-          prog(0.42, "Dò tìm toàn cục…");
+          prog(0.32, "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…");
           const a2 = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters * 0.65),
-            init: g1,
+            iters: Math.round(iters * 0.45),
+            init: topSeeds[1].manh,
             seed: 987654321,
-            onProg: (f) => prog(0.42 + f * 0.3, "Dò tìm toàn cục…"),
+            onProg: (f) =>
+              prog(0.32 + f * 0.24, "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…"),
           });
           if (kmAborted()) return null;
 
-          const top = [a, a2, cur].sort((x, y) => y.score - x.score)[0];
+          prog(0.56, "Luyện kim nhánh 3 (Mật Độ & Đa Hướng)…");
+          const a3 = await anneal({
+            nv0,
+            mode,
+            iters: Math.round(iters * 0.35),
+            init: topSeeds[2].manh,
+            seed: 27182818,
+            onProg: (f) =>
+              prog(0.56 + f * 0.18, "Luyện kim nhánh 3 (Mật Độ & Đa Hướng)…"),
+          });
+          if (kmAborted()) return null;
+
+          const top = [a1, a2, a3, cur].sort((x, y) => y.score - x.score)[0];
           const b = await anneal({
             nv0,
             mode,
-            iters: Math.round(iters / 2),
+            iters: Math.round(iters * 0.45),
             init: top.manh,
             seed: 424243,
             onProg: (f) =>
-              prog(0.72 + f * 0.23, "Đang tối ưu huyệt & tương sinh…"),
+              prog(0.74 + f * 0.18, "Hội tụ đỉnh cao (LNS & Tương Sinh)…"),
           });
           if (kmAborted()) return null;
 
-          let best = [a, a2, b].sort((x, y) => y.score - x.score)[0];
-          prog(0.96, "Leo đồi & hoàn thiện hình học…");
+          let best = [a1, a2, a3, b].sort((x, y) => y.score - x.score)[0];
+          prog(0.92, "Leo đồi & hoàn thiện hình học…");
           {
             const pl = await polish(nv0, mode, best, (f) =>
-              prog(0.96 + 0.04 * f, "Leo đồi & hoàn thiện hình học…"),
+              prog(0.92 + 0.08 * f, "Leo đồi & hoàn thiện hình học…"),
             );
             if (pl.score >= best.score) best = pl;
           }
@@ -15196,10 +15767,10 @@ table.au-tb tr:last-child td {
           prog(1, "Xong");
           return { cur, best };
         }
-        // 7.15.3: Đánh giá nhanh độ tiềm năng của ô chuẩn bị mở để ưu tiên dò chuyên sâu
+        // 7.21.0: Đánh giá nhanh độ tiềm năng của ô chuẩn bị mở (xét cả khoảng cách tới Huyệt Đạo bị cô lập & hệ đồ trong túi)
         function rankOpenCandidate(i, g, nv, hySet0) {
           let score = 0;
-          if (hySet0 && hySet0.has(i)) score += 60;
+          if (hySet0 && hySet0.has(i)) score += 95;
           const x = i % g.rong;
           const y = Math.floor(i / g.rong);
           const st = nv.kinhMach.trangThai;
@@ -15212,19 +15783,33 @@ table.au-tb tr:last-child td {
           let thongCount = 0;
           for (const o of nb) {
             if (st[o] === "thong") thongCount++;
-            if (o === g.danDien) score += 40;
+            if (o === g.danDien) score += 50;
+            if (hySet0 && hySet0.has(o) && st[o] !== "thong") score += 35;
           }
-          score += thongCount * 15;
+          score += thongCount * 16;
+
+          // Thưởng nếu ô này nằm trên đường tiến về một Huyệt Đạo chưa mở
+          if (hySet0) {
+            for (const h of hySet0) {
+              if (g.vung[h] >= 0 && st[h] !== "thong") {
+                const hx = h % g.rong,
+                  hy = Math.floor(h / g.rong);
+                const dist = Math.abs(x - hx) + Math.abs(y - hy);
+                if (dist <= 3) score += (4 - dist) * 14;
+              }
+            }
+          }
+
           const cellMau = (nv.kinhMach.mau && nv.kinhMach.mau[i]) || "vo_sac";
           const lc = (nv.linhCan && nv.linhCan.he) || [];
           if (cellMau === "vo_sac") {
-            score += 15;
+            score += 18;
           } else if (lc.includes(cellMau)) {
-            score += 25;
-          } else if (lc.some((h) => heTacDong(h, cellMau) > 0)) {
-            score += 15;
+            score += 28;
+          } else if (lc.some((h) => gocHe(h) === gocHe(cellMau))) {
+            score += 18;
           } else if (lc.some((h) => heTacDong(h, cellMau) < 0)) {
-            score -= 10;
+            score -= 12;
           }
           return score;
         }
@@ -15538,7 +16123,24 @@ table.au-tb tr:last-child td {
 
                 if (targetHe) {
                   seenCandCells.add(cell);
-                  const itPwr = kmItemPower(it) || 10;
+                  const scPwr = kmScalablePower(it, (AU.cfg && AU.cfg.km && AU.cfg.km.mode) || "bal", null);
+                  const hySetNow = hySet(g, nv.kinhMach);
+                  const hyCnt = cells.filter((cIdx) => hySetNow.has(cIdx)).length;
+                  const hyAmp = hyCnt > 0 ? 2.0 + 0.25 * (hyCnt - 1) : 1.0;
+                  const wasKhac = oKhac(curMau, wantedHe);
+                  const totalKhacBefore = cells.filter((cIdx, kIdx) => {
+                    const mC = mauK[cIdx] || "vo_sac";
+                    const pH = (cellElements && cellElements[kIdx]) ? cellElements[kIdx] : (hs[0] || "vo_sac");
+                    return oKhac(mC, pH);
+                  }).length;
+                  // Nếu đổi màu ô này giúp thoát ngưỡng quá nửa ô khắc (> cells.length / 2), triệt tiêu ngay +1 Điểm Nghịch!
+                  const eliminatesNghich =
+                    wasKhac &&
+                    totalKhacBefore * 2 > cells.length &&
+                    (totalKhacBefore - 1) * 2 <= cells.length;
+                  const effectivePwr =
+                    (scPwr * hyAmp) / Math.max(1, cells.length) +
+                    (eliminatesNghich ? 600 : wasKhac ? 45 : 0);
                   candidates.push({
                     cell,
                     fromHe: curMau,
@@ -15547,7 +16149,7 @@ table.au-tb tr:last-child td {
                     itTen: it.ten || it.id,
                     col: (cell % g.rong) + 1,
                     row: Math.floor(cell / g.rong) + 1,
-                    score: gain * itPwr,
+                    score: gain * effectivePwr,
                   });
                 }
               }
@@ -22993,31 +23595,54 @@ table.au-tb tr:last-child td {
             (s, i) => s === "thong" && i !== g.danDien && g.vung[i] >= 0,
           ).length;
         }
-        // 7.15.0: Phạt luỹ tiến bất đối xứng khi vi phạm tỉ lệ Tâm Pháp : Chiến Pháp
-        function hbRatioPenalty(manh, R) {
+        // 7.21.0: Phạt tỉ lệ Tâm Pháp : Chiến Pháp thích ứng theo túi đồ thực tế (không bóp nghẹt bảng mạch khi túi thiếu Tâm Pháp)
+        function hbRatioPenalty(manh, R, nvRef) {
           const H = S.hbRatio;
           if (!H) return 0;
           const items = C().items;
           let tam = 0,
+            bv = 0,
             chien = 0;
           manh.forEach((p, i) => {
             const rm = R.manh && R.manh[i];
             if (!rm || !rm.thong) return;
             const it = items.get(p.m.item);
             if (!it) return;
-            if (hbCls(it) === "tam") tam += p.cells.length;
+            const cls = hbCls(it);
+            if (cls === "tam") tam += p.cells.length;
+            else if (cls === "bv") bv += p.cells.length;
             else chien += p.cells.length;
           });
-          const tot = tam + chien;
+          // Bảo Vật bị động (không tốn linh lực) tính 75% như Tâm Pháp hỗ trợ khi xếp từ túi đồ
+          const effectiveTam = S.hbLite ? tam : tam + bv * 0.75;
+          const tot = tam + bv + chien;
           if (!tot) return 0;
-          const targetTam = H.t * tot;
-          // Phạt luỹ tiến cực mạnh khi thiếu Tâm Pháp (ngăn chặn dồn thừa chiêu thức):
-          if (tam < targetTam) {
-            const def = targetTam - tam;
-            return def * 75 + Math.pow(def, 1.8) * 35;
+          let targetTam = H.t * tot;
+
+          // Khi xếp từ túi đồ thực tế (!S.hbLite), không bao giờ đòi hỏi số ô Tâm Pháp vượt quá 85% tổng số ô Tâm Pháp có trong túi!
+          if (!S.hbLite && nvRef && nvRef.tuiDo) {
+            let maxBagTam = 0;
+            for (const id of Object.keys(nvRef.tuiDo)) {
+              if (!(nvRef.tuiDo[id] > 0)) continue;
+              const it = items.get(id);
+              if (
+                it &&
+                (it.canh_gioi ?? 0) <= (nvRef.canhGioi ?? 0) &&
+                (hbCls(it) === "tam" || hbCls(it) === "bv")
+              ) {
+                maxBagTam += hbCells(it);
+              }
+            }
+            targetTam = Math.min(targetTam, maxBagTam * 0.85);
           }
-          // Thừa Tâm Pháp chỉ phạt nhẹ:
-          return (tam - targetTam) * 12;
+
+          if (effectiveTam < targetTam) {
+            const def = targetTam - effectiveTam;
+            return S.hbLite
+              ? def * 28 + Math.pow(def, 1.45) * 12
+              : def * 10 + Math.pow(def, 1.25) * 4;
+          }
+          return S.hbLite ? (effectiveTam - targetTam) * 6 : 0;
         }
         function hbShareOf(nvH, manh) {
           const K = S.core,
@@ -37156,9 +37781,21 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: "Phiên Bản 7.20.2 · Nâng Cấp Toàn Diện Bộ Lọc Sự Kiện Tu Vi & Loại Bỏ Triệt Để Sự Kiện Lỏ",
+            t: "Phiên Bản 7.21.0 · Đại Trùng Tu Động Cơ Kinh Mạch 4.0 (Multi-Topology · LNS · Chuẩn Hóa Lõi Game)",
             d: "09/11/2026",
             now: true,
+            pts: [
+              "<b>Kết Nối Trực Tiếp Toàn Bộ Hàm Lõi Kinh Mạch (<code>character/kinh_mach</code>):</b> Ánh xạ đầy đủ các hàm gốc của game (<code>heTungO</code>, <code>acupointsOf</code>, <code>doHop</code>, <code>hopHe</code>, <code>hopKinhLo</code>, <code>coTuongSinhNoiTai</code>, <code>heDoiDuoc</code>, <code>tayConLai</code>) vào bộ giải. Nhận diện chính xác hệ của từng ô thành phần trên mảnh đa hệ ở cả 4 góc xoay và quy tắc Kinh Lộ (cùng hệ gốc hoặc tương sinh <code>hopKinhLo</code>).",
+              "<b>Phân Tách Thuộc Tính Nhân Hệ Số (<code>kmScalablePower</code>) &amp; Bảo Toàn Huyệt Đạo (×2.0+):</b> Theo đúng công thức <code>tinhKinhMach</code> của game, các dòng <code>toc_do</code>, <code>dot_pha</code>, <code>khang_tam_ma</code> trên Tâm Pháp chỉ cần thông mạch và không nhân <code>heSo</code>, trong khi <code>linh_luc</code>, <code>chieu</code>, <code>khi_huyet</code>, <code>ho_the</code>, <code>phap_luc</code> và lục duy <code>chi_so</code> (Ngộ Tính, Đạo Tâm, Căn Cốt...) được nhân trực tiếp với <code>heSo</code>. Thuật toán mới tuyệt đối không lãng phí Huyệt Đạo hay đan Tẩy Ô cho mảnh không nhân hệ số, dồn toàn bộ Huyệt Đạo và chuỗi tương sinh cho mảnh khuếch đại thực sự.",
+              "<b>Gỡ Bỏ Ràng Buộc Chặn Cứng Lệch Màu Đơn Lẻ &amp; Phạt Tỉ Lệ Ảo:</b> Xóa bỏ điều kiện cấm cứng <code>conflictCount &gt; 0</code> từng làm kẹt các mảnh lớn phẩm cao không thể bắc cầu qua ô lệch màu; thay bằng hàm lợi ích liên tục theo đúng hệ số <code>0.85 + 0.45 × doHop</code> và chỉ phạt nặng khi quá nửa số ô nằm trên mạch khắc (<code>khacCellCount &gt; N/2</code> gây +1 Điểm Nghịch). Đồng thời nâng cấp <code>hbRatioPenalty</code> thích ứng theo số ô Tâm Pháp thực có trong túi đồ.",
+              "<b>Khởi Tạo 5 Cấu Trúc Hình Học Đa Dạng (5-Topology Seeding):</b> Thay vì chỉ chạy 2 hạt giống tham lam đơn điệu, bộ giải khởi tạo 5 cấu trúc độc lập (<i>Huyệt Đạo Steiner Multi-Bridge</i>, <i>Xương Sống Kinh Lộ</i>, <i>Cụm Tương Sinh Chủ Lực</i>, <i>Thân Cây Mật Độ Cao</i>, và <i>GRASP Đa Điểm Neo</i>), chọn lọc Top 3 nhánh tốt nhất để đưa vào luyện kim sâu.",
+              "<b>Luyện Kim Mô Phỏng 4.0 Với Toán Tử LNS (Ruin &amp; Recreate) &amp; Dây Chuyền Đẩy (Ejection Chain):</b> Bổ sung toán tử phá hủy &amp; tái thiết cục bộ cụm 2–3 mảnh kề nhau (Large Neighborhood Search), toán tử đẩy mảnh vướng để chèn mảnh phẩm cao (Displace &amp; Insert), kiểm tra điểm khớp (Articulation Point) bằng BigInt Bitmask O(N) để bảo toàn mạng lưới liên thông, cùng pha <i>1-Step Slide-and-Pack</i> và <i>Bag-to-Board Swap</i> trong <code>polish</code>.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.20.2 · Nâng Cấp Toàn Diện Bộ Lọc Sự Kiện Tu Vi & Loại Bỏ Triệt Để Sự Kiện Lỏ",
+            d: "09/11/2026",
+            now: false,
             pts: [
               "<b>Quét Sạch Toàn Bộ 1.509 Sự Kiện Game & Loại Bỏ 100% Sự Kiện Lỏ:</b> Phân tích toàn bộ dữ liệu mã nguồn gốc; triệt để loại trừ các dịch vụ tiện ích thành trấn thường trực (Thư viện tốn linh thạch đọc sách <code>ev.hoc_duong_tang_thu</code>, thuê đò, chợ phiên, làm công, phòng ban nội môn...) và các sự kiện gây tiêu tốn linh thạch, mất thời gian mà không có tu vi cố định.",
               "<b>Chắc Chắn Nhận Tu Vi Cao & An Toàn Tuyệt Đối:</b> Chỉ kích hoạt các kỳ ngộ, bí cảnh, di tích và Song Tu đảm bảo nhận tu vi thực sự (<code>tu_vi >= 1.0</code>, Song Tu +5% tiểu cảnh giới); các nhánh kiểm định thất bại không bị phạt tiền hay hại thân.",
