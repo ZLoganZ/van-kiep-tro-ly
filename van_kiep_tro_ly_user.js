@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.20.1
+// @version      7.20.2
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.1
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.2
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.20.1";
+      var TOOL_VER = "7.20.2";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -25768,6 +25768,62 @@ table.au-tb tr:last-child td {
         }
 
         // ── Kiểm tra và phân tích sự kiện tăng tu vi (Kỳ ngộ, Bí cảnh, Di tích, Song Tu...)
+        // Helper kiểm tra xem sự kiện có phải "lỏ", tiện ích lặp lại, mua bán, cạm bẫy hoặc tốn linh thạch không
+        function isLoTuViEnc(encId, encDef) {
+          if (!encId) return true;
+          // Các loại sự kiện dịch vụ thường trực, lừa đảo, cạm bẫy hoặc tốn phí
+          if (
+            /^ev\.(cho_|tiem_|quan_|trang_|hoc_duong_|bd_|loi_tat_|lam_cong_|mua_tin_|dau_gia_|pn_|tm_|bq_)/i.test(
+              encId,
+            )
+          )
+            return true;
+          if (
+            encId === "ev.son_mon_dong_kin" ||
+            encId === "ev.nhiem_vu_tong_mon" ||
+            encId === "ev.ngoa_son_ngo_dao" ||
+            encId === "ev.the_gia_bong_loc" ||
+            encId === "ev.thinh_giao" ||
+            encId === "ev.tham_ban_cu"
+          )
+            return true;
+          try {
+            const def = encDef || (C() && C().encounters && C().encounters.get(encId));
+            if (def) {
+              if (
+                def.tien_ich ||
+                def.kind === "cua_hang" ||
+                def.nhom === "mua_ban" ||
+                def.nhom === "su_vu" ||
+                def.dia_diem === true
+              ) {
+                // Ngoại trừ các bí cảnh, dị bảo, di tích thực sự
+                if (
+                  def.kind !== "bi_canh" &&
+                  def.kind !== "di_tich" &&
+                  !def.id?.startsWith("ev.ditich_") &&
+                  !def.id?.startsWith("ev.di_bao")
+                ) {
+                  return true;
+                }
+              }
+              const f = def.file || "";
+              if (
+                f.includes("/thanh_tran/lam_cong") ||
+                f.includes("/thanh_tran/mua_tin") ||
+                f.includes("/thanh_tran/cho_den") ||
+                f.includes("/thanh_tran/dau_gia") ||
+                f.includes("/thanh_tran/pham_nhan") ||
+                f.includes("/bien_co/be_quan") ||
+                f.includes("/tong_mon_noi")
+              ) {
+                return true;
+              }
+            }
+          } catch (e) {}
+          return false;
+        }
+
         const _tuViEncCache = new Map();
         function encGivesTuVi(encId) {
           if (!encId) return 0;
@@ -25783,12 +25839,18 @@ table.au-tb tr:last-child td {
             return 0;
           }
 
+          // 1. Loại bỏ triệt để các sự kiện "lỏ", tiện ích lặp lại, bế quan trả phí, mua bán
+          if (isLoTuViEnc(encId, enc)) {
+            _tuViEncCache.set(encId, 0);
+            return 0;
+          }
+
           let maxTv = 0;
           const visitedChains = new Set();
 
           function evalEffs(effs) {
-            if (!Array.isArray(effs)) return 0;
-            let tv = 0;
+            if (!Array.isArray(effs)) return { tv: 0, lt: 0, bad: false };
+            let tv = 0, lt = 0, bad = false;
             for (const eff of effs) {
               if (!eff || typeof eff !== "object") continue;
               if (eff.tu_vi !== undefined || eff.tuVi !== undefined) {
@@ -25798,13 +25860,19 @@ table.au-tb tr:last-child td {
                 if (Number.isFinite(v) && v > 0) tv += v;
               }
               if (eff.song_tu) tv += 5.0; // Song Tu tăng ~5% tiểu cảnh giới (rất lớn)
-              if (eff.tu_luyen) {
-                const nam = Number(eff.tu_luyen.nam) || 1;
-                const hs = Number(eff.tu_luyen.he_so) || 1;
-                tv += nam * hs;
-              }
               if (eff.be_quan_linh_mach) tv += 2.0;
               if (eff.thai_bo) tv += 3.0;
+              // Tuyệt đối KHÔNG tính tu_luyen vụn vặt thời gian ngắn (như đọc sách, bế quan ngắn mùa)
+              if (eff.linh_thach !== undefined) {
+                const ltv =
+                  typeof eff.linh_thach === "number"
+                    ? eff.linh_thach
+                    : eff.linh_thach?.bac
+                      ? eff.linh_thach.bac * 10
+                      : 0;
+                if (ltv < 0) lt += ltv;
+              }
+              if (eff.injury || eff.thuong_the || eff.tam_ma) bad = true;
               if (
                 eff.start_chain &&
                 typeof eff.start_chain === "string" &&
@@ -25824,25 +25892,39 @@ table.au-tb tr:last-child td {
                 }
               }
             }
-            return tv;
+            return { tv, lt, bad };
           }
 
           function scanChoice(ch) {
             if (!ch || typeof ch !== "object") return 0;
-            let cTv = evalEffs(ch.effects);
-            if (ch.success) {
-              const sEff = Array.isArray(ch.success)
-                ? ch.success
-                : ch.success.effects;
-              cTv = Math.max(cTv, evalEffs(sEff));
+            if (ch.thoat) return 0;
+            // Bỏ qua nếu lựa chọn đòi trả phí linh thạch
+            if (ch.requires && ch.requires.linh_thach) return 0;
+
+            const base = evalEffs(ch.effects);
+            if (base.lt < 0 || base.bad) return 0; // Nhánh mất linh thạch hoặc hại thân
+
+            const hasCheck = Boolean(
+              ch.check || ch.chance || ch.success || ch.partial,
+            );
+            if (!hasCheck) {
+              return base.tv;
             }
-            if (ch.partial) {
-              const pEff = Array.isArray(ch.partial)
-                ? ch.partial
-                : ch.partial.effects;
-              cTv = Math.max(cTv, evalEffs(pEff));
-            }
-            return cTv;
+
+            const sEff = evalEffs(
+              Array.isArray(ch.success) ? ch.success : ch.success?.effects,
+            );
+            const fEff = evalEffs(
+              Array.isArray(ch.failure) ? ch.failure : ch.failure?.effects,
+            );
+            const pEff = evalEffs(
+              Array.isArray(ch.partial) ? ch.partial : ch.partial?.effects,
+            );
+
+            // Kiểm định thất bại: Nếu bị mất tiền hoặc hại thân -> không an toàn, bỏ qua
+            if (fEff.lt < 0 || fEff.bad) return 0;
+
+            return Math.max(base.tv, sEff.tv, pEff.tv);
           }
 
           if (Array.isArray(enc.choices)) {
@@ -25861,6 +25943,9 @@ table.au-tb tr:last-child td {
               }
             }
           }
+
+          // Ngưỡng tối thiểu: Phải có ít nhất 1.0 tu vi thực tế mới bõ công tới tham gia
+          if (maxTv < 1.0) maxTv = 0;
 
           _tuViEncCache.set(encId, maxTv);
           return maxTv;
@@ -25925,24 +26010,33 @@ table.au-tb tr:last-child td {
               const v = Number(obj.tu_vi !== undefined ? obj.tu_vi : obj.tuVi);
               if (Number.isFinite(v)) {
                 // Thưởng điểm cao cho tu vi dương, phạt rất nặng tu vi âm (tránh các nhánh trừ tu vi)
-                sc += v > 0 ? v * 10 : v * 60;
+                sc += v > 0 ? v * 100 : v * 600;
               }
             }
-            if (obj.song_tu) sc += 50;
-            if (obj.tu_luyen) {
-              const n = Number(obj.tu_luyen.nam) || 1;
-              const hs = Number(obj.tu_luyen.he_so) || 1;
-              sc += n * hs * 8;
+            if (obj.song_tu) sc += 500;
+            if (obj.be_quan_linh_mach) sc += 200;
+            if (obj.thai_bo) sc += 300;
+            // Phạt cực nặng nếu tốn linh thạch hoặc yêu cầu linh thạch
+            if (obj.linh_thach !== undefined) {
+              const lt =
+                typeof obj.linh_thach === "number"
+                  ? obj.linh_thach
+                  : obj.linh_thach?.bac
+                    ? obj.linh_thach.bac * 10
+                    : 0;
+              if (lt < 0) sc -= 99999;
             }
-            if (obj.be_quan_linh_mach) sc += 20;
-            if (obj.thai_bo) sc += 25;
-            if (obj.tam_ma) sc -= Number(obj.tam_ma) * 15;
-            if (obj.injury) sc -= 25;
+            if (obj.tam_ma) sc -= Number(obj.tam_ma) * 5000;
+            if (obj.injury || obj.thuong_the) sc -= 50000;
             return sc;
           }
 
           function scoreChoiceDef(def) {
             if (!def || typeof def !== "object") return 0;
+            // Kiểm tra yêu cầu đòi nộp linh thạch
+            if (def.requires && def.requires.linh_thach) {
+              return -99999;
+            }
             let sc = evalObjScore(def.effects);
             if (def.success) {
               const sEff = Array.isArray(def.success)
@@ -25961,7 +26055,7 @@ table.au-tb tr:last-child td {
                 ? def.failure
                 : def.failure.effects;
               const scFail = evalObjScore(fEff);
-              if (scFail < 0) sc += scFail * 0.5; // Phạt nếu thất bại gây trừ tu vi/chấn thương
+              if (scFail < 0) sc += scFail; // Phạt nặng nếu thất bại gây trừ tu vi/chấn thương/mất tiền
             }
             // Nếu dẫn sang scene kế tiếp, quét các nhánh scene đó tìm tu vi tiềm năng
             if (def.scene && encDef.scenes && encDef.scenes[def.scene]) {
@@ -25998,32 +26092,45 @@ table.au-tb tr:last-child td {
             }
           }
 
+          // Chỉ chọn nếu nhánh đó mang lại điểm dương (tu vi thực sự và an toàn)
           if (bestChoice && bestScore > 0) {
             return { choice: bestChoice, tv: bestScore };
           }
 
+          // Nếu mọi nhánh khảo nghiệm đều là cạm bẫy / tốn tiền / nguy hiểm:
+          // Ưu tiên chọn nhánh thoát (thoat) nếu có để an toàn rút lui!
+          const leaveChoice = availableChoices.find(
+            (c) =>
+              c.thoat ||
+              /rời|thôi|bỏ|hẹn|quay về|trở về|không làm phiền/i.test(
+                c.text || "",
+              ),
+          );
+          if (leaveChoice) {
+            return { choice: leaveChoice, tv: 0 };
+          }
+
           // 2. Nếu chưa có nhánh nào có tu_vi trực tiếp ngay ở bước này (hoặc là bước dẫn tới scene khác):
-          // Ưu tiên các lựa chọn tiến lên / khảo nghiệm / mở / nhận / bế quan / tu luyện
+          // Ưu tiên các lựa chọn tiến lên / khảo nghiệm an toàn (không có chữ phí/mua/linh thạch)
           const advanceChoice = nonThoat.find((c) => {
             const txt = c.text || "";
+            if (/phí|linh thạch|mua|trả tiền|cống nạp/i.test(txt)) return false;
             return (
               c.check ||
-              /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh|bước|quan sát|chiêm ngưỡng|soi|xem xét|ngồi|nhập định|dưỡng|hộ pháp/i.test(
+              /kiểm định|khảo nghiệm|thử|tiến|vào|nhận|lấy|hái|mở|luyện|uống|nghênh|bước|quan sát|chiêm ngưỡng|soi|xem xét|nhập định|dưỡng|hộ pháp/i.test(
                 txt,
               )
             );
           });
           if (advanceChoice) return { choice: advanceChoice, tv: 0 };
 
-          // 3. Tránh các lựa chọn bỏ cuộc / rời đi / hẹn dịp khác / từ chối
-          const activeChoice = nonThoat.find((c) => {
+          // 3. Tránh các lựa chọn tốn phí linh thạch
+          const safeChoice = nonThoat.find((c) => {
             const txt = c.text || "";
-            return !/rời|bỏ|thôi|hẹn|không thèm|quay về|trở về|chạy|cáo từ/i.test(
-              txt,
-            );
+            return !/phí|linh thạch|mua|trả tiền/i.test(txt);
           });
 
-          return { choice: activeChoice || nonThoat[0], tv: 0 };
+          return { choice: safeChoice || nonThoat[0], tv: 0 };
         }
 
         function getItemPhaBinhCanh(it) {
@@ -28013,7 +28120,11 @@ table.au-tb tr:last-child td {
                   "🎉 Hoàn tất sự kiện tăng tu vi «" + encTen + "» thành công!",
                   "vk-ok",
                 );
-                if (st.skipEnc) st.skipEnc.delete(a.id);
+                // Ghi nhớ không quay lại sự kiện này tại vị trí hiện tại trong cùng phiên chạy (chống lặp vô tận)
+                st.skipEnc = st.skipEnc || new Set();
+                st.skipEnc.add(a.id);
+                st.skipEnc.add(a.id + "@" + run.viTri);
+                if (run.oNoi) st.skipEnc.add(a.id + "@" + run.oNoi);
                 if (st.encAttempts) {
                   delete st.encAttempts[a.id + "@" + run.viTri];
                   delete st.encAttempts[a.id + "@" + run.oNoi];
@@ -29426,7 +29537,7 @@ table.au-tb tr:last-child td {
 
           const director = TT.core && TT.core["encounter/director"];
 
-          // 2. Quét từ director.placeActivities cho tất cả các ô có thể tới
+          // 2. Quét từ director.placeActivities cho tất cả các ô có thể tới (chỉ lấy kỳ ngộ/bí cảnh thực sự, bỏ tiện ích thành trấn)
           if (director && typeof director.placeActivities === "function") {
             for (const [slotStr, y] of reachable.entries()) {
               if (st && st.bad && (st.bad.has(slotStr) || st.bad.has(+slotStr)))
@@ -29439,7 +29550,7 @@ table.au-tb tr:last-child td {
                 if (Array.isArray(acts)) {
                   for (const a of acts) {
                     if (!a || !a.id || a.lockedReason) continue;
-                    if (isBienCoEnc(a.id)) continue;
+                    if (isLoTuViEnc(a.id, a) || isBienCoEnc(a.id)) continue;
                     const encKey = a.id + "@" + slotStr;
                     if (seenEncs.has(encKey)) continue;
                     if (
@@ -29456,7 +29567,7 @@ table.au-tb tr:last-child td {
                       continue;
 
                     const tv = encGivesTuVi(a.id);
-                    if (tv <= 0) continue;
+                    if (tv < 1.0) continue;
 
                     seenEncs.add(encKey);
                     out.push({
@@ -29486,7 +29597,7 @@ table.au-tb tr:last-child td {
                 continue;
 
               const encId = n.encounter;
-              if (isBienCoEnc(encId)) continue;
+              if (isLoTuViEnc(encId) || isBienCoEnc(encId)) continue;
               const encKey = encId + "@" + slotStr;
               if (seenEncs.has(encKey)) continue;
               if (
@@ -29499,7 +29610,7 @@ table.au-tb tr:last-child td {
                 continue;
 
               const tv = encGivesTuVi(encId);
-              if (tv <= 0) continue;
+              if (tv < 1.0) continue;
 
               if (!reachable.has(slotStr)) continue;
               if (st && st.bad && (st.bad.has(slotStr) || st.bad.has(+slotStr)))
@@ -29551,7 +29662,7 @@ table.au-tb tr:last-child td {
             }
           }
 
-          // 4. Quét từ run.noiChon (các khu di tích, bí cảnh có sự kiện thường trú hoặc sự kiện kỳ ngộ)
+          // 4. Quét từ run.noiChon (chỉ quét các kỳ ngộ tạm thời hoặc contextual di tích/bí cảnh, TUYỆT ĐỐI KHÔNG quét standing thường trực)
           if (run.noiChon) {
             for (const [slotStr, nc] of Object.entries(run.noiChon)) {
               if (!nc) continue;
@@ -29566,11 +29677,10 @@ table.au-tb tr:last-child td {
               const allPlaceEncs = [
                 ...(Array.isArray(nc.suKien) ? nc.suKien : []),
                 ...(Array.isArray(nc.contextual) ? nc.contextual : []),
-                ...(Array.isArray(nc.standing) ? nc.standing : []),
               ];
 
               for (const encId of allPlaceEncs) {
-                if (!encId || isBienCoEnc(encId)) continue;
+                if (!encId || isLoTuViEnc(encId) || isBienCoEnc(encId)) continue;
                 const encKey = encId + "@" + slotStr;
                 if (seenEncs.has(encKey)) continue;
                 if (
@@ -29583,7 +29693,7 @@ table.au-tb tr:last-child td {
                   continue;
 
                 const tv = encGivesTuVi(encId);
-                if (tv <= 0) continue;
+                if (tv < 1.0) continue;
 
                 // Kiểm tra giới hạn run
                 try {
@@ -37046,9 +37156,20 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: "Phiên Bản 7.20.0 · Đại Tu Hiệu Năng O(1), Thuật Toán Kinh Mạch 3.0 & Tiện Ích UI/UX",
+            t: "Phiên Bản 7.20.2 · Nâng Cấp Toàn Diện Bộ Lọc Sự Kiện Tu Vi & Loại Bỏ Triệt Để Sự Kiện Lỏ",
             d: "09/11/2026",
             now: true,
+            pts: [
+              "<b>Quét Sạch Toàn Bộ 1.509 Sự Kiện Game & Loại Bỏ 100% Sự Kiện Lỏ:</b> Phân tích toàn bộ dữ liệu mã nguồn gốc; triệt để loại trừ các dịch vụ tiện ích thành trấn thường trực (Thư viện tốn linh thạch đọc sách <code>ev.hoc_duong_tang_thu</code>, thuê đò, chợ phiên, làm công, phòng ban nội môn...) và các sự kiện gây tiêu tốn linh thạch, mất thời gian mà không có tu vi cố định.",
+              "<b>Chắc Chắn Nhận Tu Vi Cao & An Toàn Tuyệt Đối:</b> Chỉ kích hoạt các kỳ ngộ, bí cảnh, di tích và Song Tu đảm bảo nhận tu vi thực sự (<code>tu_vi >= 1.0</code>, Song Tu +5% tiểu cảnh giới); các nhánh kiểm định thất bại không bị phạt tiền hay hại thân.",
+              "<b>Tối Ưu Quyết Định Nhánh Khảo Nghiệm:</b> Tự động phạt điểm cực nặng (-99.999) đối với các lựa chọn đòi nộp linh thạch hoặc gây thương tổn / tâm ma; nếu không có nhánh nào an toàn và có lợi sẽ tự động chọn rút lui an toàn thay vì chịu phạt.",
+              "<b>Chống Lặp Vô Tận Tại Nơi Chốn:</b> Khắc phục triệt để lỗi xóa nhầm bộ nhớ sự kiện sau khi hoàn tất, đảm bảo không bao giờ bị kẹt lặp lại nhiều lần tại cùng một sự kiện ở nơi đang đứng.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.20.0 · Đại Tu Hiệu Năng O(1), Thuật Toán Kinh Mạch 3.0 & Tiện Ích UI/UX",
+            d: "09/11/2026",
+            now: false,
             pts: [
               "<b>Tăng Tốc 80% Động Cơ Kinh Mạch (Signature Memoization & O(1) Bitmask Spine):</b> Bổ sung bộ nhớ đệm chữ ký trạng thái cho <code>buildCandidates</code> và <code>benchEnemies</code>, kết hợp kiểm tra liên thông trục Đan Điền – Tâm Pháp bằng phép toán bit <code>(cpAdjMask &amp; cn.cellMask) !== 0n</code> trong O(1), triệt tiêu hoàn toàn độ trễ khởi tạo lặp lại qua các pha Greedy, Simulated Annealing và Hill-Climbing Polish.",
               "<b>Khắc Phục Triệt Để Lỗi Ghi Đè Hàm <code>stripDead</code> &amp; Lấp Đầy Khe Hở:</b> Hợp nhất hàm <code>stripDead</code> và <code>coverNote</code> bị định nghĩa trùng lặp, khôi phục trọn vẹn pha <code>smartFillRemainingGaps</code> sau khi lọc mảnh đứt mạch và đối sánh chữ ký mảnh ghép chuẩn xác để không bỏ sót cấu hình tối ưu.",
