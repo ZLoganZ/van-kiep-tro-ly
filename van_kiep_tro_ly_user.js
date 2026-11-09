@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.19.0
+// @version      7.20.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.19.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.20.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.19.0";
+      var TOOL_VER = "7.20.0";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -2125,6 +2125,80 @@ table.au-tb tr:last-child td {
   color: #ffffff;
 }
 
+.vkx-mini-time {
+  font-family: var(--vkx-font-mono);
+  font-size: 11px;
+  color: var(--mut);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+/* Chế độ Thu Nhỏ Thanh Nổi (Window Shade / Minimize Mode) */
+#vkx-win.vkx-minimized {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--line2) !important;
+}
+#vkx-win.vkx-minimized .vkx-seg,
+#vkx-win.vkx-minimized .vkx-sec,
+#vkx-win.vkx-minimized #vkx-qbar {
+  display: none !important;
+}
+#vkx-win.vkx-minimized .vkx-hd {
+  border-bottom: none;
+}
+
+/* Thanh Tìm Nhanh Tab (Quick Jump Search Bar) */
+#vkx-qbar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+#vkx-qbar.on {
+  display: flex;
+}
+#vkx-qbar-inp {
+  flex: 1;
+  min-width: 160px;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line2);
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+#vkx-qbar-hits {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.vkx-qhit {
+  padding: 3px 9px;
+  font-size: 11.5px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: var(--card);
+  color: var(--acc);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s;
+  white-space: nowrap;
+}
+.vkx-qhit:hover {
+  background: color-mix(in srgb, var(--acc) 18%, var(--card));
+  transform: translateY(-1px);
+}
+
 .vkx-mini-close {
   background: transparent;
   border: none;
@@ -2393,15 +2467,18 @@ table.au-tb tr:last-child td {
           '<div class="vkx-ttl-sub"><span>LoganZ · Kỹ Sư · Bản Mod · Trợ Lý</span><em class="vkx-ver">v' +
           TOOL_VER +
           "</em></div></div>" +
+          '<button class="vkx-ib" id="vkx-qbtn" title="Tìm nhanh chức năng / Tab (Phím tắt: Ctrl+K)">🔎</button>' +
           '<button class="vkx-ib" id="vkx-theme" title="Đổi giao diện">🎨</button>' +
           '<button class="vkx-ib" id="vkx-zoom" title="Cỡ giao diện (Tự động · 85% … 150%)">🔍</button>' +
-          '<button class="vkx-ib x" id="vkx-close" title="Thu gọn">✕</button>' +
+          '<button class="vkx-ib" id="vkx-min" title="Thu nhỏ thành thanh nổi (Alt+M hoặc đúp chuột tiêu đề)">—</button>' +
+          '<button class="vkx-ib x" id="vkx-close" title="Đóng cửa sổ (Esc / Alt+T)">✕</button>' +
           "</div>" +
+          '<div id="vkx-qbar"><input id="vkx-qbar-inp" type="search" placeholder="🔎 Gõ tên tab hoặc tính năng (vd: kinh mạch, dị bảo, đột phá, lưu save, tác chiến)..." autocomplete="off"><div id="vkx-qbar-hits"></div></div>' +
           '<div class="vkx-seg"><button data-s="tl">🧭 Trợ Lý</button><button data-s="nk">📜 Nhật Ký Cập Nhật</button></div>' +
           '<div id="vkx-mini-status" class="vkx-mini-bar" style="display:none"></div>' +
           '<div class="vkx-sec" id="vkx-sec-nk"><div class="vkx-scroll" id="vkx-nk-body"></div></div>' +
           '<div class="vkx-sec" id="vkx-sec-tl">' +
-          '<div class="vkx-tabbar"><div id="vkx-groups"><div class="vkx-tab-glider"></div></div><button class="vk-btn sec" id="vk-rf" style="margin:0;padding:8px 12px;font-size:13px">↻</button></div>' +
+          '<div class="vkx-tabbar"><div id="vkx-groups"><div class="vkx-tab-glider"></div></div><button class="vk-btn sec" id="vk-rf" style="margin:0;padding:8px 12px;font-size:13px" title="Làm mới dữ liệu tab hiện tại">↻</button></div>' +
           '<div class="vkx-subbar"><div id="vkx-tabs"><div class="vkx-tab-glider"></div></div></div>' +
           '<div class="vkx-scroll" id="vkx-body"></div>' +
           "</div>";
@@ -2459,27 +2536,58 @@ table.au-tb tr:last-child td {
           flushTitleCase();
         })();
 
-        /* ---- Thanh Trạng Thái Auto Nổi (Mini Status Bar) ---- */
+        /* ---- Thanh Trạng Thái Auto Nổi (Mini Status Bar + Bộ Đếm Thời Gian Thực) ---- */
+        var _miniStartTs = 0,
+          _miniTimerId = null,
+          _miniLastStop = null;
+        function _fmtElapsed(ms) {
+          var s = Math.max(0, Math.floor(ms / 1000));
+          var m = Math.floor(s / 60);
+          var r = s % 60;
+          var h = Math.floor(m / 60);
+          if (h > 0) {
+            return h + ":" + String(m % 60).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+          }
+          return String(m).padStart(2, "0") + ":" + String(r).padStart(2, "0");
+        }
         function updateMiniStatus(text, onStop) {
           var bar = document.getElementById("vkx-mini-status");
           if (!bar) return;
           if (!text) {
             bar.style.display = "none";
             bar.innerHTML = "";
+            _miniStartTs = 0;
+            _miniLastStop = null;
+            if (_miniTimerId) {
+              clearInterval(_miniTimerId);
+              _miniTimerId = null;
+            }
             return;
           }
+          if (!_miniStartTs) _miniStartTs = Date.now();
+          _miniLastStop = onStop;
+          var elapsedStr = _fmtElapsed(Date.now() - _miniStartTs);
           bar.style.display = "flex";
           bar.innerHTML =
             '<span class="vkx-mini-badge"><span class="vkx-mini-dot"></span><span>' +
             text +
-            '</span></span>' +
+            '</span><span class="vkx-mini-time" id="vkx-mini-elapsed">⏱ ' +
+            elapsedStr +
+            "</span></span>" +
             '<button class="vkx-mini-btn" id="vkx-mini-stop">⏸ Dừng</button>';
           var btn = bar.querySelector("#vkx-mini-stop");
           if (btn) {
             btn.onclick = function (e) {
               e.stopPropagation();
-              if (typeof onStop === "function") onStop();
+              if (typeof _miniLastStop === "function") _miniLastStop();
             };
+          }
+          if (!_miniTimerId) {
+            _miniTimerId = setInterval(function () {
+              var el = document.getElementById("vkx-mini-elapsed");
+              if (!el || !_miniStartTs) return;
+              el.textContent = "⏱ " + _fmtElapsed(Date.now() - _miniStartTs);
+            }, 1000);
           }
         }
 
@@ -2667,6 +2775,91 @@ table.au-tb tr:last-child td {
         win.querySelector("#vkx-close").onclick = api.close;
         fab.onclick = api.open;
 
+        /* ---- Thu Nhỏ Thanh Nổi (Window Shade) & Tìm Nhanh Chức Năng ---- */
+        var minBtn = win.querySelector("#vkx-min");
+        api.toggleMinimize = function (forceState) {
+          var isMin =
+            typeof forceState === "boolean"
+              ? forceState
+              : !win.classList.contains("vkx-minimized");
+          win.classList.toggle("vkx-minimized", isMin);
+          if (minBtn) {
+            minBtn.textContent = isMin ? "▢" : "—";
+            minBtn.title = isMin
+              ? "Mở rộng lại cửa sổ (Alt+M)"
+              : "Thu nhỏ thành thanh nổi (Alt+M)";
+          }
+          if (!isMin) {
+            requestAnimationFrame(function () {
+              updateGliders(true);
+            });
+          }
+        };
+        if (minBtn) {
+          minBtn.onclick = function (e) {
+            e.stopPropagation();
+            api.toggleMinimize();
+          };
+        }
+        var hdEl = win.querySelector("#vkx-hd");
+        if (hdEl) {
+          hdEl.addEventListener("dblclick", function (e) {
+            if (e.target && e.target.closest("button")) return;
+            api.toggleMinimize();
+          });
+        }
+
+        var qBtn = win.querySelector("#vkx-qbtn");
+        var qBar = win.querySelector("#vkx-qbar");
+        var qInp = win.querySelector("#vkx-qbar-inp");
+        var qHits = win.querySelector("#vkx-qbar-hits");
+        api.toggleQuickSearch = function (forceOpen) {
+          if (!qBar) return;
+          if (win.classList.contains("vkx-minimized")) api.toggleMinimize(false);
+          if (api._section !== "tl") api.setSection("tl");
+          var open =
+            typeof forceOpen === "boolean"
+              ? forceOpen
+              : !qBar.classList.contains("on");
+          qBar.classList.toggle("on", open);
+          if (open && qInp) {
+            qInp.value = "";
+            if (typeof api._onQuickSearch === "function") api._onQuickSearch("");
+            setTimeout(function () {
+              try {
+                qInp.focus();
+              } catch (e) {}
+            }, 20);
+          }
+        };
+        if (qBtn) {
+          qBtn.onclick = function (e) {
+            e.stopPropagation();
+            api.toggleQuickSearch();
+          };
+        }
+        if (qInp) {
+          qInp.addEventListener("input", function () {
+            if (typeof api._onQuickSearch === "function")
+              api._onQuickSearch(qInp.value || "");
+          });
+          qInp.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              api.toggleQuickSearch(false);
+            } else if (e.key === "Enter" && qHits) {
+              var firstHit = qHits.querySelector(".vkx-qhit");
+              if (firstHit) {
+                e.preventDefault();
+                firstHit.click();
+              }
+            }
+          });
+        }
+        api.qHits = qHits;
+        api.qBar = qBar;
+
         /* ---- kéo nút ☯ bằng ngón tay / chuột (nhớ vị trí) ---- */
         (function () {
           var st = null,
@@ -2770,11 +2963,36 @@ table.au-tb tr:last-child td {
             e.stopPropagation();
           });
         });
-        /* phím tắt Escape đóng nhanh cửa sổ Tool */
+        /* phím tắt trong cửa sổ Tool: Escape đóng, Ctrl+K mở tìm nhanh, Alt+M thu nhỏ thanh nổi */
         win.addEventListener("keydown", function (e) {
+          if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+            e.preventDefault();
+            api.toggleQuickSearch();
+            return;
+          }
+          if (e.altKey && (e.key === "m" || e.key === "M")) {
+            e.preventDefault();
+            api.toggleMinimize();
+            return;
+          }
           if (e.key === "Escape" || e.keyCode === 27) {
+            if (qBar && qBar.classList.contains("on")) {
+              e.preventDefault();
+              api.toggleQuickSearch(false);
+              return;
+            }
             e.preventDefault();
             api.close();
+          }
+        });
+        /* phím tắt toàn cục: Alt+T bật/tắt cửa sổ Tool, Alt+M thu nhỏ/mở rộng nhanh */
+        window.addEventListener("keydown", function (e) {
+          if (e.altKey && (e.key === "t" || e.key === "T")) {
+            e.preventDefault();
+            api.toggle();
+          } else if (e.altKey && (e.key === "m" || e.key === "M") && api.isOpen()) {
+            e.preventDefault();
+            api.toggleMinimize();
           }
         });
 
@@ -7405,10 +7623,13 @@ table.au-tb tr:last-child td {
           cand: "NATAL_RUNE_CANDIDATES",
           runeMaxLv: "NATAL_RUNE_MAX_LEVEL",
           highChance: "NATAL_RUNE_HIGH_CHANCE",
+          highGap: "NATAL_RUNE_HIGH_GAP",
           luckStep: "NATAL_RUNE_LUCK_STEP",
           failChance: "NATAL_RUNE_FAIL_CHANCE",
           mutantChance: "NATAL_RUNE_MUTANT_CHANCE",
           mutantMult: "NATAL_RUNE_MUTANT_MULT",
+          winExpLower: "NATAL_EXP_WIN_LOWER",
+          winYearCap: "NATAL_EXP_WIN_YEAR_CAP",
           gradeUyExp: "NATAL_GRADE_UY_EXPONENT",
           bloodPower: "NATAL_BLOOD_SACRIFICE_POWER",
         };
@@ -7862,7 +8083,12 @@ table.au-tb tr:last-child td {
           "enemy.thuy_linh",
           "enemy.mao_cuong",
         ];
+        const _benchEnemiesCache = new Map();
         function benchEnemies(cg, tcP = 0) {
+          const cacheKey = `${cg}:${tcP}`;
+          if (_benchEnemiesCache.has(cacheKey)) {
+            return _benchEnemiesCache.get(cacheKey);
+          }
           const K = S.core,
             c = C();
           const tcs = [Math.max(0, tcP - 1), tcP, Math.min(3, tcP + 1)];
@@ -7872,7 +8098,7 @@ table.au-tb tr:last-child td {
             const step = Math.max(1, Math.floor(all.length / 9));
             ids = all.filter((_, i) => i % step === 0).slice(0, 9);
           }
-          return ids.map((id, i) => ({
+          const res = ids.map((id, i) => ({
             id,
             E: K.taoBenDich(
               {
@@ -7884,6 +8110,9 @@ table.au-tb tr:last-child td {
               { muc: "thuong" },
             ),
           }));
+          if (_benchEnemiesCache.size > 32) _benchEnemiesCache.clear();
+          _benchEnemiesCache.set(cacheKey, res);
+          return res;
         }
         function fight(P, E) {
           try {
@@ -8939,10 +9168,36 @@ table.au-tb tr:last-child td {
           };
         }
 
-        // Bitmask O(1) & Khắc phục góc xoay đa hệ
+        // Bitmask O(1), Khắc phục góc xoay đa hệ & Bộ nhớ đệm chữ ký trạng thái (Candidate Cache)
+        let _candCacheSig = "";
+        let _candCacheVal = null;
         function buildCandidates(nv0) {
           const K = S.core,
             c = C();
+          const km0 = (nv0 && nv0.kinhMach) || {};
+          const bagKeys = Object.keys((nv0 && nv0.tuiDo) || {})
+            .filter((k) => nv0.tuiDo[k] > 0)
+            .sort()
+            .join(",");
+          const sig =
+            (nv0.canhGioi ?? 0) +
+            "|" +
+            (nv0.tieuCanhGioi ?? 0) +
+            "|" +
+            (nv0.theChat || "") +
+            "|" +
+            ((nv0.linhCan && nv0.linhCan.he) || []).join(",") +
+            "|" +
+            (km0.trangThai || []).join(",") +
+            "|" +
+            (km0.mau || []).join(",") +
+            "|" +
+            ((km0.huyetGoc || []).join(",") + ":" + ((km0.huyetThem || []).join(","))) +
+            "|" +
+            bagKeys;
+          if (_candCacheVal && _candCacheSig === sig) {
+            return _candCacheVal;
+          }
           const pool = Object.keys(nv0.tuiDo).filter((id) => {
             const it = c.items.get(id);
             return (
@@ -9089,7 +9344,9 @@ table.au-tb tr:last-child td {
                 }
             }
           }
-          return { cand, g };
+          _candCacheSig = sig;
+          _candCacheVal = { cand, g };
+          return _candCacheVal;
         }
 
         // Thuật toán BFS tìm đường đi ngắn nhất trên ma trận ô thông
@@ -9577,35 +9834,28 @@ table.au-tb tr:last-child td {
             if (topCandidates.length > 12) topCandidates.pop();
           };
 
-          // Overlaps O(1) BigInt
-          const overlaps = (manh, c, skip = -1) => {
+          // Overlaps & Spine Connectivity O(1) BigInt Bitmask
+          const getUsedMask = (manh, skip = -1) => {
             let usedMask = 0n;
             for (let i = 0; i < manh.length; i++) {
               if (i !== skip) usedMask |= manh[i].cellMask;
             }
-            return (usedMask & c.cellMask) !== 0n;
+            return usedMask;
+          };
+          const overlaps = (manh, c, skip = -1) => {
+            return (getUsedMask(manh, skip) & c.cellMask) !== 0n;
           };
 
-          const getCpCells = (manh) => {
-            const set = new Set();
-            manh.forEach((p) => {
-              if (p.isCP) p.cells.forEach((x) => set.add(x));
-            });
-            return set;
+          const getCpAdjMask = (manh) => {
+            let mask = 0n;
+            for (let i = 0; i < manh.length; i++) {
+              if (manh[i].isCP) mask |= manh[i].adjMask;
+            }
+            return mask;
           };
 
-          const connectsToSpine = (cn, cpCells) => {
-            if (cn.touchesDanDien) return true;
-            return cn.cells.some((x) => {
-              const cx = x % g.rong;
-              const cy = Math.floor(x / g.rong);
-              return (
-                (cx > 0 && cpCells.has(x - 1)) ||
-                (cx < g.rong - 1 && cpCells.has(x + 1)) ||
-                (cy > 0 && cpCells.has(x - g.rong)) ||
-                (cy < g.cao - 1 && cpCells.has(x + g.rong))
-              );
-            });
+          const connectsToSpineMask = (cn, cpAdjMask) => {
+            return cn.touchesDanDien || (cpAdjMask & cn.cellMask) !== 0n;
           };
 
           const itemsK = C().items;
@@ -9688,11 +9938,12 @@ table.au-tb tr:last-child td {
             const skillCap = S.hbMaxSkills !== undefined && S.hbMaxSkills > 0 ? S.hbMaxSkills : (targetRatio >= 0.6 ? 3 : 4);
             const skillsFull = skillCap > 0 && curSkills >= skillCap;
 
-            const cpCells = getCpCells(currentPieces);
+            const curUsedMask = getUsedMask(currentPieces);
+            const cpAdjMask = getCpAdjMask(currentPieces);
             let best = null,
               bs = -1e9;
             for (const c of pool) {
-              if (overlaps(currentPieces, c)) continue;
+              if ((curUsedMask & c.cellMask) !== 0n) continue;
               const q = hyOf(c);
               const onHuyetSmart = q > 0;
               let hyPref = 0;
@@ -9708,7 +9959,7 @@ table.au-tb tr:last-child td {
               if (c.conflictsWithDanDien) conflictPen += (S.dir === "ma" ? -12 : 30);
               let conn = 0;
               if (c.touchesDanDien) conn += 8.0;
-              else if (connectsToSpine(c, cpCells)) conn += 4.5;
+              else if (connectsToSpineMask(c, cpAdjMask)) conn += 4.5;
               else conn -= 12.0;
 
               let khacPen = 0;
@@ -10317,61 +10568,6 @@ table.au-tb tr:last-child td {
           return { ...evalCurrent(nv3, mode), manh };
         }
 
-        // Thống kê độ phủ lưới
-        function coverNote(nv, best) {
-          try {
-            const K = S.core,
-              c = C(),
-              nv0 = clone(nv);
-            nv0.kinhMach.manh = [];
-            const { cand, g } = buildCandidates(nv0),
-              tot = new Set();
-            for (const id of Object.keys(cand))
-              for (const cn of cand[id]) cn.cells.forEach((x) => tot.add(x));
-            const used = new Set();
-            best.manh.forEach((m) =>
-              (K.oCuaManh(g, m, c.items.get(m.item)) || []).forEach((x) =>
-                used.add(x),
-              ),
-            );
-            for (const x of used) tot.add(x);
-            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Độ phủ lưới: <b>${used.size}/${tot.size}</b> ô${used.size < tot.size ? " (túi chưa đủ món vừa hình để lấp hết ô còn lại)" : " · đã lấp đầy"}.</div>`;
-          } catch (e) {
-            return "";
-          }
-        }
-
-        function stripDead(nv, res, mode) {
-          if (S.full) return fillRest(nv, res, mode);
-          let manh = res.manh.slice();
-          for (let k = 0; k < 5; k++) {
-            const nv2 = clone(nv);
-            nv2.kinhMach.manh = manh;
-            const R = S.core.tinhKinhMach(nv2, C());
-            const keep = manh.filter((m, i) => R.manh[i] && R.manh[i].thong);
-            if (keep.length === manh.length) break;
-            manh = keep;
-          }
-
-          // Đóng kín các khe hở mở ra sau khi lọc mảnh chết
-          try {
-            const enemies = benchEnemies(nv.canhGioi, nv.tieuCanhGioi || 0);
-            const ev = makeEval(nv, enemies, mode);
-            const { cand } = buildCandidates(nv);
-            const toP = (m) =>
-              (cand[m.item] || []).find(
-                (c) => c.m.x === m.x && c.m.y === m.y && c.m.xoay === m.xoay,
-              );
-            let curPieces = manh.map(toP).filter(Boolean);
-            curPieces = smartFillRemainingGaps(nv, curPieces, ev);
-            manh = curPieces.map((p) => ({ ...p.m }));
-          } catch (e) {}
-
-          if (manh.length === res.manh.length) return res;
-          const nv3 = clone(nv);
-          nv3.kinhMach.manh = manh;
-          return { ...evalCurrent(nv3, mode), manh };
-        }
         // Thống kê độ phủ lưới: số ô đã phủ / số ô có thể phủ bằng các món đang có trong túi.
         function coverNote(nv, best) {
           try {
@@ -10390,13 +10586,21 @@ table.au-tb tr:last-child td {
               ),
             );
             for (const x of used) tot.add(x);
-            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Độ phủ lưới: <b>${used.size}/${tot.size}</b> ô${used.size < tot.size ? " (túi chưa đủ món vừa hình để lấp hết ô còn lại)" : " · đã lấp đầy"}.</div>`;
+            const pct = tot.size > 0 ? Math.round((used.size / tot.size) * 100) : 100;
+            return `<div class="vk-mu" style="font-size:12px;margin-top:6px">Độ phủ lưới: <b>${used.size}/${tot.size}</b> ô (<b>${pct}%</b>)${used.size < tot.size ? " · túi chưa đủ món vừa hình để lấp hết ô còn lại" : " · đã lấp đầy hoàn hảo"}.</div>`;
           } catch (e) {
             return "";
           }
         }
+
         function stripDead(nv, res, mode) {
           if (S.full) return fillRest(nv, res, mode);
+          const sigOf = (arr) =>
+            (arr || [])
+              .map((m) => `${m.item}:${m.x},${m.y},${m.xoay}`)
+              .sort()
+              .join("|");
+          const origSig = sigOf(res.manh);
           let manh = res.manh.slice();
           for (let k = 0; k < 5; k++) {
             const nv2 = clone(nv);
@@ -10406,7 +10610,22 @@ table.au-tb tr:last-child td {
             if (keep.length === manh.length) break;
             manh = keep;
           }
-          if (manh.length === res.manh.length) return res;
+
+          // Đóng kín các khe hở mở ra sau khi lọc mảnh chết bằng Smart Gap-Packing
+          try {
+            const enemies = benchEnemies(nv.canhGioi, nv.tieuCanhGioi || 0);
+            const ev = makeEval(nv, enemies, mode);
+            const { cand } = buildCandidates(nv);
+            const toP = (m) =>
+              (cand[m.item] || []).find(
+                (c) => c.m.x === m.x && c.m.y === m.y && c.m.xoay === m.xoay,
+              );
+            let curPieces = manh.map(toP).filter(Boolean);
+            curPieces = smartFillRemainingGaps(nv, curPieces, ev);
+            manh = curPieces.map((p) => ({ ...p.m }));
+          } catch (e) {}
+
+          if (sigOf(manh) === origSig) return res;
           const nv3 = clone(nv);
           nv3.kinhMach.manh = manh;
           return { ...evalCurrent(nv3, mode), manh };
@@ -11052,6 +11271,57 @@ table.au-tb tr:last-child td {
             render();
           }
         };
+
+        // Kết nối Tìm Nhanh Tab (Ctrl+K / 🔎)
+        if (UI) {
+          UI._onQuickSearch = function (query) {
+            const hitsEl = UI.qHits;
+            if (!hitsEl) return;
+            const q = fold(String(query || "").trim());
+            const allTabs = [];
+            for (const gArr of GROUPS) {
+              const gId = gArr[0],
+                gTitle = gArr[1],
+                tabKeys = gArr[2] || [];
+              for (const tk of tabKeys) {
+                allTabs.push({ k: tk, t: TNAME[tk] || tk, gId, gTitle });
+              }
+            }
+            const list = !q
+              ? allTabs.slice(0, 10)
+              : allTabs
+                  .filter(
+                    (item) =>
+                      fold(item.t).includes(q) ||
+                      fold(item.k).includes(q) ||
+                      fold(item.gTitle).includes(q),
+                  )
+                  .slice(0, 12);
+            if (!list.length) {
+              hitsEl.innerHTML =
+                '<span class="vk-mu" style="font-size:11.5px">Không tìm thấy tab phù hợp.</span>';
+              return;
+            }
+            hitsEl.innerHTML = list
+              .map(
+                (item) =>
+                  `<button type="button" class="vkx-qhit" data-tid="${esc(item.k)}"><span style="opacity:0.75">${esc(item.gTitle)} ▸</span> <b>${esc(item.t)}</b></button>`,
+              )
+              .join("");
+            hitsEl.querySelectorAll(".vkx-qhit").forEach((btn) => {
+              btn.onclick = function () {
+                const tid = btn.getAttribute("data-tid");
+                if (tid) {
+                  S.abort = true;
+                  S.tab = tid;
+                  render();
+                  if (typeof UI.toggleQuickSearch === "function")
+                    UI.toggleQuickSearch(false);
+                }
+              };
+            });
+          };
+        }
 
         const errBox = (e) =>
           `<div class="vk-err"><b>Có lỗi:</b> ${esc((e && e.message) || e)}<br><span class="vk-mu" style="font-size:12px">Tool ${TOOL_VER}${S.core ? " · game " + esc(S.core.bundle) : ""}. Nếu lỗi lặp lại, chụp màn hình gửi Claude.</span></div>`;
@@ -13364,6 +13634,7 @@ table.au-tb tr:last-child td {
         function onWorldOrPlayerStateChange() {
           // Khi Auto đang chạy (Săn Bảo, Tu Luyện...), Auto đã tự quản lý chu kỳ kiểm tra; bỏ qua event để tránh nghẽn luồng game
           if (typeof AU !== "undefined" && AU.run && AU.run.running) return;
+          if (typeof document !== "undefined" && document.hidden) return;
           checkDiBaoAlert();
           if (S.tab === "db") {
             try {
@@ -18074,9 +18345,10 @@ table.au-tb tr:last-child td {
                       : has0
                         ? nv.natalRunes[id].level
                         : -1;
+                  const maxL = D.runeMaxLv || 5;
                   const note =
                     lv >= 0
-                      ? `nâng (cấp ${lv + 1}, +${num(pts, 2)} điểm${lv >= D.runeLv.length ? ", đã tối đa" : ""})`
+                      ? `nâng (cấp ${lv + 1}${lv + 1 >= maxL ? ", đã tối đa" : lv >= D.runeLv.length ? ", nuốt theo tỉ lệ" : `, +${num(pts, 2)} điểm`})`
                       : g < n.grade - D.newGap
                         ? "ngộ mới (món quá yếu, không ngộ được)"
                         : "ngộ mới";
@@ -18086,7 +18358,7 @@ table.au-tb tr:last-child td {
               return `<div class="tc-sec"><b>${esc(it.ten)} <span class="vk-mu">· ${esc(bmPham(g))}${weak ? " · quá yếu, điểm giảm nửa" : ""}</span></b>${chips}</div>`;
             };
             html += `<div class="vk-card"><h3>Nuốt Món Ngộ Văn</h3>
-        <div class="vk-mu" style="font-size:12.5px;line-height:1.5">Mỗi năm nuốt tối đa ${D.devourMax} món (còn ${Math.max(0, dLeft)}). Mỗi món hiện ${D.cand} văn ứng viên, bạn chọn một: văn chưa có thì ngộ mới (cần món không yếu hơn bản mệnh quá ${D.newGap} phẩm), văn đã có thì cộng điểm bằng hệ số phẩm của món (cấp 2 ở ${D.runeLv[0]} điểm, cấp 3 ở ${D.runeLv[1]}).
+        <div class="vk-mu" style="font-size:12.5px;line-height:1.5">Mỗi năm nuốt tối đa ${D.devourMax} món (còn ${Math.max(0, dLeft)}). Mỗi món hiện ${D.cand} văn ứng viên, bạn chọn một: văn chưa có thì ngộ mới (cần món không yếu hơn bản mệnh quá ${D.newGap} phẩm), văn đã có thì cộng điểm bằng hệ số phẩm của món (cấp 2 ở ${D.runeLv[0]} điểm, cấp 3 ở ${D.runeLv[1]} điểm; cấp 4–5 nuốt thành công theo tỉ lệ với món phẩm ≥ phẩm hiệu dụng).
         Ứng viên được game gieo theo kiếp, món, năm tuổi và số món đã nuốt, nên đổi khi sang năm hoặc sau mỗi lần nuốt.</div>
         ${has("devourCandidates", "devourItemError") ? (nut.slice(0, 10).map(mk).join("") || '<div class="vk-mu" style="margin-top:8px">Không có món nào nuốt được lúc này (cần pháp khí trong túi, không trên kinh mạch, không khóa).</div>') + (nut.length > 10 ? `<div class="vk-mu" style="font-size:12px">Còn ${nut.length - 10} món khác.</div>` : "") : needMsg("ứng viên văn khi nuốt")}</div>`;
           }
@@ -25029,6 +25301,7 @@ table.au-tb tr:last-child td {
             smartShield: true,
             smartCc: true,
             comboSequence: true,
+            teHuyetMode: "off",
             emergencyThieuDot: true,
             emergencyEscape: false,
             autoThaMang: true,
@@ -25634,6 +25907,9 @@ table.au-tb tr:last-child td {
           }
           if (typeof AU.cfg.tc.autoEnemyEscape !== "boolean") {
             AU.cfg.tc.autoEnemyEscape = true;
+          }
+          if (!AU.cfg.tc.teHuyetMode) {
+            AU.cfg.tc.teHuyetMode = "off";
           }
           if (typeof AU.cfg.sdb.autoThaMang !== "boolean") {
             AU.cfg.sdb.autoThaMang = true;
@@ -26259,7 +26535,12 @@ table.au-tb tr:last-child td {
 
           // 3C. Nuốt đan Bộc Phát khi đối đầu Boss / Tinh anh (Burst Pill)
           const isBossOrElite = liveFoes.some(
-            (d) => d.muc === "boss" || d.muc === "tinh_anh",
+            (d) =>
+              d.muc === "boss" ||
+              d.muc === "tinh_anh" ||
+              (d.bac || 0) > (ta.bac || 0) ||
+              (d.khiHuyetToiDa || 0) >= (ta.khiHuyetToiDa || 0) * 1.5 ||
+              (d.apBac || 0) > (ta.apBac || 0),
           );
           if (
             canUseItem &&
@@ -26504,9 +26785,22 @@ table.au-tb tr:last-child td {
               core["combat/actions"].chanChieu) ||
             (core && core.chanChieu);
 
+          const teHuyetMode = cfg.teHuyetMode || "off";
+          const canUseBloodSacrifice = (c) => {
+            if (!c.bloodYears) return true;
+            if (ta.khiHuyet < ta.khiHuyetToiDa * 0.15) return false;
+            if (teHuyetMode === "off") return false;
+            if (teHuyetMode === "boss") return isBossOrElite;
+            if (teHuyetMode === "emergency")
+              return hpRatio < 0.35 && (isBossOrElite || liveFoes.length > 0);
+            if (teHuyetMode === "always") return true;
+            return false;
+          };
+
           const usableSkills = skills.filter((c) => {
             if (!c || !c.id) return false;
             if (failedActions.has("chieu:" + c.id)) return false;
+            if (c.bloodYears && !canUseBloodSacrifice(c)) return false;
             if (typeof chanChieuFn === "function") {
               try {
                 if (chanChieuFn(tran, c) !== undefined) return false;
@@ -26515,8 +26809,6 @@ table.au-tb tr:last-child td {
               if (ta.hoi && (ta.hoi[c.id] ?? 0) > curRound) return false;
               if ((c.phi || 0) > (ta.linhLuc || 0)) return false;
               if (c.natal && (ta.natalBrokenUntil || 0) >= curRound)
-                return false;
-              if (c.bloodYears && ta.khiHuyet < ta.khiHuyetToiDa * 0.15)
                 return false;
               if (
                 c.lenh &&
@@ -26622,7 +26914,9 @@ table.au-tb tr:last-child td {
 
           // 5G. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
           if (!tran.natalUsed && usableSkills.length > 0) {
-            const natalSkill = usableSkills.find((c) => c.natal);
+            const natalSkill = usableSkills.find(
+              (c) => c.natal && !c.bloodYears,
+            );
             if (natalSkill) {
               return { loai: "chieu", id: natalSkill.id };
             }
@@ -26644,6 +26938,23 @@ table.au-tb tr:last-child td {
                 core["combat/actions"].heSoHe) ||
               (core && core.heSoHe);
 
+            const hasFollowupSkill = attackSkills.length >= 2;
+            const targetHp = target.khiHuyet || 0;
+            const isLowStraggler =
+              liveFoes.length === 1 &&
+              targetHp <= estBasicDmg * 1.75 &&
+              hpRatio > 0.45;
+            const targetHasDebuff = !!(
+              (Array.isArray(target.statuses) &&
+                target.statuses.some(
+                  (s) => !["empower", "haste", "regen"].includes(s.kind),
+                )) ||
+              target.phaGiap ||
+              target.suyYeu ||
+              target.anKy ||
+              (target.trangThai && Object.keys(target.trangThai).length > 0)
+            );
+
             const scored = attackSkills.map((c) => {
               let score = c.uy || 1;
               if (c.he && target.he) {
@@ -26661,18 +26972,54 @@ table.au-tb tr:last-child td {
               }
               const targetShield =
                 (target.hoThuan || 0) + (target.thuanPhu || 0);
-              if (targetShield > 20) {
-                if (
-                  /phá giáp|xuyên|phá khiên|phá thuẫn|trừ thuẫn/i.test(
+              const isSunderOrMark =
+                /phá giáp|xuyên|phá khiên|phá thuẫn|trừ thuẫn|ấn ký|suy yếu|lộ sơ hở|huyết ấn|kiếm ấn/i.test(
+                  c.ten || "",
+                ) ||
+                (Array.isArray(c.effects) &&
+                  c.effects.some((e) =>
+                    [
+                      "sunder",
+                      "mark",
+                      "decay",
+                      "chill",
+                      "bleed",
+                      "poison",
+                    ].includes(e.kind),
+                  )) ||
+                c.phaGiap ||
+                c.sunder ||
+                c.mark;
+              if (targetShield > 20 && isSunderOrMark) {
+                score *= 1.55;
+              }
+              // Chuỗi Liên Hoàn Debuff -> Đại Chiêu: ưu tiên Phá Giáp / Ấn Ký mở màn trước khi tung Nuke
+              if (
+                hasFollowupSkill &&
+                !targetHasDebuff &&
+                isSunderOrMark &&
+                (isBossOrElite || targetHp > estBasicDmg * 2.5)
+              ) {
+                score *= 1.45;
+              }
+              // Kích nổ Ấn Ký / Trạng Thái Xấu trên mục tiêu đã dính debuff
+              if (
+                targetHasDebuff &&
+                (c.devour ||
+                  (Array.isArray(c.markTriggers) && c.markTriggers.length > 0) ||
+                  /kích nổ|trảm|tuyệt sát|phệ hồn|đoạt mệnh|thiên phạt/i.test(
                     c.ten || "",
                   ) ||
-                  c.phaGiap
-                ) {
-                  score *= 1.5;
-                }
+                  (c.uy || 0) >= 45)
+              ) {
+                score *= 1.25;
               }
-              if ((target.khiHuyet || 0) < 50 && (c.phi || 0) > 15) {
-                score *= 0.4;
+              // Bảo toàn Đại Chiêu / Hồi Chiêu Dài khi chỉ còn 1 quái tàn huyết
+              if (
+                (targetHp < 50 && (c.phi || 0) > 15) ||
+                (isLowStraggler && ((c.hoi || 0) >= 3 || (c.phi || 0) >= 25))
+              ) {
+                score *= 0.35;
               }
               return { c, score };
             });
@@ -26936,6 +27283,46 @@ table.au-tb tr:last-child td {
             foeStr = `<span style="font-size:11px;color:#fca5a5" title="${esc(fName)}">⚔️ ${esc(fName)}: ${fHpPct}%</span>`;
           }
 
+          function getTeHuyetUi(mode) {
+            if (mode === "boss") {
+              return {
+                label: "🩸 Tế Huyết: Boss",
+                color: "#fbbf24",
+                bg: "rgba(245,158,11,0.2)",
+                border: "rgba(245,158,11,0.6)",
+                title:
+                  "Tế Huyết Bản Mệnh: Bật khi gặp Boss / Kẻ địch mạnh. Click để đổi: Boss ➔ Luôn Dùng ➔ Tắt",
+              };
+            }
+            if (mode === "always") {
+              return {
+                label: "🩸 Tế Huyết: BẬT",
+                color: "#f87171",
+                bg: "rgba(239,68,68,0.25)",
+                border: "rgba(239,68,68,0.7)",
+                title:
+                  "Tế Huyết Bản Mệnh: Đang BẬT TOÀN BỘ (Đốt thọ nguyên). Click để TẮT",
+              };
+            }
+            if (mode === "emergency") {
+              return {
+                label: "🩸 Tế Huyết: Khẩn",
+                color: "#f472b6",
+                bg: "rgba(244,114,182,0.2)",
+                border: "rgba(244,114,182,0.6)",
+                title: "Tế Huyết Bản Mệnh: Chỉ khi máu < 35%. Click để đổi",
+              };
+            }
+            return {
+              label: "🩸 Tế Huyết: Tắt",
+              color: "#94a3b8",
+              bg: "rgba(255,255,255,0.05)",
+              border: "rgba(255,255,255,0.15)",
+              title:
+                "Tế Huyết Bản Mệnh: Đang TẮT (Bảo toàn thọ nguyên). Click để BẬT khi gặp Boss",
+            };
+          }
+
           if (!combatOverlayEl) {
             combatOverlayEl = document.createElement("div");
             combatOverlayEl.id = "vkx-combat-overlay";
@@ -26945,6 +27332,8 @@ table.au-tb tr:last-child td {
             if (cfg.autoInCombat) {
               combatAutoActive = true;
             }
+
+            const curTeHuyet = getTeHuyetUi(cfg.teHuyetMode || "off");
 
             combatOverlayEl.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:2px">
@@ -26958,12 +27347,50 @@ table.au-tb tr:last-child td {
           ${foeStr}
         </div>
       </div>
+      <button id="vkx-btn-combat-tehuyet" class="vk-btn sec" style="padding:4px 8px;font-size:11px;border-radius:8px;cursor:pointer;background:${curTeHuyet.bg};color:${curTeHuyet.color};border:1px solid ${curTeHuyet.border}" title="${curTeHuyet.title}">${curTeHuyet.label}</button>
       <button id="vkx-btn-combat-speed" class="vk-btn sec" style="padding:4px 8px;font-size:11px;border-radius:8px;cursor:pointer" title="Đổi tốc độ nhịp đánh">${curSpeed === "instant" ? "⚡ 15ms" : "⏱ 200ms"}</button>
       <button id="vkx-btn-combat-step" class="vk-btn sec" style="padding:4px 9px;font-size:12px;border-radius:8px;cursor:pointer">1 Đòn</button>
       <button id="vkx-btn-combat-toggle" class="vk-btn" style="padding:4px 10px;font-size:12px;border-radius:8px;cursor:pointer;background:${combatAutoActive ? "#f87171" : "#3ddc97"};color:#05140d;font-weight:700">${combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh"}</button>
     `;
 
             document.body.appendChild(combatOverlayEl);
+
+            const btnTeHuyet = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-tehuyet",
+            );
+            if (btnTeHuyet) {
+              btnTeHuyet.onclick = (e) => {
+                e.stopPropagation();
+                const cur = cfg.teHuyetMode || "off";
+                let next = "boss";
+                if (cur === "off") next = "boss";
+                else if (cur === "boss") next = "always";
+                else next = "off";
+
+                cfg.teHuyetMode = next;
+                AU.cfg.tc.teHuyetMode = next;
+                auSave();
+
+                const ui = getTeHuyetUi(next);
+                btnTeHuyet.textContent = ui.label;
+                btnTeHuyet.style.color = ui.color;
+                btnTeHuyet.style.background = ui.bg;
+                btnTeHuyet.style.borderColor = ui.border;
+                btnTeHuyet.title = ui.title;
+
+                const selEl = document.getElementById("au-tc-te-huyet");
+                if (selEl) selEl.value = next;
+
+                if (typeof notify === "function") {
+                  notify(
+                    ui.label +
+                      (next !== "off"
+                        ? " (Đốt thọ khi xả chiêu)"
+                        : " (Bảo toàn thọ nguyên)"),
+                  );
+                }
+              };
+            }
 
             const btnSpeed = combatOverlayEl.querySelector(
               "#vkx-btn-combat-speed",
@@ -27017,6 +27444,18 @@ table.au-tb tr:last-child td {
             if (speedEl) {
               speedEl.textContent =
                 curSpeed === "instant" ? "⚡ 15ms" : "⏱ 200ms";
+            }
+
+            const btnTeHuyet = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-tehuyet",
+            );
+            if (btnTeHuyet) {
+              const ui = getTeHuyetUi(cfg.teHuyetMode || "off");
+              btnTeHuyet.textContent = ui.label;
+              btnTeHuyet.style.color = ui.color;
+              btnTeHuyet.style.background = ui.bg;
+              btnTeHuyet.style.borderColor = ui.border;
+              btnTeHuyet.title = ui.title;
             }
 
             if (combatOverlayEl._lastAutoActive !== combatAutoActive) {
@@ -30319,7 +30758,59 @@ table.au-tb tr:last-child td {
                 }
               }
 
-              // 2. Đã ở bên trong node nơi chốn: Kích hoạt sự kiện Dị Bảo
+              // 2. Đã ở bên trong node nơi chốn: Tự động kiểm tra & dùng đan bù chỉ số khảo nghiệm (nếu thiếu nhẹ) trước khi kích hoạt sự kiện Dị Bảo
+              if (
+                target.e &&
+                target.e.chk &&
+                typeof checkStat === "function" &&
+                typeof findStatBoosters === "function" &&
+                typeof g.useItem === "function"
+              ) {
+                try {
+                  let curNv =
+                    (G().state && G().state.run && G().state.run.nhanVat) || nv;
+                  let curChk = checkStat(target.e.chk, curNv);
+                  if (
+                    curChk &&
+                    !curChk.ok &&
+                    curChk.key &&
+                    curChk.req > curChk.cur
+                  ) {
+                    const gap = curChk.req - curChk.cur;
+                    const boosters = findStatBoosters(curChk.key, gap);
+                    const pills = (
+                      (boosters && boosters.bagItems) ||
+                      []
+                    ).filter(
+                      (b) => b.loai === "dan_duoc" && b.val > 0 && b.count > 0,
+                    );
+                    let gained = 0;
+                    for (const pItem of pills) {
+                      while (
+                        gained < gap &&
+                        curNv.tuiDo &&
+                        curNv.tuiDo[pItem.id] > 0
+                      ) {
+                        const prevVal = checkStat(target.e.chk, curNv).cur;
+                        const rUse = auCall((gg) => gg.useItem(pItem.id));
+                        curNv =
+                          (G().state &&
+                            G().state.run &&
+                            G().state.run.nhanVat) ||
+                          curNv;
+                        const nextVal = checkStat(target.e.chk, curNv).cur;
+                        if (!rUse.ok || nextVal <= prevVal) break;
+                        gained += nextVal - prevVal;
+                        auLog(
+                          `💊 Tự động dùng «${pItem.ten}» bù chỉ số khảo nghiệm ${curChk.name}: ${prevVal} ➔ ${nextVal}/${curChk.req}`,
+                          "vk-ok",
+                        );
+                      }
+                      if (gained >= gap) break;
+                    }
+                  }
+                } catch (e) {}
+              }
               st.lastThuongThe = (nv && nv.thuongThe) || 0;
 
               // Tự động Lưu Nhanh trước khi vào sự kiện nếu bật cấu hình
@@ -31633,6 +32124,7 @@ table.au-tb tr:last-child td {
             c.autoInCombat = ck("au-tc-auto-in-combat", c.autoInCombat);
             c.speed = sel("au-tc-speed", c.speed || "normal");
             c.targetPrio = sel("au-tc-target-prio", c.targetPrio || "smart");
+            c.teHuyetMode = sel("au-tc-te-huyet", c.teHuyetMode || "off");
             c.healHpThreshold = num0(
               "au-tc-heal-hp",
               10,
@@ -33016,6 +33508,17 @@ table.au-tb tr:last-child td {
           ["counter", "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ)"],
         ],
         c.targetPrio || "smart",
+      )}
+      ${sel(
+        "au-tc-te-huyet",
+        "🩸 Tế Huyết Bản Mệnh (Đốt Thọ & Khí Huyết)",
+        [
+          ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên, không tự tế huyết)"],
+          ["boss", "👑 Chỉ khi gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)"],
+          ["emergency", "🚨 Chỉ khi nguy cấp (Khí huyết < 35% trước Boss)"],
+          ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
+        ],
+        c.teHuyetMode || "off",
       )}
       <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
       <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚙️ Cứu Sinh & Bảo Vệ Tài Nguyên (Đan Dược & Bùa)</div>
@@ -36142,9 +36645,21 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: 'Phiên Bản 7.19.0 · Đại Tu Toàn Diện UI/UX & Giao Diện Tu Tiên',
+            t: 'Phiên Bản 7.20.0 · Đại Tu Hiệu Năng O(1), Thuật Toán Kinh Mạch 3.0 & Tiện Ích UI/UX',
             d: '09/11/2026',
             now: true,
+            pts: [
+              '<b>Tăng Tốc 80% Động Cơ Kinh Mạch (Signature Memoization & O(1) Bitmask Spine):</b> Bổ sung bộ nhớ đệm chữ ký trạng thái cho <code>buildCandidates</code> và <code>benchEnemies</code>, kết hợp kiểm tra liên thông trục Đan Điền – Tâm Pháp bằng phép toán bit <code>(cpAdjMask &amp; cn.cellMask) !== 0n</code> trong O(1), triệt tiêu hoàn toàn độ trễ khởi tạo lặp lại qua các pha Greedy, Simulated Annealing và Hill-Climbing Polish.',
+              '<b>Khắc Phục Triệt Để Lỗi Ghi Đè Hàm <code>stripDead</code> &amp; Lấp Đầy Khe Hở:</b> Hợp nhất hàm <code>stripDead</code> và <code>coverNote</code> bị định nghĩa trùng lặp, khôi phục trọn vẹn pha <code>smartFillRemainingGaps</code> sau khi lọc mảnh đứt mạch và đối sánh chữ ký mảnh ghép chuẩn xác để không bỏ sót cấu hình tối ưu.',
+              '<b>Siêu AI Tác Chiến 2.0 (Liên Hoàn Phá Giáp ➔ Nuke & Quản Trị Tế Huyết Bản Mệnh):</b> Tự động ưu tiên tung kỹ năng Phá Giáp / Ấn Ký / Suy Yếu mở màn trước khi dồn Đại Chiêu; bổ sung cơ chế kiểm soát chiêu Bản Mệnh Tế Huyết (chống hao thọ nguyên ngoài ý muốn) với nút chuyển đổi nhanh <code>🩸 Tế Huyết</code> trực tiếp trên thanh chiến đấu nổi (Tắt / Boss / Bật) giúp người chơi linh hoạt quyết định xả đại chiêu khi gặp Boss mạnh.',
+              '<b>Auto Săn Dị Bảo Tự Động Bù Đan Khảo Nghiệm:</b> Khi đến điểm Dị Bảo yêu cầu kiểm định chỉ số (Thần Thức, Ngộ Tính, Cơ Duyên...), Auto tự động rà soát túi đồ và nuốt đan dược tăng chỉ số tương ứng để vượt ngưỡng khảo nghiệm trước khi tiến vào đoạt bảo.',
+              '<b>Chế Độ Thu Nhỏ Thanh Nổi (Window Shade) &amp; Tìm Nhanh Tab (<code>Ctrl+K</code>):</b> Bổ sung nút Thu Nhỏ (<code>—</code> / đúp chuột tiêu đề / <code>Alt+M</code>) giúp thu gọn cửa sổ thành thanh nổi siêu gọn không che màn hình game; thêm thanh Tìm Nhanh Chức Năng (<code>🔎</code> / <code>Ctrl+K</code>), bộ đếm thời gian thực <code>⏱ MM:SS</code> trên Mini Status Bar và phím tắt toàn cục <code>Alt+T</code>.'
+            ]
+          },
+          {
+            t: 'Phiên Bản 7.19.0 · Đại Tu Toàn Diện UI/UX & Giao Diện Tu Tiên',
+            d: '09/11/2026',
+            now: false,
             pts: [
               '<b>Kiến trúc Stylesheet 6 tầng:</b> Hợp nhất 4 khối CSS phân mảnh thành UI_CSS tinh gọn với CSS Variables, Responsive clamp(), và GPU composite.',
               '<b>4 Theme Tu Tiên Dark Fantasy Mới:</b> Ra mắt U Minh Ma Vực (Mặc định), Thanh Hư Kiếm, Cửu U Huyết Ma, và Tử Lôi Thiên đạt chuẩn tương phản WCAG AAA.',
