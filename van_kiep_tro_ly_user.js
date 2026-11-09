@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.22.0
+// @version      7.22.1
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.22.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.22.1
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.22.0";
+      var TOOL_VER = "7.22.1";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -8608,7 +8608,8 @@ table.au-tb tr:last-child td {
           return ga === gb || SINH_HE[ga] === gb;
         }
         function hopKinhLoHe(heArrA, heArrB) {
-          if (!heArrA || !heArrB || !heArrA.length || !heArrB.length) return false;
+          if (!heArrA || !heArrB || !heArrA.length || !heArrB.length)
+            return false;
           if (S.core && typeof S.core.hopKinhLo === "function") {
             try {
               return !!S.core.hopKinhLo(heArrA, heArrB);
@@ -8733,10 +8734,26 @@ table.au-tb tr:last-child td {
           for (const [k, val] of Object.entries(cs)) {
             if (!val) continue;
             let cw = 10;
-            if (mode === "tu" && (k === "ngo_tinh" || k === "can_cot" || k === "khi_van")) cw = 28;
-            else if (mode === "dot_pha" && (k === "dao_tam" || k === "can_cot" || k === "than_thuc" || k === "khi_van")) cw = 32;
-            else if (mode === "tank" && (k === "can_cot" || k === "dao_tam")) cw = 24;
-            else if ((mode === "danh" || mode === "burst") && (k === "than_phap" || k === "than_thuc" || k === "can_cot")) cw = 20;
+            if (
+              mode === "tu" &&
+              (k === "ngo_tinh" || k === "can_cot" || k === "khi_van")
+            )
+              cw = 28;
+            else if (
+              mode === "dot_pha" &&
+              (k === "dao_tam" ||
+                k === "can_cot" ||
+                k === "than_thuc" ||
+                k === "khi_van")
+            )
+              cw = 32;
+            else if (mode === "tank" && (k === "can_cot" || k === "dao_tam"))
+              cw = 24;
+            else if (
+              (mode === "danh" || mode === "burst") &&
+              (k === "than_phap" || k === "than_thuc" || k === "can_cot")
+            )
+              cw = 20;
             p += val * cw;
           }
           return p;
@@ -8778,9 +8795,13 @@ table.au-tb tr:last-child td {
             const isAtk = ch.dang === "cong";
             sp += (ch.uy || 0.8) * (isAtk ? uyW : uyW * 0.72);
             if (ch.shieldTurns)
-              sp += ch.shieldTurns * (mode === "tank" || mode === "dot_pha" ? 70 : 35);
+              sp +=
+                ch.shieldTurns *
+                (mode === "tank" || mode === "dot_pha" ? 70 : 35);
             if (ch.controlTurns)
-              sp += ch.controlTurns * (mode === "tank" || mode === "danh" ? 55 : 30);
+              sp +=
+                ch.controlTurns *
+                (mode === "tank" || mode === "danh" ? 55 : 30);
             sp += (ch.effects || []).length * 22;
           }
 
@@ -8811,7 +8832,8 @@ table.au-tb tr:last-child td {
             } else if (mode === "tank") {
               if (k === "can_cot" || k === "dao_tam") cw = 36;
             } else {
-              if (k === "than_phap" || k === "than_thuc" || k === "can_cot") cw = 28;
+              if (k === "than_phap" || k === "than_thuc" || k === "can_cot")
+                cw = 28;
             }
             sp += val * cw;
           }
@@ -8846,7 +8868,8 @@ table.au-tb tr:last-child td {
           return sp * densityMult;
         }
 
-        // 2. 15-Turn Qi Cycle Simulator: Mô phỏng vòng quay chân khí 15 hiệp thực tế
+        // 2. 15-Turn Qi Cycle Simulator (Multi-Skill Per Turn):
+        // Trong Vạn Kiếp Tu Tiên, mỗi hiệp người chơi tung TẤT CẢ các chiêu đã hồi xong (chứ không phải chỉ 1 chiêu/hiệp!).
         function simulateQiCycle(P, sortedSkills, turns = 15) {
           const maxQi = P.linhLucToiDa || 0;
           const regen = P.linhLucMoiLuot || 0;
@@ -8862,6 +8885,15 @@ table.au-tb tr:last-child td {
           let cycleTotalDmg = 0;
           let skillsCast = 0;
 
+          // Mức tiêu hao Linh Lực trung bình mỗi hiệp (khớp chính xác 100% với llBalanceStr trong bảng so sánh statRows)
+          let drainPerTurn = 0;
+          for (let i = 0; i < numSkills; i++) {
+            const phi = skills[i].phi || 0;
+            if (phi > 0) {
+              drainPerTurn += phi / Math.max(1, (skills[i].hoi || 0) + 1);
+            }
+          }
+
           for (let t = 1; t <= turns; t++) {
             if (t > 1) {
               qi = Math.min(maxQi, qi + regen);
@@ -8870,33 +8902,30 @@ table.au-tb tr:last-child td {
               }
             }
 
-            let chosenIdx = -1;
+            let stalledThisTurn = false;
             for (let i = 0; i < numSkills; i++) {
               if (cd[i] === 0) {
-                chosenIdx = i;
-                break;
+                const sk = skills[i];
+                const cost = sk.phi || 0;
+                if (cost > 0 && qi < cost) {
+                  stalledThisTurn = true;
+                  qiDeficit += cost - qi;
+                } else {
+                  if (cost > 0) qi -= cost;
+                  cd[i] = Math.max(1, (sk.hoi || 0) + 1);
+                  const dmg = sk.uyLuc || (sk.uy || 0) * (P.phapLuc || 1);
+                  cycleTotalDmg += dmg;
+                  skillsCast++;
+                }
               }
             }
-
-            if (chosenIdx !== -1) {
-              const sk = skills[chosenIdx];
-              const cost = sk.phi || 0;
-              if (cost > 0 && qi < cost) {
-                qiStallTurns++;
-                qiDeficit += cost - qi;
-              } else {
-                if (cost > 0) qi -= cost;
-                cd[chosenIdx] = Math.max(1, (sk.hoi || 0) + 1);
-                const dmg = sk.uyLuc || (sk.uy || 0) * (P.phapLuc || 1);
-                cycleTotalDmg += dmg;
-                skillsCast++;
-              }
-            }
+            if (stalledThisTurn) qiStallTurns++;
           }
 
           return {
             qiStallTurns,
             qiDeficit,
+            drainPerTurn,
             cycleTotalDmg,
             skillsCast,
             turns,
@@ -8904,7 +8933,7 @@ table.au-tb tr:last-child td {
           };
         }
 
-        // 3. Chấm điểm chân khí chuẩn xác: Phạt lũy tiến khi kẹt chiêu & Thưởng lớn khi tuần hoàn hoàn hảo
+        // 3. Chấm điểm chân khí chuẩn xác 4.1: Triệt tiêu hoàn toàn "🔴 Thiếu Hụt Chân Khí" & Tuân thủ nghiêm Giới Hạn Chiêu Chủ Động
         function calcQiScore(P, sortedSkills, mode, turns = 15) {
           const sim = simulateQiCycle(P, sortedSkills, turns);
           const costSkills = (sortedSkills || []).filter(
@@ -8915,28 +8944,42 @@ table.au-tb tr:last-child td {
             : 0;
           const regen = P.linhLucMoiLuot || 0;
           const maxQi = P.linhLucToiDa || 0;
+          const drain = sim.drainPerTurn || 0;
 
           let llPenalty = 0;
-          const isCombat = mode === "danh" || mode === "burst";
+          const isCombat =
+            mode === "danh" || mode === "burst" || mode === "bal";
 
+          // Phạt cực nặng khi tổng tiêu hao/lượt vượt quá hồi phục/lượt (nguyên nhân trực tiếp gây "🔴 Thiếu Hụt Chân Khí" trên bảng!)
+          if (drain > regen) {
+            const drainDef = drain - regen;
+            llPenalty += 520 + drainDef * 42 + Math.pow(drainDef, 1.55) * 20;
+          } else if (drain > 0 && regen < drain * 1.15) {
+            // Chưa đạt ngưỡng dư dả 1.15x ("🟢 Tự Cấp Tự Túc")
+            llPenalty += (drain * 1.15 - regen) * 24;
+          }
+
+          // Phạt khi xảy ra kẹt chiêu trong mô phỏng đa chiêu/hiệp
           if (sim.qiStallTurns > 0 || sim.qiDeficit > 0) {
-            const stallMult = isCombat ? 135 : 95;
-            const defMult = isCombat ? 18 : 12;
+            const stallMult = isCombat ? 150 : 110;
+            const defMult = isCombat ? 16 : 11;
             llPenalty +=
               sim.qiStallTurns * stallMult +
-              Math.pow(sim.qiStallTurns, 1.8) * 75 +
+              Math.pow(sim.qiStallTurns, 1.75) * 70 +
               sim.qiDeficit * defMult;
           }
 
+          // Phạt khi Linh Lực hồi/lượt thấp hơn chi phí của chiêu đắt nhất
           if (maxPhi > 0) {
-            if (regen < maxPhi * 0.8) {
-              llPenalty += (maxPhi * 0.8 - regen) * (isCombat ? 22.0 : 14.0);
+            if (regen < maxPhi * 0.95) {
+              llPenalty += (maxPhi * 0.95 - regen) * (isCombat ? 32.0 : 20.0);
             }
-            if (maxQi < maxPhi * 1.35) {
-              llPenalty += (maxPhi * 1.35 - maxQi) * 7.0;
+            if (maxQi < maxPhi * 1.5) {
+              llPenalty += (maxPhi * 1.5 - maxQi) * 10.0;
             }
           }
 
+          // Tuân thủ nghiêm ngặt Giới Hạn Chiêu Thức Chủ Động (ví dụ: 2–3 Chiêu Tinh Hoa)
           const skillCap =
             S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
               ? S.hbMaxSkills
@@ -8948,28 +8991,32 @@ table.au-tb tr:last-child td {
 
           if (skillCap > 0 && costSkills.length > skillCap) {
             const ex = costSkills.length - skillCap;
-            if (sim.qiStallTurns > 0) {
-              llPenalty += ex * 220 + Math.pow(ex, 2) * 150;
-            } else if (S.hbLite) {
-              llPenalty += ex * 18;
-            } else {
-              // Khi xếp từ túi đồ thực tế mà chân khí hoàn toàn dư dả (0 lượt kẹt chiêu),
-              // không phạt nặng việc lắp thêm chiêu có ích.
-              llPenalty += ex * 4;
-            }
+            llPenalty += ex * 380 + Math.pow(ex, 2) * 240;
+          } else if (costSkills.length > 4) {
+            const ex = costSkills.length - 4;
+            llPenalty += ex * 280 + Math.pow(ex, 2) * 180;
           }
 
+          // Thưởng lớn khi đạt chuẩn "🟢 Tự Cấp Tự Túc" (regen >= drain * 1.15, regen >= maxPhi * 0.95, số chiêu <= skillCap)
           let llBonus = 0;
-          if (sim.qiStallTurns === 0 && sim.qiDeficit === 0) {
-            if (costSkills.length >= 1) {
-              llBonus += isCombat ? 165 : 110;
-              if (sim.skillsCast >= 7) llBonus += 55;
+          if (
+            costSkills.length >= 1 &&
+            costSkills.length <= Math.max(3, skillCap)
+          ) {
+            if (
+              regen >= drain * 1.15 &&
+              regen >= maxPhi * 0.95 &&
+              sim.qiStallTurns === 0
+            ) {
+              llBonus += 360;
+            } else if (regen >= drain && sim.qiStallTurns === 0) {
+              llBonus += 180;
             }
           }
 
           const baseLl =
-            (mode === "tu" ? 12.5 : isCombat ? 9.5 : 7.5) * regen +
-            (mode === "tu" ? 2.6 : 1.9) * Math.min(350, maxQi);
+            (mode === "tu" ? 13.5 : isCombat ? 11.5 : 9.0) * regen +
+            (mode === "tu" ? 2.6 : 2.1) * Math.min(400, maxQi);
 
           return {
             score: baseLl - llPenalty + llBonus,
@@ -9002,11 +9049,10 @@ table.au-tb tr:last-child td {
             dp = R.biDong.dot_pha || 0;
           const ng = (R.diemNghich || 0) * ngW;
 
-          // Đánh giá chiêu thức thực tế (Rotation) + Chu kỳ sát thương 15 hiệp
+          // Đánh giá chiêu thức thực tế (Rotation): Chỉ cộng điểm sát thương cho tối đa skillCap chiêu mạnh nhất!
           const chieuList = (P.chieu || []).filter(
             (x) =>
-              x &&
-              ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
+              x && ((x.phi || 0) > 0 || (x.uy || 0) > 0 || (x.uyLuc || 0) > 0),
           );
           const sortedSkills = chieuList.slice().sort((a, b) => {
             const uyA = a.uyLuc || (a.uy || 0) * (P.phapLuc || 1);
@@ -9014,10 +9060,23 @@ table.au-tb tr:last-child td {
             return uyB - uyA;
           });
 
-          const rotWeights = [1.0, 0.72, 0.42, 0.18, 0.08];
+          const skillCap =
+            S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : mode === "tu"
+                ? 2
+                : S.hbRatio && S.hbRatio.t >= 0.6
+                  ? 3
+                  : 4;
+
+          const baseRotWeights = [1.0, 0.68, 0.35, 0.12];
           let effectiveRotDmg = 0;
-          for (let i = 0; i < sortedSkills.length; i++) {
-            const w = i < rotWeights.length ? rotWeights[i] : 0.04;
+          const maxCountedSkills = Math.min(
+            sortedSkills.length,
+            skillCap > 0 ? skillCap : 4,
+          );
+          for (let i = 0; i < maxCountedSkills; i++) {
+            const w = i < baseRotWeights.length ? baseRotWeights[i] : 0.0;
             const skillDmg =
               sortedSkills[i].uyLuc ||
               (sortedSkills[i].uy || 0) * (P.phapLuc || 1);
@@ -9031,18 +9090,15 @@ table.au-tb tr:last-child td {
           const qiRes = calcQiScore(P, sortedSkills, mode, 15);
           const llScore = qiRes.score;
 
-          // Sát thương chuẩn hóa theo Pháp Lực cơ sở của cảnh giới để phản ánh nhạy bén cả log lẫn tỉ lệ tuyến tính
-          const baseSp = Math.max(
-            20,
-            (capX && capX.base) || P.phapLuc || 50,
-          );
+          // Sát thương chuẩn hóa theo Pháp Lực cơ sở của cảnh giới (Tuyệt đối không cộng uyMax thô chưa chuẩn hóa!)
+          const baseSp = Math.max(20, (capX && capX.base) || P.phapLuc || 50);
           const relRot = effectiveRotDmg / baseSp;
           const relMax = uyMax / baseSp;
           const relCycle = (qiRes.sim.cycleTotalDmg || 0) / (baseSp * 8);
           const dmgScore =
-            Math.log10(Math.max(10, effectiveRotDmg)) * 38 +
+            Math.log10(Math.max(10, effectiveRotDmg)) * 36 +
             Math.log10(Math.max(10, uyMax)) * 24 +
-            Math.min(280, relRot * 28 + relMax * 18 + relCycle * 32);
+            Math.min(260, relRot * 22 + relMax * 18 + relCycle * 25);
 
           // Huyệt đạo & Khuếch đại hệ số thực tế (heSo Amplification)
           let hyScore = 0;
@@ -9051,17 +9107,34 @@ table.au-tb tr:last-child td {
           const usedCells = new Set();
           const bBuild = B ? B.build : null;
 
+          // Xác định danh sách ID của top skillCap chiêu mạnh nhất để không thưởng heSoAmp cho chiêu thừa
+          const topSkillNames = new Set(
+            sortedSkills.slice(0, maxCountedSkills).map((s) => s.ten || s.id),
+          );
+
           manh.forEach((p, idx) => {
             p.cells.forEach((x) => usedCells.add(x));
             const rm = R.manh && R.manh[idx];
             const isThong = !!(rm && rm.thong);
             const it = c.items.get(p.m.item);
-            if (isThong) {
+            if (isThong && it) {
               connectedCells += p.cells.length;
-              const scPwr = kmScalablePower(it, mode, bBuild);
-              const heSo = (rm && rm.heSo) || 1.0;
-              // Thưởng trực tiếp cho mức khuếch đại heSo thực tế trên các mảnh nhân hệ số!
-              heSoAmpScore += (heSo - 0.85) * scPwr * 0.42;
+              const isExtraSkill =
+                it.chieu &&
+                (it.chieu.phi || 0) > 0 &&
+                !topSkillNames.has(it.chieu.ten) &&
+                !topSkillNames.has(it.id);
+              if (!isExtraSkill) {
+                let scPwr = kmScalablePower(it, mode, bBuild);
+                // Thưởng thêm cho mảnh có Linh Lực khi xếp theo tỉ lệ Tâm Pháp cao (6:4 / 7:3)
+                if (it.linh_luc > 0) {
+                  const ratioBoost =
+                    S.hbRatio && S.hbRatio.t >= 0.65 ? 1.55 : 1.25;
+                  scPwr += it.linh_luc * 45 * ratioBoost;
+                }
+                const heSo = (rm && rm.heSo) || 1.0;
+                heSoAmpScore += (heSo - 0.85) * scPwr * 0.38;
+              }
             }
             const q =
               p.hyCount !== undefined
@@ -9071,10 +9144,9 @@ table.au-tb tr:last-child td {
               if (isThong) {
                 const pwr = acupointPriority(it, mode, bBuild);
                 if (pwr <= 20) {
-                  // Phạt nhẹ khi đặt mảnh không nhân hệ số (thuần toc_do/dot_pha) chiếm chỗ Huyệt Đạo
                   hyScore -= 15 * q;
                 } else {
-                  hyScore += 32 * q + 0.36 * pwr * (1 + 0.25 * (q - 1));
+                  hyScore += 32 * q + 0.34 * pwr * (1 + 0.25 * (q - 1));
                 }
               } else {
                 hyScore -= 95 * q;
@@ -9099,6 +9171,13 @@ table.au-tb tr:last-child td {
               200 * excess + (excess > 0.08 ? 350 * (excess - 0.08) : 0);
           }
 
+          // Điểm nền tảng phòng thủ (Hộ Thể + Khí Huyết) để chế độ Burst / Đánh không bao giờ vứt bỏ 60% Hộ Thể và 20k Máu chỉ để lấy vài trăm sát thương lẻ!
+          const effHoThe = Math.min(maxHoThe, curHoThe);
+          const effHp = (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
+          const defFoundationScore =
+            effHoThe * (mode === "tank" ? 380 : 240) +
+            Math.log10(Math.max(10, effHp)) * 48;
+
           let kinhLoBonus = 0;
           (R.manh || []).forEach((m) => {
             if (
@@ -9122,7 +9201,8 @@ table.au-tb tr:last-child td {
               const p = manh[idx];
               const it = m.item;
               const scPwr = kmScalablePower(it, mode, bBuild);
-              const scaleFactor = scPwr > 20 ? 1.0 + Math.min(1.5, scPwr / 250) : 0.25;
+              const scaleFactor =
+                scPwr > 20 ? 1.0 + Math.min(1.5, scPwr / 250) : 0.25;
               const canRecolor =
                 isTayO &&
                 p &&
@@ -9140,7 +9220,7 @@ table.au-tb tr:last-child td {
           });
 
           const deadPenalty = S.full ? 0 : dead * 95;
-          const densityBonus = connectedCells * 3.2 + thong * 9.0;
+          const densityBonus = connectedCells * 3.0 + thong * 8.0;
 
           return {
             thong,
@@ -9150,11 +9230,13 @@ table.au-tb tr:last-child td {
             ng,
             dmgScore,
             uyMax,
+            relMax,
             effectiveRotDmg,
             llScore,
             hyScore,
             heSoAmpScore,
             hoThePenalty,
+            defFoundationScore,
             kinhLoBonus,
             colorScore,
             deadPenalty,
@@ -9185,8 +9267,10 @@ table.au-tb tr:last-child td {
             avgEnemyDps = 50;
           if (enemies && enemies.length) {
             avgEnemyHp =
-              enemies.reduce((a, x) => a + ((x.E && x.E.khiHuyetToiDa) || 500), 0) /
-              enemies.length;
+              enemies.reduce(
+                (a, x) => a + ((x.E && x.E.khiHuyetToiDa) || 500),
+                0,
+              ) / enemies.length;
             avgEnemyDps =
               enemies.reduce((a, x) => a + ((x.E && x.E.phapLuc) || 50), 0) /
               enemies.length;
@@ -9228,7 +9312,8 @@ table.au-tb tr:last-child td {
             const effHp =
               (P.khiHuyetToiDa || 100) / Math.max(0.15, 1 - effHoThe);
             const hpLog = Math.log10(Math.max(10, effHp)) * 55;
-            const ttkEnemy = avgEnemyHp / Math.max(1, cm.effectiveRotDmg || P.phapLuc || 10);
+            const ttkEnemy =
+              avgEnemyHp / Math.max(1, cm.effectiveRotDmg || P.phapLuc || 10);
             const ttkSelf = effHp / Math.max(1, avgEnemyDps * 1.35);
             const duelRatio = Math.min(3.5, ttkSelf / Math.max(0.5, ttkEnemy));
             const duelProxy = duelRatio * 180;
@@ -9236,8 +9321,8 @@ table.au-tb tr:last-child td {
             let proxyFight = 0;
             if (mode === "danh" || mode === "burst") {
               proxyFight =
-                1.25 * cm.dmgScore +
-                0.8 * hpLog +
+                1.2 * cm.dmgScore +
+                0.95 * hpLog +
                 0.85 * duelProxy +
                 (P.tocDo || 0) * 0.25;
             } else if (mode === "tank") {
@@ -9247,7 +9332,7 @@ table.au-tb tr:last-child td {
                 0.75 * duelProxy +
                 320 * effHoThe;
             } else if (mode === "tu") {
-              proxyFight = 0.22 * cm.dmgScore + 0.3 * hpLog + 0.25 * duelProxy;
+              proxyFight = 0.22 * cm.dmgScore + 0.35 * hpLog + 0.25 * duelProxy;
             } else if (mode === "dot_pha") {
               proxyFight = 0.28 * cm.dmgScore + 0.45 * hpLog + 0.3 * duelProxy;
             } else {
@@ -9295,19 +9380,22 @@ table.au-tb tr:last-child td {
                 18 * cm.ng +
                 cm.llScore;
             } else if (mode === "burst") {
+              // Sửa triệt để lỗi cộng 0.9 * uyMax thô (gây lệch hàng nghìn điểm ở cảnh giới cao): dùng relMax đã chuẩn hóa!
               s =
                 proxyFight +
-                1.75 * cm.dmgScore +
-                0.9 * (cm.uyMax || 0) +
+                1.45 * cm.dmgScore +
+                28 * Math.min(15, cm.relMax || 0) +
+                cm.defFoundationScore +
                 0.5 * cm.thong -
-                12 * cm.ng +
+                14 * cm.ng +
                 cm.llScore;
             } else if (mode === "danh") {
               s =
                 proxyFight +
                 1.1 * cm.dmgScore +
+                cm.defFoundationScore +
                 0.5 * cm.thong -
-                8 * cm.ng +
+                10 * cm.ng +
                 cm.llScore;
             } else {
               const realSpd =
@@ -9317,6 +9405,7 @@ table.au-tb tr:last-child td {
               s =
                 proxyFight +
                 0.55 * cm.dmgScore +
+                0.85 * cm.defFoundationScore +
                 65 * cm.toc +
                 (realSpd > 0 ? realSpd * 25 : 0) +
                 50 * cm.dp +
@@ -9391,7 +9480,7 @@ table.au-tb tr:last-child td {
                 wins++;
                 fightScore +=
                   mode === "danh" || mode === "burst"
-                    ? 105 + 18 * hpLeft + 65 / Math.max(1, r.nHiep)
+                    ? 105 + 22 * hpLeft + 65 / Math.max(1, r.nHiep)
                     : mode === "tank"
                       ? 105 + 85 * hpLeft + 22 / Math.max(1, r.nHiep)
                       : 105 + 52 * hpLeft + 28 / Math.max(1, r.nHiep);
@@ -9459,17 +9548,19 @@ table.au-tb tr:last-child td {
             } else if (mode === "burst") {
               s =
                 fightScore +
-                1.75 * cm.dmgScore +
-                0.9 * (cm.uyMax || 0) +
+                1.45 * cm.dmgScore +
+                28 * Math.min(15, cm.relMax || 0) +
+                cm.defFoundationScore +
                 0.5 * cm.thong -
-                12 * cm.ng +
+                14 * cm.ng +
                 cm.llScore;
             } else if (mode === "danh") {
               s =
                 fightScore +
                 1.1 * cm.dmgScore +
+                cm.defFoundationScore +
                 0.5 * cm.thong -
-                8 * cm.ng +
+                10 * cm.ng +
                 cm.llScore;
             } else {
               const realSpd =
@@ -9479,6 +9570,7 @@ table.au-tb tr:last-child td {
               s =
                 fightScore +
                 0.55 * cm.dmgScore +
+                0.85 * cm.defFoundationScore +
                 65 * cm.toc +
                 (realSpd > 0 ? realSpd * 25 : 0) +
                 50 * cm.dp +
@@ -9971,14 +10063,21 @@ table.au-tb tr:last-child td {
             const sortedHy = openHy.slice().sort((a, b) => {
               const da =
                 Math.abs((a % g.rong) - (g.danDien % g.rong)) +
-                Math.abs(Math.floor(a / g.rong) - Math.floor(g.danDien / g.rong));
+                Math.abs(
+                  Math.floor(a / g.rong) - Math.floor(g.danDien / g.rong),
+                );
               const db =
                 Math.abs((b % g.rong) - (g.danDien % g.rong)) +
-                Math.abs(Math.floor(b / g.rong) - Math.floor(g.danDien / g.rong));
+                Math.abs(
+                  Math.floor(b / g.rong) - Math.floor(g.danDien / g.rong),
+                );
               return vIdx === 2 ? db - da : da - db;
             });
 
-            const maxHyTargets = vIdx === 2 ? Math.min(2, sortedHy.length) : Math.min(4, sortedHy.length);
+            const maxHyTargets =
+              vIdx === 2
+                ? Math.min(2, sortedHy.length)
+                : Math.min(4, sortedHy.length);
 
             for (const h of sortedHy) {
               if ((placedHuyetMask & (1n << BigInt(h))) !== 0n) continue;
@@ -10088,7 +10187,10 @@ table.au-tb tr:last-child td {
                   for (const id of cpPool) {
                     if (bridgePieces.some((p) => p.m.item === id)) continue;
                     const itCnd = c.items.get(id);
-                    const isKinhLoMatch = hopKinhLoHe(itCnd.he || [], hPiece.hs || []);
+                    const isKinhLoMatch = hopKinhLoHe(
+                      itCnd.he || [],
+                      hPiece.hs || [],
+                    );
                     for (const cnd of cand[id]) {
                       if (!cnd.cells.includes(stepCell)) continue;
                       if ((placedHuyetMask & cnd.cellMask) !== 0n) continue;
@@ -10196,15 +10298,36 @@ table.au-tb tr:last-child td {
             }
           }
 
-          // Lan tỏa mạng lưới lấp kín ma trận (nhanh & không chặn cứng lệch màu đơn lẻ)
+          // Lan tỏa mạng lưới lấp kín ma trận (nhanh & tuân thủ nghiêm giới hạn chiêu chủ động + tỉ lệ Tâm Pháp)
           const rndG = createMulberry32(1000 + vIdx * 7919);
+          const skillCapG =
+            S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : mode === "tu"
+                ? 2
+                : S.hbRatio && S.hbRatio.t >= 0.6
+                  ? 3
+                  : 4;
           let curS = quick(cur);
           for (let round = 0; round < 48; round++) {
             const topChoices = [];
+            const curActiveSkills = cur.reduce((acc, p) => {
+              const itP = c.items.get(p.m.item);
+              return (
+                acc + (itP && itP.chieu && (itP.chieu.phi || 0) > 0 ? 1 : 0)
+              );
+            }, 0);
 
             for (const id of Object.keys(cand)) {
               if (cur.some((p) => p.m.item === id)) continue;
               const itCnd = c.items.get(id);
+              const isCostSkill = !!(
+                itCnd &&
+                itCnd.chieu &&
+                (itCnd.chieu.phi || 0) > 0
+              );
+              if (skillCapG > 0 && curActiveSkills >= skillCapG && isCostSkill)
+                continue;
               const acPrio = acupointPriority(itCnd, mode, bBuild);
               const isNonScaling = acPrio <= 20;
 
@@ -10356,23 +10479,36 @@ table.au-tb tr:last-child td {
 
             let curTamCells = 0,
               curTotCells = 0,
-              curSkills = 0;
+              curSkills = 0,
+              estDrain = 0,
+              estRegen = 0;
             if (currentPieces && currentPieces.length) {
               for (const p of currentPieces) {
                 const itP = itemsK.get(p.m.item);
                 if (!itP) continue;
                 curTotCells += p.cells.length;
-                if (hbCls(itP) === "tam" || hbCls(itP) === "bv")
-                  curTamCells += p.cells.length;
-                if (itP.chieu && (itP.chieu.phi || 0) > 0) curSkills++;
+                if (hbCls(itP) === "tam") curTamCells += p.cells.length;
+                else if (hbCls(itP) === "bv")
+                  curTamCells += p.cells.length * 0.35;
+                if (itP.linh_luc > 0) {
+                  estRegen +=
+                    itP.linh_luc * ((p.hyCount || 0) > 0 ? 2.4 : 1.35);
+                }
+                if (itP.chieu && (itP.chieu.phi || 0) > 0) {
+                  curSkills++;
+                  estDrain +=
+                    (itP.chieu.phi || 0) /
+                    Math.max(1, (itP.chieu.hoi || 0) + 1);
+                }
               }
             }
             const rawTargetRatio =
-              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.55;
+              S.hbRatio && S.hbRatio.t != null ? S.hbRatio.t : 0.6;
             const needTam =
-              curTotCells > 0 &&
-              curTamCells < totalBagTamCells &&
-              curTamCells / curTotCells < rawTargetRatio;
+              curTotCells === 0 ||
+              (curTamCells < totalBagTamCells &&
+                curTamCells / curTotCells < rawTargetRatio);
+            const needQi = estDrain > estRegen * 0.82;
             const skillCap =
               S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
                 ? S.hbMaxSkills
@@ -10387,9 +10523,16 @@ table.au-tb tr:last-child td {
               const it = itemsK.get(id);
               let w = itemWeights.get(id) || 5;
               const cls = hbCls(it);
-              if (needTam && (cls === "tam" || cls === "bv")) w *= 1.5;
-              if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0)
-                w *= 0.35;
+              if (needTam) {
+                if (cls === "tam") w *= rawTargetRatio >= 0.68 ? 4.2 : 2.8;
+                else if (cls === "bv") w *= 1.6;
+              }
+              if (needQi && it && (it.linh_luc || 0) > 0) {
+                w *= 2.8 + Math.min(2.5, (it.linh_luc || 0) * 0.25);
+              }
+              if (skillsFull && it && it.chieu && (it.chieu.phi || 0) > 0) {
+                w *= 0.015;
+              }
               weights.push(w);
               sum += w;
             }
@@ -10491,14 +10634,23 @@ table.au-tb tr:last-child td {
                   if ((p.hyCount || 0) > 0) giveMult *= 1.5;
                   if (bBuild && itP && buildMatch(bBuild, itP)) giveMult += 6.5;
 
-                  const khacPen = mode === "dot_pha" || mode === "tu" ? 16.0 : 10.0;
+                  const khacPen =
+                    mode === "dot_pha" || mode === "tu" ? 16.0 : 10.0;
                   synBonus +=
                     recvMult * syn.bGenA +
                     giveMult * syn.aGenB -
                     khacPen * (syn.aKhacB + syn.bKhacA);
                 } else if (S.dir === "ma") {
-                  const isNghichA = !!(itSmart && itSmart.tag && itSmart.tag.includes("nghich"));
-                  const isNghichB = !!(itP && itP.tag && itP.tag.includes("nghich"));
+                  const isNghichA = !!(
+                    itSmart &&
+                    itSmart.tag &&
+                    itSmart.tag.includes("nghich")
+                  );
+                  const isNghichB = !!(
+                    itP &&
+                    itP.tag &&
+                    itP.tag.includes("nghich")
+                  );
                   synBonus +=
                     (isNghichA ? 14.0 : 6.0) * syn.bKhacA +
                     (isNghichB ? 14.0 : 6.0) * syn.aKhacB +
@@ -10516,11 +10668,7 @@ table.au-tb tr:last-child td {
               }
 
               const sc =
-                colorAndNghich +
-                conn +
-                hyPref +
-                synBonus +
-                0.8 * rnd();
+                colorAndNghich + conn + hyPref + synBonus + 0.8 * rnd();
               if (sc > bs) {
                 bs = sc;
                 best = c;
@@ -10567,7 +10715,7 @@ table.au-tb tr:last-child td {
               const c = smart(id, next);
               if (!c || overlaps(next, c)) continue;
               next.push(c);
-            } else if (r < 0.30) {
+            } else if (r < 0.3) {
               // OP 2: Displace & Insert (Ejection Chain) — Đẩy mảnh vướng ra để nhét mảnh xịn vào, rồi xếp lại mảnh bị đẩy!
               const f = free();
               if (!f.length) continue;
@@ -10609,8 +10757,39 @@ table.au-tb tr:last-child td {
                 }
               }
               kept.push(chosen);
-              // Lắp lại các mảnh vừa bị đẩy ra vào khoảng trống còn lại
+              // Lắp lại các mảnh vừa bị đẩy ra (nếu mảnh bị đẩy là chiêu thừa vượt skillCap thì thay bằng Tâm Pháp!)
+              const skillCapOp2 =
+                S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+                  ? S.hbMaxSkills
+                  : S.hbRatio && S.hbRatio.t >= 0.6
+                    ? 3
+                    : 4;
               for (const evId of evictedIds) {
+                const itEv = itemsK.get(evId);
+                const isEvSkill = !!(
+                  itEv &&
+                  itEv.chieu &&
+                  (itEv.chieu.phi || 0) > 0
+                );
+                const curSk = kept.reduce((acc, p) => {
+                  const ip = itemsK.get(p.m.item);
+                  return (
+                    acc + (ip && ip.chieu && (ip.chieu.phi || 0) > 0 ? 1 : 0)
+                  );
+                }, 0);
+                if (isEvSkill && skillCapOp2 > 0 && curSk >= skillCapOp2) {
+                  const tamFree = ids.filter((fid) => {
+                    if (kept.some((p) => p.m.item === fid)) return false;
+                    const itF = itemsK.get(fid);
+                    return itF && hbCls(itF) === "tam";
+                  });
+                  if (tamFree.length > 0) {
+                    const tid = pickWeightedFree(tamFree, kept);
+                    const reT = tid ? smart(tid, kept) : null;
+                    if (reT && !overlaps(kept, reT)) kept.push(reT);
+                  }
+                  continue;
+                }
                 const reC = smart(evId, kept);
                 if (reC && !overlaps(kept, reC)) {
                   kept.push(reC);
@@ -10636,10 +10815,7 @@ table.au-tb tr:last-child td {
                 nearList.push({ k, d: isAdj ? 0 : dist });
               }
               nearList.sort((a, b) => a.d - b.d);
-              const ruinCount = Math.min(
-                nearList.length,
-                rnd() < 0.5 ? 1 : 2,
-              );
+              const ruinCount = Math.min(nearList.length, rnd() < 0.5 ? 1 : 2);
               for (let u = 0; u < ruinCount; u++) {
                 removeSet.add(nearList[u].k);
               }
@@ -10727,7 +10903,7 @@ table.au-tb tr:last-child td {
                   }
                 }
               }
-            } else if (r < 0.70) {
+            } else if (r < 0.7) {
               // OP 5: Pairwise Swap — Hoán đổi vùng vị trí giữa 2 mảnh
               if (next.length < 2) continue;
               const i = Math.floor(rnd() * next.length);
@@ -10759,7 +10935,7 @@ table.au-tb tr:last-child td {
                   next[j] = newB;
                 }
               }
-            } else if (r < 0.80) {
+            } else if (r < 0.8) {
               // OP 6: In-Place Rotation & Micro-Slide (tối ưu hệ từng ô heTungO và màu ô lân cận)
               const i = Math.floor(rnd() * next.length);
               const c0 = next[i];
@@ -10774,30 +10950,87 @@ table.au-tb tr:last-child td {
               const c = nb[Math.floor(rnd() * nb.length)];
               next[i] = c;
             } else if (r < 0.92) {
-              // OP 7: Articulation-Safe Replace / Relocate (Ưu tiên đổi mảnh lá không làm đứt mạch toàn nhánh)
+              // OP 7: Articulation-Safe Replace & Excess-Skill-to-Tâm-Pháp Pruning
+              const skillCapOp7 =
+                S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+                  ? S.hbMaxSkills
+                  : S.hbRatio && S.hbRatio.t >= 0.6
+                    ? 3
+                    : 4;
+              const activeSkillIndices = [];
               const nonCutIndices = [];
               const baseFlow = computeFlowBitmask(next, ddAdjMask);
               for (let k = 0; k < next.length; k++) {
+                const itK = itemsK.get(next[k].m.item);
+                if (itK && itK.chieu && (itK.chieu.phi || 0) > 0) {
+                  activeSkillIndices.push(k);
+                }
                 const fSkip = computeFlowBitmask(next, ddAdjMask, k);
                 if (fSkip.deadCount <= baseFlow.deadCount) {
                   nonCutIndices.push(k);
                 }
               }
-              const i =
-                nonCutIndices.length > 0 && rnd() < 0.8
-                  ? nonCutIndices[Math.floor(rnd() * nonCutIndices.length)]
-                  : Math.floor(rnd() * next.length);
+
+              // Nếu đang thừa chiêu chủ động (> skillCapOp7), ưu tiên nhắm thẳng vào các chiêu thừa để đổi sang Tâm Pháp!
+              let i;
+              if (
+                skillCapOp7 > 0 &&
+                activeSkillIndices.length > skillCapOp7 &&
+                rnd() < 0.85
+              ) {
+                activeSkillIndices.sort((a, b) => {
+                  const itA = itemsK.get(next[a].m.item),
+                    itB = itemsK.get(next[b].m.item);
+                  return kmItemPower(itA, mode) - kmItemPower(itB, mode);
+                });
+                i = activeSkillIndices[0];
+              } else {
+                i =
+                  nonCutIndices.length > 0 && rnd() < 0.8
+                    ? nonCutIndices[Math.floor(rnd() * nonCutIndices.length)]
+                    : Math.floor(rnd() * next.length);
+              }
 
               const f = free();
               const testNext = next.filter((_, idx) => idx !== i);
-              if (f.length > 0 && rnd() < 0.65) {
+              if (f.length > 0 && rnd() < 0.75) {
                 const id = pickWeightedFree(f, testNext);
                 const c = smart(id, testNext);
                 if (!c || overlaps(testNext, c)) continue;
                 testNext.push(c);
-                // Thử nhét lại cả mảnh cũ nếu còn vừa chỗ
-                const cOld = smart(next[i].m.item, testNext);
-                if (cOld && !overlaps(testNext, cOld)) testNext.push(cOld);
+                // Chỉ nhét lại mảnh cũ nếu mảnh cũ KHÔNG làm vượt trần skillCapOp7!
+                const oldIt = itemsK.get(next[i].m.item);
+                const oldIsSkill = !!(
+                  oldIt &&
+                  oldIt.chieu &&
+                  (oldIt.chieu.phi || 0) > 0
+                );
+                const newSkCount = testNext.reduce((acc, p) => {
+                  const ip = itemsK.get(p.m.item);
+                  return (
+                    acc + (ip && ip.chieu && (ip.chieu.phi || 0) > 0 ? 1 : 0)
+                  );
+                }, 0);
+                if (
+                  !oldIsSkill ||
+                  !(skillCapOp7 > 0 && newSkCount >= skillCapOp7)
+                ) {
+                  const cOld = smart(next[i].m.item, testNext);
+                  if (cOld && !overlaps(testNext, cOld)) testNext.push(cOld);
+                } else {
+                  // Thay vì nhét lại chiêu thừa, nhét thêm 1 Tâm Pháp nữa nếu vừa chỗ!
+                  const tamPool = free().filter((fid) => {
+                    if (testNext.some((p) => p.m.item === fid)) return false;
+                    const itF = itemsK.get(fid);
+                    return itF && hbCls(itF) === "tam";
+                  });
+                  if (tamPool.length > 0) {
+                    const tid2 = pickWeightedFree(tamPool, testNext);
+                    const cTam2 = tid2 ? smart(tid2, testNext) : null;
+                    if (cTam2 && !overlaps(testNext, cTam2))
+                      testNext.push(cTam2);
+                  }
+                }
                 next.length = 0;
                 next.push(...testNext);
               } else {
@@ -10932,16 +11165,63 @@ table.au-tb tr:last-child td {
 
           let flowMask = getFlowAccessibleMask();
 
-          // Vòng 1: Lấp trực tiếp các món vừa khít vào ô trống
+          const skillCapGap =
+            S.hbMaxSkills !== undefined && S.hbMaxSkills > 0
+              ? S.hbMaxSkills
+              : S.hbRatio && S.hbRatio.t >= 0.6
+                ? 3
+                : 4;
+
+          const isDrainSafe = (P) => {
+            if (!P) return true;
+            const cList = (P.chieu || []).filter((x) => (x.phi || 0) > 0);
+            if (!cList.length) return true;
+            if (skillCapGap > 0 && cList.length > skillCapGap) return false;
+            const ll = P.linhLucMoiLuot || 0;
+            let drain = 0;
+            for (const sk of cList) {
+              drain += (sk.phi || 0) / Math.max(1, (sk.hoi || 0) + 1);
+            }
+            return ll >= drain;
+          };
+
+          // Vòng 1: Lấp trực tiếp các món vừa khít vào ô trống (Ưu tiên tuyệt đối Tâm Pháp hồi Linh Lực & bị động, cấm nhồi thừa chiêu gây thiếu khí!)
           for (let pass = 0; pass < 24; pass++) {
             const placedItemIds = new Set(currentPieces.map((p) => p.m.item));
-            const remainingIds = allIds.filter((id) => !placedItemIds.has(id));
+            const curActiveSkills = currentPieces.reduce((acc, p) => {
+              const itP = itemsK.get(p.m.item);
+              return (
+                acc + (itP && itP.chieu && (itP.chieu.phi || 0) > 0 ? 1 : 0)
+              );
+            }, 0);
+            const remainingIds = allIds.filter((id) => {
+              if (placedItemIds.has(id)) return false;
+              const it = itemsK.get(id);
+              if (
+                skillCapGap > 0 &&
+                curActiveSkills >= skillCapGap &&
+                it &&
+                it.chieu &&
+                (it.chieu.phi || 0) > 0
+              ) {
+                return false;
+              }
+              return true;
+            });
             if (!remainingIds.length) break;
 
             remainingIds.sort((a, b) => {
               const itA = itemsK.get(a),
                 itB = itemsK.get(b);
-              return kmItemPower(itB) - kmItemPower(itA);
+              const tamBonusA =
+                (hbCls(itA) === "tam" ? 180 : hbCls(itA) === "bv" ? 90 : 0) +
+                (itA.linh_luc || 0) * 65;
+              const tamBonusB =
+                (hbCls(itB) === "tam" ? 180 : hbCls(itB) === "bv" ? 90 : 0) +
+                (itB.linh_luc || 0) * 65;
+              return (
+                kmItemPower(itB) + tamBonusB - (kmItemPower(itA) + tamBonusA)
+              );
             });
 
             let bestCandidate = null;
@@ -10985,6 +11265,15 @@ table.au-tb tr:last-child td {
                   nextEval.R.manh[lastIdx].thong;
 
                 if (!isThong) continue;
+                const itCndObj = itemsK.get(cnd.id);
+                if (
+                  itCndObj &&
+                  itCndObj.chieu &&
+                  (itCndObj.chieu.phi || 0) > 0 &&
+                  !isDrainSafe(nextEval.P)
+                ) {
+                  continue;
+                }
 
                 const isScoreBetter = nextEval.s > currentScore + 1e-4;
                 const isSideStatBetter =
@@ -11025,8 +11314,27 @@ table.au-tb tr:last-child td {
           // Vòng 2: 1-Step Slide-and-Pack — Trượt nhẹ 1 mảnh đang đặt sang ô trống kề bên để mở chỗ nhét thêm 1 món mới từ túi!
           for (let slidePass = 0; slidePass < 6; slidePass++) {
             const placedItemIds = new Set(currentPieces.map((p) => p.m.item));
+            const curActiveSlide = currentPieces.reduce((acc, p) => {
+              const itP = itemsK.get(p.m.item);
+              return (
+                acc + (itP && itP.chieu && (itP.chieu.phi || 0) > 0 ? 1 : 0)
+              );
+            }, 0);
             const remainingIds = allIds
-              .filter((id) => !placedItemIds.has(id))
+              .filter((id) => {
+                if (placedItemIds.has(id)) return false;
+                const it = itemsK.get(id);
+                if (
+                  skillCapGap > 0 &&
+                  curActiveSlide >= skillCapGap &&
+                  it &&
+                  it.chieu &&
+                  (it.chieu.phi || 0) > 0
+                ) {
+                  return false;
+                }
+                return true;
+              })
               .sort(
                 (a, b) =>
                   kmItemPower(itemsK.get(b)) - kmItemPower(itemsK.get(a)),
@@ -11243,17 +11551,34 @@ table.au-tb tr:last-child td {
               }
             }
 
-            // 4. Thay thế mảnh đang đặt bằng mảnh tốt hơn còn dư trong túi (Bag-to-Board Upgrade Swap)
+            // 4. Thay thế mảnh đang đặt bằng mảnh tốt hơn còn dư trong túi (Ưu tiên đổi chiêu thừa/ngốn mana sang Tâm Pháp hồi Linh Lực!)
             if (!over()) {
               const placedSet = new Set(cur.map((p) => p.m.item));
-              const unplacedIds = ids
-                .filter((id) => !placedSet.has(id))
+              const allUnplaced = ids.filter((id) => !placedSet.has(id));
+              const topGen = allUnplaced
+                .slice()
                 .sort(
                   (a, b) =>
                     kmItemPower(itemsK.get(b), mode) -
                     kmItemPower(itemsK.get(a), mode),
                 )
-                .slice(0, 12);
+                .slice(0, 10);
+              const topTam = allUnplaced
+                .filter((id) => {
+                  const it = itemsK.get(id);
+                  return it && (hbCls(it) === "tam" || (it.linh_luc || 0) > 0);
+                })
+                .sort((a, b) => {
+                  const itA = itemsK.get(a),
+                    itB = itemsK.get(b);
+                  return (
+                    (itB.linh_luc || 0) * 60 +
+                    kmItemPower(itB, mode) -
+                    ((itA.linh_luc || 0) * 60 + kmItemPower(itA, mode))
+                  );
+                })
+                .slice(0, 10);
+              const unplacedIds = [...new Set([...topTam, ...topGen])];
 
               for (let i = 0; i < cur.length && !over(); i++) {
                 const oldP = cur[i];
@@ -11267,8 +11592,8 @@ table.au-tb tr:last-child td {
                     .filter(
                       (c) =>
                         (c.cellMask & maskWithoutI) === 0n &&
-                        (Math.abs(c.m.x - oldP.m.x) <= 3 &&
-                          Math.abs(c.m.y - oldP.m.y) <= 3),
+                        Math.abs(c.m.x - oldP.m.x) <= 3 &&
+                        Math.abs(c.m.y - oldP.m.y) <= 3,
                     )
                     .sort(
                       (a, b) =>
@@ -11280,10 +11605,12 @@ table.au-tb tr:last-child td {
 
                   let upgraded = false;
                   for (const newC of topForUid) {
-                    const nx = cur.slice();
+                    let nx = cur.slice();
                     nx[i] = newC;
                     if (computeFlowBitmask(nx, ddAdjMask).deadCount > 0)
                       continue;
+                    // Nếu thay 1 mảnh lớn bằng 1 Tâm Pháp gọn hơn, lấp luôn khoảng trống dư ra bằng Tâm Pháp khác trước khi chấm điểm!
+                    nx = smartFillRemainingGaps(nv0, nx, ev);
                     const e = ev(nx);
                     if (e.s > curS + 1e-9) {
                       cur = nx;
@@ -15714,7 +16041,10 @@ table.au-tb tr:last-child td {
             init: topSeeds[1].manh,
             seed: 987654321,
             onProg: (f) =>
-              prog(0.32 + f * 0.24, "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…"),
+              prog(
+                0.32 + f * 0.24,
+                "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…",
+              ),
           });
           if (kmAborted()) return null;
 
@@ -16155,14 +16485,23 @@ table.au-tb tr:last-child td {
 
                 if (targetHe) {
                   seenCandCells.add(cell);
-                  const scPwr = kmScalablePower(it, (AU.cfg && AU.cfg.km && AU.cfg.km.mode) || "bal", null);
+                  const scPwr = kmScalablePower(
+                    it,
+                    (AU.cfg && AU.cfg.km && AU.cfg.km.mode) || "bal",
+                    null,
+                  );
                   const hySetNow = hySet(g, nv.kinhMach);
-                  const hyCnt = cells.filter((cIdx) => hySetNow.has(cIdx)).length;
+                  const hyCnt = cells.filter((cIdx) =>
+                    hySetNow.has(cIdx),
+                  ).length;
                   const hyAmp = hyCnt > 0 ? 2.0 + 0.25 * (hyCnt - 1) : 1.0;
                   const wasKhac = oKhac(curMau, wantedHe);
                   const totalKhacBefore = cells.filter((cIdx, kIdx) => {
                     const mC = mauK[cIdx] || "vo_sac";
-                    const pH = (cellElements && cellElements[kIdx]) ? cellElements[kIdx] : (hs[0] || "vo_sac");
+                    const pH =
+                      cellElements && cellElements[kIdx]
+                        ? cellElements[kIdx]
+                        : hs[0] || "vo_sac";
                     return oKhac(mC, pH);
                   }).length;
                   // Nếu đổi màu ô này giúp thoát ngưỡng quá nửa ô khắc (> cells.length / 2), triệt tiêu ngay +1 Điểm Nghịch!
@@ -23627,7 +23966,7 @@ table.au-tb tr:last-child td {
             (s, i) => s === "thong" && i !== g.danDien && g.vung[i] >= 0,
           ).length;
         }
-        // 7.21.0: Phạt tỉ lệ Tâm Pháp : Chiến Pháp thích ứng theo túi đồ thực tế (không bóp nghẹt bảng mạch khi túi thiếu Tâm Pháp)
+        // 7.22.1: Phạt tỉ lệ Tâm Pháp : Chiến Pháp nghiêm ngặt (Bảo đảm tỉ lệ 7:3 / 6:4 ưu tiên tối đa Tâm Pháp & Linh Lực)
         function hbRatioPenalty(manh, R, nvRef) {
           const H = S.hbRatio;
           if (!H) return 0;
@@ -23645,13 +23984,13 @@ table.au-tb tr:last-child td {
             else if (cls === "bv") bv += p.cells.length;
             else chien += p.cells.length;
           });
-          // Bảo Vật bị động (không tốn linh lực) tính 75% như Tâm Pháp hỗ trợ khi xếp từ túi đồ
-          const effectiveTam = S.hbLite ? tam : tam + bv * 0.75;
+          // Chỉ tính Bảo Vật bị động có hồi linh lực như 35% Tâm Pháp hỗ trợ; ưu tiên tuyệt đối Tâm Pháp thực thụ
+          const effectiveTam = S.hbLite ? tam : tam + bv * 0.35;
           const tot = tam + bv + chien;
           if (!tot) return 0;
           let targetTam = H.t * tot;
 
-          // Khi xếp từ túi đồ thực tế (!S.hbLite), không bao giờ đòi hỏi số ô Tâm Pháp vượt quá 85% tổng số ô Tâm Pháp có trong túi!
+          // Chỉ giới hạn theo số ô Tâm Pháp trong túi nếu túi thực sự quá ít Tâm Pháp
           if (!S.hbLite && nvRef && nvRef.tuiDo) {
             let maxBagTam = 0;
             for (const id of Object.keys(nvRef.tuiDo)) {
@@ -23660,21 +23999,21 @@ table.au-tb tr:last-child td {
               if (
                 it &&
                 (it.canh_gioi ?? 0) <= (nvRef.canhGioi ?? 0) &&
-                (hbCls(it) === "tam" || hbCls(it) === "bv")
+                hbCls(it) === "tam"
               ) {
                 maxBagTam += hbCells(it);
               }
             }
-            targetTam = Math.min(targetTam, maxBagTam * 0.85);
+            if (maxBagTam > 0) {
+              targetTam = Math.min(targetTam, maxBagTam * 0.95);
+            }
           }
 
           if (effectiveTam < targetTam) {
             const def = targetTam - effectiveTam;
-            return S.hbLite
-              ? def * 28 + Math.pow(def, 1.45) * 12
-              : def * 10 + Math.pow(def, 1.25) * 4;
+            return def * 68 + Math.pow(def, 1.75) * 32;
           }
-          return S.hbLite ? (effectiveTam - targetTam) * 6 : 0;
+          return S.hbLite ? (effectiveTam - targetTam) * 8 : 0;
         }
         function hbShareOf(nvH, manh) {
           const K = S.core,
@@ -26467,7 +26806,8 @@ table.au-tb tr:last-child td {
           )
             return true;
           try {
-            const def = encDef || (C() && C().encounters && C().encounters.get(encId));
+            const def =
+              encDef || (C() && C().encounters && C().encounters.get(encId));
             if (def) {
               if (
                 def.tien_ich ||
@@ -26529,7 +26869,9 @@ table.au-tb tr:last-child td {
 
           function evalEffs(effs) {
             if (!Array.isArray(effs)) return { tv: 0, lt: 0, bad: false };
-            let tv = 0, lt = 0, bad = false;
+            let tv = 0,
+              lt = 0,
+              bad = false;
             for (const eff of effs) {
               if (!eff || typeof eff !== "object") continue;
               if (eff.tu_vi !== undefined || eff.tuVi !== undefined) {
@@ -26987,32 +27329,50 @@ table.au-tb tr:last-child td {
           if (AU.cfg.tc.healBossPanicHp == null) AU.cfg.tc.healBossPanicHp = 55;
           if (!AU.cfg.tc.spiritPillMode) AU.cfg.tc.spiritPillMode = "on_demand";
           if (!AU.cfg.tc.burstPillMode) {
-            AU.cfg.tc.burstPillMode = AU.cfg.tc.useBurstPill === false ? "off" : "boss_combo";
+            AU.cfg.tc.burstPillMode =
+              AU.cfg.tc.useBurstPill === false ? "off" : "boss_combo";
           }
-          if (typeof AU.cfg.tc.cleansePillMode !== "boolean") AU.cfg.tc.cleansePillMode = true;
+          if (typeof AU.cfg.tc.cleansePillMode !== "boolean")
+            AU.cfg.tc.cleansePillMode = true;
           if (AU.cfg.tc.maxPillGradeNormal == null) {
-            AU.cfg.tc.maxPillGradeNormal = Math.min(4, AU.cfg.tc.maxPillGrade || 5);
+            AU.cfg.tc.maxPillGradeNormal = Math.min(
+              4,
+              AU.cfg.tc.maxPillGrade || 5,
+            );
           }
           if (!AU.cfg.tc.shieldTalismanMode) {
-            AU.cfg.tc.shieldTalismanMode = AU.cfg.tc.smartShield === false ? "off" : "predictive";
+            AU.cfg.tc.shieldTalismanMode =
+              AU.cfg.tc.smartShield === false ? "off" : "predictive";
           }
-          if (AU.cfg.tc.shieldHpThreshold == null) AU.cfg.tc.shieldHpThreshold = 55;
+          if (AU.cfg.tc.shieldHpThreshold == null)
+            AU.cfg.tc.shieldHpThreshold = 55;
           if (!AU.cfg.tc.ccTalismanMode) {
-            AU.cfg.tc.ccTalismanMode = AU.cfg.tc.smartCc === false ? "off" : "interrupt";
+            AU.cfg.tc.ccTalismanMode =
+              AU.cfg.tc.smartCc === false ? "off" : "interrupt";
           }
           if (!AU.cfg.tc.atkTalismanMode) {
-            AU.cfg.tc.atkTalismanMode = AU.cfg.tc.useAttackTalismans === false ? "off" : "smart_weave";
+            AU.cfg.tc.atkTalismanMode =
+              AU.cfg.tc.useAttackTalismans === false ? "off" : "smart_weave";
           }
           if (AU.cfg.tc.talismanGradeNormal == null) {
-            AU.cfg.tc.talismanGradeNormal = Math.min(4, AU.cfg.tc.talismanGrade || 5);
+            AU.cfg.tc.talismanGradeNormal = Math.min(
+              4,
+              AU.cfg.tc.talismanGrade || 5,
+            );
           }
-          if (!AU.cfg.tc.formationMode) AU.cfg.tc.formationMode = "boss_or_danger";
+          if (!AU.cfg.tc.formationMode)
+            AU.cfg.tc.formationMode = "boss_or_danger";
           if (AU.cfg.tc.recallPetHp == null) AU.cfg.tc.recallPetHp = 25;
-          if (AU.cfg.tc.healSkillThreshold == null) AU.cfg.tc.healSkillThreshold = 75;
-          if (AU.cfg.tc.shieldSkillThreshold == null) AU.cfg.tc.shieldSkillThreshold = 40;
-          if (typeof AU.cfg.tc.preventOverkill !== "boolean") AU.cfg.tc.preventOverkill = true;
-          if (typeof AU.cfg.tc.aoePriority !== "boolean") AU.cfg.tc.aoePriority = true;
-          if (typeof AU.cfg.tc.prioritizeNatal !== "boolean") AU.cfg.tc.prioritizeNatal = true;
+          if (AU.cfg.tc.healSkillThreshold == null)
+            AU.cfg.tc.healSkillThreshold = 75;
+          if (AU.cfg.tc.shieldSkillThreshold == null)
+            AU.cfg.tc.shieldSkillThreshold = 40;
+          if (typeof AU.cfg.tc.preventOverkill !== "boolean")
+            AU.cfg.tc.preventOverkill = true;
+          if (typeof AU.cfg.tc.aoePriority !== "boolean")
+            AU.cfg.tc.aoePriority = true;
+          if (typeof AU.cfg.tc.prioritizeNatal !== "boolean")
+            AU.cfg.tc.prioritizeNatal = true;
           if (AU.cfg.tc.thieuDotHp == null) AU.cfg.tc.thieuDotHp = 20;
           if (AU.cfg.tc.escapeHp == null) AU.cfg.tc.escapeHp = 16;
           if (typeof AU.cfg.sdb.autoThaMang !== "boolean") {
@@ -27350,9 +27710,7 @@ table.au-tb tr:last-child td {
           if (dmg <= 0 && (c.uy || 0) > 0) dmg = c.uy * 12;
 
           const heSoHeFn =
-            (core &&
-              core["combat/actions"] &&
-              core["combat/actions"].heSoHe) ||
+            (core && core["combat/actions"] && core["combat/actions"].heSoHe) ||
             (core && core.heSoHe);
           const heTacDongFn =
             (core &&
@@ -27377,7 +27735,8 @@ table.au-tb tr:last-child td {
                 const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
                 const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
                 const rel = heTacDongFn(sHe, fHe);
-                if (rel === -1 || KHAC_HE[gocHe(sHe)] === gocHe(fHe)) dmg *= 1.35;
+                if (rel === -1 || KHAC_HE[gocHe(sHe)] === gocHe(fHe))
+                  dmg *= 1.35;
                 else if (rel === 1 || KHAC_HE[gocHe(fHe)] === gocHe(sHe))
                   dmg *= 0.75;
               } catch (e) {}
@@ -27418,9 +27777,14 @@ table.au-tb tr:last-child td {
             ) ||
             (Array.isArray(c.effects) &&
               c.effects.some((e) =>
-                ["sunder", "mark", "decay", "chill", "bleed", "poison"].includes(
-                  e.kind,
-                ),
+                [
+                  "sunder",
+                  "mark",
+                  "decay",
+                  "chill",
+                  "bleed",
+                  "poison",
+                ].includes(e.kind),
               )) ||
             !!(c.phaGiap || c.sunder || c.mark)
           );
@@ -27612,7 +27976,8 @@ table.au-tb tr:last-child td {
           }
 
           // Thông số tình huống trận đấu hiện tại
-          const hpRatio = (ta.khiHuyet || 0) / Math.max(1, ta.khiHuyetToiDa || 1);
+          const hpRatio =
+            (ta.khiHuyet || 0) / Math.max(1, ta.khiHuyetToiDa || 1);
           const mpRatio = (ta.linhLuc || 0) / Math.max(1, ta.linhLucToiDa || 1);
           const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
           const shieldRatio = curShield / Math.max(1, ta.khiHuyetToiDa || 1);
@@ -27883,12 +28248,19 @@ table.au-tb tr:last-child td {
           if (canUseItem && !ta.danLuotNay && cfg.cleansePillMode !== false) {
             const badStatuses = Array.isArray(ta.statuses)
               ? ta.statuses.filter((s) =>
-                  ["bleed", "poison", "burn", "decay", "chill", "sunder"].includes(
-                    s.kind,
-                  ),
+                  [
+                    "bleed",
+                    "poison",
+                    "burn",
+                    "decay",
+                    "chill",
+                    "sunder",
+                  ].includes(s.kind),
                 )
               : [];
-            const needCleanse = badStatuses.length >= 2 || (badStatuses.length >= 1 && hpRatio < 0.5);
+            const needCleanse =
+              badStatuses.length >= 2 ||
+              (badStatuses.length >= 1 && hpRatio < 0.5);
             const needPillShield =
               isHeavyAttackIncoming && shieldRatio < 0.2 && hpRatio < 0.65;
 
@@ -27903,7 +28275,9 @@ table.au-tb tr:last-child td {
                   (needCleanse && (it.tran.giai_doc || it.tran.thanh_tam)) ||
                   (needPillShield && it.tran.thuan && it.tran.thuan > 0)
                 ) {
-                  setAiDecision(`💊 Dùng ${it.ten || it.id} (Hộ thân/Giải độc)`);
+                  setAiDecision(
+                    `💊 Dùng ${it.ten || it.id} (Hộ thân/Giải độc)`,
+                  );
                   return { loai: "dan", item: it.id, so: 1 };
                 }
               }
@@ -27954,7 +28328,8 @@ table.au-tb tr:last-child td {
 
           // 1F. Hồi Phục Khẩn Cấp Bằng Kỹ Năng (khi HP < 55% hoặc chế độ Thủ)
           const healSkillRatio =
-            (cfg.healSkillThreshold != null ? cfg.healSkillThreshold : 75) / 100;
+            (cfg.healSkillThreshold != null ? cfg.healSkillThreshold : 75) /
+            100;
           const urgentHealRatio =
             aiMode === "defensive"
               ? Math.max(0.65, healSkillRatio)
@@ -27980,9 +28355,7 @@ table.au-tb tr:last-child td {
             (cfg.shieldSkillThreshold != null ? cfg.shieldSkillThreshold : 40) /
             100;
           const needUrgentShield =
-            isHeavyAttackIncoming ||
-            hpRatio < 0.5 ||
-            aiMode === "defensive";
+            isHeavyAttackIncoming || hpRatio < 0.5 || aiMode === "defensive";
           if (
             usableSkills.length > 0 &&
             needUrgentShield &&
@@ -28091,9 +28464,7 @@ table.au-tb tr:last-child td {
                   hpRatio < 0.65 ||
                   aiMode !== "aggressive")
               ) {
-                setAiDecision(
-                  `❄️ Khống chế: ${ccSkill.ten || ccSkill.id}`,
-                );
+                setAiDecision(`❄️ Khống chế: ${ccSkill.ten || ccSkill.id}`);
                 return { loai: "chieu", id: ccSkill.id };
               }
             }
@@ -28417,7 +28788,9 @@ table.au-tb tr:last-child td {
               // Thưởng khắc hệ Ngũ Hành
               if (c.he && target.he && typeof heTacDongFn === "function") {
                 try {
-                  const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
+                  const fHe = Array.isArray(target.he)
+                    ? target.he[0]
+                    : target.he;
                   const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
                   if (
                     heTacDongFn(sHe, fHe) === -1 ||
@@ -28474,8 +28847,7 @@ table.au-tb tr:last-child td {
               if (
                 cfg.preventOverkill !== false &&
                 ((targetHp < 50 && (c.phi || 0) > 15) ||
-                  (isLowStraggler &&
-                    ((c.hoi || 0) >= 3 || (c.phi || 0) >= 24)))
+                  (isLowStraggler && ((c.hoi || 0) >= 3 || (c.phi || 0) >= 24)))
               ) {
                 score *= 0.3;
               }
@@ -28714,11 +29086,7 @@ table.au-tb tr:last-child td {
           if (combatAutoActive) {
             if (combatStepTimer) clearTimeout(combatStepTimer);
             const stepDelay =
-              cfg.speed === "instant"
-                ? 15
-                : cfg.speed === "fast"
-                  ? 80
-                  : 200;
+              cfg.speed === "instant" ? 15 : cfg.speed === "fast" ? 80 : 200;
             combatStepTimer = setTimeout(() => {
               combatStepTimer = null;
               const liveTran = g.state.run && g.state.run.tran;
@@ -28773,8 +29141,7 @@ table.au-tb tr:last-child td {
               else if (act.loai === "danh_thuong") failed.add("danh_thuong");
               else if (act.loai === "muc_tieu")
                 failed.add("muc_tieu:" + act.ma);
-              else if (act.loai === "thu_hoi")
-                failed.add("thu_hoi:" + act.id);
+              else if (act.loai === "thu_hoi") failed.add("thu_hoi:" + act.id);
               else if (act.loai === "thieu_dot") failed.add("thieu_dot");
               else if (act.loai === "bo_chay") failed.add("bo_chay");
 
@@ -28857,7 +29224,8 @@ table.au-tb tr:last-child td {
               ? Math.round(((ta.linhLuc || 0) / ta.linhLucToiDa) * 100)
               : 0;
             const shield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
-            const retention = ta.drugRetention != null ? ta.drugRetention : 0.85;
+            const retention =
+              ta.drugRetention != null ? ta.drugRetention : 0.85;
             const curResistExp =
               (ta.drugResistTran && ta.drugResistTran["khi_huyet"]) || 0;
             const resistPct = Math.round(
@@ -28945,10 +29313,19 @@ table.au-tb tr:last-child td {
           function getTargetUi(tp) {
             const map = {
               smart: ["🎯 M.Tiêu: T.Minh", "Nhắm mục tiêu tối ưu chiến thuật"],
-              boss: ["🎯 M.Tiêu: Boss", "Ưu tiên dồn sát thương Trùm / Tinh Anh"],
-              threat: ["🎯 M.Tiêu: N.Hiểm", "Ưu tiên kẻ chuẩn bị tung đại chiêu / hồi máu"],
+              boss: [
+                "🎯 M.Tiêu: Boss",
+                "Ưu tiên dồn sát thương Trùm / Tinh Anh",
+              ],
+              threat: [
+                "🎯 M.Tiêu: N.Hiểm",
+                "Ưu tiên kẻ chuẩn bị tung đại chiêu / hồi máu",
+              ],
               weakest: ["🎯 M.Tiêu: Yếu", "Ưu tiên dứt điểm kẻ thấp máu trước"],
-              counter: ["🎯 M.Tiêu: Khắc", "Ưu tiên mục tiêu bị khắc hệ Ngũ Hành"],
+              counter: [
+                "🎯 M.Tiêu: Khắc",
+                "Ưu tiên mục tiêu bị khắc hệ Ngũ Hành",
+              ],
             };
             const m = map[tp] || map.smart;
             return { label: m[0], title: m[1] + " (Click để đổi)" };
@@ -28974,9 +29351,7 @@ table.au-tb tr:last-child td {
                 ? savedPos.top + "px"
                 : "64px";
             const rightCss =
-              savedPos && Number.isFinite(savedPos.left)
-                ? "auto"
-                : "16px";
+              savedPos && Number.isFinite(savedPos.left) ? "auto" : "16px";
             const leftCss =
               savedPos && Number.isFinite(savedPos.left)
                 ? savedPos.left + "px"
@@ -31075,7 +31450,8 @@ table.au-tb tr:last-child td {
               ];
 
               for (const encId of allPlaceEncs) {
-                if (!encId || isLoTuViEnc(encId) || isBienCoEnc(encId)) continue;
+                if (!encId || isLoTuViEnc(encId) || isBienCoEnc(encId))
+                  continue;
                 const encKey = encId + "@" + slotStr;
                 if (seenEncs.has(encKey)) continue;
                 if (
@@ -35524,7 +35900,10 @@ table.au-tb tr:last-child td {
         [
           ["smart_v3", "🌟 Siêu AI 3.0 (Chuỗi 5 Pha Toàn Diện — Khuyên dùng)"],
           ["aggressive", "🔥 Tổng Công Kích Tốc Chiến (Dồn sát thương tối đa)"],
-          ["defensive", "🛡️ Vững Như Bàn Thạch (Ưu tiên Khiên, Hồi Phục & Khóa)"],
+          [
+            "defensive",
+            "🛡️ Vững Như Bàn Thạch (Ưu tiên Khiên, Hồi Phục & Khóa)",
+          ],
           ["game_core", "⚙️ AI Mặc Định Của Game (nextAutomatedAction)"],
         ],
         c.aiEngineMode || "smart_v3",
@@ -35535,7 +35914,10 @@ table.au-tb tr:last-child td {
         [
           ["auto", "✅ Tự Động Thông Minh (Theo cấu hình chi tiết bên dưới)"],
           ["boss_only", "👑 Chỉ Dùng Khi Gặp Boss / Tinh Anh (Hoặc HP < 20%)"],
-          ["save_all", "🔒 Khóa Toàn Bộ Đan & Phù (Tiết kiệm 100% khi cày quái)"],
+          [
+            "save_all",
+            "🔒 Khóa Toàn Bộ Đan & Phù (Tiết kiệm 100% khi cày quái)",
+          ],
         ],
         c.itemPolicy || "auto",
       )}
@@ -35554,10 +35936,22 @@ table.au-tb tr:last-child td {
         "🎯 Chiến Thuật Chọn Mục Tiêu (Targeting)",
         [
           ["smart", "🧠 Tối Ưu Chiến Thuật (Dứt điểm nhanh + Diệt hồi máu/nộ)"],
-          ["boss", "👑 Ưu Tiên Trùm / Thủ Lĩnh (Dồn sát thương Boss & Tinh Anh)"],
-          ["threat", "⚡ Ưu Tiên Mối Đe Dọa (Kẻ đang tụ đại chiêu / Triệu hồi)"],
-          ["weakest", "🎯 Diệt Kẻ Yếu Trước (Hạ nhanh quái thấp máu giảm sát thương)"],
-          ["counter", "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ ×1.35)"],
+          [
+            "boss",
+            "👑 Ưu Tiên Trùm / Thủ Lĩnh (Dồn sát thương Boss & Tinh Anh)",
+          ],
+          [
+            "threat",
+            "⚡ Ưu Tiên Mối Đe Dọa (Kẻ đang tụ đại chiêu / Triệu hồi)",
+          ],
+          [
+            "weakest",
+            "🎯 Diệt Kẻ Yếu Trước (Hạ nhanh quái thấp máu giảm sát thương)",
+          ],
+          [
+            "counter",
+            "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ ×1.35)",
+          ],
         ],
         c.targetPrio || "smart",
       )}
@@ -35566,7 +35960,10 @@ table.au-tb tr:last-child td {
         "🩸 Tế Huyết Bản Mệnh (Đốt Thọ Nguyên & Khí Huyết)",
         [
           ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên tuyệt đối)"],
-          ["boss", "👑 Chỉ Khi Gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)"],
+          [
+            "boss",
+            "👑 Chỉ Khi Gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)",
+          ],
           ["emergency", "🚨 Chỉ Khi Nguy Cấp (Khí huyết < 35% trước Boss)"],
           ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
         ],
@@ -35584,7 +35981,10 @@ table.au-tb tr:last-child td {
         "❤️ Chế Độ Cắn Đan Hồi Khí Huyết",
         [
           ["smart", "🧠 Thông Minh (Tự nâng ngưỡng khi địch tụ Đại Chiêu)"],
-          ["boss_only", "👑 Chỉ Đánh Boss / Tinh Anh (Hoặc khi nguy kịch < 18%)"],
+          [
+            "boss_only",
+            "👑 Chỉ Đánh Boss / Tinh Anh (Hoặc khi nguy kịch < 18%)",
+          ],
           ["always", "⚡ Luôn Cắn Theo Ngưỡng Cố Định"],
           ["off", "⛔ Tắt Tự Cắn Đan Hồi Huyết"],
         ],
@@ -35608,7 +36008,10 @@ table.au-tb tr:last-child td {
         "au-tc-burst-mode",
         "🔥 Chế Độ Cắn Đan Bộc Phát (Tăng Sát Thương)",
         [
-          ["boss_combo", "🎯 Chuẩn Combo Boss (Gặp Boss + Có sẵn chiêu mạnh + Địch >30% HP)"],
+          [
+            "boss_combo",
+            "🎯 Chuẩn Combo Boss (Gặp Boss + Có sẵn chiêu mạnh + Địch >30% HP)",
+          ],
           ["boss_any", "👑 Gặp Boss / Tinh Anh Là Cắn Ngay Đầu Trận"],
           ["always", "⚔️ Dùng Ở Mọi Trận Đấu Khi Có Chiêu"],
           ["off", "⛔ Tắt Đan Bộc Phát"],
@@ -35630,7 +36033,10 @@ table.au-tb tr:last-child td {
         "au-tc-shield-tal-mode",
         "🛡️ Chế Độ Dùng Phù Hộ Thuẫn (Giáp Phù)",
         [
-          ["predictive", "🧠 Dự Báo Đỡ Đòn (Khi địch tụ Đại Chiêu hoặc HP dưới ngưỡng)"],
+          [
+            "predictive",
+            "🧠 Dự Báo Đỡ Đòn (Khi địch tụ Đại Chiêu hoặc HP dưới ngưỡng)",
+          ],
           ["always_keep", "🛡️ Luôn Duy Trì Lớp Khiên Phù Mỗi Khi Cạn"],
           ["boss_only", "👑 Chỉ Dùng Phù Hộ Thuẫn Trước Boss / Tinh Anh"],
           ["off", "⛔ Tắt Phù Hộ Thuẫn"],
@@ -35642,7 +36048,10 @@ table.au-tb tr:last-child td {
         "au-tc-cc-tal-mode",
         "⛓️ Chế Độ Dùng Phù Khống Chế (Định Thân / Choáng)",
         [
-          ["interrupt", "⚡ Ngắt Đại Chiêu & Khóa Boss (Khi địch tụ nộ / Boss / HP < 48%)"],
+          [
+            "interrupt",
+            "⚡ Ngắt Đại Chiêu & Khóa Boss (Khi địch tụ nộ / Boss / HP < 48%)",
+          ],
           ["boss_lock", "👑 Khóa Chặt Boss / Tinh Anh Ngay Khi Hết Miễn Khống"],
           ["emergency", "🚨 Chỉ Dùng Cứu Mạng Khi Máu Nguy Kịch (< 42% HP)"],
           ["always", "❄️ Luôn Dùng Khi Địch Chưa Bị Khống Chế"],
@@ -35654,9 +36063,18 @@ table.au-tb tr:last-child td {
         "au-tc-atk-tal-mode",
         "🗡️ Chế Độ Ném Phù Công Kích (Sát Thương 0 Mana)",
         [
-          ["smart_weave", "🧠 Đan Xen Thông Minh (Sau khi xả chiêu vào Boss / Khi hết mana / Kết liễu)"],
-          ["zero_mana", "💧 Tiết Kiệm: Chỉ Ném Khi Cạn Linh Lực Hoặc Toàn Bộ Chiêu Đang Hồi"],
-          ["boss_burst", "👑 Dồn Sát Thương Boss: Xả Phù Khắc Hệ Tối Đa Vào Boss / Tinh Anh"],
+          [
+            "smart_weave",
+            "🧠 Đan Xen Thông Minh (Sau khi xả chiêu vào Boss / Khi hết mana / Kết liễu)",
+          ],
+          [
+            "zero_mana",
+            "💧 Tiết Kiệm: Chỉ Ném Khi Cạn Linh Lực Hoặc Toàn Bộ Chiêu Đang Hồi",
+          ],
+          [
+            "boss_burst",
+            "👑 Dồn Sát Thương Boss: Xả Phù Khắc Hệ Tối Đa Vào Boss / Tinh Anh",
+          ],
           ["always", "🔥 Luôn Ném Ở Mọi Trận Đấu"],
           ["off", "⛔ Tắt Phù Công Kích"],
         ],
@@ -35668,7 +36086,10 @@ table.au-tb tr:last-child td {
         "au-tc-formation-mode",
         "阵 Chế Độ Khai Triển Trận Bàn (bay_tran)",
         [
-          ["boss_or_danger", "🧠 Khi Gặp Boss/Tinh Anh Hoặc Khi Nguy Hiểm (HP < 65% / Địch >= 2)"],
+          [
+            "boss_or_danger",
+            "🧠 Khi Gặp Boss/Tinh Anh Hoặc Khi Nguy Hiểm (HP < 65% / Địch >= 2)",
+          ],
           ["boss_only", "👑 Chỉ Bày Trận Khi Gặp Boss / Tinh Anh"],
           ["always", "⚡ Luôn Bày Trận Đầu Mọi Trận Đấu"],
           ["off", "⛔ Tắt Tự Động Bày Trận Bàn"],
@@ -38913,9 +39334,20 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: "Phiên Bản 7.22.0 · Đại Trùng Tu Siêu AI Tác Chiến 3.0 & Giao Diện HUD Chiến Thuật",
+            t: "Phiên Bản 7.22.1 · Khắc Phục Triệt Để Thiếu Hụt Linh Lực Kinh Mạch & Tuân Thủ Tỉ Lệ 7:3 · Siêu AI Tác Chiến 3.0",
             d: "09/11/2026",
             now: true,
+            pts: [
+              "<b>Sửa Lỗi Mô Phỏng Vòng Quay Chân Khí (Multi-Skill Per Turn trong <code>simulateQiCycle</code>):</b> Trong cơ chế chiến đấu thực tế của game, nhân vật tung <b>tất cả</b> các chiêu đã hồi xong trong cùng 1 hiệp chứ không phải chỉ 1 chiêu/hiệp. Bản cũ chỉ mô phỏng 1 chiêu/hiệp nên đánh giá sai rằng Linh Lực vẫn đủ dù lắp 6–7 chiêu. Bản 7.22.1 mô phỏng xuất toàn bộ chiêu hồi xong mỗi hiệp và tính trực tiếp <code>drainPerTurn = Σ(phi / (hoi + 1))</code> khớp 100% với dòng <i>Vòng chiêu &amp; Linh lực</i> trên bảng so sánh, phạt cực nặng mọi cấu hình có <code>drain &gt; linhLucMoiLuot</code>.",
+              "<b>Tuân Thủ Nghiêm Ngặt Giới Hạn 2–3 Chiêu Chủ Động &amp; Tỉ Lệ Tâm Pháp 7:3 / 6:4:</b> Cắt bỏ điểm thưởng sát thương và hệ số khuếch đại đối với các chiêu vượt quá giới hạn <code>hbMaxSkills</code> (2–3 chiêu), cấm <code>greedy</code> và <code>smartFillRemainingGaps</code> nhồi thêm chiêu tiêu hao Linh Lực khi đã đủ số chiêu hoặc khi có nguy cơ thiếu hụt chân khí, ưu tiên lấp đầy bàn mạch bằng Tâm Pháp tăng Linh Lực, Hộ Thể và Khí Huyết.",
+              "<b>Chuẩn Hóa Trọng Số Sát Thương Chế Độ <i>Kiếm Tu Bạo Kích (Burst)</i>:</b> Sửa lỗi cộng trực tiếp <code>0.9 × uyMax</code> thô chưa chuẩn hóa theo Pháp Lực ở cảnh giới cao (từng khiến máy hy sinh 60% Hộ Thể, 20.000 Khí Huyết và Linh Lực hồi chỉ để đổi lấy vài trăm sát thương chiêu). Bổ sung điểm nền tảng phòng thủ (<code>defFoundationScore</code>) để giữ vững trần Hộ Thể và Khí Huyết.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.22.0 · Đại Trùng Tu Siêu AI Tác Chiến 3.0 & Giao Diện HUD Chiến Thuật",
+            d: "09/11/2026",
+            d: "09/11/2026",
+            now: false,
             pts: [
               "<b>Khắc Phục Triệt Để Lỗi <code>nextAutomatedAction</code> Cướp Quyền Điều Khiển Chiêu:</b> Ở các bản trước, hàm <code>nextAutomatedAction</code> của game được gọi ngay trước khối chọn chiêu thông minh, làm vô hiệu hóa thứ tự Buff, Khiên, Phá Giáp và Chống Tràn Sát Thương. Bản 7.22.0 đưa Bộ Não Chiến Thuật 5 Pha của Tool lên làm trung tâm điều phối chính và ánh xạ đầy đủ các hàm gốc từ <code>combat/actions</code> &amp; <code>combat/elements</code>.",
               "<b>Hệ Thống Cắn Đan Dược Chi Tiết 3.0:</b> Bổ sung chế độ cắn đan máu thông minh (tự động nâng ngưỡng HP an toàn lên <code>healBossPanicHp</code> trước khi Boss tung Đại Chiêu), chế độ đan Linh Lực theo nhu cầu xuất chiêu (<code>on_demand</code> — tự khớp lượng hồi sát với số Linh Lực thiếu hụt), chế độ đan Bộc Phát chuẩn combo (chỉ cắn khi gặp Boss và đang có sẵn chiêu tấn công mạnh), tự dùng đan Giải Độc / Hộ Thể, và <b>tách riêng giới hạn phẩm đan Quái Thường vs Boss</b> để không bao giờ phí đan quý vào quái dọc đường.",
