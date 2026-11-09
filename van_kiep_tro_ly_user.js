@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Vạn Kiếp Tu Tiên Tool · Trợ Lý
 // @namespace    https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/
-// @version      7.21.0
+// @version      7.22.0
 // @description  Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động (Chế độ Stealth Tampermonkey không bị game detect).
 // @author       LoganZ · Kỹ Sư
 // @match        https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.21.0
+/* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản 7.22.0
  * Viết bởi LoganZ cùng Kỹ Sư. Toàn bộ phép tính gọi lõi game qua window.tuTien.core.
  * Chế độ Stealth Standalone: Hoàn toàn không đăng ký vào window.tuTienMods để game không phát hiện,
  * không khóa Tỉ thí, không lưu dấu vết mod vào save game. */
@@ -29,7 +29,7 @@
         } catch (e) {}
         return;
       }
-      var TOOL_VER = "7.21.0";
+      var TOOL_VER = "7.22.0";
       var UI_CSS = `
 /* ═════════════════════════════════════════════════════════════════════════
    LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
@@ -7717,6 +7717,38 @@ table.au-tb tr:last-child td {
                 K[fn] = KM[fn].bind(KM);
               }
             }
+          }
+          // Ánh xạ trực tiếp các module và hàm chiến đấu từ lõi game để Siêu AI Tác Chiến 3.0 truy xuất 100% chính xác
+          for (const modName of [
+            "combat/actions",
+            "combat/elements",
+            "combat/playerAutomation",
+            "combat/setup",
+            "combat/autoCombat",
+          ]) {
+            if (R[modName]) K[modName] = R[modName];
+          }
+          const CA = R["combat/actions"];
+          if (CA) {
+            for (const fn of [
+              "chanChieu",
+              "chanDungDo",
+              "estimatePillRestore",
+              "pillWasted",
+              "escapeBlock",
+              "escapeRealmBlock",
+              "chanThieuDot",
+              "formationBlock",
+              "heSoHe",
+            ]) {
+              if (typeof CA[fn] === "function" && !K[fn]) {
+                K[fn] = CA[fn].bind(CA);
+              }
+            }
+          }
+          const CE = R["combat/elements"];
+          if (CE && typeof CE.heTacDong === "function" && !K.heTacDong) {
+            K.heTacDong = CE.heTacDong.bind(CE);
           }
           // Hằng đọc sống từ game (hằng khai 'export let' đổi theo độ khó), không chép ra biến lúc nạp.
           const live = (name, mod, key) =>
@@ -26178,15 +26210,35 @@ table.au-tb tr:last-child td {
           tc: {
             autoCombatOverlay: true,
             autoInCombat: false,
+            aiEngineMode: "smart_v3",
+            itemPolicy: "auto",
             speed: "normal",
             targetPrio: "smart",
+            healPillMode: "smart",
             healHpThreshold: 35,
+            healBossPanicHp: 55,
+            spiritPillMode: "on_demand",
             spiritThreshold: 20,
+            burstPillMode: "boss_combo",
+            cleansePillMode: true,
             maxDrugResistance: 70,
-            maxPillGrade: 5,
-            talismanGrade: 5,
+            maxPillGradeNormal: 4,
+            maxPillGrade: 6,
+            shieldTalismanMode: "predictive",
+            shieldHpThreshold: 55,
+            ccTalismanMode: "interrupt",
+            atkTalismanMode: "smart_weave",
+            talismanGradeNormal: 4,
+            talismanGrade: 6,
+            formationMode: "boss_or_danger",
             useBurstPill: true,
             saveFamiliars: true,
+            recallPetHp: 25,
+            healSkillThreshold: 75,
+            shieldSkillThreshold: 40,
+            preventOverkill: true,
+            aoePriority: true,
+            prioritizeNatal: true,
             autoNormalAttack: true,
             smartFinisher: true,
             useAttackTalismans: true,
@@ -26195,7 +26247,9 @@ table.au-tb tr:last-child td {
             comboSequence: true,
             teHuyetMode: "off",
             emergencyThieuDot: true,
+            thieuDotHp: 20,
             emergencyEscape: false,
+            escapeHp: 16,
             autoThaMang: true,
             autoEnemyEscape: true,
           },
@@ -26927,6 +26981,40 @@ table.au-tb tr:last-child td {
           if (!AU.cfg.tc.teHuyetMode) {
             AU.cfg.tc.teHuyetMode = "off";
           }
+          if (!AU.cfg.tc.aiEngineMode) AU.cfg.tc.aiEngineMode = "smart_v3";
+          if (!AU.cfg.tc.itemPolicy) AU.cfg.tc.itemPolicy = "auto";
+          if (!AU.cfg.tc.healPillMode) AU.cfg.tc.healPillMode = "smart";
+          if (AU.cfg.tc.healBossPanicHp == null) AU.cfg.tc.healBossPanicHp = 55;
+          if (!AU.cfg.tc.spiritPillMode) AU.cfg.tc.spiritPillMode = "on_demand";
+          if (!AU.cfg.tc.burstPillMode) {
+            AU.cfg.tc.burstPillMode = AU.cfg.tc.useBurstPill === false ? "off" : "boss_combo";
+          }
+          if (typeof AU.cfg.tc.cleansePillMode !== "boolean") AU.cfg.tc.cleansePillMode = true;
+          if (AU.cfg.tc.maxPillGradeNormal == null) {
+            AU.cfg.tc.maxPillGradeNormal = Math.min(4, AU.cfg.tc.maxPillGrade || 5);
+          }
+          if (!AU.cfg.tc.shieldTalismanMode) {
+            AU.cfg.tc.shieldTalismanMode = AU.cfg.tc.smartShield === false ? "off" : "predictive";
+          }
+          if (AU.cfg.tc.shieldHpThreshold == null) AU.cfg.tc.shieldHpThreshold = 55;
+          if (!AU.cfg.tc.ccTalismanMode) {
+            AU.cfg.tc.ccTalismanMode = AU.cfg.tc.smartCc === false ? "off" : "interrupt";
+          }
+          if (!AU.cfg.tc.atkTalismanMode) {
+            AU.cfg.tc.atkTalismanMode = AU.cfg.tc.useAttackTalismans === false ? "off" : "smart_weave";
+          }
+          if (AU.cfg.tc.talismanGradeNormal == null) {
+            AU.cfg.tc.talismanGradeNormal = Math.min(4, AU.cfg.tc.talismanGrade || 5);
+          }
+          if (!AU.cfg.tc.formationMode) AU.cfg.tc.formationMode = "boss_or_danger";
+          if (AU.cfg.tc.recallPetHp == null) AU.cfg.tc.recallPetHp = 25;
+          if (AU.cfg.tc.healSkillThreshold == null) AU.cfg.tc.healSkillThreshold = 75;
+          if (AU.cfg.tc.shieldSkillThreshold == null) AU.cfg.tc.shieldSkillThreshold = 40;
+          if (typeof AU.cfg.tc.preventOverkill !== "boolean") AU.cfg.tc.preventOverkill = true;
+          if (typeof AU.cfg.tc.aoePriority !== "boolean") AU.cfg.tc.aoePriority = true;
+          if (typeof AU.cfg.tc.prioritizeNatal !== "boolean") AU.cfg.tc.prioritizeNatal = true;
+          if (AU.cfg.tc.thieuDotHp == null) AU.cfg.tc.thieuDotHp = 20;
+          if (AU.cfg.tc.escapeHp == null) AU.cfg.tc.escapeHp = 16;
           if (typeof AU.cfg.sdb.autoThaMang !== "boolean") {
             AU.cfg.sdb.autoThaMang = true;
           }
@@ -27239,6 +27327,106 @@ table.au-tb tr:last-child td {
         // 3. TUYỆT ĐỐI không đánh thường (danh_thuong) trước khi toàn bộ chiêu thức khả dụng đã được tung hết.
         // 4. Sửa cơ chế vòng lặp tác chiến (auFightInstant & auFightStep): khi một hành động thất bại, tiếp tục
         //    thử các chiêu kế tiếp trong danh sách thay vì lập tức vội vã đánh thường rồi kết lượt bỏ cuộc.
+        // Biến lưu quyết định chiến thuật gần nhất của AI để hiển thị trực tiếp trên HUD trong trận
+        let _lastAiDecisionText = "Sẵn sàng tác chiến";
+        let _lastAiActionCount = 0;
+
+        function setAiDecision(txt) {
+          _lastAiDecisionText = txt || "Đang phân tích…";
+          _lastAiActionCount++;
+          try {
+            const el =
+              combatOverlayEl &&
+              combatOverlayEl.querySelector("#vkx-combat-last-act");
+            if (el) el.textContent = "🤖 " + _lastAiDecisionText;
+          } catch (e) {}
+        }
+
+        // Ước tính sát thương thực tế của 1 chiêu lên mục tiêu (xét Pháp Lực, Khắc Hệ Ngũ Hành, Bộc Phát, Phá Giáp/Ấn Ký)
+        function estimateSkillDamage(ta, target, c, core) {
+          if (!c || !ta || !target) return 0;
+          const basePl = Math.max(15, ta.phapLuc || ta.cong || 25);
+          let dmg = c.uyLuc || (c.uy || 0) * basePl * 0.45;
+          if (dmg <= 0 && (c.uy || 0) > 0) dmg = c.uy * 12;
+
+          const heSoHeFn =
+            (core &&
+              core["combat/actions"] &&
+              core["combat/actions"].heSoHe) ||
+            (core && core.heSoHe);
+          const heTacDongFn =
+            (core &&
+              core["combat/elements"] &&
+              core["combat/elements"].heTacDong) ||
+            (core && core.heTacDong) ||
+            heTacDong;
+
+          if (c.he && target.he) {
+            let applied = false;
+            if (typeof heSoHeFn === "function") {
+              try {
+                const m = heSoHeFn(c.he, target);
+                if (Number.isFinite(m) && m > 0) {
+                  dmg *= m;
+                  applied = true;
+                }
+              } catch (e) {}
+            }
+            if (!applied && typeof heTacDongFn === "function") {
+              try {
+                const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
+                const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
+                const rel = heTacDongFn(sHe, fHe);
+                if (rel === -1 || KHAC_HE[gocHe(sHe)] === gocHe(fHe)) dmg *= 1.35;
+                else if (rel === 1 || KHAC_HE[gocHe(fHe)] === gocHe(sHe))
+                  dmg *= 0.75;
+              } catch (e) {}
+            }
+          }
+
+          if (ta.bocPhatDen || ta.bocPhatTuDan) dmg *= 1.45;
+          if (
+            target.phaGiap ||
+            target.suyYeu ||
+            (Array.isArray(target.statuses) &&
+              target.statuses.some((s) => s.kind === "sunder"))
+          ) {
+            dmg *= 1.25;
+          }
+          if (target.hoThe && target.hoThe > 0) {
+            dmg *= Math.max(0.25, 1 - Math.min(0.7, target.hoThe));
+          }
+          return Math.round(dmg);
+        }
+
+        // Nhận diện kỹ năng diện rộng (AoE)
+        function isAoESkill(c) {
+          if (!c) return false;
+          if (c.scope === "all" || c.scope === "spread" || c.daMucTieu)
+            return true;
+          return /vạn kiếm|quần|trận|mưa|bão|tất cả|toàn bộ|lan|liên hoàn/i.test(
+            (c.ten || "") + " " + (c.mo_ta || ""),
+          );
+        }
+
+        // Nhận diện kỹ năng Phá Giáp / Ấn Ký / Giảm Thủ
+        function isSunderOrMarkSkill(c) {
+          if (!c) return false;
+          return (
+            /phá giáp|xuyên|phá khiên|phá thuẫn|trừ thuẫn|ấn ký|suy yếu|lộ sơ hở|huyết ấn|kiếm ấn|ăn mòn/i.test(
+              c.ten || "",
+            ) ||
+            (Array.isArray(c.effects) &&
+              c.effects.some((e) =>
+                ["sunder", "mark", "decay", "chill", "bleed", "poison"].includes(
+                  e.kind,
+                ),
+              )) ||
+            !!(c.phaGiap || c.sunder || c.mark)
+          );
+        }
+
+        // ═════════ SIÊU AI TÁC CHIẾN 3.0 (5-PHASE TACTICAL ENGINE) ═════════
         function smartCombatAction(tran, Cc, cfg, failedActions) {
           cfg = cfg || (AU && AU.cfg && AU.cfg.tc) || {};
           failedActions = failedActions || new Set();
@@ -27249,65 +27437,143 @@ table.au-tb tr:last-child td {
 
           const core =
             (S && S.core) || (typeof TT !== "undefined" && TT && TT.core);
+          const aiMode = cfg.aiEngineMode || "smart_v3";
+          const itemPolicy = cfg.itemPolicy || "auto"; // "auto" | "boss_only" | "save_all"
+          const curRound = tran.hiep || 1;
 
-          // 1. CHỌN MỤC TIÊU TỐI ƯU (Targeting & Retargeting)
+          // 0. Nếu người chơi chọn ủy quyền 100% cho AI gốc của game ("game_core")
+          if (aiMode === "game_core") {
+            const autoFn =
+              (core &&
+                core["combat/playerAutomation"] &&
+                core["combat/playerAutomation"].nextAutomatedAction) ||
+              (core && core.nextAutomatedAction);
+            if (typeof autoFn === "function") {
+              try {
+                const cand = autoFn(tran, Cc, {
+                  enabled: true,
+                  autoEndTurn: false,
+                  usePills: itemPolicy !== "save_all",
+                  useTalismans: itemPolicy !== "save_all",
+                  stackShields: true,
+                  useInnate: true,
+                  skillPriority: [],
+                  recallFamiliarBelow:
+                    cfg.saveFamiliars !== false
+                      ? (cfg.recallPetHp || 25) / 100
+                      : 0,
+                  healBelow: (cfg.healHpThreshold || 35) / 100,
+                  spiritBelow: (cfg.spiritThreshold || 20) / 100,
+                  maxGrade: cfg.maxPillGrade || 6,
+                });
+                if (cand) {
+                  setAiDecision("AI Game: " + (cand.loai || "hành động"));
+                  return cand;
+                }
+              } catch (e) {}
+            }
+          }
+
+          // 1. CHỌN MỤC TIÊU CHIẾN THUẬT (Targeting & Retargeting 3.0)
           const liveFoes = dich.filter((d) => (d.khiHuyet || 0) > 0);
-          if (!liveFoes.length) return { loai: "ket_luot" };
+          if (!liveFoes.length) {
+            setAiDecision("Kết lượt (Địch đã hạ)");
+            return { loai: "ket_luot" };
+          }
+
+          const isBossOrElite = liveFoes.some(
+            (d) =>
+              d.muc === "boss" ||
+              d.muc === "tinh_anh" ||
+              (d.bac || 0) > (ta.bac || 0) ||
+              (d.khiHuyetToiDa || 0) >= (ta.khiHuyetToiDa || 0) * 1.35 ||
+              (d.apBac || 0) > (ta.apBac || 0) ||
+              /tâm ma|hộ vệ|thủ lĩnh|trưởng lão|yêu vương|ma tôn/i.test(
+                d.ten || "",
+              ),
+          );
 
           let target = liveFoes.find((d) => d.ma === tran.mucTieu);
           const prio = cfg.targetPrio || "smart";
+          const heTacDongFn =
+            (core &&
+              core["combat/elements"] &&
+              core["combat/elements"].heTacDong) ||
+            (core && core.heTacDong) ||
+            heTacDong;
 
-          // Đánh giá và chọn mục tiêu ưu tiên tốt nhất khi có nhiều kẻ địch
           if (liveFoes.length > 1) {
-            const heTacDongFn =
-              (core &&
-                core["combat/elements"] &&
-                core["combat/elements"].heTacDong) ||
-              (core && core.heTacDong);
-
             const scoreFoe = (d) => {
               let score = 0;
               const hp = d.khiHuyet || 0;
               const maxHp = Math.max(1, d.khiHuyetToiDa || 1);
+              const shield = (d.hoThuan || 0) + (d.thuanPhu || 0);
+              const effHp = hp + shield;
               const hpPct = hp / maxHp;
               const intent = d.yDinh || "";
               const isNuking =
-                /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich/i.test(intent) ||
-                (d.anTuc === 0 && d.linhLuc && d.linhLuc > 30);
+                /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich|tuyệt|hủy diệt/i.test(
+                  intent,
+                ) ||
+                (d.anTuc === 0 && d.linhLuc && d.linhLuc > 28);
+              const isHealerOrSummoner =
+                /hồi|trị|triệu hồi|hộ pháp|tế tự|dược/i.test(
+                  (d.ten || "") + " " + intent,
+                );
 
               if (prio === "boss") {
-                if (d.muc === "boss") score += 1000;
-                else if (d.muc === "tinh_anh") score += 500;
-                score += (1 - hpPct) * 100;
+                if (d.muc === "boss") score += 1200;
+                else if (d.muc === "tinh_anh") score += 600;
+                score += (1 - hpPct) * 120;
+              } else if (prio === "threat") {
+                if (isNuking) score += 900;
+                if (isHealerOrSummoner) score += 650;
+                if (d.muc === "boss") score += 350;
+                score += (1 - hpPct) * 150;
               } else if (prio === "weakest") {
-                score += (1 - hpPct) * 500;
-                score += Math.max(0, 1000 - hp);
+                score += (1 - hpPct) * 600;
+                score += Math.max(0, 1200 - effHp);
               } else if (prio === "counter") {
                 if (d.he && ta.chieu) {
                   for (const c of ta.chieu) {
                     if (c && c.he && typeof heTacDongFn === "function") {
-                      if (heTacDongFn(c.he, d.he) === -1) score += 200;
+                      const fHe = Array.isArray(d.he) ? d.he[0] : d.he;
+                      const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
+                      if (
+                        heTacDongFn(sHe, fHe) === -1 ||
+                        KHAC_HE[gocHe(sHe)] === gocHe(fHe)
+                      ) {
+                        score += 260;
+                      }
                     }
                   }
                 }
-                score += (1 - hpPct) * 100;
+                score += (1 - hpPct) * 120;
               } else {
-                // "smart": Cân bằng chiến thuật đa mục tiêu
-                if (hpPct < 0.25 || hp < 150) score += 300;
-                if (isNuking) score += 250;
-                if (d.muc === "boss") score += 200;
-                else if (d.muc === "tinh_anh") score += 100;
+                // "smart": Tối ưu giảm sát thương nhận vào mỗi hiệp (Focus Fire mục tiêu sắp hạ gục + kẻ chuẩn bị Nuke/Hồi máu)
+                if (effHp <= Math.max(35, (ta.phapLuc || ta.cong || 25) * 1.4))
+                  score += 480;
+                else if (hpPct < 0.25) score += 320;
+                if (isHealerOrSummoner) score += 310;
+                if (isNuking) score += 270;
+                if (d.muc === "boss") score += 210;
+                else if (d.muc === "tinh_anh") score += 110;
                 if (d.he && ta.chieu) {
                   for (const c of ta.chieu) {
                     if (c && c.he && typeof heTacDongFn === "function") {
-                      if (heTacDongFn(c.he, d.he) === -1) {
-                        score += 50;
+                      const fHe = Array.isArray(d.he) ? d.he[0] : d.he;
+                      const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
+                      if (
+                        heTacDongFn(sHe, fHe) === -1 ||
+                        KHAC_HE[gocHe(sHe)] === gocHe(fHe)
+                      ) {
+                        score += 65;
                         break;
                       }
                     }
                   }
                 }
-                score += (1 - hpPct) * 50;
+                score += (1 - hpPct) * 80;
               }
               return score;
             };
@@ -27319,15 +27585,17 @@ table.au-tb tr:last-child td {
 
             if (!target) {
               if (bestFoe && !failedActions.has("muc_tieu:" + bestFoe.ma)) {
+                setAiDecision("Nhắm mục tiêu: " + (bestFoe.ten || bestFoe.ma));
                 return { loai: "muc_tieu", ma: bestFoe.ma };
               }
               target = bestFoe;
             } else if (
               bestFoe &&
               bestFoe.ma !== target.ma &&
-              scoreFoe(bestFoe) >= scoreFoe(target) + 150 &&
+              scoreFoe(bestFoe) >= scoreFoe(target) + 130 &&
               !failedActions.has("muc_tieu:" + bestFoe.ma)
             ) {
+              setAiDecision("Chuyển mục tiêu: " + (bestFoe.ten || bestFoe.ma));
               return { loai: "muc_tieu", ma: bestFoe.ma };
             }
           }
@@ -27335,12 +27603,78 @@ table.au-tb tr:last-child td {
           if (!target) {
             const nextTarget = liveFoes[0];
             if (nextTarget && !failedActions.has("muc_tieu:" + nextTarget.ma)) {
+              setAiDecision(
+                "Nhắm mục tiêu: " + (nextTarget.ten || nextTarget.ma),
+              );
               return { loai: "muc_tieu", ma: nextTarget.ma };
             }
             target = nextTarget;
           }
 
-          // 2. CỨU NGỰ LINH KHẨN CẤP (Pet Emergency Recall)
+          // Thông số tình huống trận đấu hiện tại
+          const hpRatio = (ta.khiHuyet || 0) / Math.max(1, ta.khiHuyetToiDa || 1);
+          const mpRatio = (ta.linhLuc || 0) / Math.max(1, ta.linhLucToiDa || 1);
+          const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
+          const shieldRatio = curShield / Math.max(1, ta.khiHuyetToiDa || 1);
+          const targetShield = (target.hoThuan || 0) + (target.thuanPhu || 0);
+          const targetEffHp = (target.khiHuyet || 0) + targetShield;
+          const foeIntent = target.yDinh || "";
+          const isHeavyAttackIncoming = liveFoes.some((d) => {
+            const itn = d.yDinh || "";
+            return (
+              /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich|tuyệt|phá thiên/i.test(
+                itn,
+              ) ||
+              (d.anTuc === 0 && (d.linhLuc || 0) > 28)
+            );
+          });
+
+          // Kiểm tra điều kiện dùng vật phẩm theo chính sách itemPolicy & giới hạn phẩm Quái Thường vs Boss
+          const itemsUsed = ta.itemsThisTurn || 0;
+          const allowConsumeItems =
+            itemPolicy === "save_all"
+              ? false
+              : itemPolicy === "boss_only"
+                ? isBossOrElite || hpRatio < 0.2
+                : true;
+          const canUseItem = allowConsumeItems && itemsUsed < 10 && !!ta.tui;
+
+          const effMaxPillGrade = isBossOrElite
+            ? cfg.maxPillGrade || 6
+            : Math.min(
+                cfg.maxPillGrade || 6,
+                cfg.maxPillGradeNormal != null ? cfg.maxPillGradeNormal : 4,
+              );
+          const effMaxTalismanGrade = isBossOrElite
+            ? cfg.talismanGrade || 6
+            : Math.min(
+                cfg.talismanGrade || 6,
+                cfg.talismanGradeNormal != null ? cfg.talismanGradeNormal : 4,
+              );
+
+          const chanDungDoFn =
+            (core &&
+              core["combat/actions"] &&
+              core["combat/actions"].chanDungDo) ||
+            (core && core.chanDungDo);
+          const canUseBagItem = (it) => {
+            if (!it || !ta.tui || !(ta.tui[it.id] > 0)) return false;
+            if (failedActions.has("dan:" + it.id)) return false;
+            if (typeof chanDungDoFn === "function") {
+              try {
+                if (chanDungDoFn(tran, it) !== undefined) return false;
+              } catch (e) {}
+            }
+            return true;
+          };
+
+          // ═══════════════════════════════════════════════════════════════════
+          // PHA 1: SINH TỒN KHẨN CẤP (THU HỒI NGỰ LINH · THOÁT HIỂM · ĐAN MÁU · HỒI PHỤC KHẨN)
+          // ═══════════════════════════════════════════════════════════════════
+
+          // 1A. Thu hồi Ngự Linh hấp hối
+          const recallThreshold =
+            (cfg.recallPetHp != null ? cfg.recallPetHp : 25) / 100;
           if (cfg.saveFamiliars !== false && Array.isArray(tran.familiars)) {
             for (const fam of tran.familiars) {
               if (
@@ -27351,21 +27685,26 @@ table.au-tb tr:last-child td {
               ) {
                 const petHpRatio = fam.khiHuyet / fam.khiHuyetToiDa;
                 if (
-                  petHpRatio < 0.25 &&
+                  petHpRatio < recallThreshold &&
                   !failedActions.has("thu_hoi:" + fam.id)
                 ) {
+                  setAiDecision(
+                    "Thu hồi Ngự Linh (" +
+                      Math.round(petHpRatio * 100) +
+                      "% HP)",
+                  );
                   return { loai: "thu_hoi", id: fam.id };
                 }
               }
             }
           }
 
-          // 2B. THOÁT HIỂM & THIÊU ĐỐT CỨU MẠNG KHẨN CẤP (Emergency Escape & Life-Burst)
-          const hpRatio = ta.khiHuyet / Math.max(1, ta.khiHuyetToiDa);
-
+          // 1B. Độn Thổ Thoát Thân Khẩn Cấp (bo_chay)
+          const escapeHpRatio =
+            (cfg.escapeHp != null ? cfg.escapeHp : 16) / 100;
           if (
             cfg.emergencyEscape &&
-            hpRatio < 0.16 &&
+            hpRatio < escapeHpRatio &&
             !failedActions.has("bo_chay")
           ) {
             const escapeBlockFn =
@@ -27394,6 +27733,9 @@ table.au-tb tr:last-child td {
                   }
                 }
               }
+              setAiDecision(
+                "Thoát hiểm khẩn cấp (HP " + Math.round(hpRatio * 100) + "%)",
+              );
               if (escapeTalisman) {
                 return { loai: "bo_chay", item: escapeTalisman.id };
               }
@@ -27401,9 +27743,12 @@ table.au-tb tr:last-child td {
             }
           }
 
+          // 1C. Thiêu Đốt Thọ Nguyên Cứu Mạng (thieu_dot)
+          const thieuDotHpRatio =
+            (cfg.thieuDotHp != null ? cfg.thieuDotHp : 20) / 100;
           if (
             cfg.emergencyThieuDot !== false &&
-            hpRatio < 0.2 &&
+            hpRatio < thieuDotHpRatio &&
             !ta.thieuDot &&
             !failedActions.has("thieu_dot")
           ) {
@@ -27415,19 +27760,29 @@ table.au-tb tr:last-child td {
             if (typeof chanThieuDotFn === "function") {
               try {
                 if (chanThieuDotFn(tran) === undefined) {
+                  setAiDecision(
+                    "🔥 Thiêu đốt thọ nguyên lật kèo (HP " +
+                      Math.round(hpRatio * 100) +
+                      "%)",
+                  );
                   return { loai: "thieu_dot" };
                 }
               } catch (e) {}
             }
           }
 
-          // 3. CỨU SINH / BÙ MÁU & LINH LỰC THÔNG MINH (Smart Pill & Spirit System)
-          const itemsUsed = ta.itemsThisTurn || 0;
-          const canUseItem = itemsUsed < 10 && ta.tui;
-          const hpThreshold =
+          // 1D. Cắn Đan Hồi Huyết Thông Minh (Smart Heal Pill 3.0)
+          const healPillMode = cfg.healPillMode || "smart";
+          const baseHealHpRatio =
             (cfg.healHpThreshold != null ? cfg.healHpThreshold : 35) / 100;
+          const panicHealHpRatio =
+            (cfg.healBossPanicHp != null ? cfg.healBossPanicHp : 55) / 100;
+          const effectiveHealThreshold =
+            healPillMode === "smart" &&
+            (isHeavyAttackIncoming || (isBossOrElite && curShield <= 0))
+              ? Math.max(baseHealHpRatio, panicHealHpRatio)
+              : baseHealHpRatio;
 
-          // Tính Dược Kháng thực tế: % Kháng = (1 - retention^exp) * 100
           const retention = ta.drugRetention != null ? ta.drugRetention : 0.85;
           const curResistExp =
             (ta.drugResistTran && ta.drugResistTran["khi_huyet"]) || 0;
@@ -27436,60 +27791,59 @@ table.au-tb tr:last-child td {
           );
           const maxResist =
             cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70;
-          const allowHealPill = hpRatio < 0.2 || curResistPct <= maxResist;
+          const allowByMode =
+            healPillMode === "off"
+              ? false
+              : healPillMode === "boss_only"
+                ? isBossOrElite || hpRatio < 0.18
+                : true;
+          const allowHealPill =
+            allowByMode && (hpRatio < 0.2 || curResistPct <= maxResist);
 
-          // 3A. Nuốt đan hồi phục Khí Huyết (Heal Pill)
           if (
             canUseItem &&
             !ta.danLuotNay &&
-            hpRatio < hpThreshold &&
+            hpRatio < effectiveHealThreshold &&
             allowHealPill
           ) {
-            const maxGrade = cfg.maxPillGrade || 5;
-            const missingHp = ta.khiHuyetToiDa - ta.khiHuyet;
+            const missingHp = Math.max(1, ta.khiHuyetToiDa - ta.khiHuyet);
+            // Nếu nguy kịch (< 20% HP), cho phép mở khóa lên tới maxPillGrade của Boss để giữ mạng!
+            const pillCap =
+              hpRatio < 0.2 ? cfg.maxPillGrade || 6 : effMaxPillGrade;
             let bestPill = null;
             let bestScore = Infinity;
             let bestCount = 1;
 
+            const pillWastedFn =
+              (core &&
+                core["combat/actions"] &&
+                core["combat/actions"].pillWasted) ||
+              (core && core.pillWasted);
+            const estPillFn =
+              (core &&
+                core["combat/actions"] &&
+                core["combat/actions"].estimatePillRestore) ||
+              (core && core.estimatePillRestore);
+
             for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("dan:" + id))
-                continue;
+              if (!count || count <= 0) continue;
               const it = Cc.items && Cc.items.get(id);
               if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
               if (it.tran.bo_chay) continue;
-              if (it.pham_cap && it.pham_cap > maxGrade) continue;
+              if ((it.pham_cap || 1) > pillCap) continue;
               if (!(it.tran.khi_huyet && it.tran.khi_huyet > 0)) continue;
+              if (!canUseBagItem(it)) continue;
 
-              const chanDungDo =
-                (core &&
-                  core["combat/actions"] &&
-                  core["combat/actions"].chanDungDo) ||
-                (core && core.chanDungDo);
-              if (typeof chanDungDo === "function") {
+              if (typeof pillWastedFn === "function" && hpRatio > 0.25) {
                 try {
-                  if (chanDungDo(tran, it) !== undefined) continue;
-                } catch (e) {}
-              }
-              const pillWasted =
-                (core &&
-                  core["combat/actions"] &&
-                  core["combat/actions"].pillWasted) ||
-                (core && core.pillWasted);
-              if (typeof pillWasted === "function") {
-                try {
-                  if (pillWasted(ta, it)) continue;
+                  if (pillWastedFn(ta, it)) continue;
                 } catch (e) {}
               }
 
               let estOne = 0;
-              const estPill =
-                (core &&
-                  core["combat/actions"] &&
-                  core["combat/actions"].estimatePillRestore) ||
-                (core && core.estimatePillRestore);
-              if (typeof estPill === "function") {
+              if (typeof estPillFn === "function") {
                 try {
-                  estOne = estPill(ta, it).khiHuyet;
+                  estOne = estPillFn(ta, it).khiHuyet;
                 } catch (e) {}
               }
               if (!estOne || estOne <= 0) {
@@ -27500,11 +27854,15 @@ table.au-tb tr:last-child td {
 
               const neededCount = Math.min(
                 count,
-                Math.max(1, Math.min(3, Math.ceil(missingHp / estOne))),
+                Math.max(1, Math.min(3, Math.ceil((missingHp * 0.9) / estOne))),
               );
               const totalEst = estOne * neededCount;
-              const diff = Math.abs(missingHp - totalEst);
-              const score = diff + (it.pham_cap || 1) * 20;
+              const overheal = Math.max(0, totalEst - missingHp);
+              const underheal = Math.max(0, missingHp - totalEst);
+              const score =
+                underheal * 1.1 +
+                overheal * 0.65 +
+                (it.pham_cap || 1) * (isBossOrElite ? 18 : 45);
 
               if (score < bestScore) {
                 bestScore = score;
@@ -27514,301 +27872,46 @@ table.au-tb tr:last-child td {
             }
 
             if (bestPill) {
+              setAiDecision(
+                `💊 Cắn ${bestPill.ten || bestPill.id} ×${bestCount} (HP ${Math.round(hpRatio * 100)}%)`,
+              );
               return { loai: "dan", item: bestPill.id, so: bestCount };
             }
           }
 
-          // 3B. Nuốt đan hồi Linh Lực khi cạn kiệt (Spirit Pill)
-          const mpRatio = (ta.linhLuc || 0) / Math.max(1, ta.linhLucToiDa || 1);
-          const spiritThreshold =
-            (cfg.spiritThreshold != null ? cfg.spiritThreshold : 20) / 100;
-          if (
-            canUseItem &&
-            !ta.danLuotNay &&
-            (mpRatio < spiritThreshold || (ta.linhLuc || 0) < 6)
-          ) {
-            const maxGrade = cfg.maxPillGrade || 5;
-            let bestSpiritPill = null;
-            for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("dan:" + id))
-                continue;
-              const it = Cc.items && Cc.items.get(id);
-              if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
-              if (it.tran.bo_chay) continue;
-              if (it.pham_cap && it.pham_cap > maxGrade) continue;
-              if (!(it.tran.linh_luc && it.tran.linh_luc > 0)) continue;
+          // 1E. Đan Giải Độc / Thanh Tâm / Hộ Thể Đan khi trúng nhiều tầng hiệu ứng xấu hoặc sắp bị Nuke
+          if (canUseItem && !ta.danLuotNay && cfg.cleansePillMode !== false) {
+            const badStatuses = Array.isArray(ta.statuses)
+              ? ta.statuses.filter((s) =>
+                  ["bleed", "poison", "burn", "decay", "chill", "sunder"].includes(
+                    s.kind,
+                  ),
+                )
+              : [];
+            const needCleanse = badStatuses.length >= 2 || (badStatuses.length >= 1 && hpRatio < 0.5);
+            const needPillShield =
+              isHeavyAttackIncoming && shieldRatio < 0.2 && hpRatio < 0.65;
 
-              const chanDungDo =
-                (core &&
-                  core["combat/actions"] &&
-                  core["combat/actions"].chanDungDo) ||
-                (core && core.chanDungDo);
-              if (typeof chanDungDo === "function") {
-                try {
-                  if (chanDungDo(tran, it) !== undefined) continue;
-                } catch (e) {}
-              }
-
-              bestSpiritPill = it;
-              break;
-            }
-            if (bestSpiritPill) {
-              return { loai: "dan", item: bestSpiritPill.id, so: 1 };
-            }
-          }
-
-          // 3C. Nuốt đan Bộc Phát khi đối đầu Boss / Tinh anh (Burst Pill)
-          const isBossOrElite = liveFoes.some(
-            (d) =>
-              d.muc === "boss" ||
-              d.muc === "tinh_anh" ||
-              (d.bac || 0) > (ta.bac || 0) ||
-              (d.khiHuyetToiDa || 0) >= (ta.khiHuyetToiDa || 0) * 1.5 ||
-              (d.apBac || 0) > (ta.apBac || 0),
-          );
-          if (
-            canUseItem &&
-            !ta.danLuotNay &&
-            cfg.useBurstPill !== false &&
-            isBossOrElite &&
-            !ta.bocPhatDen &&
-            !ta.bocPhatTuDan
-          ) {
-            const maxGrade = cfg.maxPillGrade || 5;
-            let burstPill = null;
-            for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("dan:" + id))
-                continue;
-              const it = Cc.items && Cc.items.get(id);
-              if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
-              if (it.pham_cap && it.pham_cap > maxGrade) continue;
-              if (it.tran.bao_phat && it.tran.bao_phat > 0) {
-                burstPill = it;
-                break;
-              }
-            }
-            if (burstPill) {
-              return { loai: "dan", item: burstPill.id, so: 1 };
-            }
-          }
-
-          // 4. DỰ BÁO ĐỠ ĐÒN / DỰNG HỘ THUẪN PHÙ (Predictive Talisman Shield)
-          if (canUseItem && cfg.smartShield !== false) {
-            const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
-            const foeIntent = target.yDinh || "";
-            const isHeavyAttack =
-              /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich/i.test(foeIntent) ||
-              (target.anTuc === 0 && target.linhLuc && target.linhLuc > 30);
-            if (isHeavyAttack && curShield < ta.khiHuyetToiDa * 0.25) {
-              const maxGrade = cfg.talismanGrade || 5;
-              let shieldTalisman = null;
+            if (needCleanse || needPillShield) {
               for (const [id, count] of Object.entries(ta.tui)) {
-                if (!count || count <= 0 || failedActions.has("dan:" + id))
-                  continue;
+                if (!count || count <= 0) continue;
                 const it = Cc.items && Cc.items.get(id);
-                if (!it || it.loai !== "phu_luc" || !it.tran) continue;
-                if (it.pham_cap && it.pham_cap > maxGrade) continue;
-                if (it.tran.thuan && it.tran.thuan > 0) {
-                  shieldTalisman = it;
-                  break;
-                }
-              }
-              if (shieldTalisman) {
-                return { loai: "dan", item: shieldTalisman.id, so: 1 };
-              }
-            }
-          }
-
-          // 4B. TỰ ĐỘNG BÀY TRẬN BÀN CHIẾN ĐẤU (Tactical Formations - bay_tran)
-          if (
-            ta.tui &&
-            (isBossOrElite || hpRatio < 0.65) &&
-            cfg.autoFormation !== false
-          ) {
-            for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("bay_tran:" + id))
-                continue;
-              const it = Cc.items && Cc.items.get(id);
-              if (!it || it.loai !== "tran_ban" || !it.tran_phap) continue;
-              const formationBlock =
-                (core &&
-                  core["combat/actions"] &&
-                  core["combat/actions"].formationBlock) ||
-                (core && core.formationBlock);
-              if (typeof formationBlock === "function") {
-                try {
-                  if (formationBlock(tran, Cc, it.id) !== undefined) continue;
-                } catch (e) {}
-              }
-              return { loai: "bay_tran", item: it.id };
-            }
-          }
-
-          // 4C. BÙA CHÚ KHỐNG CHẾ / ĐỊNH THÂN (Control Talismans - khong_che)
-          if (
-            canUseItem &&
-            cfg.smartCc !== false &&
-            !target.khongChe &&
-            (target.controlImmunity == null || target.controlImmunity <= 0) &&
-            (!target.mienDen || target.mienDen < (tran.hiep || 1))
-          ) {
-            const foeIntent = target.yDinh || "";
-            const isHeavyAttack =
-              /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich/i.test(foeIntent) ||
-              (target.anTuc === 0 && target.linhLuc && target.linhLuc > 30);
-            if (isHeavyAttack || isBossOrElite || hpRatio < 0.5) {
-              const maxGrade = cfg.talismanGrade || 5;
-              let ccTalisman = null;
-              for (const [id, count] of Object.entries(ta.tui)) {
-                if (!count || count <= 0 || failedActions.has("dan:" + id))
-                  continue;
-                const it = Cc.items && Cc.items.get(id);
-                if (!it || it.loai !== "phu_luc" || !it.tran) continue;
-                if (it.pham_cap && it.pham_cap > maxGrade) continue;
-                if (it.tran.khong_che && it.tran.khong_che > 0) {
-                  const chanDungDo =
-                    (core &&
-                      core["combat/actions"] &&
-                      core["combat/actions"].chanDungDo) ||
-                    (core && core.chanDungDo);
-                  if (typeof chanDungDo === "function") {
-                    try {
-                      if (chanDungDo(tran, it) !== undefined) continue;
-                    } catch (e) {}
-                  }
-                  ccTalisman = it;
-                  break;
-                }
-              }
-              if (ccTalisman) {
-                return { loai: "dan", item: ccTalisman.id, so: 1 };
-              }
-            }
-          }
-
-          // 4D. BÙA CHÚ TẤN CÔNG / SÁT THƯƠNG 0 MANA (Attack Talismans - tran.chieu)
-          if (
-            canUseItem &&
-            cfg.useAttackTalismans !== false &&
-            (isBossOrElite ||
-              (ta.linhLuc || 0) < 15 ||
-              (target.khiHuyet || 0) < 120)
-          ) {
-            const maxGrade = cfg.talismanGrade || 5;
-            let bestAtkTalisman = null;
-            let bestAtkScore = -1;
-            const heTacDongFn =
-              (core &&
-                core["combat/elements"] &&
-                core["combat/elements"].heTacDong) ||
-              (core && core.heTacDong);
-
-            for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("dan:" + id))
-                continue;
-              const it = Cc.items && Cc.items.get(id);
-              if (!it || it.loai !== "phu_luc" || !it.tran) continue;
-              if (it.pham_cap && it.pham_cap > maxGrade) continue;
-              if (it.tran.chieu && (it.tran.chieu.uy || 0) > 0) {
-                const chanDungDo =
-                  (core &&
-                    core["combat/actions"] &&
-                    core["combat/actions"].chanDungDo) ||
-                  (core && core.chanDungDo);
-                if (typeof chanDungDo === "function") {
-                  try {
-                    if (chanDungDo(tran, it) !== undefined) continue;
-                  } catch (e) {}
-                }
-                let tScore = it.tran.chieu.uy || 10;
+                if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
+                if ((it.pham_cap || 1) > effMaxPillGrade) continue;
+                if (!canUseBagItem(it)) continue;
                 if (
-                  it.tran.chieu.he &&
-                  target.he &&
-                  typeof heTacDongFn === "function"
+                  (needCleanse && (it.tran.giai_doc || it.tran.thanh_tam)) ||
+                  (needPillShield && it.tran.thuan && it.tran.thuan > 0)
                 ) {
-                  try {
-                    if (heTacDongFn(it.tran.chieu.he, target.he) === -1) {
-                      tScore *= 1.35;
-                    }
-                  } catch (e) {}
-                }
-                if (tScore > bestAtkScore) {
-                  bestAtkScore = tScore;
-                  bestAtkTalisman = it;
+                  setAiDecision(`💊 Dùng ${it.ten || it.id} (Hộ thân/Giải độc)`);
+                  return { loai: "dan", item: it.id, so: 1 };
                 }
               }
             }
-            if (bestAtkTalisman) {
-              return { loai: "dan", item: bestAtkTalisman.id, so: 1 };
-            }
           }
 
-          // 4E. DỨT ĐIỂM THÔNG MINH BẰNG QUYỀN CƯỚC (Smart Finisher - danh_thuong)
-          // Khi địch chỉ còn tàn huyết không có khiên trong tầm đòn đánh thường, dứt điểm ngay để tiết kiệm 100% mana & hồi chiêu!
-          const targetShield = (target.hoThuan || 0) + (target.thuanPhu || 0);
-          const estBasicDmg = Math.max(25, Math.round((ta.cong || 20) * 0.85));
-          if (
-            cfg.smartFinisher !== false &&
-            !ta.daDanhThuong &&
-            !failedActions.has("danh_thuong") &&
-            targetShield <= 0 &&
-            (target.khiHuyet || 0) > 0 &&
-            (target.khiHuyet || 0) <= estBasicDmg
-          ) {
-            return { loai: "danh_thuong" };
-          }
-
-          // 5. TÍCH HỢP AI LÕI GAME (nextAutomatedAction) NẾU CÓ SẴN
-          const autoFn =
-            (core &&
-              core["combat/playerAutomation"] &&
-              core["combat/playerAutomation"].nextAutomatedAction) ||
-            (core && core.nextAutomatedAction);
-          if (typeof autoFn === "function") {
-            try {
-              const autoSettings = {
-                enabled: true,
-                autoEndTurn: false,
-                usePills: true,
-                useTalismans: true,
-                stackShields: true,
-                useInnate: true,
-                skillPriority: [],
-                recallFamiliarBelow: cfg.saveFamiliars !== false ? 0.25 : 0,
-                healBelow:
-                  (cfg.healHpThreshold != null ? cfg.healHpThreshold : 35) /
-                  100,
-                spiritBelow:
-                  (cfg.spiritThreshold != null ? cfg.spiritThreshold : 20) /
-                  100,
-                maxGrade: cfg.maxPillGrade || 5,
-              };
-              const cand = autoFn(tran, Cc, autoSettings);
-              if (
-                cand &&
-                (cand.loai === "chieu" ||
-                  cand.loai === "dan" ||
-                  cand.loai === "muc_tieu" ||
-                  cand.loai === "thu_hoi")
-              ) {
-                const actKey =
-                  cand.loai === "chieu"
-                    ? "chieu:" + cand.id
-                    : cand.loai === "dan"
-                      ? "dan:" + cand.item
-                      : cand.loai === "thu_hoi"
-                        ? "thu_hoi:" + cand.id
-                        : "muc_tieu:" + cand.ma;
-                if (!failedActions.has(actKey)) {
-                  return cand;
-                }
-              }
-            } catch (e) {}
-          }
-
-          // 5. CHỌN VÀ TUNG KỸ NĂNG (Smart Skill Selection - 100% Không Bỏ Chiêu)
+          // Chuẩn bị danh sách Kỹ Năng Khả Dụng (Usable Skills)
           const skills = ta.chieu || [];
-          const curRound = tran.hiep || 1;
           const chanChieuFn =
             (core &&
               core["combat/actions"] &&
@@ -27818,7 +27921,7 @@ table.au-tb tr:last-child td {
           const teHuyetMode = cfg.teHuyetMode || "off";
           const canUseBloodSacrifice = (c) => {
             if (!c.bloodYears) return true;
-            if (ta.khiHuyet < ta.khiHuyetToiDa * 0.15) return false;
+            if (ta.khiHuyet < ta.khiHuyetToiDa * 0.18) return false;
             if (teHuyetMode === "off") return false;
             if (teHuyetMode === "boss") return isBossOrElite;
             if (teHuyetMode === "emergency")
@@ -27849,34 +27952,319 @@ table.au-tb tr:last-child td {
             return true;
           });
 
-          // 5A. Tự Động Bù Mana Nếu Có Chiêu Chưa Tung Được Chỉ Vì Thiếu Linh Lực
-          const outOfManaSkills = skills.filter((c) => {
-            if (!c || !c.id || failedActions.has("chieu:" + c.id)) return false;
-            const onCd = ta.hoi && (ta.hoi[c.id] ?? 0) > curRound;
-            return !onCd && (c.phi || 0) > (ta.linhLuc || 0);
-          });
+          // 1F. Hồi Phục Khẩn Cấp Bằng Kỹ Năng (khi HP < 55% hoặc chế độ Thủ)
+          const healSkillRatio =
+            (cfg.healSkillThreshold != null ? cfg.healSkillThreshold : 75) / 100;
+          const urgentHealRatio =
+            aiMode === "defensive"
+              ? Math.max(0.65, healSkillRatio)
+              : Math.min(0.55, healSkillRatio);
+          if (usableSkills.length > 0 && hpRatio < urgentHealRatio) {
+            const healSkill = usableSkills.find(
+              (c) =>
+                c.dang === "hoi_phuc" ||
+                /hồi xuân|trị thương|sinh cơ|trường sinh|hồi huyết/i.test(
+                  c.ten || "",
+                ),
+            );
+            if (healSkill) {
+              setAiDecision(
+                `💚 Chiêu hồi phục: ${healSkill.ten || healSkill.id}`,
+              );
+              return { loai: "chieu", id: healSkill.id };
+            }
+          }
+
+          // 1G. Dựng Khiên Kỹ Năng / Phù Hộ Thuẫn Dự Báo Đỡ Đòn
+          const shieldSkillRatio =
+            (cfg.shieldSkillThreshold != null ? cfg.shieldSkillThreshold : 40) /
+            100;
+          const needUrgentShield =
+            isHeavyAttackIncoming ||
+            hpRatio < 0.5 ||
+            aiMode === "defensive";
           if (
-            outOfManaSkills.length > 0 &&
-            canUseItem &&
-            !ta.danLuotNay &&
-            ta.tui
+            usableSkills.length > 0 &&
+            needUrgentShield &&
+            shieldRatio < shieldSkillRatio
           ) {
+            const shieldSkill = usableSkills.find(
+              (c) =>
+                c.dang === "thu" ||
+                /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp|kim chung/i.test(
+                  c.ten || "",
+                ),
+            );
+            if (shieldSkill) {
+              setAiDecision(
+                `🛡️ Dựng khiên: ${shieldSkill.ten || shieldSkill.id}`,
+              );
+              return { loai: "chieu", id: shieldSkill.id };
+            }
+          }
+
+          // Dán Phù Hộ Thuẫn theo shieldTalismanMode
+          const shieldTalMode =
+            cfg.shieldTalismanMode ||
+            (cfg.smartShield === false ? "off" : "predictive");
+          const shieldHpTrig =
+            (cfg.shieldHpThreshold != null ? cfg.shieldHpThreshold : 55) / 100;
+          const shouldUseShieldTalisman =
+            shieldTalMode === "off"
+              ? false
+              : shieldTalMode === "boss_only"
+                ? isBossOrElite &&
+                  (isHeavyAttackIncoming || hpRatio < shieldHpTrig) &&
+                  shieldRatio < 0.3
+                : shieldTalMode === "always_keep"
+                  ? shieldRatio < 0.12
+                  : (isHeavyAttackIncoming && shieldRatio < 0.3) ||
+                    (hpRatio < shieldHpTrig && shieldRatio < 0.15);
+
+          if (canUseItem && shouldUseShieldTalisman) {
+            let bestShieldTal = null;
             for (const [id, count] of Object.entries(ta.tui)) {
-              if (!count || count <= 0 || failedActions.has("dan:" + id))
-                continue;
+              if (!count || count <= 0) continue;
               const it = Cc.items && Cc.items.get(id);
-              if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
+              if (!it || it.loai !== "phu_luc" || !it.tran) continue;
+              if ((it.pham_cap || 1) > effMaxTalismanGrade) continue;
+              if (!(it.tran.thuan && it.tran.thuan > 0)) continue;
+              if (!canUseBagItem(it)) continue;
               if (
-                it.tran.linh_luc &&
-                it.tran.linh_luc > 0 &&
-                !it.tran.bo_chay
+                !bestShieldTal ||
+                (it.pham_cap || 1) > (bestShieldTal.pham_cap || 1)
               ) {
-                return { loai: "dan", item: it.id, so: 1 };
+                bestShieldTal = it;
+              }
+            }
+            if (bestShieldTal) {
+              setAiDecision(
+                `🛡️ Dán phù thuẫn: ${bestShieldTal.ten || bestShieldTal.id}`,
+              );
+              return { loai: "dan", item: bestShieldTal.id, so: 1 };
+            }
+          }
+
+          // ═══════════════════════════════════════════════════════════════════
+          // PHA 2: DỨT ĐIỂM NHANH CHỐNG TRÀN SÁT THƯƠNG (SMART EXECUTE) & KHỐNG CHẾ NGẮT CHIÊU
+          // ═══════════════════════════════════════════════════════════════════
+
+          // 2A. Dứt điểm 0 Mana bằng Quyền Cước nếu mục tiêu không có khiên và máu nằm gọn trong 1 đòn đánh thường
+          const estBasicDmg = Math.max(
+            22,
+            Math.round((ta.cong || ta.phapLuc * 0.35 || 20) * 0.85),
+          );
+          if (
+            cfg.smartFinisher !== false &&
+            !ta.daDanhThuong &&
+            !failedActions.has("danh_thuong") &&
+            targetShield <= 0 &&
+            (target.khiHuyet || 0) > 0 &&
+            (target.khiHuyet || 0) <= estBasicDmg
+          ) {
+            setAiDecision("👊 Quyền Cước kết liễu (Tiết kiệm 100% mana)");
+            return { loai: "danh_thuong" };
+          }
+
+          // 2B. Khống Chế Ngắt Nộ (Kỹ Năng Khống Chế & Phù Khống Chế)
+          const isImmune =
+            (target.controlImmunity && target.controlImmunity > 0) ||
+            (target.mienDen && target.mienDen >= curRound);
+          const targetAlreadyCC = !!target.khongChe;
+
+          if (!isImmune && !targetAlreadyCC && cfg.smartCc !== false) {
+            // Ưu tiên 1: Kỹ năng Khống Chế (0 tốn phù)
+            if (usableSkills.length > 0) {
+              const ccSkill = usableSkills.find(
+                (c) =>
+                  c.dang === "khong_che" ||
+                  (c.controlChance && c.controlChance > 0) ||
+                  (c.controlTurns && c.controlTurns > 0) ||
+                  /choáng|định thân|trầm mặc|trói|đóng băng|phong ấn|giam cầm/i.test(
+                    c.ten || "",
+                  ),
+              );
+              if (
+                ccSkill &&
+                (isHeavyAttackIncoming ||
+                  isBossOrElite ||
+                  hpRatio < 0.65 ||
+                  aiMode !== "aggressive")
+              ) {
+                setAiDecision(
+                  `❄️ Khống chế: ${ccSkill.ten || ccSkill.id}`,
+                );
+                return { loai: "chieu", id: ccSkill.id };
+              }
+            }
+
+            // Ưu tiên 2: Phù Khống Chế theo ccTalismanMode
+            const ccTalMode =
+              cfg.ccTalismanMode ||
+              (cfg.smartCc === false ? "off" : "interrupt");
+            const shouldUseCcTal =
+              ccTalMode === "off"
+                ? false
+                : ccTalMode === "always"
+                  ? true
+                  : ccTalMode === "boss_lock"
+                    ? isBossOrElite
+                    : ccTalMode === "emergency"
+                      ? hpRatio < 0.42
+                      : isHeavyAttackIncoming ||
+                        (isBossOrElite && hpRatio < 0.75) ||
+                        hpRatio < 0.48;
+
+            if (canUseItem && shouldUseCcTal) {
+              let bestCcTal = null;
+              for (const [id, count] of Object.entries(ta.tui)) {
+                if (!count || count <= 0) continue;
+                const it = Cc.items && Cc.items.get(id);
+                if (!it || it.loai !== "phu_luc" || !it.tran) continue;
+                if ((it.pham_cap || 1) > effMaxTalismanGrade) continue;
+                if (!(it.tran.khong_che && it.tran.khong_che > 0)) continue;
+                if (!canUseBagItem(it)) continue;
+                bestCcTal = it;
+                break;
+              }
+              if (bestCcTal) {
+                setAiDecision(
+                  `⛓️ Ném phù khống chế: ${bestCcTal.ten || bestCcTal.id}`,
+                );
+                return { loai: "dan", item: bestCcTal.id, so: 1 };
               }
             }
           }
 
-          // 5B. Buff / Hỗ trợ: Nếu chưa bộc phát và có chiêu buff
+          // ═══════════════════════════════════════════════════════════════════
+          // PHA 3: DÀN TRẬN BÀN · BÙ ĐAN LINH LỰC · BUFF BỘC PHÁT · MỞ MÀN PHÁ GIÁP
+          // ═══════════════════════════════════════════════════════════════════
+
+          // 3A. Tự động bày Trận Bàn theo formationMode
+          const formMode =
+            cfg.formationMode ||
+            (cfg.autoFormation === false ? "off" : "boss_or_danger");
+          const shouldDeployFormation =
+            formMode === "off"
+              ? false
+              : formMode === "always"
+                ? true
+                : formMode === "boss_only"
+                  ? isBossOrElite
+                  : isBossOrElite || hpRatio < 0.65 || liveFoes.length >= 2;
+
+          if (allowConsumeItems && ta.tui && shouldDeployFormation) {
+            const formationBlockFn =
+              (core &&
+                core["combat/actions"] &&
+                core["combat/actions"].formationBlock) ||
+              (core && core.formationBlock);
+            for (const [id, count] of Object.entries(ta.tui)) {
+              if (!count || count <= 0 || failedActions.has("bay_tran:" + id))
+                continue;
+              const it = Cc.items && Cc.items.get(id);
+              if (!it || it.loai !== "tran_ban" || !it.tran_phap) continue;
+              if (typeof formationBlockFn === "function") {
+                try {
+                  if (formationBlockFn(tran, Cc, it.id) !== undefined) continue;
+                } catch (e) {}
+              }
+              setAiDecision(`阵 Khai triển trận bàn: ${it.ten || it.id}`);
+              return { loai: "bay_tran", item: it.id };
+            }
+          }
+
+          // 3B. Cắn Đan Hồi Linh Lực Thông Minh (Smart Spirit Pill 3.0)
+          // Kiểm tra cả trường hợp dưới ngưỡng % VÀ trường hợp có chiêu đã hồi xong nhưng thiếu Linh Lực để tung!
+          const spiritMode = cfg.spiritPillMode || "on_demand";
+          const spiritTrig =
+            (cfg.spiritThreshold != null ? cfg.spiritThreshold : 20) / 100;
+          const readyButOutOfManaSkills = skills.filter((c) => {
+            if (!c || !c.id || failedActions.has("chieu:" + c.id)) return false;
+            if (c.bloodYears && !canUseBloodSacrifice(c)) return false;
+            const onCd = ta.hoi && (ta.hoi[c.id] ?? 0) > curRound;
+            return !onCd && (c.phi || 0) > (ta.linhLuc || 0);
+          });
+          const maxNeededPhi = readyButOutOfManaSkills.length
+            ? Math.max(...readyButOutOfManaSkills.map((c) => c.phi || 0))
+            : 0;
+          const needManaForSkill =
+            spiritMode === "on_demand" &&
+            readyButOutOfManaSkills.length > 0 &&
+            (usableSkills.filter((c) => c.dang === "cong" || (c.uy || 0) > 0)
+              .length === 0 ||
+              isBossOrElite);
+
+          const shouldUseSpiritPill =
+            spiritMode === "off"
+              ? false
+              : spiritMode === "boss_only"
+                ? isBossOrElite && (mpRatio < spiritTrig || needManaForSkill)
+                : spiritMode === "threshold_only"
+                  ? mpRatio < spiritTrig
+                  : mpRatio < spiritTrig || needManaForSkill;
+
+          if (canUseItem && !ta.danLuotNay && shouldUseSpiritPill) {
+            const missingMp = Math.max(
+              1,
+              (ta.linhLucToiDa || 50) - (ta.linhLuc || 0),
+              maxNeededPhi - (ta.linhLuc || 0),
+            );
+            const mpResistExp =
+              (ta.drugResistTran && ta.drugResistTran["linh_luc"]) || 0;
+            const mpEff = Math.pow(retention, mpResistExp);
+            const estPillFn =
+              (core &&
+                core["combat/actions"] &&
+                core["combat/actions"].estimatePillRestore) ||
+              (core && core.estimatePillRestore);
+
+            let bestMpPill = null;
+            let bestMpScore = Infinity;
+
+            for (const [id, count] of Object.entries(ta.tui)) {
+              if (!count || count <= 0) continue;
+              const it = Cc.items && Cc.items.get(id);
+              if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
+              if (it.tran.bo_chay) continue;
+              if ((it.pham_cap || 1) > effMaxPillGrade) continue;
+              if (!(it.tran.linh_luc && it.tran.linh_luc > 0)) continue;
+              if (!canUseBagItem(it)) continue;
+
+              let estMp = 0;
+              if (typeof estPillFn === "function") {
+                try {
+                  estMp = estPillFn(ta, it).linhLuc;
+                } catch (e) {}
+              }
+              if (!estMp || estMp <= 0) {
+                estMp = Math.round(
+                  (ta.linhLucToiDa || 50) * it.tran.linh_luc * mpEff,
+                );
+              }
+              if (estMp <= 0) estMp = 5;
+
+              const diff = Math.abs(missingMp - estMp);
+              const canCoverSkill =
+                (ta.linhLuc || 0) + estMp >= maxNeededPhi ? 0 : 120;
+              const score =
+                diff +
+                canCoverSkill +
+                (it.pham_cap || 1) * (isBossOrElite ? 12 : 35);
+              if (score < bestMpScore) {
+                bestMpScore = score;
+                bestMpPill = it;
+              }
+            }
+            if (bestMpPill) {
+              setAiDecision(
+                `💧 Cắn ${bestMpPill.ten || bestMpPill.id} (Bù Linh Lực)`,
+              );
+              return { loai: "dan", item: bestMpPill.id, so: 1 };
+            }
+          }
+
+          // 3C. Kỹ Năng Buff / Gia Cường (Tung TRƯỚC khi ra đòn tấn công)
           if (
             usableSkills.length > 0 &&
             cfg.comboSequence !== false &&
@@ -27886,93 +28274,129 @@ table.au-tb tr:last-child td {
               (c) =>
                 c.dang === "buff" ||
                 c.dang === "ho_tro" ||
-                /bộc phát|tăng công|cuồng nộ|hóa thần/i.test(c.ten || ""),
+                (Array.isArray(c.effects) &&
+                  c.effects.some((e) =>
+                    ["empower", "haste"].includes(e.kind),
+                  ) &&
+                  !(c.uy > 20)) ||
+                /bộc phát|tăng công|cuồng nộ|hóa thần|tụ khí|kiếm ý/i.test(
+                  c.ten || "",
+                ),
             );
-            if (buffSkill) {
+            if (buffSkill && targetEffHp > estBasicDmg * 1.3) {
+              setAiDecision(
+                `✨ Kích hoạt Buff: ${buffSkill.ten || buffSkill.id}`,
+              );
               return { loai: "chieu", id: buffSkill.id };
             }
           }
 
-          // 5C. Phòng Thủ / Hộ Thuẫn (Shield Skills): Khi chưa có khiên hoặc khiên mỏng -> Luôn dựng khiên!
-          if (usableSkills.length > 0) {
-            const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
-            if (curShield < ta.khiHuyetToiDa * 0.35) {
-              const shieldSkill = usableSkills.find(
-                (c) =>
-                  c.dang === "thu" ||
-                  /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp/i.test(c.ten || ""),
+          // 3D. Cắn Đan Bộc Phát Thông Minh (Burst Pill 3.0 — Chỉ cắn khi đã có chiêu tấn công sẵn sàng và địch còn >30% HP)
+          const attackSkills = usableSkills.filter(
+            (c) => c.dang === "cong" || (c.uy || 0) > 0 || !c.dang,
+          );
+          const hasReadyStrongAttack = attackSkills.some(
+            (c) => (c.uy || 0) >= 18 || c.natal || (c.phi || 0) >= 12,
+          );
+          const burstMode =
+            cfg.burstPillMode ||
+            (cfg.useBurstPill === false ? "off" : "boss_combo");
+          const targetHpPct =
+            (target.khiHuyet || 0) / Math.max(1, target.khiHuyetToiDa || 1);
+          const shouldUseBurstPill =
+            burstMode === "off"
+              ? false
+              : burstMode === "always"
+                ? attackSkills.length > 0 && targetHpPct > 0.25
+                : burstMode === "boss_any"
+                  ? isBossOrElite
+                  : isBossOrElite &&
+                    (hasReadyStrongAttack || attackSkills.length >= 2) &&
+                    targetHpPct > 0.3;
+
+          if (
+            canUseItem &&
+            !ta.danLuotNay &&
+            !ta.bocPhatDen &&
+            !ta.bocPhatTuDan &&
+            shouldUseBurstPill
+          ) {
+            let burstPill = null;
+            for (const [id, count] of Object.entries(ta.tui)) {
+              if (!count || count <= 0) continue;
+              const it = Cc.items && Cc.items.get(id);
+              if (!it || it.loai !== "dan_duoc" || !it.tran) continue;
+              if ((it.pham_cap || 1) > effMaxPillGrade) continue;
+              if (!(it.tran.bao_phat && it.tran.bao_phat > 0)) continue;
+              if (!canUseBagItem(it)) continue;
+              burstPill = it;
+              break;
+            }
+            if (burstPill) {
+              setAiDecision(
+                `🔥 Cắn ${burstPill.ten || burstPill.id} (Bộc phát dồn Boss)`,
               );
-              if (shieldSkill) {
-                return { loai: "chieu", id: shieldSkill.id };
+              return { loai: "dan", item: burstPill.id, so: 1 };
+            }
+          }
+
+          // ═══════════════════════════════════════════════════════════════════
+          // PHA 4: KỸ NĂNG TẤN CÔNG THÔNG MINH (CHỐNG OVERKILL · PHÁ GIÁP ➔ ĐẠI CHIÊU · KÍCH NỔ ẤN KÝ · AoE)
+          // ═══════════════════════════════════════════════════════════════════
+          if (attackSkills.length > 0) {
+            // 4A. Kiểm tra Kết Liễu Tiết Kiệm (Anti-Overkill Execute):
+            // Nếu có chiêu đủ sức hạ gục mục tiêu ngay trong 1 đòn, chọn chiêu tốn ít mana & hồi chiêu ngắn nhất!
+            if (cfg.preventOverkill !== false && liveFoes.length === 1) {
+              const lethalSkills = attackSkills
+                .map((c) => ({
+                  c,
+                  dmg: estimateSkillDamage(ta, target, c, core),
+                }))
+                .filter((x) => x.dmg >= targetEffHp * 1.02 && !x.c.bloodYears);
+
+              if (lethalSkills.length >= 2) {
+                lethalSkills.sort((a, b) => {
+                  const costA =
+                    (a.c.phi || 0) * 2 +
+                    (a.c.hoi || 0) * 18 +
+                    (a.c.uy || 0) * 0.5;
+                  const costB =
+                    (b.c.phi || 0) * 2 +
+                    (b.c.hoi || 0) * 18 +
+                    (b.c.uy || 0) * 0.5;
+                  return costA - costB;
+                });
+                const chosenExec = lethalSkills[0].c;
+                setAiDecision(
+                  `🎯 Kết liễu chuẩn: ${chosenExec.ten || chosenExec.id} (Chống phí đại chiêu)`,
+                );
+                return { loai: "chieu", id: chosenExec.id };
               }
             }
-          }
 
-          // 5D. Hồi Phục (Heal Skills): Khi mất máu -> Luôn tung chiêu hồi phục!
-          if (usableSkills.length > 0 && ta.khiHuyet < ta.khiHuyetToiDa * 0.9) {
-            const healSkill = usableSkills.find(
-              (c) =>
-                c.dang === "hoi_phuc" ||
-                /hồi|trị thương|sinh cơ|trường sinh/i.test(c.ten || ""),
-            );
-            if (healSkill) {
-              return { loai: "chieu", id: healSkill.id };
+            // 4B. Chiêu Bản Mệnh (Sau khi đã bật Buff/Bộc phát): tung ít nhất 1 lần mỗi trận để tăng tâm huyết
+            if (
+              cfg.prioritizeNatal !== false &&
+              !tran.natalUsed &&
+              targetEffHp > estBasicDmg * 1.4
+            ) {
+              const natalSkill = attackSkills.find(
+                (c) => c.natal && !c.bloodYears,
+              );
+              if (natalSkill) {
+                setAiDecision(
+                  `🗡️ Xuất Bản Mệnh: ${natalSkill.ten || natalSkill.id}`,
+                );
+                return { loai: "chieu", id: natalSkill.id };
+              }
             }
-          }
 
-          // 5E. Khống Chế (Control Skills): Ngắt chiêu địch / khóa tay
-          const isImmune =
-            (target.controlImmunity && target.controlImmunity > 0) ||
-            (target.mienDen && target.mienDen >= curRound);
-          if (
-            !isImmune &&
-            cfg.smartCc !== false &&
-            usableSkills.length > 0 &&
-            !target.khongChe
-          ) {
-            const ccSkill = usableSkills.find(
-              (c) =>
-                c.dang === "khong_che" ||
-                (c.controlChance && c.controlChance > 0) ||
-                (c.controlTurns && c.controlTurns > 0) ||
-                /choáng|định thân|trầm mặc|trói|đóng băng/i.test(c.ten || ""),
-            );
-            if (ccSkill) {
-              return { loai: "chieu", id: ccSkill.id };
-            }
-          }
-
-          // 5G. Chiêu Bản Mệnh: Ưu tiên tung ít nhất 1 lần trong trận để tăng tâm huyết (gdd 56)
-          if (!tran.natalUsed && usableSkills.length > 0) {
-            const natalSkill = usableSkills.find(
-              (c) => c.natal && !c.bloodYears,
-            );
-            if (natalSkill) {
-              return { loai: "chieu", id: natalSkill.id };
-            }
-          }
-
-          // 5H. Chiêu Tấn Công Tối Ưu (Khắc hệ & Mana Efficiency)
-          const attackSkills = usableSkills.filter(
-            (c) => c.dang === "cong" || c.uy > 0 || !c.dang,
-          );
-          if (attackSkills.length > 0) {
-            const heTacDongFn =
-              (core &&
-                core["combat/elements"] &&
-                core["combat/elements"].heTacDong) ||
-              (core && core.heTacDong);
-            const heSoHeFn =
-              (core &&
-                core["combat/actions"] &&
-                core["combat/actions"].heSoHe) ||
-              (core && core.heSoHe);
-
+            // 4C. Chấm điểm toàn diện các kỹ năng tấn công
             const hasFollowupSkill = attackSkills.length >= 2;
             const targetHp = target.khiHuyet || 0;
             const isLowStraggler =
               liveFoes.length === 1 &&
-              targetHp <= estBasicDmg * 1.75 &&
+              targetEffHp <= estBasicDmg * 1.75 &&
               hpRatio > 0.45;
             const targetHasDebuff = !!(
               (Array.isArray(target.statuses) &&
@@ -27986,52 +28410,51 @@ table.au-tb tr:last-child td {
             );
 
             const scored = attackSkills.map((c) => {
-              let score = c.uy || 1;
-              if (c.he && target.he) {
-                if (typeof heTacDongFn === "function") {
-                  try {
-                    const rel = heTacDongFn(c.he, target.he);
-                    if (rel === -1) score *= 1.4;
-                    else if (rel === 1) score *= 0.7;
-                  } catch (e) {}
-                } else if (typeof heSoHeFn === "function") {
-                  try {
-                    score *= heSoHeFn(c.he, target);
-                  } catch (e) {}
-                }
+              const estDmg = estimateSkillDamage(ta, target, c, core);
+              let score = Math.max(10, estDmg);
+              let reason = "Công kích";
+
+              // Thưởng khắc hệ Ngũ Hành
+              if (c.he && target.he && typeof heTacDongFn === "function") {
+                try {
+                  const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
+                  const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
+                  if (
+                    heTacDongFn(sHe, fHe) === -1 ||
+                    KHAC_HE[gocHe(sHe)] === gocHe(fHe)
+                  ) {
+                    score *= 1.25;
+                    reason = "Khắc hệ";
+                  }
+                } catch (e) {}
               }
-              const targetShield =
-                (target.hoThuan || 0) + (target.thuanPhu || 0);
-              const isSunderOrMark =
-                /phá giáp|xuyên|phá khiên|phá thuẫn|trừ thuẫn|ấn ký|suy yếu|lộ sơ hở|huyết ấn|kiếm ấn/i.test(
-                  c.ten || "",
-                ) ||
-                (Array.isArray(c.effects) &&
-                  c.effects.some((e) =>
-                    [
-                      "sunder",
-                      "mark",
-                      "decay",
-                      "chill",
-                      "bleed",
-                      "poison",
-                    ].includes(e.kind),
-                  )) ||
-                c.phaGiap ||
-                c.sunder ||
-                c.mark;
-              if (targetShield > 20 && isSunderOrMark) {
-                score *= 1.55;
-              }
-              // Chuỗi Liên Hoàn Debuff -> Đại Chiêu: ưu tiên Phá Giáp / Ấn Ký mở màn trước khi tung Nuke
+
+              // Thưởng kỹ năng diện rộng (AoE) khi có nhiều kẻ địch
               if (
+                cfg.aoePriority !== false &&
+                liveFoes.length >= 2 &&
+                isAoESkill(c)
+              ) {
+                score *= 1 + 0.55 * Math.min(4, liveFoes.length - 1);
+                reason = `Quần công ${liveFoes.length} mục tiêu`;
+              }
+
+              // Chuỗi Liên Hoàn Phá Giáp / Ấn Ký -> Đại Chiêu
+              const isSunder = isSunderOrMarkSkill(c);
+              if (targetShield > 20 && isSunder) {
+                score *= 1.65;
+                reason = "Phá hộ thuẫn";
+              } else if (
+                cfg.comboSequence !== false &&
                 hasFollowupSkill &&
                 !targetHasDebuff &&
-                isSunderOrMark &&
-                (isBossOrElite || targetHp > estBasicDmg * 2.5)
+                isSunder &&
+                (isBossOrElite || targetEffHp > estBasicDmg * 2.4)
               ) {
-                score *= 1.45;
+                score *= 1.55;
+                reason = "Mở màn Phá Giáp / Ấn Ký";
               }
+
               // Kích nổ Ấn Ký / Trạng Thái Xấu trên mục tiêu đã dính debuff
               if (
                 targetHasDebuff &&
@@ -28041,46 +28464,187 @@ table.au-tb tr:last-child td {
                   /kích nổ|trảm|tuyệt sát|phệ hồn|đoạt mệnh|thiên phạt/i.test(
                     c.ten || "",
                   ) ||
-                  (c.uy || 0) >= 45)
+                  (c.uy || 0) >= 40)
               ) {
-                score *= 1.25;
+                score *= 1.32;
+                reason = "Kích nổ Ấn Ký / Tuyệt sát";
               }
-              // Bảo toàn Đại Chiêu / Hồi Chiêu Dài khi chỉ còn 1 quái tàn huyết
+
+              // Bảo toàn Đại Chiêu khi chỉ còn 1 quái tàn huyết
               if (
-                (targetHp < 50 && (c.phi || 0) > 15) ||
-                (isLowStraggler && ((c.hoi || 0) >= 3 || (c.phi || 0) >= 25))
+                cfg.preventOverkill !== false &&
+                ((targetHp < 50 && (c.phi || 0) > 15) ||
+                  (isLowStraggler &&
+                    ((c.hoi || 0) >= 3 || (c.phi || 0) >= 24)))
               ) {
-                score *= 0.35;
+                score *= 0.3;
               }
-              return { c, score };
+
+              return { c, score, reason };
             });
+
             scored.sort((a, b) => b.score - a.score);
-            return { loai: "chieu", id: scored[0].c.id };
+            const bestSkill = scored[0];
+            setAiDecision(
+              `⚡ ${bestSkill.c.ten || bestSkill.c.id} (${bestSkill.reason})`,
+            );
+            return { loai: "chieu", id: bestSkill.c.id };
           }
 
-          // 5I. Fallback Toàn Diện: Tung Nốt BẤT KỲ Chiêu Nào Còn Dùng Được Trong UsableSkills (Không Bỏ Chiêu!)
+          // ═══════════════════════════════════════════════════════════════════
+          // PHA 5: ĐAN XEN PHÙ CÔNG KÍCH · DUY TRÌ KHIÊN/MÁU · DỆT QUYỀN CƯỚC 0 MANA
+          // ═══════════════════════════════════════════════════════════════════
+
+          // 5A. Ném Phù Công Kích theo atkTalismanMode (Sau khi đã tung hết chiêu hoặc đang dồn Boss)
+          const atkTalMode =
+            cfg.atkTalismanMode ||
+            (cfg.useAttackTalismans === false ? "off" : "smart_weave");
+          const shouldUseAtkTalisman =
+            atkTalMode === "off"
+              ? false
+              : atkTalMode === "always"
+                ? true
+                : atkTalMode === "boss_burst"
+                  ? isBossOrElite
+                  : atkTalMode === "zero_mana"
+                    ? (ta.linhLuc || 0) < 12 || usableSkills.length === 0
+                    : isBossOrElite ||
+                      (ta.linhLuc || 0) < 15 ||
+                      targetEffHp <= 160;
+
+          if (canUseItem && shouldUseAtkTalisman) {
+            let bestAtkTal = null;
+            let bestAtkScore = -1;
+            for (const [id, count] of Object.entries(ta.tui)) {
+              if (!count || count <= 0) continue;
+              const it = Cc.items && Cc.items.get(id);
+              if (!it || it.loai !== "phu_luc" || !it.tran) continue;
+              if ((it.pham_cap || 1) > effMaxTalismanGrade) continue;
+              if (!(it.tran.chieu && (it.tran.chieu.uy || 0) > 0)) continue;
+              if (!canUseBagItem(it)) continue;
+
+              let tScore = it.tran.chieu.uy || 10;
+              if (
+                it.tran.chieu.he &&
+                target.he &&
+                typeof heTacDongFn === "function"
+              ) {
+                try {
+                  const fHe = Array.isArray(target.he)
+                    ? target.he[0]
+                    : target.he;
+                  const sHe = Array.isArray(it.tran.chieu.he)
+                    ? it.tran.chieu.he[0]
+                    : it.tran.chieu.he;
+                  if (
+                    heTacDongFn(sHe, fHe) === -1 ||
+                    KHAC_HE[gocHe(sHe)] === gocHe(fHe)
+                  ) {
+                    tScore *= 1.4;
+                  }
+                } catch (e) {}
+              }
+              if (tScore > bestAtkScore) {
+                bestAtkScore = tScore;
+                bestAtkTal = it;
+              }
+            }
+            if (bestAtkTal) {
+              setAiDecision(
+                `🧧 Phù công kích: ${bestAtkTal.ten || bestAtkTal.id}`,
+              );
+              return { loai: "dan", item: bestAtkTal.id, so: 1 };
+            }
+          }
+
+          // 5B. Duy trì Hồi Phục / Hộ Thuẫn kỹ năng còn dư trước khi kết thúc lượt
+          if (usableSkills.length > 0 && hpRatio < healSkillRatio) {
+            const sustainHeal = usableSkills.find(
+              (c) =>
+                c.dang === "hoi_phuc" ||
+                /hồi|trị thương|sinh cơ|trường sinh/i.test(c.ten || ""),
+            );
+            if (sustainHeal) {
+              setAiDecision(
+                `💚 Duy trì hồi huyết: ${sustainHeal.ten || sustainHeal.id}`,
+              );
+              return { loai: "chieu", id: sustainHeal.id };
+            }
+          }
+          if (usableSkills.length > 0 && shieldRatio < shieldSkillRatio) {
+            const sustainShield = usableSkills.find(
+              (c) =>
+                c.dang === "thu" ||
+                /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp/i.test(c.ten || ""),
+            );
+            if (sustainShield) {
+              setAiDecision(
+                `🛡️ Bồi đắp hộ thuẫn: ${sustainShield.ten || sustainShield.id}`,
+              );
+              return { loai: "chieu", id: sustainShield.id };
+            }
+          }
+
+          // 5C. Tung nốt bất kỳ chiêu khả dụng nào còn lại
           if (usableSkills.length > 0) {
-            return { loai: "chieu", id: usableSkills[0].id };
+            const remSkill = usableSkills[0];
+            setAiDecision(`⚡ Tung chiêu: ${remSkill.ten || remSkill.id}`);
+            return { loai: "chieu", id: remSkill.id };
+          }
+
+          // 5D. Fallback kiểm tra nextAutomatedAction của lõi game (chỉ khi Siêu AI 3.0 đã hết chiêu chủ động)
+          const autoFn =
+            (core &&
+              core["combat/playerAutomation"] &&
+              core["combat/playerAutomation"].nextAutomatedAction) ||
+            (core && core.nextAutomatedAction);
+          if (typeof autoFn === "function") {
+            try {
+              const cand = autoFn(tran, Cc, {
+                enabled: true,
+                autoEndTurn: false,
+                usePills: false,
+                useTalismans: false,
+                stackShields: true,
+                useInnate: true,
+                skillPriority: [],
+                recallFamiliarBelow: 0,
+                healBelow: 0,
+                spiritBelow: 0,
+                maxGrade: effMaxPillGrade,
+              });
+              if (cand && cand.loai === "chieu") {
+                const actKey = "chieu:" + cand.id;
+                const skObj = skills.find((x) => x && x.id === cand.id);
+                if (
+                  !failedActions.has(actKey) &&
+                  (!skObj || !skObj.bloodYears || canUseBloodSacrifice(skObj))
+                ) {
+                  setAiDecision("⚡ Chiêu bổ trợ: " + cand.id);
+                  return cand;
+                }
+              }
+            } catch (e) {}
           }
 
           // 6. QUYỀN CƯỚC MIỄN PHÍ MỖI LƯỢT (Basic Attack - danh_thuong)
-          // CHỈ đánh thường khi TOÀN BỘ kỹ năng đã tung hết, đang hồi chiêu hoặc cạn kiệt linh lực!
           if (
             cfg.autoNormalAttack !== false &&
             !ta.daDanhThuong &&
             !failedActions.has("danh_thuong")
           ) {
+            setAiDecision("👊 Dệt Quyền Cước (0 Linh Lực)");
             return { loai: "danh_thuong" };
           }
 
           // 7. KẾT THÚC LƯỢT (End Turn)
+          setAiDecision("⏭ Kết thúc hiệp " + curRound);
           return { loai: "ket_luot" };
         }
 
         let combatStepTimer = null;
 
-        // Đánh tự động bằng AI trong trận với nhịp độ trực quan (Visual Pacing: 200ms) để người chơi nhìn rõ từng đòn
-        // singleAction: true nếu người chơi bấm "Đánh 1 Đòn" -> chỉ chạy đúng 1 hành động rồi dừng để quan sát
+        // Đánh tự động bằng AI trong trận với nhịp độ tùy chọn (200ms / 80ms / 15ms)
         function auFightStep(singleAction) {
           const g = G(),
             c = C();
@@ -28101,7 +28665,7 @@ table.au-tb tr:last-child td {
 
           let act = null;
           let r = { ok: false };
-          for (let attempt = 0; attempt < 10; attempt++) {
+          for (let attempt = 0; attempt < 12; attempt++) {
             act = smartCombatAction(tran, c, cfg, failedActions);
             if (!act) {
               if (
@@ -28129,6 +28693,8 @@ table.au-tb tr:last-child td {
               failedActions.add("danh_thuong");
             else if (act.loai === "muc_tieu")
               failedActions.add("muc_tieu:" + act.ma);
+            else if (act.loai === "thu_hoi")
+              failedActions.add("thu_hoi:" + act.id);
             else if (act.loai === "thieu_dot") failedActions.add("thieu_dot");
             else if (act.loai === "bo_chay") failedActions.add("bo_chay");
 
@@ -28147,7 +28713,12 @@ table.au-tb tr:last-child td {
 
           if (combatAutoActive) {
             if (combatStepTimer) clearTimeout(combatStepTimer);
-            const stepDelay = cfg.speed === "instant" ? 15 : 200;
+            const stepDelay =
+              cfg.speed === "instant"
+                ? 15
+                : cfg.speed === "fast"
+                  ? 80
+                  : 200;
             combatStepTimer = setTimeout(() => {
               combatStepTimer = null;
               const liveTran = g.state.run && g.state.run.tran;
@@ -28164,7 +28735,7 @@ table.au-tb tr:last-child td {
           return "ok";
         }
 
-        // Đánh tự động tức thì (Zero-delay) dùng cho Auto Săn Yêu / Auto Tháp chạy ngầm trong auPending
+        // Đánh tự động tức thì (Zero-delay) dùng cho Auto Săn Yêu / Auto Dị Bảo / Auto Tháp chạy ngầm trong auPending
         function auFightInstant() {
           const g = G(),
             c = C();
@@ -28177,7 +28748,7 @@ table.au-tb tr:last-child td {
           const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
           let iters = 0;
           const failed = new Set();
-          while (tran && !tran.ketThuc && tran.luot === "ta" && iters < 16) {
+          while (tran && !tran.ketThuc && tran.luot === "ta" && iters < 18) {
             iters++;
             let act = smartCombatAction(tran, c, cfg, failed);
             if (!act) {
@@ -28202,12 +28773,12 @@ table.au-tb tr:last-child td {
               else if (act.loai === "danh_thuong") failed.add("danh_thuong");
               else if (act.loai === "muc_tieu")
                 failed.add("muc_tieu:" + act.ma);
+              else if (act.loai === "thu_hoi")
+                failed.add("thu_hoi:" + act.id);
               else if (act.loai === "thieu_dot") failed.add("thieu_dot");
               else if (act.loai === "bo_chay") failed.add("bo_chay");
 
-              // Nếu hành động này thất bại, TIẾP TỤC VÒNG LẶP để thử chiêu / hành động khác!
-              // TUYỆT ĐỐI không lập tức đánh thường rồi kết lượt bỏ cuộc!
-              if (act.loai === "ket_luot" || failed.size >= 12) {
+              if (act.loai === "ket_luot" || failed.size >= 14) {
                 auCall(() => g.hanhDongTran({ loai: "ket_luot" }));
                 break;
               }
@@ -28218,41 +28789,34 @@ table.au-tb tr:last-child td {
           return "ok";
         }
 
-        // ═════════ GIAO DIỆN NỔI TÁC CHIẾN TRONG TRẬN (COMBAT OVERLAY) ═════════
+        // ═════════ GIAO DIỆN NỔI TÁC CHIẾN TRONG TRẬN 3.0 (DRAGGABLE & COLLAPSIBLE HUD) ═════════
         let combatAutoActive = false;
         let combatOverlayEl = null;
+        let combatHudCollapsed = false;
         let lastSyncedCombatAutomationStr = "";
 
-        // Đồng bộ cấu hình Auto của game gốc trong localStorage để nếu người chơi bấm nút "Tự" của game thì game vẫn cắn đan & dùng phù
         function syncGameCombatAutomation() {
           try {
+            const cfg = (AU && AU.cfg && AU.cfg.tc) || {};
             const raw = localStorage.getItem("tu-tien:combat-automation");
             let c = raw ? JSON.parse(raw) : {};
-            c.usePills = true;
-            c.useTalismans = true;
+            const allowItems = cfg.itemPolicy !== "save_all";
+            c.usePills = allowItems && cfg.healPillMode !== "off";
+            c.useTalismans = allowItems;
             c.autoEndTurn = true;
             c.useInnate = true;
-            if (!c.pillRules) {
-              c.pillRules = {
-                healBelow: 0.45,
-                spiritBelow: 0.25,
-                maxGrade: 0,
-                burstOn: "strong",
-              };
-            } else {
-              c.pillRules.spiritBelow = Math.max(
-                c.pillRules.spiritBelow || 0,
-                0.25,
-              );
-            }
-            if (!c.talismanRules) {
-              c.talismanRules = {
-                shieldBelow: 0.5,
-                maxGrade: 0,
-                controlOn: "strong",
-                attackOn: "strong",
-              };
-            }
+            c.pillRules = {
+              healBelow: (cfg.healHpThreshold || 35) / 100,
+              spiritBelow: (cfg.spiritThreshold || 20) / 100,
+              maxGrade: cfg.maxPillGrade || 0,
+              burstOn: cfg.burstPillMode === "off" ? "never" : "strong",
+            };
+            c.talismanRules = {
+              shieldBelow: (cfg.shieldHpThreshold || 55) / 100,
+              maxGrade: cfg.talismanGrade || 0,
+              controlOn: cfg.ccTalismanMode === "off" ? "never" : "strong",
+              attackOn: cfg.atkTalismanMode === "off" ? "never" : "strong",
+            };
             const nextStr = JSON.stringify(c);
             if (nextStr !== lastSyncedCombatAutomationStr && nextStr !== raw) {
               lastSyncedCombatAutomationStr = nextStr;
@@ -28278,11 +28842,10 @@ table.au-tb tr:last-child td {
             return;
           }
 
-          // Chỉ đồng bộ localStorage khi thực sự có trận đấu
           syncGameCombatAutomation();
 
           const ta = tran.ta;
-          const dich = tran.dich || [];
+          const dich = (tran.dich || []).filter((d) => (d.khiHuyet || 0) > 0);
           const curTarget = dich.find((d) => d.ma === tran.mucTieu) || dich[0];
           const curHiep = tran.hiep || 1;
           const curSpeed = cfg.speed || "normal";
@@ -28294,7 +28857,13 @@ table.au-tb tr:last-child td {
               ? Math.round(((ta.linhLuc || 0) / ta.linhLucToiDa) * 100)
               : 0;
             const shield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
-            hpStr = `<span style="font-size:11px;color:#a3e635">❤️ ${hpPct}%</span> <span style="font-size:11px;color:#38bdf8">💧 ${mpPct}%</span>${shield > 0 ? ` <span style="font-size:11px;color:#fbbf24">🛡️ +${shield}</span>` : ""}`;
+            const retention = ta.drugRetention != null ? ta.drugRetention : 0.85;
+            const curResistExp =
+              (ta.drugResistTran && ta.drugResistTran["khi_huyet"]) || 0;
+            const resistPct = Math.round(
+              (1 - Math.pow(retention, curResistExp)) * 100,
+            );
+            hpStr = `<span style="font-size:11px;color:#a3e635;font-weight:600">❤️ ${hpPct}%</span> <span style="font-size:11px;color:#38bdf8;font-weight:600">💧 ${mpPct}%</span>${shield > 0 ? ` <span style="font-size:11px;color:#fbbf24">🛡️ +${shield}</span>` : ""}${resistPct > 0 ? ` <span style="font-size:10.5px;color:#cbd5e1" title="Dược kháng tích lũy trong trận">💊Kháng ${resistPct}%</span>` : ""}`;
           }
 
           let foeStr = "";
@@ -28305,23 +28874,32 @@ table.au-tb tr:last-child td {
                 )
               : 0;
             const fName = curTarget.ten || "Mục tiêu";
-            foeStr = `<span style="font-size:11px;color:#fca5a5" title="${esc(fName)}">⚔️ ${esc(fName)}: ${fHpPct}%</span>`;
+            foeStr = `<span style="font-size:11px;color:#fca5a5;font-weight:600" title="${esc(fName)}">🎯 ${esc(fName)} (${fHpPct}%)${dich.length > 1 ? ` +${dich.length - 1}` : ""}</span>`;
           }
 
           function getTeHuyetUi(mode) {
             if (mode === "boss") {
               return {
-                label: "🩸 Tế Huyết: Boss",
+                label: "🩸 Tế: Boss",
                 color: "#fbbf24",
                 bg: "rgba(245,158,11,0.2)",
                 border: "rgba(245,158,11,0.6)",
                 title:
-                  "Tế Huyết Bản Mệnh: Bật khi gặp Boss / Kẻ địch mạnh. Click để đổi: Boss ➔ Luôn Dùng ➔ Tắt",
+                  "Tế Huyết Bản Mệnh: Chỉ dùng khi gặp Boss / Tinh Anh. Click để đổi: Boss ➔ Khẩn ➔ Luôn Bật ➔ Tắt",
+              };
+            }
+            if (mode === "emergency") {
+              return {
+                label: "🩸 Tế: Khẩn",
+                color: "#f472b6",
+                bg: "rgba(244,114,182,0.2)",
+                border: "rgba(244,114,182,0.6)",
+                title: "Tế Huyết Bản Mệnh: Chỉ khi máu < 35%. Click để đổi",
               };
             }
             if (mode === "always") {
               return {
-                label: "🩸 Tế Huyết: BẬT",
+                label: "🩸 Tế: BẬT",
                 color: "#f87171",
                 bg: "rgba(239,68,68,0.25)",
                 border: "rgba(239,68,68,0.7)",
@@ -28329,56 +28907,237 @@ table.au-tb tr:last-child td {
                   "Tế Huyết Bản Mệnh: Đang BẬT TOÀN BỘ (Đốt thọ nguyên). Click để TẮT",
               };
             }
-            if (mode === "emergency") {
+            return {
+              label: "🩸 Tế: Tắt",
+              color: "#94a3b8",
+              bg: "rgba(255,255,255,0.06)",
+              border: "rgba(255,255,255,0.18)",
+              title:
+                "Tế Huyết Bản Mệnh: Đang TẮT (Bảo toàn thọ nguyên). Click để đổi",
+            };
+          }
+
+          function getPolicyUi(pol) {
+            if (pol === "boss_only") {
               return {
-                label: "🩸 Tế Huyết: Khẩn",
-                color: "#f472b6",
-                bg: "rgba(244,114,182,0.2)",
-                border: "rgba(244,114,182,0.6)",
-                title: "Tế Huyết Bản Mệnh: Chỉ khi máu < 35%. Click để đổi",
+                label: "🎒 Đan/Phù: Boss",
+                color: "#fbbf24",
+                title:
+                  "Chế độ Vật Phẩm: Chỉ dùng Đan/Phù khi gặp Boss hoặc nguy kịch (<20% HP). Click để đổi",
+              };
+            }
+            if (pol === "save_all") {
+              return {
+                label: "🎒 Đan/Phù: Khoá",
+                color: "#94a3b8",
+                title:
+                  "Chế độ Vật Phẩm: Đang KHÓA toàn bộ Đan/Phù để tiết kiệm tuyệt đối. Click để mở lại",
               };
             }
             return {
-              label: "🩸 Tế Huyết: Tắt",
-              color: "#94a3b8",
-              bg: "rgba(255,255,255,0.05)",
-              border: "rgba(255,255,255,0.15)",
+              label: "🎒 Đan/Phù: Chuẩn",
+              color: "#3ddc97",
               title:
-                "Tế Huyết Bản Mệnh: Đang TẮT (Bảo toàn thọ nguyên). Click để BẬT khi gặp Boss",
+                "Chế độ Vật Phẩm: Tự động dùng Đan/Phù thông minh theo ngưỡng đã cài. Click để đổi nhanh",
             };
+          }
+
+          function getTargetUi(tp) {
+            const map = {
+              smart: ["🎯 M.Tiêu: T.Minh", "Nhắm mục tiêu tối ưu chiến thuật"],
+              boss: ["🎯 M.Tiêu: Boss", "Ưu tiên dồn sát thương Trùm / Tinh Anh"],
+              threat: ["🎯 M.Tiêu: N.Hiểm", "Ưu tiên kẻ chuẩn bị tung đại chiêu / hồi máu"],
+              weakest: ["🎯 M.Tiêu: Yếu", "Ưu tiên dứt điểm kẻ thấp máu trước"],
+              counter: ["🎯 M.Tiêu: Khắc", "Ưu tiên mục tiêu bị khắc hệ Ngũ Hành"],
+            };
+            const m = map[tp] || map.smart;
+            return { label: m[0], title: m[1] + " (Click để đổi)" };
+          }
+
+          function getSpeedLabel(sp) {
+            if (sp === "instant") return "⚡ 15ms";
+            if (sp === "fast") return "🚀 80ms";
+            return "⏱ 200ms";
           }
 
           if (!combatOverlayEl) {
             combatOverlayEl = document.createElement("div");
             combatOverlayEl.id = "vkx-combat-overlay";
-            combatOverlayEl.style.cssText =
-              "position:fixed;top:68px;right:18px;z-index:2147483002;background:rgba(15,25,22,0.95);backdrop-filter:blur(10px);border:1px solid #3ddc97;box-shadow:0 8px 24px rgba(0,0,0,0.6),0 0 16px rgba(61,220,151,0.3);border-radius:14px;padding:8px 12px;display:flex;align-items:center;gap:10px;font-family:system-ui,sans-serif;color:#e7f1ec;font-size:13px;user-select:none;";
+            let savedPos = null;
+            try {
+              savedPos = JSON.parse(
+                localStorage.getItem("vkx_combat_hud_pos") || "null",
+              );
+            } catch (e) {}
+            const topCss =
+              savedPos && Number.isFinite(savedPos.top)
+                ? savedPos.top + "px"
+                : "64px";
+            const rightCss =
+              savedPos && Number.isFinite(savedPos.left)
+                ? "auto"
+                : "16px";
+            const leftCss =
+              savedPos && Number.isFinite(savedPos.left)
+                ? savedPos.left + "px"
+                : "auto";
+
+            combatOverlayEl.style.cssText = `position:fixed;top:${topCss};left:${leftCss};right:${rightCss};z-index:2147483002;background:rgba(12,18,24,0.95);backdrop-filter:blur(12px);border:1px solid rgba(61,220,151,0.55);box-shadow:0 10px 28px rgba(0,0,0,0.68),0 0 18px rgba(61,220,151,0.22);border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;gap:6px;font-family:system-ui,sans-serif;color:#e7f1ec;font-size:12.5px;user-select:none;max-width:min(96vw, 560px);`;
 
             if (cfg.autoInCombat) {
               combatAutoActive = true;
             }
 
             const curTeHuyet = getTeHuyetUi(cfg.teHuyetMode || "off");
+            const curPol = getPolicyUi(cfg.itemPolicy || "auto");
+            const curTgt = getTargetUi(cfg.targetPrio || "smart");
 
             combatOverlayEl.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:15px">⚔️</span>
-          <b style="color:var(--acc, #3ddc97);font-size:13px">Siêu Auto VIP</b>
-          <span id="vkx-combat-round" style="font-size:11px;padding:1px 5px;background:rgba(255,255,255,0.08);border-radius:4px;color:#cbd5e1">H.${curHiep}</span>
+      <div id="vkx-combat-drag" style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:grab">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:14px">⚔️</span>
+          <b style="color:var(--acc, #3ddc97);font-size:13px">Siêu AI 3.0</b>
+          <span id="vkx-combat-round" style="font-size:11px;padding:1px 6px;background:rgba(255,255,255,0.1);border-radius:5px;color:#e2e8f0;font-weight:600">H.${curHiep}</span>
+          <div id="vkx-combat-live-stats" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            ${hpStr}
+            ${foeStr}
+          </div>
         </div>
-        <div id="vkx-combat-live-stats" style="display:flex;align-items:center;gap:8px;margin-top:1px">
-          ${hpStr}
-          ${foeStr}
+        <div style="display:flex;align-items:center;gap:5px">
+          <button id="vkx-btn-combat-step" class="vk-btn sec" style="padding:3px 8px;font-size:11.5px;border-radius:7px;cursor:pointer" title="Thực hiện đúng 1 hành động chiến thuật rồi dừng">1 Đòn</button>
+          <button id="vkx-btn-combat-toggle" class="vk-btn" style="padding:3px 10px;font-size:12px;border-radius:7px;cursor:pointer;background:${combatAutoActive ? "#f87171" : "#3ddc97"};color:#05140d;font-weight:700">${combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh"}</button>
+          <button id="vkx-btn-combat-collapse" class="vk-btn sec" style="padding:2px 7px;font-size:11px;border-radius:7px;cursor:pointer" title="Thu gọn / Mở rộng thanh chiến thuật">${combatHudCollapsed ? "+" : "–"}</button>
         </div>
       </div>
-      <button id="vkx-btn-combat-tehuyet" class="vk-btn sec" style="padding:4px 8px;font-size:11px;border-radius:8px;cursor:pointer;background:${curTeHuyet.bg};color:${curTeHuyet.color};border:1px solid ${curTeHuyet.border}" title="${curTeHuyet.title}">${curTeHuyet.label}</button>
-      <button id="vkx-btn-combat-speed" class="vk-btn sec" style="padding:4px 8px;font-size:11px;border-radius:8px;cursor:pointer" title="Đổi tốc độ nhịp đánh">${curSpeed === "instant" ? "⚡ 15ms" : "⏱ 200ms"}</button>
-      <button id="vkx-btn-combat-step" class="vk-btn sec" style="padding:4px 9px;font-size:12px;border-radius:8px;cursor:pointer">1 Đòn</button>
-      <button id="vkx-btn-combat-toggle" class="vk-btn" style="padding:4px 10px;font-size:12px;border-radius:8px;cursor:pointer;background:${combatAutoActive ? "#f87171" : "#3ddc97"};color:#05140d;font-weight:700">${combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh"}</button>
+      <div id="vkx-combat-subbar" style="display:${combatHudCollapsed ? "none" : "flex"};flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,0.08);padding-top:5px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap">
+          <span id="vkx-combat-last-act" style="font-size:11.5px;color:#93c5fd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">🤖 ${esc(_lastAiDecisionText)}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+            <button id="vkx-btn-combat-target" class="vk-btn sec" style="padding:2px 7px;font-size:11px;border-radius:6px;cursor:pointer" title="${curTgt.title}">${curTgt.label}</button>
+            <button id="vkx-btn-combat-policy" class="vk-btn sec" style="padding:2px 7px;font-size:11px;border-radius:6px;cursor:pointer;color:${curPol.color}" title="${curPol.title}">${curPol.label}</button>
+            <button id="vkx-btn-combat-tehuyet" class="vk-btn sec" style="padding:2px 7px;font-size:11px;border-radius:6px;cursor:pointer;background:${curTeHuyet.bg};color:${curTeHuyet.color};border:1px solid ${curTeHuyet.border}" title="${curTeHuyet.title}">${curTeHuyet.label}</button>
+            <button id="vkx-btn-combat-speed" class="vk-btn sec" style="padding:2px 7px;font-size:11px;border-radius:6px;cursor:pointer" title="Đổi tốc độ nhịp đánh (200ms ➔ 80ms ➔ 15ms)">${getSpeedLabel(curSpeed)}</button>
+          </div>
+        </div>
+      </div>
     `;
 
             document.body.appendChild(combatOverlayEl);
+
+            // Kéo thả mượt mà thanh HUD trong trận
+            const dragBar = combatOverlayEl.querySelector("#vkx-combat-drag");
+            if (dragBar) {
+              let dragging = false,
+                startX = 0,
+                startY = 0,
+                origLeft = 0,
+                origTop = 0;
+              dragBar.addEventListener("pointerdown", (ev) => {
+                if (ev.target && ev.target.closest("button")) return;
+                dragging = true;
+                const rect = combatOverlayEl.getBoundingClientRect();
+                startX = ev.clientX;
+                startY = ev.clientY;
+                origLeft = rect.left;
+                origTop = rect.top;
+                dragBar.style.cursor = "grabbing";
+                try {
+                  dragBar.setPointerCapture(ev.pointerId);
+                } catch (e) {}
+              });
+              dragBar.addEventListener("pointermove", (ev) => {
+                if (!dragging) return;
+                const nx = Math.max(
+                  4,
+                  Math.min(
+                    window.innerWidth - 120,
+                    origLeft + (ev.clientX - startX),
+                  ),
+                );
+                const ny = Math.max(
+                  4,
+                  Math.min(
+                    window.innerHeight - 48,
+                    origTop + (ev.clientY - startY),
+                  ),
+                );
+                combatOverlayEl.style.left = nx + "px";
+                combatOverlayEl.style.top = ny + "px";
+                combatOverlayEl.style.right = "auto";
+              });
+              const endDrag = () => {
+                if (!dragging) return;
+                dragging = false;
+                dragBar.style.cursor = "grab";
+                try {
+                  const rect = combatOverlayEl.getBoundingClientRect();
+                  localStorage.setItem(
+                    "vkx_combat_hud_pos",
+                    JSON.stringify({
+                      left: Math.round(rect.left),
+                      top: Math.round(rect.top),
+                    }),
+                  );
+                } catch (e) {}
+              };
+              dragBar.addEventListener("pointerup", endDrag);
+              dragBar.addEventListener("pointercancel", endDrag);
+            }
+
+            const btnCollapse = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-collapse",
+            );
+            if (btnCollapse) {
+              btnCollapse.onclick = (e) => {
+                e.stopPropagation();
+                combatHudCollapsed = !combatHudCollapsed;
+                const sub = combatOverlayEl.querySelector("#vkx-combat-subbar");
+                if (sub)
+                  sub.style.display = combatHudCollapsed ? "none" : "flex";
+                btnCollapse.textContent = combatHudCollapsed ? "+" : "–";
+              };
+            }
+
+            const btnTarget = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-target",
+            );
+            if (btnTarget) {
+              btnTarget.onclick = (e) => {
+                e.stopPropagation();
+                const order = ["smart", "boss", "threat", "weakest", "counter"];
+                const cur = cfg.targetPrio || "smart";
+                const next = order[(order.indexOf(cur) + 1) % order.length];
+                cfg.targetPrio = next;
+                AU.cfg.tc.targetPrio = next;
+                auSave();
+                const ui = getTargetUi(next);
+                btnTarget.textContent = ui.label;
+                btnTarget.title = ui.title;
+                const selEl = document.getElementById("au-tc-target-prio");
+                if (selEl) selEl.value = next;
+              };
+            }
+
+            const btnPolicy = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-policy",
+            );
+            if (btnPolicy) {
+              btnPolicy.onclick = (e) => {
+                e.stopPropagation();
+                const order = ["auto", "boss_only", "save_all"];
+                const cur = cfg.itemPolicy || "auto";
+                const next = order[(order.indexOf(cur) + 1) % order.length];
+                cfg.itemPolicy = next;
+                AU.cfg.tc.itemPolicy = next;
+                auSave();
+                const ui = getPolicyUi(next);
+                btnPolicy.textContent = ui.label;
+                btnPolicy.style.color = ui.color;
+                btnPolicy.title = ui.title;
+                const selEl = document.getElementById("au-tc-item-policy");
+                if (selEl) selEl.value = next;
+              };
+            }
 
             const btnTeHuyet = combatOverlayEl.querySelector(
               "#vkx-btn-combat-tehuyet",
@@ -28386,12 +29145,9 @@ table.au-tb tr:last-child td {
             if (btnTeHuyet) {
               btnTeHuyet.onclick = (e) => {
                 e.stopPropagation();
+                const order = ["off", "boss", "emergency", "always"];
                 const cur = cfg.teHuyetMode || "off";
-                let next = "boss";
-                if (cur === "off") next = "boss";
-                else if (cur === "boss") next = "always";
-                else next = "off";
-
+                const next = order[(order.indexOf(cur) + 1) % order.length];
                 cfg.teHuyetMode = next;
                 AU.cfg.tc.teHuyetMode = next;
                 auSave();
@@ -28405,15 +29161,6 @@ table.au-tb tr:last-child td {
 
                 const selEl = document.getElementById("au-tc-te-huyet");
                 if (selEl) selEl.value = next;
-
-                if (typeof notify === "function") {
-                  notify(
-                    ui.label +
-                      (next !== "off"
-                        ? " (Đốt thọ khi xả chiêu)"
-                        : " (Bảo toàn thọ nguyên)"),
-                  );
-                }
               };
             }
 
@@ -28423,11 +29170,15 @@ table.au-tb tr:last-child td {
             if (btnSpeed) {
               btnSpeed.onclick = (e) => {
                 e.stopPropagation();
-                cfg.speed = cfg.speed === "instant" ? "normal" : "instant";
-                AU.cfg.tc.speed = cfg.speed;
+                const order = ["normal", "fast", "instant"];
+                const cur = cfg.speed || "normal";
+                const next = order[(order.indexOf(cur) + 1) % order.length];
+                cfg.speed = next;
+                AU.cfg.tc.speed = next;
                 auSave();
-                btnSpeed.textContent =
-                  cfg.speed === "instant" ? "⚡ 15ms" : "⏱ 200ms";
+                btnSpeed.textContent = getSpeedLabel(next);
+                const selEl = document.getElementById("au-tc-speed");
+                if (selEl) selEl.value = next;
               };
             }
 
@@ -28463,14 +29214,33 @@ table.au-tb tr:last-child td {
             if (statsEl) {
               statsEl.innerHTML = `${hpStr} ${foeStr}`;
             }
+            const actEl = combatOverlayEl.querySelector("#vkx-combat-last-act");
+            if (actEl) {
+              actEl.textContent = "🤖 " + _lastAiDecisionText;
+            }
             const speedEl = combatOverlayEl.querySelector(
               "#vkx-btn-combat-speed",
             );
             if (speedEl) {
-              speedEl.textContent =
-                curSpeed === "instant" ? "⚡ 15ms" : "⏱ 200ms";
+              speedEl.textContent = getSpeedLabel(curSpeed);
             }
-
+            const btnTarget = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-target",
+            );
+            if (btnTarget) {
+              const ui = getTargetUi(cfg.targetPrio || "smart");
+              btnTarget.textContent = ui.label;
+              btnTarget.title = ui.title;
+            }
+            const btnPolicy = combatOverlayEl.querySelector(
+              "#vkx-btn-combat-policy",
+            );
+            if (btnPolicy) {
+              const ui = getPolicyUi(cfg.itemPolicy || "auto");
+              btnPolicy.textContent = ui.label;
+              btnPolicy.style.color = ui.color;
+              btnPolicy.title = ui.title;
+            }
             const btnTeHuyet = combatOverlayEl.querySelector(
               "#vkx-btn-combat-tehuyet",
             );
@@ -33239,54 +34009,152 @@ table.au-tb tr:last-child td {
             };
             c.autoCombatOverlay = ck("au-tc-overlay", c.autoCombatOverlay);
             c.autoInCombat = ck("au-tc-auto-in-combat", c.autoInCombat);
+            c.aiEngineMode = sel("au-tc-ai-mode", c.aiEngineMode || "smart_v3");
+            c.itemPolicy = sel("au-tc-item-policy", c.itemPolicy || "auto");
             c.speed = sel("au-tc-speed", c.speed || "normal");
             c.targetPrio = sel("au-tc-target-prio", c.targetPrio || "smart");
             c.teHuyetMode = sel("au-tc-te-huyet", c.teHuyetMode || "off");
+            c.healPillMode = sel("au-tc-heal-mode", c.healPillMode || "smart");
             c.healHpThreshold = num0(
               "au-tc-heal-hp",
               10,
-              80,
+              85,
               c.healHpThreshold,
+            );
+            c.healBossPanicHp = num0(
+              "au-tc-heal-panic-hp",
+              20,
+              90,
+              c.healBossPanicHp != null ? c.healBossPanicHp : 55,
+            );
+            c.spiritPillMode = sel(
+              "au-tc-spirit-mode",
+              c.spiritPillMode || "on_demand",
             );
             c.spiritThreshold = num0(
               "au-tc-spirit-mp",
               0,
-              80,
+              85,
               c.spiritThreshold != null ? c.spiritThreshold : 20,
+            );
+            c.burstPillMode = sel(
+              "au-tc-burst-mode",
+              c.burstPillMode || "boss_combo",
+            );
+            c.useBurstPill = c.burstPillMode !== "off";
+            c.cleansePillMode = ck(
+              "au-tc-cleanse-pill",
+              c.cleansePillMode !== false,
             );
             c.maxDrugResistance = num0(
               "au-tc-max-resist",
-              20,
+              15,
               95,
               c.maxDrugResistance,
             );
+            c.maxPillGradeNormal = Math.floor(
+              num0(
+                "au-tc-pill-grade-norm",
+                1,
+                8,
+                c.maxPillGradeNormal != null ? c.maxPillGradeNormal : 4,
+              ),
+            );
             c.maxPillGrade = Math.floor(
-              num0("au-tc-pill-grade", 1, 8, c.maxPillGrade),
+              num0("au-tc-pill-grade", 1, 8, c.maxPillGrade || 6),
+            );
+            c.shieldTalismanMode = sel(
+              "au-tc-shield-tal-mode",
+              c.shieldTalismanMode || "predictive",
+            );
+            c.smartShield = c.shieldTalismanMode !== "off";
+            c.shieldHpThreshold = num0(
+              "au-tc-shield-hp",
+              15,
+              90,
+              c.shieldHpThreshold != null ? c.shieldHpThreshold : 55,
+            );
+            c.ccTalismanMode = sel(
+              "au-tc-cc-tal-mode",
+              c.ccTalismanMode || "interrupt",
+            );
+            c.smartCc = c.ccTalismanMode !== "off";
+            c.atkTalismanMode = sel(
+              "au-tc-atk-tal-mode",
+              c.atkTalismanMode || "smart_weave",
+            );
+            c.useAttackTalismans = c.atkTalismanMode !== "off";
+            c.talismanGradeNormal = Math.floor(
+              num0(
+                "au-tc-talisman-grade-norm",
+                1,
+                8,
+                c.talismanGradeNormal != null ? c.talismanGradeNormal : 4,
+              ),
             );
             c.talismanGrade = Math.floor(
-              num0("au-tc-talisman-grade", 1, 8, c.talismanGrade),
+              num0("au-tc-talisman-grade", 1, 8, c.talismanGrade || 6),
             );
-            c.smartShield = ck("au-tc-shield", c.smartShield);
-            c.smartCc = ck("au-tc-cc", c.smartCc);
-            c.saveFamiliars = ck("au-tc-familiars", c.saveFamiliars);
-            c.autoNormalAttack = ck("au-tc-normal-attack", c.autoNormalAttack);
+            c.formationMode = sel(
+              "au-tc-formation-mode",
+              c.formationMode || "boss_or_danger",
+            );
+            c.saveFamiliars = ck("au-tc-familiars", c.saveFamiliars !== false);
+            c.recallPetHp = num0(
+              "au-tc-recall-pet-hp",
+              10,
+              60,
+              c.recallPetHp != null ? c.recallPetHp : 25,
+            );
+            c.healSkillThreshold = num0(
+              "au-tc-heal-skill-hp",
+              20,
+              95,
+              c.healSkillThreshold != null ? c.healSkillThreshold : 75,
+            );
+            c.shieldSkillThreshold = num0(
+              "au-tc-shield-skill-hp",
+              10,
+              85,
+              c.shieldSkillThreshold != null ? c.shieldSkillThreshold : 40,
+            );
+            c.preventOverkill = ck(
+              "au-tc-prevent-overkill",
+              c.preventOverkill !== false,
+            );
+            c.aoePriority = ck("au-tc-aoe-prio", c.aoePriority !== false);
+            c.prioritizeNatal = ck(
+              "au-tc-natal-prio",
+              c.prioritizeNatal !== false,
+            );
+            c.autoNormalAttack = ck(
+              "au-tc-normal-attack",
+              c.autoNormalAttack !== false,
+            );
             c.smartFinisher = ck(
               "au-tc-smart-finisher",
               c.smartFinisher !== false,
             );
-            c.useAttackTalismans = ck(
-              "au-tc-talisman-attack",
-              c.useAttackTalismans !== false,
-            );
-            c.comboSequence = ck("au-tc-combo", c.comboSequence);
-            c.useBurstPill = ck("au-tc-burst-pill", c.useBurstPill !== false);
+            c.comboSequence = ck("au-tc-combo", c.comboSequence !== false);
             c.emergencyThieuDot = ck(
               "au-tc-thieu-dot",
               c.emergencyThieuDot !== false,
             );
+            c.thieuDotHp = num0(
+              "au-tc-thieu-dot-hp",
+              10,
+              50,
+              c.thieuDotHp != null ? c.thieuDotHp : 20,
+            );
             c.emergencyEscape = ck(
               "au-tc-emergency-escape",
               !!c.emergencyEscape,
+            );
+            c.escapeHp = num0(
+              "au-tc-escape-hp",
+              5,
+              45,
+              c.escapeHp != null ? c.escapeHp : 16,
             );
             c.autoThaMang = ck("au-tc-auto-tha", c.autoThaMang !== false);
             c.autoEnemyEscape = ck(
@@ -34604,7 +35472,7 @@ table.au-tb tr:last-child td {
           }
         }
 
-        // ═════════ TAB SIÊU AI TÁC CHIẾN VIP (atc) ═════════
+        // ═════════ TAB SIÊU AI TÁC CHIẾN 3.0 (atc) ═════════
         function tabAutoTacChien() {
           const c = AU.cfg.tc;
           const row = (lab, ctl) =>
@@ -34612,75 +35480,339 @@ table.au-tb tr:last-child td {
           const sel = (id, lab, opts, v) =>
             row(
               lab,
-              `<select class="vk-sel" id="${id}" style="width:230px">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
+              `<select class="vk-sel" id="${id}" style="width:245px">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
             );
+
+          const lastBattle = gWin.__vkLastCombat;
+          const lastBattleHtml = lastBattle
+            ? `<div style="margin-top:6px;padding:8px 11px;border-radius:10px;background:var(--bg3);border:1px solid var(--line);font-size:12.5px">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+                  <span><b>📊 Trận Gần Nhất (${esc(lastBattle.time)}):</b> ${lastBattle.kq === "thang" ? '<b class="vk-ok">🏆 Chiến Thắng</b>' : '<b class="vk-bad">💀 Thất Bại / Rút Lui</b>'} sau <b>${lastBattle.hiep || 1}</b> hiệp</span>
+                  <span class="vk-mu">🤖 ${esc(_lastAiDecisionText)}</span>
+                </div>
+                ${
+                  lastBattle.dich && lastBattle.dich.length
+                    ? `<div class="vk-mu" style="margin-top:4px;font-size:12px">Đối thủ: ${lastBattle.dich.map((d) => `<b>${esc(d.ten)}</b> (${Math.max(0, d.hp || 0)}/${d.maxHp || "?"} HP)`).join(" · ")}</div>`
+                    : ""
+                }
+              </div>`
+            : `<div class="vk-mu" style="font-size:12px;margin-top:4px">🤖 Trạng thái AI hiện tại: <b>${esc(_lastAiDecisionText)}</b></div>`;
+
           body.innerHTML = `
-    <div class="vk-card"><h3>Siêu AI Tác Chiến VIP (Khắc Phục Auto Lỏ)</h3>
+    <div class="vk-card">
+      <h3>⚔️ Siêu AI Tác Chiến 3.0 (Bộ Não Chiến Thuật 5 Pha)</h3>
       <div class="vk-mu" style="font-size:13px">
-        Thay thế hoàn toàn thuật toán tự đánh ngô nghê của game bằng <b>Hệ Thống Tác Chiến Chiến Thuật Đỉnh Cao</b>.
-        Áp dụng đồng bộ cho: <b>Nút Nổi trong trận của game</b>, <b>Trận đánh Auto Săn Yêu</b>, <b>Tháp Vô Nhai Uyên</b>, <b>Đánh Boss Hóa Thần & Dị Bảo</b>, và <b>Trấn Áp Tâm Ma</b>.
+        Điều phối toàn diện <b>5 pha tác chiến chuẩn</b>: <i>Sinh Tồn Khẩn Cấp ➔ Khống Chế Ngắt Nộ ➔ Dàn Trận &amp; Buff/Phá Giáp ➔ Đại Chiêu Khắc Hệ &amp; Chống Tràn Sát Thương ➔ Dệt Quyền Cước 0 Mana</i>.
+        Áp dụng đồng bộ cho: <b>Thanh HUD trong trận</b>, <b>Auto Săn Yêu</b>, <b>Auto Dị Bảo</b>, <b>Tháp Vô Nhai Uyên</b> và <b>Độ Kiếp Tâm Ma</b>.
       </div>
-      <label style="display:flex;gap:6px;align-items:center;margin:8px 0;font-size:13.5px"><input type="checkbox" id="au-tc-overlay" ${c.autoCombatOverlay !== false ? "checked" : ""}> <b>Hiển Thị Nút Nổi [⚡ Siêu Auto VIP] Trong Trận Đấu Của Game</b></label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-in-combat" ${c.autoInCombat ? "checked" : ""}> Tự động kích hoạt Siêu Auto ngay khi vừa bước vào trận</label>
+      ${lastBattleHtml}
+      <div style="margin-top:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--acc);margin-bottom:6px">⚡ Bộ Cài Đặt Chiến Thuật Nhanh (1-Click Presets):</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:6px">
+          <button class="vk-btn sec" data-tc-preset="balanced" style="padding:7px 9px;font-size:12px">⚖️ Cân Bằng Thực Chiến</button>
+          <button class="vk-btn sec" data-tc-preset="boss" style="padding:7px 9px;font-size:12px">👑 Quyết Chiến Boss / Độ Kiếp</button>
+          <button class="vk-btn sec" data-tc-preset="farm" style="padding:7px 9px;font-size:12px">💰 Cày Quái Tiết Kiệm</button>
+          <button class="vk-btn sec" data-tc-preset="tank" style="padding:7px 9px;font-size:12px">🛡️ Thiết Bích Cầu Sinh</button>
+        </div>
+      </div>
+      <hr style="border:0;border-top:1px dashed var(--line);margin:10px 0">
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13.5px"><input type="checkbox" id="au-tc-overlay" ${c.autoCombatOverlay !== false ? "checked" : ""}> <b>Hiển Thị Thanh HUD Chiến Thuật Nổi [⚔️ Siêu AI 3.0] Trong Trận (Kéo Thả &amp; Thu Gọn Được)</b></label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-in-combat" ${c.autoInCombat ? "checked" : ""}> Tự động bật Tự Đánh ngay khi vừa bước vào trận đấu</label>
+      ${sel(
+        "au-tc-ai-mode",
+        "🧠 Chế Độ Bộ Não AI (AI Engine)",
+        [
+          ["smart_v3", "🌟 Siêu AI 3.0 (Chuỗi 5 Pha Toàn Diện — Khuyên dùng)"],
+          ["aggressive", "🔥 Tổng Công Kích Tốc Chiến (Dồn sát thương tối đa)"],
+          ["defensive", "🛡️ Vững Như Bàn Thạch (Ưu tiên Khiên, Hồi Phục & Khóa)"],
+          ["game_core", "⚙️ AI Mặc Định Của Game (nextAutomatedAction)"],
+        ],
+        c.aiEngineMode || "smart_v3",
+      )}
+      ${sel(
+        "au-tc-item-policy",
+        "🎒 Chính Sách Tiêu Hao Đan Dược & Phù Lục",
+        [
+          ["auto", "✅ Tự Động Thông Minh (Theo cấu hình chi tiết bên dưới)"],
+          ["boss_only", "👑 Chỉ Dùng Khi Gặp Boss / Tinh Anh (Hoặc HP < 20%)"],
+          ["save_all", "🔒 Khóa Toàn Bộ Đan & Phù (Tiết kiệm 100% khi cày quái)"],
+        ],
+        c.itemPolicy || "auto",
+      )}
       ${sel(
         "au-tc-speed",
-        "Tốc Độ Nhịp Đánh (Visual Pacing)",
+        "⏱ Tốc Độ Nhịp Đánh Trong Trận",
         [
-          ["normal", "⏱ Tiêu Chuẩn (200ms — Quan sát chiêu)"],
-          ["instant", "⚡ Siêu Tốc (15ms — Xả combo tức thì)"],
+          ["normal", "⏱ Tiêu Chuẩn (200ms — Quan sát rõ từng chiêu)"],
+          ["fast", "🚀 Nhanh Mượt (80ms — Cân bằng tốc độ & hiệu ứng)"],
+          ["instant", "⚡ Siêu Tốc (15ms — Xả toàn bộ combo tức thì)"],
         ],
         c.speed || "normal",
       )}
       ${sel(
         "au-tc-target-prio",
-        "Chiến Thuật Chọn Mục Tiêu (Targeting)",
+        "🎯 Chiến Thuật Chọn Mục Tiêu (Targeting)",
         [
-          ["smart", "🧠 Tối Ưu Chiến Thuật (Dồn dmg / Ngắt nộ)"],
-          ["boss", "👑 Ưu Tiên Trùm / Thủ Lĩnh (Boss & Tinh Anh)"],
-          ["weakest", "🎯 Diệt Kẻ Yếu Trước (Dứt điểm quái thấp máu)"],
-          ["counter", "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ)"],
+          ["smart", "🧠 Tối Ưu Chiến Thuật (Dứt điểm nhanh + Diệt hồi máu/nộ)"],
+          ["boss", "👑 Ưu Tiên Trùm / Thủ Lĩnh (Dồn sát thương Boss & Tinh Anh)"],
+          ["threat", "⚡ Ưu Tiên Mối Đe Dọa (Kẻ đang tụ đại chiêu / Triệu hồi)"],
+          ["weakest", "🎯 Diệt Kẻ Yếu Trước (Hạ nhanh quái thấp máu giảm sát thương)"],
+          ["counter", "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ ×1.35)"],
         ],
         c.targetPrio || "smart",
       )}
       ${sel(
         "au-tc-te-huyet",
-        "🩸 Tế Huyết Bản Mệnh (Đốt Thọ & Khí Huyết)",
+        "🩸 Tế Huyết Bản Mệnh (Đốt Thọ Nguyên & Khí Huyết)",
         [
-          ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên, không tự tế huyết)"],
-          [
-            "boss",
-            "👑 Chỉ khi gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)",
-          ],
-          ["emergency", "🚨 Chỉ khi nguy cấp (Khí huyết < 35% trước Boss)"],
+          ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên tuyệt đối)"],
+          ["boss", "👑 Chỉ Khi Gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)"],
+          ["emergency", "🚨 Chỉ Khi Nguy Cấp (Khí huyết < 35% trước Boss)"],
           ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
         ],
         c.teHuyetMode || "off",
       )}
-      <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
-      <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚙️ Cứu Sinh & Bảo Vệ Tài Nguyên (Đan Dược & Bùa)</div>
-      ${auFld("au-tc-heal-hp", "Ngưỡng Máu Tự Nuốt Đan Hồi Phục", c.healHpThreshold, "(% HP)")}
-      ${auFld("au-tc-spirit-mp", "Ngưỡng Linh Lực Tự Nuốt Đan Hồi Mana", c.spiritThreshold != null ? c.spiritThreshold : 20, "(% Linh Lực — tự hồi mana khi cạn kiệt)")}
-      ${auFld("au-tc-max-resist", "Dược Kháng Tối Đa Được Nuốt Đan", c.maxDrugResistance, "(% Kháng — tự động tính theo hệ số hấp thụ, bỏ qua khi máu < 20%)")}
-      ${auFld("au-tc-pill-grade", "Phẩm Cấp Đan Dược Tối Đa Được Dùng", c.maxPillGrade, "(1: Phàm → 8: Nghịch Thiên)")}
-      ${auFld("au-tc-talisman-grade", "Phẩm Cấp Bùa Chú / Phù Tối Đa Được Dùng", c.talismanGrade, "(1: Phàm → 8: Nghịch Thiên)")}
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-burst-pill" ${c.useBurstPill !== false ? "checked" : ""}> <b>Nuốt Đan Bộc Phát (Burst):</b> Tự dùng đan bộc phát x1.5-x2 sát thương khi đánh Boss / Quái Tinh Anh</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-familiars" ${c.saveFamiliars !== false ? "checked" : ""}> <b>Bảo Vệ Ngự Linh:</b> Tự động thu hồi thú cưng khi máu &lt; 25% và bị nhắm</label>
-      <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
-      <div style="font-weight:700;margin:6px 0;color:var(--acc)">⚔️ Kỹ Năng & Chiến Thuật Tấn Công (Rotation & Combos)</div>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-smart-finisher" ${c.smartFinisher !== false ? "checked" : ""}> <b>Dứt Điểm Thông Minh (Smart Finisher):</b> Ưu tiên tung Quyền Cước (danh_thuong) 0 mana dứt điểm khi địch tàn huyết, tiết kiệm mana & hồi chiêu</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-normal-attack" ${c.autoNormalAttack !== false ? "checked" : ""}> <b>Luôn Đánh Quyền Cước (danh_thuong) Mỗi Lượt:</b> 0 linh lực, đánh sau khi xả chiêu, tối ưu hóa 100% lượt đánh</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-talisman-attack" ${c.useAttackTalismans !== false ? "checked" : ""}> <b>Tự Ném Phù Tấn Công (Attack Talismans):</b> Tự ném bùa công kích (Hỏa Đạn Phù, Dẫn Lôi Phù, Canh Kim Phù...) khi đánh Boss hoặc cạn linh lực (0 mana)</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-shield" ${c.smartShield !== false ? "checked" : ""}> <b>Dự Báo Phòng Ngự:</b> Dựng Hộ Thuẫn / Phù Hộ Thể khi khiên yếu hoặc trước đại chiêu boss</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-cc" ${c.smartCc !== false ? "checked" : ""}> <b>Khống Chế Ngắt Chiêu:</b> Tung chiêu/phù choáng, định thân, khóa chân khi địch chuẩn bị đòn nộ</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? "checked" : ""}> <b>Chuỗi Combo Chuẩn:</b> Buff bộc phát → Khống chế → Chiêu Khắc Hệ Ngũ Hành → Dứt điểm</label>
-      <hr style="border:0;border-top:1px dashed var(--line);margin:8px 0">
-      <div style="font-weight:700;margin:6px 0;color:var(--acc)">🚨 Thoát Hiểm Khẩn Cấp & Xử Trí Hậu Chiến (Emergency & Aftermath)</div>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-thieu-dot" ${c.emergencyThieuDot !== false ? "checked" : ""}> <b>Thiêu Đốt Thọ Nguyên Cứu Mạng (thieu_dot):</b> Tự động thiêu đốt thọ nguyên nhận buff nghịch thiên khi sắp chết (HP &lt; 20%), lật ngược thế cờ</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-emergency-escape" ${c.emergencyEscape ? "checked" : ""}> <b>Độn Thổ Thoát Thân Khẩn Cấp (bo_chay):</b> Tự dùng Thái Hư Độn Phù hoặc Huyết Độn đào tẩu khi máu &lt; 16% trước nguy cơ tử vong</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự động chọn «Tha Mạng» khi đối thủ quy phục hoặc bắt được kẻ đột kích động phủ, tránh bị dừng Auto</label>
-      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-enemy-escape" ${c.autoEnemyEscape !== false ? "checked" : ""}> <b>Buông Tha Kẻ Tháo Chạy (enemy_escape):</b> Tự động chọn «Buông Tha / Bỏ Qua» (nhặt nửa chiến lợi phẩm) khi kẻ địch tháo chạy, không dừng Auto</label>
-      <button class="vk-btn" id="au-tc-save" style="margin-top:10px;width:100%">Lưu Cấu Hình Tác Chiến</button>
+    </div>
+
+    <div class="vk-card">
+      <h3>💊 Chiến Thuật Cắn Đan Dược Chi Tiết (Hồi Huyết · Linh Lực · Bộc Phát)</h3>
+      <div class="vk-mu" style="font-size:12.5px;margin-bottom:6px">
+        Tự động tính chính xác lượng hồi sau khi trừ <b>Dược Kháng</b> (<code>estimatePillRestore</code>), khớp số viên cần uống để không lãng phí (<code>pillWasted</code>), và phân tách giới hạn phẩm đan giữa <b>Quái Thường</b> và <b>Boss</b>.
+      </div>
+      ${sel(
+        "au-tc-heal-mode",
+        "❤️ Chế Độ Cắn Đan Hồi Khí Huyết",
+        [
+          ["smart", "🧠 Thông Minh (Tự nâng ngưỡng khi địch tụ Đại Chiêu)"],
+          ["boss_only", "👑 Chỉ Đánh Boss / Tinh Anh (Hoặc khi nguy kịch < 18%)"],
+          ["always", "⚡ Luôn Cắn Theo Ngưỡng Cố Định"],
+          ["off", "⛔ Tắt Tự Cắn Đan Hồi Huyết"],
+        ],
+        c.healPillMode || "smart",
+      )}
+      ${auFld("au-tc-heal-hp", "Ngưỡng Máu Tự Cắn Đan Thường", c.healHpThreshold != null ? c.healHpThreshold : 35, "(% HP)")}
+      ${auFld("au-tc-heal-panic-hp", "Ngưỡng Máu An Toàn Trước Đại Chiêu Boss", c.healBossPanicHp != null ? c.healBossPanicHp : 55, "(% HP — tự cắn đan sớm khi địch tụ nộ)")}
+      ${sel(
+        "au-tc-spirit-mode",
+        "💧 Chế Độ Cắn Đan Hồi Linh Lực (Mana)",
+        [
+          ["on_demand", "🧠 Khi Dưới Ngưỡng HOẶC Khi Cần Linh Lực Xuất Chiêu"],
+          ["threshold_only", "📉 Chỉ Khi % Linh Lực Tụt Dưới Ngưỡng"],
+          ["boss_only", "👑 Chỉ Cắn Đan Linh Lực Khi Đánh Boss / Tinh Anh"],
+          ["off", "⛔ Tắt Tự Cắn Đan Linh Lực"],
+        ],
+        c.spiritPillMode || "on_demand",
+      )}
+      ${auFld("au-tc-spirit-mp", "Ngưỡng Linh Lực Tự Cắn Đan Hồi Khí", c.spiritThreshold != null ? c.spiritThreshold : 20, "(% Linh Lực)")}
+      ${sel(
+        "au-tc-burst-mode",
+        "🔥 Chế Độ Cắn Đan Bộc Phát (Tăng Sát Thương)",
+        [
+          ["boss_combo", "🎯 Chuẩn Combo Boss (Gặp Boss + Có sẵn chiêu mạnh + Địch >30% HP)"],
+          ["boss_any", "👑 Gặp Boss / Tinh Anh Là Cắn Ngay Đầu Trận"],
+          ["always", "⚔️ Dùng Ở Mọi Trận Đấu Khi Có Chiêu"],
+          ["off", "⛔ Tắt Đan Bộc Phát"],
+        ],
+        c.burstPillMode || "boss_combo",
+      )}
+      ${auFld("au-tc-max-resist", "Trần Dược Kháng Tối Đa Cho Phép", c.maxDrugResistance != null ? c.maxDrugResistance : 70, "(% Kháng — tự vượt trần nếu máu < 20%)")}
+      ${auFld("au-tc-pill-grade-norm", "Phẩm Đan Tối Đa Khi Đánh Quái Thường", c.maxPillGradeNormal != null ? c.maxPillGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên — giữ đan quý)")}
+      ${auFld("au-tc-pill-grade", "Phẩm Đan Tối Đa Khi Đánh Boss / Tâm Ma", c.maxPillGrade != null ? c.maxPillGrade : 6, "(1: Phàm → 8: Nghịch Thiên)")}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-cleanse-pill" ${c.cleansePillMode !== false ? "checked" : ""}> <b>Tự Dùng Đan Giải Độc / Thanh Tâm / Hộ Thể:</b> Xóa chồng độc, xuất huyết, thiêu đốt hoặc uống đan khiên khi nguy cấp</label>
+    </div>
+
+    <div class="vk-card">
+      <h3>🧧 Chiến Thuật Dùng Phù Lục &amp; Trận Bàn Chi Tiết</h3>
+      <div class="vk-mu" style="font-size:12.5px;margin-bottom:6px">
+        Điều phối chính xác thời điểm dán <b>Phù Hộ Thuẫn</b>, ném <b>Phù Khống Chế</b> ngắt đại chiêu, đan xen <b>Phù Công Kích Khắc Hệ</b> sau khi đã Phá Giáp, và khai triển <b>Trận Bàn</b>.
+      </div>
+      ${sel(
+        "au-tc-shield-tal-mode",
+        "🛡️ Chế Độ Dùng Phù Hộ Thuẫn (Giáp Phù)",
+        [
+          ["predictive", "🧠 Dự Báo Đỡ Đòn (Khi địch tụ Đại Chiêu hoặc HP dưới ngưỡng)"],
+          ["always_keep", "🛡️ Luôn Duy Trì Lớp Khiên Phù Mỗi Khi Cạn"],
+          ["boss_only", "👑 Chỉ Dùng Phù Hộ Thuẫn Trước Boss / Tinh Anh"],
+          ["off", "⛔ Tắt Phù Hộ Thuẫn"],
+        ],
+        c.shieldTalismanMode || "predictive",
+      )}
+      ${auFld("au-tc-shield-hp", "Ngưỡng Máu Tự Dán Phù Hộ Thuẫn", c.shieldHpThreshold != null ? c.shieldHpThreshold : 55, "(% HP khi chưa có khiên)")}
+      ${sel(
+        "au-tc-cc-tal-mode",
+        "⛓️ Chế Độ Dùng Phù Khống Chế (Định Thân / Choáng)",
+        [
+          ["interrupt", "⚡ Ngắt Đại Chiêu & Khóa Boss (Khi địch tụ nộ / Boss / HP < 48%)"],
+          ["boss_lock", "👑 Khóa Chặt Boss / Tinh Anh Ngay Khi Hết Miễn Khống"],
+          ["emergency", "🚨 Chỉ Dùng Cứu Mạng Khi Máu Nguy Kịch (< 42% HP)"],
+          ["always", "❄️ Luôn Dùng Khi Địch Chưa Bị Khống Chế"],
+          ["off", "⛔ Tắt Phù Khống Chế"],
+        ],
+        c.ccTalismanMode || "interrupt",
+      )}
+      ${sel(
+        "au-tc-atk-tal-mode",
+        "🗡️ Chế Độ Ném Phù Công Kích (Sát Thương 0 Mana)",
+        [
+          ["smart_weave", "🧠 Đan Xen Thông Minh (Sau khi xả chiêu vào Boss / Khi hết mana / Kết liễu)"],
+          ["zero_mana", "💧 Tiết Kiệm: Chỉ Ném Khi Cạn Linh Lực Hoặc Toàn Bộ Chiêu Đang Hồi"],
+          ["boss_burst", "👑 Dồn Sát Thương Boss: Xả Phù Khắc Hệ Tối Đa Vào Boss / Tinh Anh"],
+          ["always", "🔥 Luôn Ném Ở Mọi Trận Đấu"],
+          ["off", "⛔ Tắt Phù Công Kích"],
+        ],
+        c.atkTalismanMode || "smart_weave",
+      )}
+      ${auFld("au-tc-talisman-grade-norm", "Phẩm Phù Tối Đa Khi Đánh Quái Thường", c.talismanGradeNormal != null ? c.talismanGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên)")}
+      ${auFld("au-tc-talisman-grade", "Phẩm Phù Tối Đa Khi Đánh Boss / Tâm Ma", c.talismanGrade != null ? c.talismanGrade : 6, "(1: Phàm → 8: Nghịch Thiên)")}
+      ${sel(
+        "au-tc-formation-mode",
+        "阵 Chế Độ Khai Triển Trận Bàn (bay_tran)",
+        [
+          ["boss_or_danger", "🧠 Khi Gặp Boss/Tinh Anh Hoặc Khi Nguy Hiểm (HP < 65% / Địch >= 2)"],
+          ["boss_only", "👑 Chỉ Bày Trận Khi Gặp Boss / Tinh Anh"],
+          ["always", "⚡ Luôn Bày Trận Đầu Mọi Trận Đấu"],
+          ["off", "⛔ Tắt Tự Động Bày Trận Bàn"],
+        ],
+        c.formationMode || "boss_or_danger",
+      )}
+    </div>
+
+    <div class="vk-card">
+      <h3>⚡ AI Dùng Chiêu Thông Minh &amp; Phối Hợp Liên Hoàn</h3>
+      ${auFld("au-tc-heal-skill-hp", "Ngưỡng Máu Dùng Kỹ Năng Hồi Phục", c.healSkillThreshold != null ? c.healSkillThreshold : 75, "(% HP — tự hồi máu bằng chiêu)")}
+      ${auFld("au-tc-shield-skill-hp", "Ngưỡng Khiên Duy Trì Kỹ Năng Hộ Thuẫn", c.shieldSkillThreshold != null ? c.shieldSkillThreshold : 40, "(% so với HP tối đa)")}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? "checked" : ""}> <b>Chuỗi Liên Hoàn 5 Bước:</b> Buff Bộc Phát ➔ Phá Giáp / Ấn Ký ➔ Đại Chiêu Khắc Hệ / Kích Nổ ➔ Quyền Cước</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-prevent-overkill" ${c.preventOverkill !== false ? "checked" : ""}> <b>Chống Tràn Sát Thương (Anti-Overkill):</b> Tự chọn chiêu nhỏ tốn ít mana để kết liễu quái sắp chết, giữ lại Đại Chiêu</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-aoe-prio" ${c.aoePriority !== false ? "checked" : ""}> <b>Ưu Tiên Kỹ Năng Quần Thể (AoE):</b> Tự động ưu tiên chiêu diện rộng khi giao chiến với từ 2 kẻ địch trở lên</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-natal-prio" ${c.prioritizeNatal !== false ? "checked" : ""}> <b>Rèn Tâm Huyết Bản Mệnh:</b> Đảm bảo xuất chiêu Pháp Bảo Bản Mệnh ít nhất 1 lần mỗi trận (sau khi bật Buff)</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-smart-finisher" ${c.smartFinisher !== false ? "checked" : ""}> <b>Dứt Điểm 0 Mana Bằng Quyền Cước:</b> Hạ gục ngay mục tiêu tàn huyết không khiên bằng đòn đánh thường miễn phí</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-normal-attack" ${c.autoNormalAttack !== false ? "checked" : ""}> <b>Luôn Dệt Quyền Cước (danh_thuong) Mỗi Hiệp:</b> Đánh thường miễn phí sau khi tung hết chiêu để tối đa sát thương</label>
+    </div>
+
+    <div class="vk-card">
+      <h3>🚨 Bảo Vệ Ngự Linh · Thoát Hiểm &amp; Xử Trí Hậu Chiến</h3>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-familiars" ${c.saveFamiliars !== false ? "checked" : ""}> <b>Bảo Vệ Ngự Linh Khẩn Cấp (thu_hoi):</b> Tự động thu hồi linh thú khi máu tụt xuống dưới ngưỡng</label>
+      ${auFld("au-tc-recall-pet-hp", "Ngưỡng Máu Thu Hồi Ngự Linh", c.recallPetHp != null ? c.recallPetHp : 25, "(% HP Ngự Linh)")}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-thieu-dot" ${c.emergencyThieuDot !== false ? "checked" : ""}> <b>Thiêu Đốt Thọ Nguyên Cứu Mạng (thieu_dot):</b> Kích hoạt nghịch thiên phản kích khi máu chạm ngưỡng tử vong</label>
+      ${auFld("au-tc-thieu-dot-hp", "Ngưỡng Máu Kích Hoạt Thiêu Đốt", c.thieuDotHp != null ? c.thieuDotHp : 20, "(% HP)")}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-emergency-escape" ${c.emergencyEscape ? "checked" : ""}> <b>Độn Thổ Thoát Thân Khẩn Cấp (bo_chay):</b> Tự dùng Thái Hư Độn Phù hoặc Huyết Độn đào tẩu trước khi tử trận</label>
+      ${auFld("au-tc-escape-hp", "Ngưỡng Máu Kích Hoạt Độn Thổ Thoát Thân", c.escapeHp != null ? c.escapeHp : 16, "(% HP)")}
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-tha" ${c.autoThaMang !== false ? "checked" : ""}> <b>Tự Động Tha Mạng Đối Thủ Bại Trận (xu_tri):</b> Tự chọn «Tha Mạng» khi đối thủ quy phục để không ngắt mạch Auto</label>
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-enemy-escape" ${c.autoEnemyEscape !== false ? "checked" : ""}> <b>Buông Tha Kẻ Tháo Chạy (enemy_escape):</b> Tự chọn «Buông Tha» (nhặt nửa chiến lợi phẩm) khi địch bỏ chạy</label>
+      <button class="vk-btn" id="au-tc-save" style="margin-top:10px;width:100%">💾 Lưu Cấu Hình Siêu AI Tác Chiến 3.0</button>
     </div>`;
+
+          // Xử lý 4 nút Preset Chiến Thuật 1-Click
+          body.querySelectorAll("[data-tc-preset]").forEach((btn) => {
+            btn.onclick = () => {
+              const p = btn.dataset.tcPreset;
+              if (p === "balanced") {
+                Object.assign(AU.cfg.tc, {
+                  aiEngineMode: "smart_v3",
+                  itemPolicy: "auto",
+                  targetPrio: "smart",
+                  healPillMode: "smart",
+                  healHpThreshold: 35,
+                  healBossPanicHp: 55,
+                  spiritPillMode: "on_demand",
+                  spiritThreshold: 20,
+                  burstPillMode: "boss_combo",
+                  maxPillGradeNormal: 4,
+                  maxPillGrade: 6,
+                  shieldTalismanMode: "predictive",
+                  shieldHpThreshold: 55,
+                  ccTalismanMode: "interrupt",
+                  atkTalismanMode: "smart_weave",
+                  talismanGradeNormal: 4,
+                  talismanGrade: 6,
+                  formationMode: "boss_or_danger",
+                  preventOverkill: true,
+                  aoePriority: true,
+                  comboSequence: true,
+                });
+                UI.notify("⚖️ Đã áp dụng Preset: Cân Bằng Thực Chiến!");
+              } else if (p === "boss") {
+                Object.assign(AU.cfg.tc, {
+                  aiEngineMode: "smart_v3",
+                  itemPolicy: "auto",
+                  targetPrio: "boss",
+                  healPillMode: "smart",
+                  healHpThreshold: 45,
+                  healBossPanicHp: 65,
+                  spiritPillMode: "on_demand",
+                  spiritThreshold: 30,
+                  burstPillMode: "boss_combo",
+                  maxPillGradeNormal: 6,
+                  maxPillGrade: 8,
+                  shieldTalismanMode: "predictive",
+                  shieldHpThreshold: 65,
+                  ccTalismanMode: "boss_lock",
+                  atkTalismanMode: "boss_burst",
+                  talismanGradeNormal: 6,
+                  talismanGrade: 8,
+                  formationMode: "always",
+                  teHuyetMode: "boss",
+                  preventOverkill: true,
+                  aoePriority: true,
+                  comboSequence: true,
+                });
+                UI.notify("👑 Đã áp dụng Preset: Quyết Chiến Boss / Độ Kiếp!");
+              } else if (p === "farm") {
+                Object.assign(AU.cfg.tc, {
+                  aiEngineMode: "smart_v3",
+                  itemPolicy: "boss_only",
+                  targetPrio: "weakest",
+                  healPillMode: "boss_only",
+                  healHpThreshold: 25,
+                  healBossPanicHp: 45,
+                  spiritPillMode: "boss_only",
+                  spiritThreshold: 15,
+                  burstPillMode: "off",
+                  maxPillGradeNormal: 2,
+                  maxPillGrade: 5,
+                  shieldTalismanMode: "boss_only",
+                  ccTalismanMode: "emergency",
+                  atkTalismanMode: "off",
+                  talismanGradeNormal: 2,
+                  talismanGrade: 5,
+                  formationMode: "boss_only",
+                  teHuyetMode: "off",
+                  preventOverkill: true,
+                  aoePriority: true,
+                  comboSequence: true,
+                });
+                UI.notify("💰 Đã áp dụng Preset: Cày Quái Tiết Kiệm!");
+              } else if (p === "tank") {
+                Object.assign(AU.cfg.tc, {
+                  aiEngineMode: "defensive",
+                  itemPolicy: "auto",
+                  targetPrio: "threat",
+                  healPillMode: "smart",
+                  healHpThreshold: 50,
+                  healBossPanicHp: 70,
+                  spiritPillMode: "on_demand",
+                  spiritThreshold: 25,
+                  burstPillMode: "boss_combo",
+                  maxPillGradeNormal: 4,
+                  maxPillGrade: 7,
+                  shieldTalismanMode: "always_keep",
+                  shieldHpThreshold: 70,
+                  ccTalismanMode: "interrupt",
+                  atkTalismanMode: "smart_weave",
+                  formationMode: "boss_or_danger",
+                  healSkillThreshold: 85,
+                  shieldSkillThreshold: 55,
+                  emergencyThieuDot: true,
+                  emergencyEscape: true,
+                });
+                UI.notify("🛡️ Đã áp dụng Preset: Thiết Bích Cầu Sinh!");
+              }
+              auSave();
+              updateCombatOverlay();
+              tabAutoTacChien();
+            };
+          });
+
           body.querySelectorAll("input,select").forEach((el) => {
             el.onchange = () => {
               auReadCfg("tc");
@@ -34692,7 +35824,7 @@ table.au-tb tr:last-child td {
             sBtn.onclick = () => {
               auReadCfg("tc");
               updateCombatOverlay();
-              UI.notify("Đã lưu cấu hình Siêu AI Tác Chiến VIP.");
+              UI.notify("✅ Đã lưu cấu hình Siêu AI Tác Chiến 3.0.");
             };
         }
 
@@ -37781,9 +38913,21 @@ table.au-tb tr:last-child td {
 
         var LOG = [
           {
-            t: "Phiên Bản 7.21.0 · Đại Trùng Tu Động Cơ Kinh Mạch 4.0 (Multi-Topology · LNS · Chuẩn Hóa Lõi Game)",
+            t: "Phiên Bản 7.22.0 · Đại Trùng Tu Siêu AI Tác Chiến 3.0 & Giao Diện HUD Chiến Thuật",
             d: "09/11/2026",
             now: true,
+            pts: [
+              "<b>Khắc Phục Triệt Để Lỗi <code>nextAutomatedAction</code> Cướp Quyền Điều Khiển Chiêu:</b> Ở các bản trước, hàm <code>nextAutomatedAction</code> của game được gọi ngay trước khối chọn chiêu thông minh, làm vô hiệu hóa thứ tự Buff, Khiên, Phá Giáp và Chống Tràn Sát Thương. Bản 7.22.0 đưa Bộ Não Chiến Thuật 5 Pha của Tool lên làm trung tâm điều phối chính và ánh xạ đầy đủ các hàm gốc từ <code>combat/actions</code> &amp; <code>combat/elements</code>.",
+              "<b>Hệ Thống Cắn Đan Dược Chi Tiết 3.0:</b> Bổ sung chế độ cắn đan máu thông minh (tự động nâng ngưỡng HP an toàn lên <code>healBossPanicHp</code> trước khi Boss tung Đại Chiêu), chế độ đan Linh Lực theo nhu cầu xuất chiêu (<code>on_demand</code> — tự khớp lượng hồi sát với số Linh Lực thiếu hụt), chế độ đan Bộc Phát chuẩn combo (chỉ cắn khi gặp Boss và đang có sẵn chiêu tấn công mạnh), tự dùng đan Giải Độc / Hộ Thể, và <b>tách riêng giới hạn phẩm đan Quái Thường vs Boss</b> để không bao giờ phí đan quý vào quái dọc đường.",
+              "<b>Hệ Thống Dùng Phù Lục &amp; Trận Bàn Chi Tiết 3.0:</b> Tuỳ chỉnh chuyên sâu chế độ Phù Hộ Thuẫn (Dự báo đỡ đòn / Luôn duy trì / Chỉ Boss), Phù Khống Chế (Ngắt đại chiêu / Khóa chặt Boss / Cứu nguy), Phù Công Kích (Đan xen sau khi đã Phá Giáp hoặc khi cạn Linh Lực, tự chọn phù Khắc Hệ Ngũ Hành ×1.4), chế độ khai triển Trận Bàn, cùng giới hạn phẩm phù Quái Thường vs Boss riêng biệt.",
+              "<b>AI Dùng Chiêu Thông Minh 3.0 (Chống Overkill · Ưu Tiên AoE · Chuỗi Liên Hoàn 5 Pha):</b> Tính sát thương dự kiến thực tế của từng chiêu (<code>estimateSkillDamage</code>) để chọn chiêu nhỏ kết liễu mục tiêu tàn huyết (tiết kiệm Đại Chiêu hồi lâu), tự nhân trọng số kỹ năng Quần Thể (AoE) khi đánh nhiều địch, thực thi đúng chuỗi <i>Buff ➔ Đan Bộc Phát ➔ Phá Giáp / Ấn Ký ➔ Chiêu Bản Mệnh &amp; Đại Chiêu Kích Nổ ➔ Quyền Cước 0 Mana</i>.",
+              "<b>Nâng Cấp UX HUD Chiến Đấu Nổi &amp; 4 Preset Chiến Thuật 1-Click:</b> Thanh HUD nổi trong trận hỗ trợ <b>Kéo Thả (Draggable)</b> lưu vị trí, nút <b>Thu Gọn (–)</b>, dòng trạng thái trực tiếp báo <b>hành động &amp; lý do AI vừa ra quyết định</b>, cùng 5 nút chuyển nhanh ngay giữa trận (Mục Tiêu, Khoá/Mở Đan Phù, Tế Huyết, Tốc Độ 200ms/80ms/15ms, Tự Đánh). Bổ sung 4 nút Preset 1-Click (<i>Cân Bằng, Quyết Chiến Boss, Cày Quái Tiết Kiệm, Thiết Bích Cầu Sinh</i>) trong tab Auto Tác Chiến.",
+            ],
+          },
+          {
+            t: "Phiên Bản 7.21.0 · Đại Trùng Tu Động Cơ Kinh Mạch 4.0 (Multi-Topology · LNS · Chuẩn Hóa Lõi Game)",
+            d: "09/11/2026",
+            now: false,
             pts: [
               "<b>Kết Nối Trực Tiếp Toàn Bộ Hàm Lõi Kinh Mạch (<code>character/kinh_mach</code>):</b> Ánh xạ đầy đủ các hàm gốc của game (<code>heTungO</code>, <code>acupointsOf</code>, <code>doHop</code>, <code>hopHe</code>, <code>hopKinhLo</code>, <code>coTuongSinhNoiTai</code>, <code>heDoiDuoc</code>, <code>tayConLai</code>) vào bộ giải. Nhận diện chính xác hệ của từng ô thành phần trên mảnh đa hệ ở cả 4 góc xoay và quy tắc Kinh Lộ (cùng hệ gốc hoặc tương sinh <code>hopKinhLo</code>).",
               "<b>Phân Tách Thuộc Tính Nhân Hệ Số (<code>kmScalablePower</code>) &amp; Bảo Toàn Huyệt Đạo (×2.0+):</b> Theo đúng công thức <code>tinhKinhMach</code> của game, các dòng <code>toc_do</code>, <code>dot_pha</code>, <code>khang_tam_ma</code> trên Tâm Pháp chỉ cần thông mạch và không nhân <code>heSo</code>, trong khi <code>linh_luc</code>, <code>chieu</code>, <code>khi_huyet</code>, <code>ho_the</code>, <code>phap_luc</code> và lục duy <code>chi_so</code> (Ngộ Tính, Đạo Tâm, Căn Cốt...) được nhân trực tiếp với <code>heSo</code>. Thuật toán mới tuyệt đối không lãng phí Huyệt Đạo hay đan Tẩy Ô cho mảnh không nhân hệ số, dồn toàn bộ Huyệt Đạo và chuỗi tương sinh cho mảnh khuếch đại thực sự.",
