@@ -25599,7 +25599,7 @@ table.au-tb tr:last-child td {
           return maxTv;
         }
 
-        function findBestTuViChoice(encDef, availableChoices, activeScene) {
+        function findBestTuViChoice(encDef, availableChoices, activeScene, opt) {
           if (!encDef || !availableChoices || !availableChoices.length)
             return null;
 
@@ -25608,9 +25608,20 @@ table.au-tb tr:last-child td {
 
           // Xử lý đặc thù cho Song Tu: Ưu tiên chọn "Song tu một năm" nhận tu vi trực tiếp
           if (encDef.id === "ev.song_tu") {
-            const cYear = nonThoat.find((c) => /song tu một năm/i.test(c.text));
+            const isHuntingMode =
+              (opt && (opt.hunt || opt.isDanhQuai)) ||
+              (AU.cfg && AU.cfg.tl && AU.cfg.tl.mode === "danh_quai");
+            const cYear = nonThoat.find((c) =>
+              /song tu một năm|song tu.*1 năm/i.test(c.text),
+            );
             if (cYear && cYear.available !== false)
               return { choice: cYear, tv: 50 };
+
+            // Ở chế độ Đánh Quái: Tuyệt đối KHÔNG chọn "Song tu, cùng nhập định" (tránh bị kẹt vào màn hình bế quan)
+            if (isHuntingMode) {
+              return null;
+            }
+
             const cNhapDinh = nonThoat.find((c) => /nhập định/i.test(c.text));
             if (cNhapDinh && cNhapDinh.available !== false)
               return { choice: cNhapDinh, tv: 20 };
@@ -27988,6 +27999,27 @@ table.au-tb tr:last-child td {
         }
         function auPick(v, opt) {
           const cs = (v.choices || []).filter((c) => c.available);
+          const isHuntingMode =
+            (opt && (opt.hunt || opt.isDanhQuai)) ||
+            (AU.cfg && AU.cfg.tl && AU.cfg.tl.mode === "danh_quai");
+
+          // Xử lý riêng biệt cho Song Tu với Đạo Lữ (ev.song_tu):
+          if (v.id === "ev.song_tu") {
+            const cYear = cs.find(
+              (c) => !c.thoat && /song tu một năm|song tu.*1 năm/i.test(c.text),
+            );
+            if (cYear) return cYear;
+            if (isHuntingMode) {
+              // Bên Đánh Quái: Tuyệt đối KHÔNG chọn "Song tu, cùng nhập định" (tránh bị kẹt vào bế quan nhập định)
+              const leave = cs.find((x) => x.thoat || /thôi/i.test(x.text));
+              if (leave) return leave;
+              const nonMeditation = cs.find(
+                (c) => !/nhập định|bế quan/i.test(c.text),
+              );
+              if (nonMeditation) return nonMeditation;
+            }
+          }
+
           if (encGivesTuVi(v.id) > 0) {
             const encDef = C().encounters && C().encounters.get(v.id);
             const activeScene =
@@ -27996,10 +28028,24 @@ table.au-tb tr:last-child td {
                 G().state.run.active &&
                 G().state.run.active.scene) ||
               null;
-            const bestTv = findBestTuViChoice(encDef, cs, activeScene);
+            const bestTv = findBestTuViChoice(encDef, cs, activeScene, opt);
             if (bestTv && bestTv.choice) return bestTv.choice;
+            if (v.id === "ev.song_tu" && isHuntingMode) {
+              const leave = cs.find((x) => x.thoat || /thôi/i.test(x.text));
+              if (leave) return leave;
+            }
             const nonThoat = cs.filter((c) => !c.thoat);
-            if (nonThoat.length > 0) return nonThoat[0];
+            if (nonThoat.length > 0) {
+              if (v.id === "ev.song_tu" && isHuntingMode) {
+                const safeChoice = nonThoat.find(
+                  (c) => !/nhập định|bế quan/i.test(c.text),
+                );
+                if (safeChoice) return safeChoice;
+                const leave = cs.find((x) => x.thoat || /thôi/i.test(x.text));
+                if (leave) return leave;
+              }
+              return nonThoat[0];
+            }
           }
           if (opt.hunt) {
             const sanMucTieu = opt.sanMucTieu || "uu_tien_dau_dan";
@@ -29572,6 +29618,7 @@ table.au-tb tr:last-child td {
           // 1. Kiểm tra việc dở (trận đánh quái / tâm ma / biến cố quấy bế quan)
           const p = auPending(st, {
             hunt: isDanhQuai,
+            isDanhQuai: isDanhQuai,
             mau: isDanhQuai ? cfg.mau : undefined,
             neHac: isDanhQuai ? cfg.neHac !== false : false,
             danhAi: isDanhQuai ? cfg.danhAi !== false : true,
@@ -36653,6 +36700,7 @@ table.au-tb tr:last-child td {
               '<b>Khắc Phục Triệt Để Lỗi Ghi Đè Hàm <code>stripDead</code> &amp; Lấp Đầy Khe Hở:</b> Hợp nhất hàm <code>stripDead</code> và <code>coverNote</code> bị định nghĩa trùng lặp, khôi phục trọn vẹn pha <code>smartFillRemainingGaps</code> sau khi lọc mảnh đứt mạch và đối sánh chữ ký mảnh ghép chuẩn xác để không bỏ sót cấu hình tối ưu.',
               '<b>Siêu AI Tác Chiến 2.0 (Liên Hoàn Phá Giáp ➔ Nuke & Quản Trị Tế Huyết Bản Mệnh):</b> Tự động ưu tiên tung kỹ năng Phá Giáp / Ấn Ký / Suy Yếu mở màn trước khi dồn Đại Chiêu; bổ sung cơ chế kiểm soát chiêu Bản Mệnh Tế Huyết (chống hao thọ nguyên ngoài ý muốn) với nút chuyển đổi nhanh <code>🩸 Tế Huyết</code> trực tiếp trên thanh chiến đấu nổi (Tắt / Boss / Bật) giúp người chơi linh hoạt quyết định xả đại chiêu khi gặp Boss mạnh.',
               '<b>Auto Săn Dị Bảo Tự Động Bù Đan Khảo Nghiệm:</b> Khi đến điểm Dị Bảo yêu cầu kiểm định chỉ số (Thần Thức, Ngộ Tính, Cơ Duyên...), Auto tự động rà soát túi đồ và nuốt đan dược tăng chỉ số tương ứng để vượt ngưỡng khảo nghiệm trước khi tiến vào đoạt bảo.',
+              '<b>Tối Ưu Song Tu Với Đạo Lữ (Chế Độ Đánh Quái):</b> Khi gặp Đạo Lữ ở nhánh Đánh Quái Săn Yêu, Auto luôn ưu tiên chọn «Song tu một năm» nhận tu vi trực tiếp, triệt để không chọn «Song tu, cùng nhập định» để không làm gián đoạn chuỗi săn quái hoặc kẹt vào phiên bế quan.',
               '<b>Chế Độ Thu Nhỏ Thanh Nổi (Window Shade) &amp; Tìm Nhanh Tab (<code>Ctrl+K</code>):</b> Bổ sung nút Thu Nhỏ (<code>—</code> / đúp chuột tiêu đề / <code>Alt+M</code>) giúp thu gọn cửa sổ thành thanh nổi siêu gọn không che màn hình game; thêm thanh Tìm Nhanh Chức Năng (<code>🔎</code> / <code>Ctrl+K</code>), bộ đếm thời gian thực <code>⏱ MM:SS</code> trên Mini Status Bar và phím tắt toàn cục <code>Alt+T</code>.'
             ]
           },
