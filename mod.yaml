@@ -1,6 +1,6 @@
 id: van_kiep_tro_ly
 name: "Vạn Kiếp Tu Tiên Tool · Trợ Lý"
-version: "7.23.0"
+version: "7.23.1"
 author: "LoganZ · Kỹ Sư"
 description: "Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động."
 script: main.js

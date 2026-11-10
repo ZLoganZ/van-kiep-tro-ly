@@ -861,6 +861,11 @@ function syncDynamicGameData() {
       typeof DIBAO === "object" &&
       Array.isArray(DIBAO.ev)
     ) {
+      // Dọn dẹp các phần tử rác / không có relic nếu từng bị thêm nhầm
+      DIBAO.ev = DIBAO.ev.filter(
+        (e) => e && typeof e.relic === "string" && e.relic.trim() !== "",
+      );
+
       const knownDibaoIds = new Set(DIBAO.ev.map((e) => e.id));
       for (const enc of content.encounters.values()) {
         if (!enc || !enc.id) continue;
@@ -874,14 +879,25 @@ function syncDynamicGameData() {
           }
           continue;
         }
+        // Chỉ nhận sự kiện có gắn dị bảo cố định thuộc phẩm 8 Nghịch Thiên (Bảo Lục)
+        const relicId = enc.relic || enc.vat_pham || "";
+        if (!relicId) continue;
+        const isRank8 =
+          (DIBAO.rel && DIBAO.rel[relicId]) ||
+          (content.items &&
+            content.items.get &&
+            content.items.get(relicId) &&
+            content.items.get(relicId).pham_cap === 8);
+        if (!isRank8) continue;
+
         if (enc.id.startsWith("ev.di_bao_") || enc.di_bao) {
           const newEv = {
             id: enc.id,
             ten: enc.ten || enc.id,
-            relic: enc.relic || enc.vat_pham || "",
+            relic: relicId,
             gate: enc.gate || (enc.tags && enc.tags.canh_gioi) || [4, 5],
             hc: (enc.limits && enc.limits.hoi_chieu_nam) || enc.hc || 120,
-            dia: enc.dia || "Bí Cảnh",
+            dia: enc.dia || null,
             marker: enc.marker || "",
             p: enc.ti_le || enc.p || 0.05,
             bv: enc.bv || null,
@@ -895,6 +911,18 @@ function syncDynamicGameData() {
           if (newEv.relic && DIBAO.evRelicMap) {
             DIBAO.evRelicMap.set(newEv.relic, newEv);
           }
+        }
+      }
+
+      // Chuẩn hóa loại bỏ các mục rỗng trong evMap và evRelicMap
+      if (DIBAO.evMap) {
+        for (const [k, v] of DIBAO.evMap.entries()) {
+          if (!v || !v.relic || !String(v.relic).trim()) DIBAO.evMap.delete(k);
+        }
+      }
+      if (DIBAO.evRelicMap) {
+        for (const [k, v] of DIBAO.evRelicMap.entries()) {
+          if (!k || !String(k).trim()) DIBAO.evRelicMap.delete(k);
         }
       }
     }

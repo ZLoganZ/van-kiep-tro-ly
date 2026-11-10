@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════════
- * Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản Mod Chính Thức v7.23.0
+ * Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản Mod Chính Thức v7.23.1
  * Tác giả: LoganZ · Kỹ Sư
  * Kiến trúc: Multi-file Modular (Biên dịch tự động từ thư mục src/ qua build.js)
  * Đăng ký trực tiếp qua window.tuTienMods (apiVersion: 1) · Đã loại bỏ Stealth Mode
@@ -7,7 +7,7 @@
 (function () {
   "use strict";
   var gWin = typeof window !== "undefined" ? window : globalThis;
-  var TOOL_VER = "7.23.0";
+  var TOOL_VER = "7.23.1";
   var _modBooted = false;
 
   function runTroLy(TT, MOD) {
@@ -8058,6 +8058,11 @@ function syncDynamicGameData() {
       typeof DIBAO === "object" &&
       Array.isArray(DIBAO.ev)
     ) {
+      // Dọn dẹp các phần tử rác / không có relic nếu từng bị thêm nhầm
+      DIBAO.ev = DIBAO.ev.filter(
+        (e) => e && typeof e.relic === "string" && e.relic.trim() !== "",
+      );
+
       const knownDibaoIds = new Set(DIBAO.ev.map((e) => e.id));
       for (const enc of content.encounters.values()) {
         if (!enc || !enc.id) continue;
@@ -8071,14 +8076,25 @@ function syncDynamicGameData() {
           }
           continue;
         }
+        // Chỉ nhận sự kiện có gắn dị bảo cố định thuộc phẩm 8 Nghịch Thiên (Bảo Lục)
+        const relicId = enc.relic || enc.vat_pham || "";
+        if (!relicId) continue;
+        const isRank8 =
+          (DIBAO.rel && DIBAO.rel[relicId]) ||
+          (content.items &&
+            content.items.get &&
+            content.items.get(relicId) &&
+            content.items.get(relicId).pham_cap === 8);
+        if (!isRank8) continue;
+
         if (enc.id.startsWith("ev.di_bao_") || enc.di_bao) {
           const newEv = {
             id: enc.id,
             ten: enc.ten || enc.id,
-            relic: enc.relic || enc.vat_pham || "",
+            relic: relicId,
             gate: enc.gate || (enc.tags && enc.tags.canh_gioi) || [4, 5],
             hc: (enc.limits && enc.limits.hoi_chieu_nam) || enc.hc || 120,
-            dia: enc.dia || "Bí Cảnh",
+            dia: enc.dia || null,
             marker: enc.marker || "",
             p: enc.ti_le || enc.p || 0.05,
             bv: enc.bv || null,
@@ -8092,6 +8108,18 @@ function syncDynamicGameData() {
           if (newEv.relic && DIBAO.evRelicMap) {
             DIBAO.evRelicMap.set(newEv.relic, newEv);
           }
+        }
+      }
+
+      // Chuẩn hóa loại bỏ các mục rỗng trong evMap và evRelicMap
+      if (DIBAO.evMap) {
+        for (const [k, v] of DIBAO.evMap.entries()) {
+          if (!v || !v.relic || !String(v.relic).trim()) DIBAO.evMap.delete(k);
+        }
+      }
+      if (DIBAO.evRelicMap) {
+        for (const [k, v] of DIBAO.evRelicMap.entries()) {
+          if (!k || !String(k).trim()) DIBAO.evRelicMap.delete(k);
         }
       }
     }
@@ -15068,6 +15096,7 @@ function tabDiBao() {
   // Chuẩn bị danh sách 21 Dị Bảo
   const allDb = [];
   for (const e of DIBAO.ev) {
+    if (!e || !e.relic || typeof e.relic !== "string" || !e.relic.trim()) continue;
     const relInfo =
       DIBAO.rel[e.relic] ||
       (Cc && Cc.items ? Cc.items.get(e.relic) : null) ||
@@ -15167,11 +15196,19 @@ function tabDiBao() {
   // Tính toán bảo hiểm Pity
   const sdbCfg =
     (typeof AU !== "undefined" && AU.cfg && AU.cfg.sdb) || {};
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  if (Array.isArray(sdbCfg.targetRelics)) {
+    sdbCfg.targetRelics = sdbCfg.targetRelics.filter(
+      (r) => r && typeof r === "string" && r.trim() !== "",
+    );
+  }
   const targetRelics = Array.isArray(sdbCfg.targetRelics)
     ? sdbCfg.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+    : validEvs.map((e) => e.relic);
   const targetSummary =
-    targetRelics.length === DIBAO.ev.length
+    targetRelics.length === validEvs.length
       ? "Tất cả 19 Dị Bảo"
       : targetRelics.length === 0
         ? '<span class="vk-bad">Chưa chọn món nào</span>'
@@ -15713,10 +15750,17 @@ mapActive.length > 0
       ev.preventDefault();
       ev.stopPropagation();
       const rId = toggleTargetBtn.getAttribute("data-relic");
-      if (rId) {
+      if (rId && rId.trim()) {
         const sdbCfg = AU.cfg.sdb;
+        const validEvs = DIBAO.ev.filter(
+          (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+        );
         if (!Array.isArray(sdbCfg.targetRelics)) {
-          sdbCfg.targetRelics = DIBAO.ev.map((e) => e.relic);
+          sdbCfg.targetRelics = validEvs.map((e) => e.relic);
+        } else {
+          sdbCfg.targetRelics = sdbCfg.targetRelics.filter(
+            (r) => r && typeof r === "string" && r.trim() !== "",
+          );
         }
         const idx = sdbCfg.targetRelics.indexOf(rId);
         if (idx >= 0) {
@@ -15729,7 +15773,7 @@ mapActive.length > 0
         const tgtEl = body.querySelector("#db-auto-target-text");
         if (tgtEl) {
           tgtEl.innerHTML =
-            sdbCfg.targetRelics.length === DIBAO.ev.length
+            sdbCfg.targetRelics.length === validEvs.length
               ? "Tất cả 19 Dị Bảo"
               : sdbCfg.targetRelics.length === 0
                 ? '<span class="vk-bad">Chưa chọn món nào</span>'
@@ -27705,8 +27749,15 @@ function auLoad() {
   delete AU.cfg.san.hiem; // Auto Săn Yêu: màu được phép do người dùng tích (mặc định Xanh, Vàng và Đỏ; Tím dừng)
   if (typeof AU.cfg.san.neHac !== "boolean") AU.cfg.san.neHac = true;
   if (typeof AU.cfg.san.danhAi !== "boolean") AU.cfg.san.danhAi = true;
+  const validDibaoRelics = DIBAO.ev
+    .filter((e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "")
+    .map((e) => e.relic);
   if (!Array.isArray(AU.cfg.sdb.targetRelics)) {
-    AU.cfg.sdb.targetRelics = DIBAO.ev.map((e) => e.relic);
+    AU.cfg.sdb.targetRelics = validDibaoRelics;
+  } else {
+    AU.cfg.sdb.targetRelics = AU.cfg.sdb.targetRelics.filter(
+      (r) => r && typeof r === "string" && r.trim() !== "",
+    );
   }
   if (typeof AU.cfg.sdb.sanMoiDiBaoXuatThe !== "boolean") {
     AU.cfg.sdb.sanMoiDiBaoXuatThe = true;
@@ -33267,9 +33318,14 @@ async function auSdbStep(st) {
   const isOwned = (id) => checkOwnedRelic(id, run, sc);
 
   // Danh sách Dị Bảo được chọn săn:
-  const selectedRelics = Array.isArray(cfg.targetRelics)
-    ? cfg.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  const selectedRelics = (
+    Array.isArray(cfg.targetRelics)
+      ? cfg.targetRelics
+      : validEvs.map((e) => e.relic)
+  ).filter((r) => r && typeof r === "string" && r.trim() !== "");
   const allowAllSpawns = cfg.sanMoiDiBaoXuatThe !== false;
   if (selectedRelics.length === 0 && !allowAllSpawns) {
     return {
@@ -33679,16 +33735,16 @@ async function auSdbStep(st) {
   }
 
   // 8. NẾU CHƯA CÓ DỊ BẢO NÀO NỞ TRÊN BẢN ĐỒ:
-  const targetEvs = DIBAO.ev.filter((e) => targetRelicSet.has(e.relic));
+  const targetEvs = validEvs.filter((e) => targetRelicSet.has(e.relic));
   const unownedCount = targetEvs.filter(
     (e) => !isOwned(e.relic),
   ).length;
   if (unownedCount === 0) {
-    const allUnowned = DIBAO.ev.filter((e) => !isOwned(e.relic)).length;
+    const allUnowned = validEvs.filter((e) => !isOwned(e.relic)).length;
     if (allUnowned === 0 || !allowAllSpawns) {
       return {
         stop:
-          targetRelicSet.size < DIBAO.ev.length
+          targetRelicSet.size < validEvs.length
             ? `🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ ${targetRelicSet.size} Dị Bảo trong danh sách bạn đã chọn!`
             : "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 19 Dị Bảo trong game!",
       };
@@ -35374,11 +35430,16 @@ function auPaint() {
     const tgtEl = body.querySelector("#db-auto-target-text");
     if (tgtEl) {
       const sdbCfg = AU.cfg && AU.cfg.sdb ? AU.cfg.sdb : {};
-      const targetRelics = Array.isArray(sdbCfg.targetRelics)
-        ? sdbCfg.targetRelics
-        : DIBAO.ev.map((e) => e.relic);
+      const validEvs = DIBAO.ev.filter(
+        (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+      );
+      const targetRelics = (
+        Array.isArray(sdbCfg.targetRelics)
+          ? sdbCfg.targetRelics
+          : validEvs.map((e) => e.relic)
+      ).filter((r) => r && typeof r === "string" && r.trim() !== "");
       tgtEl.innerHTML =
-        targetRelics.length === DIBAO.ev.length
+        targetRelics.length === validEvs.length
           ? "Tất cả 19 Dị Bảo"
           : targetRelics.length === 0
             ? '<span class="vk-bad">Chưa chọn món nào</span>'
@@ -36735,9 +36796,14 @@ function tabAutoSdb() {
         ? "ngay đây"
         : num(y) + " năm";
 
-  const selectedRelics = Array.isArray(c.targetRelics)
-    ? c.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  const selectedRelics = (
+    Array.isArray(c.targetRelics)
+      ? c.targetRelics
+      : validEvs.map((e) => e.relic)
+  ).filter((r) => r && typeof r === "string" && r.trim() !== "");
   const selSet = new Set(selectedRelics);
 
   const isOwnedItem = (id) => checkOwnedRelic(id, run, sc);
@@ -36757,11 +36823,11 @@ function tabAutoSdb() {
     run && nv && sc ? calcDiBaoPity(run, nv, sc, selectedRelics) : null;
 
   // Thống kê nhanh
-  const totalRelics = DIBAO.ev.length;
-  const ownedCount = DIBAO.ev.filter((e) =>
+  const totalRelics = validEvs.length;
+  const ownedCount = validEvs.filter((e) =>
     isOwnedItem(e.relic),
   ).length;
-  const metaCount = DIBAO.ev.filter((e) =>
+  const metaCount = validEvs.filter((e) =>
     metaRelicsSet.has(e.relic),
   ).length;
   const baoLucPoints = metaRelicsSet.size * 5;
@@ -36904,7 +36970,7 @@ function tabAutoSdb() {
   }
 
   // Lưới thẻ Dị Bảo
-  const relicItemsHtml = DIBAO.ev
+  const relicItemsHtml = validEvs
     .map((e) => {
       const rel = DIBAO.rel[e.relic] || {};
       const isChecked = selSet.has(e.relic);
@@ -37108,7 +37174,7 @@ ${radarHtml}
     const badge = body.querySelector("#au-sdb-count-badge");
     if (badge) {
       badge.innerHTML =
-        checkedRelics.length === DIBAO.ev.length
+        checkedRelics.length === validEvs.length
           ? "(Đang săn tất cả 19 món)"
           : checkedRelics.length === 0
             ? '<span class="vk-bad">(Chưa chọn món nào — Auto sẽ dừng)</span>'
@@ -39832,9 +39898,18 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 7.23.0 · Chuyển Đổi Sang Game Mod Chính Thức (Loại Bỏ Stealth), Tái Cấu Trúc Đa File Modular & Đại Trùng Tu Hệ Thống Dị Bảo",
+      t: "Phiên Bản 7.23.1 · Khắc Phục Lỗi Hiển Thị Dị Bảo Rỗng & Lọc Bỏ Sự Kiện Đồ Ngẫu Nhiên",
       d: "10/11/2026",
       now: true,
+      pts: [
+        "<b>Khắc Phục Lỗi Thẻ Dị Bảo Trống Tên &amp; Sai Giá Trị (0 Linh Thạch):</b> Sửa cơ chế đồng bộ sự kiện động trong <code>bridge.js</code> (<code>syncDynamicData</code>). Trước đây các sự kiện hoang dã/di tích mới được thêm vào tệp <code>di_bao.yaml</code> của game (<i>Nhẫn trong hố sét</i>, <i>Hộp ba khóa</i>, <i>Kéo đỉnh giữa hồ</i>) có tiền tố ID <code>ev.di_bao_</code> nhưng chỉ thưởng trang bị/công pháp ngẫu nhiên chứ không chứa Dị Bảo cụ thể (<code>relic</code>), khiến hệ thống tự động đẩy vào danh sách <code>DIBAO.ev</code> với relic rỗng. Điều này sinh ra các thẻ Dị Bảo trống tiêu đề, hiển thị sai phẩm cấp 'Phẩm 8 Nghịch Thiên', giá 0 linh thạch và định vị đón đầu nhầm tới Slot Bí Cảnh.",
+        "<b>Bảo Vệ Đa Lớp Danh Mục Dị Bảo (Data Integrity Guard):</b> Thiết lập bộ lọc kiểm tra nghiêm ngặt: chỉ cho phép sự kiện có Dị Bảo cố định thuộc phẩm 8 Nghịch Thiên (Bảo Lục) mới được nạp vào <code>DIBAO.ev</code>; đồng thời dọn dẹp các giá trị chuỗi rỗng trong cấu hình mục tiêu săn <code>AU.cfg.sdb.targetRelics</code>, danh sách thẻ hiển thị và Radar thế giới, khôi phục bảng Dị Bảo chuẩn xác 21 món.",
+      ],
+    },
+    {
+      t: "Phiên Bản 7.23.0 · Chuyển Đổi Sang Game Mod Chính Thức (Loại Bỏ Stealth), Tái Cấu Trúc Đa File Modular & Đại Trùng Tu Hệ Thống Dị Bảo",
+      d: "10/11/2026",
+      now: false,
       pts: [
         "<b>Chuyển Đổi Hoàn Toàn Sang Game Mod Chính Thức (Loại Bỏ Stealth Mode):</b> Gỡ bỏ hoàn toàn cơ chế Tampermonkey Stealth Standalone (<code>waitForGameReady</code>), chuyển sang đăng ký trực tiếp vào hệ thống Mod nguyên bản của game qua <code>window.tuTienMods</code> (<code>apiVersion: 1</code>, <code>mod.yaml</code> + <code>main.js</code>) và tích hợp bảng điều khiển vào nút <b>☯ Mod</b> của game (<code>MOD.ui.addPanel</code>).",
         "<b>Tái Cấu Trúc Mã Nguồn Đa File (Modular Architecture):</b> Tách file đơn nguyên hơn 40.700 dòng thành 25 module độc lập theo chức năng trong thư mục <code>src/</code> (<code>styles/</code>, <code>ui/</code>, <code>data/</code>, <code>core/</code>, <code>modules/</code>, <code>auto/</code>) kèm trình biên dịch <code>build.js</code> tự động đóng gói ra <code>main.js</code> và file nén cài mod <code>.zip</code>, giúp dễ dàng bảo trì và nâng cấp.",

@@ -81,9 +81,14 @@ async function auSdbStep(st) {
   const isOwned = (id) => checkOwnedRelic(id, run, sc);
 
   // Danh sách Dị Bảo được chọn săn:
-  const selectedRelics = Array.isArray(cfg.targetRelics)
-    ? cfg.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  const selectedRelics = (
+    Array.isArray(cfg.targetRelics)
+      ? cfg.targetRelics
+      : validEvs.map((e) => e.relic)
+  ).filter((r) => r && typeof r === "string" && r.trim() !== "");
   const allowAllSpawns = cfg.sanMoiDiBaoXuatThe !== false;
   if (selectedRelics.length === 0 && !allowAllSpawns) {
     return {
@@ -493,16 +498,16 @@ async function auSdbStep(st) {
   }
 
   // 8. NẾU CHƯA CÓ DỊ BẢO NÀO NỞ TRÊN BẢN ĐỒ:
-  const targetEvs = DIBAO.ev.filter((e) => targetRelicSet.has(e.relic));
+  const targetEvs = validEvs.filter((e) => targetRelicSet.has(e.relic));
   const unownedCount = targetEvs.filter(
     (e) => !isOwned(e.relic),
   ).length;
   if (unownedCount === 0) {
-    const allUnowned = DIBAO.ev.filter((e) => !isOwned(e.relic)).length;
+    const allUnowned = validEvs.filter((e) => !isOwned(e.relic)).length;
     if (allUnowned === 0 || !allowAllSpawns) {
       return {
         stop:
-          targetRelicSet.size < DIBAO.ev.length
+          targetRelicSet.size < validEvs.length
             ? `🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ ${targetRelicSet.size} Dị Bảo trong danh sách bạn đã chọn!`
             : "🎉 Chúc mừng! Bạn đã thu thập trọn vẹn toàn bộ 19 Dị Bảo trong game!",
       };

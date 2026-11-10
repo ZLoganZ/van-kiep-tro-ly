@@ -2207,6 +2207,7 @@ function tabDiBao() {
   // Chuẩn bị danh sách 21 Dị Bảo
   const allDb = [];
   for (const e of DIBAO.ev) {
+    if (!e || !e.relic || typeof e.relic !== "string" || !e.relic.trim()) continue;
     const relInfo =
       DIBAO.rel[e.relic] ||
       (Cc && Cc.items ? Cc.items.get(e.relic) : null) ||
@@ -2306,11 +2307,19 @@ function tabDiBao() {
   // Tính toán bảo hiểm Pity
   const sdbCfg =
     (typeof AU !== "undefined" && AU.cfg && AU.cfg.sdb) || {};
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  if (Array.isArray(sdbCfg.targetRelics)) {
+    sdbCfg.targetRelics = sdbCfg.targetRelics.filter(
+      (r) => r && typeof r === "string" && r.trim() !== "",
+    );
+  }
   const targetRelics = Array.isArray(sdbCfg.targetRelics)
     ? sdbCfg.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+    : validEvs.map((e) => e.relic);
   const targetSummary =
-    targetRelics.length === DIBAO.ev.length
+    targetRelics.length === validEvs.length
       ? "Tất cả 19 Dị Bảo"
       : targetRelics.length === 0
         ? '<span class="vk-bad">Chưa chọn món nào</span>'
@@ -2852,10 +2861,17 @@ mapActive.length > 0
       ev.preventDefault();
       ev.stopPropagation();
       const rId = toggleTargetBtn.getAttribute("data-relic");
-      if (rId) {
+      if (rId && rId.trim()) {
         const sdbCfg = AU.cfg.sdb;
+        const validEvs = DIBAO.ev.filter(
+          (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+        );
         if (!Array.isArray(sdbCfg.targetRelics)) {
-          sdbCfg.targetRelics = DIBAO.ev.map((e) => e.relic);
+          sdbCfg.targetRelics = validEvs.map((e) => e.relic);
+        } else {
+          sdbCfg.targetRelics = sdbCfg.targetRelics.filter(
+            (r) => r && typeof r === "string" && r.trim() !== "",
+          );
         }
         const idx = sdbCfg.targetRelics.indexOf(rId);
         if (idx >= 0) {
@@ -2868,7 +2884,7 @@ mapActive.length > 0
         const tgtEl = body.querySelector("#db-auto-target-text");
         if (tgtEl) {
           tgtEl.innerHTML =
-            sdbCfg.targetRelics.length === DIBAO.ev.length
+            sdbCfg.targetRelics.length === validEvs.length
               ? "Tất cả 19 Dị Bảo"
               : sdbCfg.targetRelics.length === 0
                 ? '<span class="vk-bad">Chưa chọn món nào</span>'

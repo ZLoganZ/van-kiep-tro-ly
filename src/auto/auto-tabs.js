@@ -560,9 +560,14 @@ function tabAutoSdb() {
         ? "ngay đây"
         : num(y) + " năm";
 
-  const selectedRelics = Array.isArray(c.targetRelics)
-    ? c.targetRelics
-    : DIBAO.ev.map((e) => e.relic);
+  const validEvs = DIBAO.ev.filter(
+    (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+  );
+  const selectedRelics = (
+    Array.isArray(c.targetRelics)
+      ? c.targetRelics
+      : validEvs.map((e) => e.relic)
+  ).filter((r) => r && typeof r === "string" && r.trim() !== "");
   const selSet = new Set(selectedRelics);
 
   const isOwnedItem = (id) => checkOwnedRelic(id, run, sc);
@@ -582,11 +587,11 @@ function tabAutoSdb() {
     run && nv && sc ? calcDiBaoPity(run, nv, sc, selectedRelics) : null;
 
   // Thống kê nhanh
-  const totalRelics = DIBAO.ev.length;
-  const ownedCount = DIBAO.ev.filter((e) =>
+  const totalRelics = validEvs.length;
+  const ownedCount = validEvs.filter((e) =>
     isOwnedItem(e.relic),
   ).length;
-  const metaCount = DIBAO.ev.filter((e) =>
+  const metaCount = validEvs.filter((e) =>
     metaRelicsSet.has(e.relic),
   ).length;
   const baoLucPoints = metaRelicsSet.size * 5;
@@ -729,7 +734,7 @@ function tabAutoSdb() {
   }
 
   // Lưới thẻ Dị Bảo
-  const relicItemsHtml = DIBAO.ev
+  const relicItemsHtml = validEvs
     .map((e) => {
       const rel = DIBAO.rel[e.relic] || {};
       const isChecked = selSet.has(e.relic);
@@ -933,7 +938,7 @@ ${radarHtml}
     const badge = body.querySelector("#au-sdb-count-badge");
     if (badge) {
       badge.innerHTML =
-        checkedRelics.length === DIBAO.ev.length
+        checkedRelics.length === validEvs.length
           ? "(Đang săn tất cả 19 món)"
           : checkedRelics.length === 0
             ? '<span class="vk-bad">(Chưa chọn món nào — Auto sẽ dừng)</span>'

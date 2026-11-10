@@ -953,8 +953,15 @@ function auLoad() {
   delete AU.cfg.san.hiem; // Auto Săn Yêu: màu được phép do người dùng tích (mặc định Xanh, Vàng và Đỏ; Tím dừng)
   if (typeof AU.cfg.san.neHac !== "boolean") AU.cfg.san.neHac = true;
   if (typeof AU.cfg.san.danhAi !== "boolean") AU.cfg.san.danhAi = true;
+  const validDibaoRelics = DIBAO.ev
+    .filter((e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "")
+    .map((e) => e.relic);
   if (!Array.isArray(AU.cfg.sdb.targetRelics)) {
-    AU.cfg.sdb.targetRelics = DIBAO.ev.map((e) => e.relic);
+    AU.cfg.sdb.targetRelics = validDibaoRelics;
+  } else {
+    AU.cfg.sdb.targetRelics = AU.cfg.sdb.targetRelics.filter(
+      (r) => r && typeof r === "string" && r.trim() !== "",
+    );
   }
   if (typeof AU.cfg.sdb.sanMoiDiBaoXuatThe !== "boolean") {
     AU.cfg.sdb.sanMoiDiBaoXuatThe = true;

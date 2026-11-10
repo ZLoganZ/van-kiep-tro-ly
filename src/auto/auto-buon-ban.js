@@ -1341,11 +1341,16 @@ function auPaint() {
     const tgtEl = body.querySelector("#db-auto-target-text");
     if (tgtEl) {
       const sdbCfg = AU.cfg && AU.cfg.sdb ? AU.cfg.sdb : {};
-      const targetRelics = Array.isArray(sdbCfg.targetRelics)
-        ? sdbCfg.targetRelics
-        : DIBAO.ev.map((e) => e.relic);
+      const validEvs = DIBAO.ev.filter(
+        (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+      );
+      const targetRelics = (
+        Array.isArray(sdbCfg.targetRelics)
+          ? sdbCfg.targetRelics
+          : validEvs.map((e) => e.relic)
+      ).filter((r) => r && typeof r === "string" && r.trim() !== "");
       tgtEl.innerHTML =
-        targetRelics.length === DIBAO.ev.length
+        targetRelics.length === validEvs.length
           ? "Tất cả 19 Dị Bảo"
           : targetRelics.length === 0
             ? '<span class="vk-bad">Chưa chọn món nào</span>'

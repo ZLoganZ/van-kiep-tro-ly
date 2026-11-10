@@ -12,9 +12,18 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 7.23.0 · Chuyển Đổi Sang Game Mod Chính Thức (Loại Bỏ Stealth), Tái Cấu Trúc Đa File Modular & Đại Trùng Tu Hệ Thống Dị Bảo",
+      t: "Phiên Bản 7.23.1 · Khắc Phục Lỗi Hiển Thị Dị Bảo Rỗng & Lọc Bỏ Sự Kiện Đồ Ngẫu Nhiên",
       d: "10/11/2026",
       now: true,
+      pts: [
+        "<b>Khắc Phục Lỗi Thẻ Dị Bảo Trống Tên &amp; Sai Giá Trị (0 Linh Thạch):</b> Sửa cơ chế đồng bộ sự kiện động trong <code>bridge.js</code> (<code>syncDynamicData</code>). Trước đây các sự kiện hoang dã/di tích mới được thêm vào tệp <code>di_bao.yaml</code> của game (<i>Nhẫn trong hố sét</i>, <i>Hộp ba khóa</i>, <i>Kéo đỉnh giữa hồ</i>) có tiền tố ID <code>ev.di_bao_</code> nhưng chỉ thưởng trang bị/công pháp ngẫu nhiên chứ không chứa Dị Bảo cụ thể (<code>relic</code>), khiến hệ thống tự động đẩy vào danh sách <code>DIBAO.ev</code> với relic rỗng. Điều này sinh ra các thẻ Dị Bảo trống tiêu đề, hiển thị sai phẩm cấp 'Phẩm 8 Nghịch Thiên', giá 0 linh thạch và định vị đón đầu nhầm tới Slot Bí Cảnh.",
+        "<b>Bảo Vệ Đa Lớp Danh Mục Dị Bảo (Data Integrity Guard):</b> Thiết lập bộ lọc kiểm tra nghiêm ngặt: chỉ cho phép sự kiện có Dị Bảo cố định thuộc phẩm 8 Nghịch Thiên (Bảo Lục) mới được nạp vào <code>DIBAO.ev</code>; đồng thời dọn dẹp các giá trị chuỗi rỗng trong cấu hình mục tiêu săn <code>AU.cfg.sdb.targetRelics</code>, danh sách thẻ hiển thị và Radar thế giới, khôi phục bảng Dị Bảo chuẩn xác 21 món.",
+      ],
+    },
+    {
+      t: "Phiên Bản 7.23.0 · Chuyển Đổi Sang Game Mod Chính Thức (Loại Bỏ Stealth), Tái Cấu Trúc Đa File Modular & Đại Trùng Tu Hệ Thống Dị Bảo",
+      d: "10/11/2026",
+      now: false,
       pts: [
         "<b>Chuyển Đổi Hoàn Toàn Sang Game Mod Chính Thức (Loại Bỏ Stealth Mode):</b> Gỡ bỏ hoàn toàn cơ chế Tampermonkey Stealth Standalone (<code>waitForGameReady</code>), chuyển sang đăng ký trực tiếp vào hệ thống Mod nguyên bản của game qua <code>window.tuTienMods</code> (<code>apiVersion: 1</code>, <code>mod.yaml</code> + <code>main.js</code>) và tích hợp bảng điều khiển vào nút <b>☯ Mod</b> của game (<code>MOD.ui.addPanel</code>).",
         "<b>Tái Cấu Trúc Mã Nguồn Đa File (Modular Architecture):</b> Tách file đơn nguyên hơn 40.700 dòng thành 25 module độc lập theo chức năng trong thư mục <code>src/</code> (<code>styles/</code>, <code>ui/</code>, <code>data/</code>, <code>core/</code>, <code>modules/</code>, <code>auto/</code>) kèm trình biên dịch <code>build.js</code> tự động đóng gói ra <code>main.js</code> và file nén cài mod <code>.zip</code>, giúp dễ dàng bảo trì và nâng cấp.",
