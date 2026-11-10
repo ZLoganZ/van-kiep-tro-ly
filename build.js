@@ -142,6 +142,52 @@ ${chunks.join("\n\n")}
   console.log(
     `✅ Đã biên dịch thành công ${JS_MODULES.length} modules + CSS -> main.js (v${VERSION}, ${lines} dòng).`
   );
+
+  // Đóng gói file cài đặt van-kiep-tro-ly-mod.zip (chứa mod.yaml và main.js)
+  const zipPath = path.join(ROOT, "van-kiep-tro-ly-mod.zip");
+  try {
+    const cp = require("child_process");
+    let packed = false;
+    // Cách 1: dùng tar -a (sẵn có trên Windows 10+, Linux, macOS)
+    try {
+      cp.execSync(`tar -a -cf "${zipPath}" mod.yaml main.js`, {
+        cwd: ROOT,
+        stdio: "pipe",
+      });
+      packed = true;
+    } catch (e1) {}
+
+    // Cách 2: PowerShell Compress-Archive trên Windows
+    if (!packed) {
+      try {
+        cp.execSync(
+          `powershell -NoProfile -Command "Compress-Archive -Path mod.yaml,main.js -DestinationPath '${zipPath}' -Force"`,
+          { cwd: ROOT, stdio: "pipe" }
+        );
+        packed = true;
+      } catch (e2) {}
+    }
+
+    // Cách 3: lệnh zip trên Linux/macOS
+    if (!packed) {
+      try {
+        cp.execSync(`zip -j -q "${zipPath}" mod.yaml main.js`, {
+          cwd: ROOT,
+          stdio: "pipe",
+        });
+        packed = true;
+      } catch (e3) {}
+    }
+
+    if (packed && fs.existsSync(zipPath)) {
+      const sizeKb = (fs.statSync(zipPath).size / 1024).toFixed(1);
+      console.log(`📦 Đã đóng gói file cài đặt: ${path.basename(zipPath)} (${sizeKb} KB).`);
+    } else {
+      console.warn("⚠️ Không tìm thấy công cụ đóng gói zip (tar, powershell, zip).");
+    }
+  } catch (err) {
+    console.warn("⚠️ Lỗi khi đóng gói file zip:", err.message);
+  }
 }
 
 build();

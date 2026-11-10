@@ -16,8 +16,16 @@ Mã nguồn được chia thành **25 module độc lập** trong thư mục `sr
 2. **Cập nhật phiên bản & Nhật Ký**:
    - Tăng số `version` trong `package.json` (script `build.js` sẽ tự động đồng bộ sang `TOOL_VER` trong `main.js` và `version` trong `mod.yaml`).
    - Thêm mục mới lên đầu mảng `LOG` trong `src/modules/nhat-ky.js` với `now: true` (và đổi mục cũ thành `now: false`).
-3. **Biên dịch & Kiểm tra cú pháp**:
+3. **Biên dịch, Đóng gói & Kiểm tra cú pháp**:
    ```bash
    node build.js
    ```
-   Script `build.js` sẽ kiểm tra cú pháp từng file trong `src/` bằng `vm.Script`, ghép nối theo thứ tự chuẩn vào `main.js`, và kiểm tra cú pháp tổng thể của `main.js`.
+   Script `build.js` sẽ kiểm tra cú pháp từng file trong `src/` bằng `vm.Script`, ghép nối theo thứ tự chuẩn vào `main.js`, đồng bộ `mod.yaml`, và **tự động đóng gói file cài đặt `van-kiep-tro-ly-mod.zip`**.
+
+4. **Commit & Push cùng lúc lên Remote (BẮT BUỘC)**:
+   Stage toàn bộ mã nguồn cùng file zip cài đặt mod để người dùng luôn nhận được bản cài đặt mới nhất:
+   ```bash
+   git add .
+   git commit -m "..."
+   git push origin main
+   ```

@@ -10,10 +10,14 @@
    - Khi kiểm tra khả năng truyền tống bằng `ddTeleOpts`, bắt buộc kiểm tra `!o.blocked`.
 4. **Kiểm tra trước khi bàn giao**:
    - Luôn chạy `node build.js` và đảm bảo không có lỗi cú pháp ở bất kỳ module nào trong `src/` cũng như `main.js`.
+5. **Đóng gói file cài đặt Mod (`van-kiep-tro-ly-mod.zip`) & Push lên cùng commit (BẮT BUỘC)**:
+   - File `van-kiep-tro-ly-mod.zip` (chứa `mod.yaml` và `main.js`) là gói cài đặt chính thức người chơi dùng để import trực tiếp vào game (Cấu hình ➔ Mods ➔ Cài mod).
+   - Script `node build.js` đã tích hợp tự động đóng gói `van-kiep-tro-ly-mod.zip` ngay sau khi biên dịch `main.js`.
+   - Mỗi khi commit mã nguồn hoặc nâng version, **BẮT BUỘC** phải stage cả file zip (`git add .` hoặc bao gồm `van-kiep-tro-ly-mod.zip`), commit và push lên remote trong **CÙNG MỘT COMMIT**. Tuyệt đối không được commit code mà để sót file `.zip` cũ hoặc push riêng rẽ.
 
 ## 1. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
 
-Mỗi khi có bất kỳ thay đổi nào trong mã nguồn `van_kiep_tro_ly_user.js`, **BẮT BUỘC** phải nâng số phiên bản theo đúng 3 cấp độ sau:
+Mỗi khi có bất kỳ thay đổi nào trong mã nguồn dự án, **BẮT BUỘC** phải nâng số phiên bản theo đúng 3 cấp độ sau:
 
 | Loại Thay Đổi               | Cấp Phiên Bản | Quy Tắc Tăng                                                                | Ví Dụ                         |
 | --------------------------- | ------------- | --------------------------------------------------------------------------- | ----------------------------- |
@@ -38,21 +42,13 @@ Mỗi khi có bất kỳ thay đổi nào trong mã nguồn `van_kiep_tro_ly_use
 
 ## 2. QUY TRÌNH BẮT BUỘC KHI CẬP NHẬT PHIÊN BẢN
 
-Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả các vị trí sau** trong file `van_kiep_tro_ly_user.js`:
+Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả các vị trí sau**:
 
-1. **UserScript Header:**
-   ```javascript
-   // @version      x.y.z
+1. **Cập nhật Version trong `package.json`:**
+   ```json
+   "version": "x.y.z"
    ```
-2. **Tiêu đề Comment đầu file:**
-   ```javascript
-   /* Vạn Kiếp Tu Tiên Tool · Trợ Lý · Bản x.y.z
-   ```
-3. **Biến Hằng Số `TOOL_VER`:**
-   ```javascript
-   var TOOL_VER = "x.y.z";
-   ```
-4. **Nhật Ký Cập Nhật (`NhatKy` -> `LOG`):**
+2. **Nhật Ký Cập Nhật (`src/modules/nhat-ky.js` -> `LOG`):**
    - Thêm một object mới lên **ĐẦU mảng `LOG`**:
      ```javascript
      { t: 'Phiên Bản x.y.z · [Tên bản cập nhật ngắn gọn]', d: 'DD/MM/YYYY', now: true, pts: [
@@ -61,10 +57,29 @@ Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả c
      ] },
      ```
    - Chuyển mục phiên bản liền trước thành `now: false`.
-5. **Commit Git:**
-   Viết thông điệp commit rõ ràng theo chuẩn:
-   - Bug fix / Enhance: `fix(combat): ...` hoặc `feat(ui): enhance ... bump to vx.y.z`
-   - Feature mới: `feat: add [tên chức năng] bump to vx.y.0`
+3. **Biên dịch mã nguồn & Đóng gói file Mod:**
+   - Chạy lệnh:
+     ```bash
+     node build.js
+     ```
+   - Script sẽ tự động:
+     - Ghép nối các module từ `src/` thành `main.js` với `TOOL_VER = "x.y.z"`.
+     - Cập nhật số phiên bản trong `mod.yaml`.
+     - Đóng gói file cài đặt `van-kiep-tro-ly-mod.zip` (gồm `mod.yaml` và `main.js`).
+4. **Kiểm tra cú pháp:**
+   - Chạy `node build.js --check` để đảm bảo không có lỗi cú pháp ở bất kỳ file nào.
+5. **Commit Git & Push Lên Remote:**
+   - Stage toàn bộ thay đổi bao gồm cả file zip:
+     ```bash
+     git add .
+     ```
+   - Viết thông điệp commit rõ ràng theo chuẩn:
+     - Bug fix / Enhance: `fix(combat): ...` hoặc `feat(ui): enhance ... bump to vx.y.z`
+     - Feature mới: `feat: add [tên chức năng] bump to vx.y.0`
+   - Push lên GitHub:
+     ```bash
+     git push origin main
+     ```
 
 ---
 
