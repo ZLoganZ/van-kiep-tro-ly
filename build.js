@@ -113,7 +113,7 @@ ${chunks.join("\n\n")}
   }
 
   // Đăng ký Mod chính thức vào hệ thống Mod của Vạn Kiếp Tu Tiên (window.tuTienMods)
-  var modDef = {
+  (gWin.tuTienMods ??= []).push({
     id: "van_kiep_tro_ly",
     name: "Vạn Kiếp Tu Tiên Tool · Trợ Lý",
     version: TOOL_VER,
@@ -122,31 +122,7 @@ ${chunks.join("\n\n")}
     ready: function (tt, mod) {
       runTroLy(tt || gWin.tuTien, mod);
     },
-  };
-
-  var modsList = (gWin.tuTienMods = gWin.tuTienMods || []);
-  var existingIdx = modsList.findIndex(function (m) {
-    return m && m.id === modDef.id;
   });
-  if (existingIdx >= 0) {
-    modsList[existingIdx] = modDef;
-  } else {
-    modsList.push(modDef);
-  }
-
-  // Hỗ trợ trường hợp người chơi nạp/chạy lại script khi game đã ở trạng thái ready
-  if (
-    gWin.tuTien &&
-    gWin.tuTien.phase === "ready" &&
-    gWin.tuTien.game &&
-    !_modBooted
-  ) {
-    try {
-      modDef.ready(gWin.tuTien, null);
-    } catch (e) {
-      console.error("[van_kiep_tro_ly] Auto-ready error:", e);
-    }
-  }
 })();
 `;
 

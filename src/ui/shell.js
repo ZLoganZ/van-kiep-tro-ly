@@ -342,6 +342,7 @@ var UI = (function () {
   api.onSection = function (fn) {
     api._secCb = fn;
   };
+  api.onSectionChange = api.onSection;
   api.onOpenChange = function (fn) {
     api._openCb = fn;
   };

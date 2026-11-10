@@ -2,6 +2,5 @@ id: van_kiep_tro_ly
 name: "Vạn Kiếp Tu Tiên Tool · Trợ Lý"
 version: "7.23.0"
 author: "LoganZ · Kỹ Sư"
-description: "Mod Trợ Lý toàn diện cho Vạn Kiếp Tu Tiên: Tối ưu Kinh Mạch 4.0, Đột Phá, Nghề & Chợ, Bản Đồ & Địa Danh, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Siêu AI Tác Chiến 3.0, Auto Tu Luyện, Auto Buôn Bán, Auto Reroll, Biệt Đội Late Game, Ngự Linh, Luân Hồi & Lưu Nạp Save."
-apiVersion: 1
+description: "Trợ Lý tính toán theo dữ liệu game: nhân vật, kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo & Auto Săn Dị Bảo (Nghịch Thiên P8), Biệt Đội Late Game, Ngự Linh, Luân Hồi, Hướng Build Đột Phá, Tự Động."
 script: main.js
