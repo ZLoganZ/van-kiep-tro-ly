@@ -1,8 +1,15 @@
-# QUY TẮC PHÁT TRIỂN & ĐÁNH SỐ PHIÊN BẢN (INSTRUCTIONS CHO AI & DEVELOPER)
+# 🤖 Quy Chuẩn Dành Cho AI Agent & Kỹ Sư (AGENTS.md)
 
-Tài liệu này là chỉ thị bắt buộc cho mọi AI Agent và lập trình viên khi làm việc trong dự án **Vạn Kiếp Trợ Lý** (`van-kiep-tro-ly`).
-
----
+1. **Không sửa trực tiếp `main.js`**: `main.js` là file đầu ra được sinh tự động bởi `node build.js`. Mọi thay đổi phải thực hiện trên các file tương ứng trong thư mục `src/`, sau đó chạy `node build.js` để cập nhật `main.js`.
+2. **Chuẩn Game Mod Chính Thức (`window.tuTienMods`)**:
+   - Không tái sử dụng cơ chế Stealth (`waitForGameReady`) của Tampermonkey.
+   - Luôn giữ cấu trúc đăng ký qua `window.tuTienMods` (`apiVersion: 1`, `id: "van_kiep_tro_ly"`) trong `build.js` và `src/index.js`, kèm `mod.yaml` hợp lệ ở thư mục gốc.
+3. **Quy tắc bảo toàn logic Dị Bảo**:
+   - Luôn phân biệt rõ `sc.relics` (Dị Bảo sở hữu trong kiếp hiện tại `run`) và `sc.metaRelics` (Bảo Lục Luân Hồi trong `meta.tienLo.relics`).
+   - Khi kiểm tra nhân vật đã có Dị Bảo trong kiếp hiện tại hay chưa, bắt buộc dùng `checkOwnedRelic(id, run, sc)` (hoặc `hasRelicItemInRun(id, run)` khi kiểm tra vật phẩm vừa rớt sau sự kiện).
+   - Khi kiểm tra khả năng truyền tống bằng `ddTeleOpts`, bắt buộc kiểm tra `!o.blocked`.
+4. **Kiểm tra trước khi bàn giao**:
+   - Luôn chạy `node build.js` và đảm bảo không có lỗi cú pháp ở bất kỳ module nào trong `src/` cũng như `main.js`.
 
 ## 1. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
 
@@ -54,43 +61,21 @@ Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả c
      ] },
      ```
    - Chuyển mục phiên bản liền trước thành `now: false`.
-
----
-
-## 3. QUY TRÌNH KIỂM THỬ, COMMIT & PUSH
-
-1. **Kiểm tra cú pháp JavaScript:**
-   Luôn chạy lệnh sau trong terminal trước khi commit:
-
-   ```bash
-   node -c .\van_kiep_tro_ly_user.js
-   ```
-
-   Chỉ tiếp tục khi lệnh trả về mã thoát `0` (không có lỗi cú pháp).
-
-2. **Commit Git:**
+5. **Commit Git:**
    Viết thông điệp commit rõ ràng theo chuẩn:
    - Bug fix / Enhance: `fix(combat): ...` hoặc `feat(ui): enhance ... bump to vx.y.z`
    - Feature mới: `feat: add [tên chức năng] bump to vx.y.0`
 
-3. **Push Git:**
-   Chạy `git push origin main` để Tampermonkey của người dùng tự động nhận diện và cập nhật phiên bản mới qua `@updateURL`.
-
 ---
 
-## 4. NGUYÊN TẮC BẢO TOÀN KIẾN TRÚC & STEALTH
+## 3. CẨM NANG ĐIỀU TRA & THÍCH ỨNG KHI GAME CÓ BẢN UPDATE MỚI
 
-- **Stealth Mode (Tối quan trọng):** Tuyệt đối KHÔNG đăng ký vào `window.tuTienMods`. Luôn giữ cơ chế chạy độc lập Standalone để game không phát hiện dùng mod, không gắn cờ save game, không khóa lôi đài.
-- **Toàn vẹn chú thích:** Giữ nguyên các chú thích code hiện có trừ khi có yêu cầu thay đổi.
-
----
-
-## 5. CẨM NANG ĐIỀU TRA & THÍCH ỨNG KHI GAME CÓ BẢN UPDATE MỚI
-
-Khi người dùng báo *"game mới có update, check kỹ lại source xem"* hoặc khi phát hiện game deploy bản build mới, AI Agent và lập trình viên **BẮT BUỘC** thực hiện quy trình điều tra 6 bước sau để biết chính xác game đã đổi gì và tìm kiếm ở đâu:
+Khi người dùng báo _"game mới có update, check kỹ lại source xem"_ hoặc khi phát hiện game deploy bản build mới, AI Agent và lập trình viên **BẮT BUỘC** thực hiện quy trình điều tra 6 bước sau để biết chính xác game đã đổi gì và tìm kiếm ở đâu:
 
 ### Bước 0: Dọn Dẹp File Cũ Trong `scratch/` (BẮT BUỘC TRƯỚC KHI TẢI MỚI)
+
 Tuyệt đối không tải đè hoặc tích lũy nhiều file bundle/zip/script nháp trong thư mục `scratch/`. Trước khi kéo source mới về, phải dọn dẹp sạch sẽ:
+
 1. **Lưu bản hiện hành làm mốc so sánh (diffing):**
    - Đổi tên `latest_game_bundle.js` $\rightarrow$ `old_game_bundle.js` (chỉ giữ đúng 1 bản liền trước để so sánh).
    - Đổi tên thư mục `latest_template_extracted` $\rightarrow$ `old_template_extracted`.
@@ -100,6 +85,7 @@ Tuyệt đối không tải đè hoặc tích lũy nhiều file bundle/zip/scrip
    - Xóa sạch toàn bộ các script tạm một lần (`check_*.js`, `find_*.js`, `inspect_*.js`, `diff_*.js`, `show_*.js`, `*.txt`) của các đợt điều tra trước. Thư mục `scratch/` chỉ chứa duy nhất bộ mốc `old_*` sẵn sàng cho việc so sánh.
 
 ### Bước 1: Lấy Bundle JS Mới Nhất Của Game
+
 1. Quét trang chủ để lấy tên file bundle mới:
    ```bash
    curl.exe -s https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/ | Select-String -Pattern "index-.*\.js"
@@ -112,7 +98,9 @@ Tuyệt đối không tải đè hoặc tích lũy nhiều file bundle/zip/scrip
    Tìm `version:"[hash]"` (ví dụ `version:"57bad5c99c0c8e9e"` so với build cũ `version:"6c44dc3ea63bb7dc"`).
 
 ### Bước 2: Tải & So Sánh Gói Mod Template (`tu-tien.d.ts`) - **CHÌA KHÓA VÀNG**
+
 Game luôn phục vụ gói mod mẫu chính thức tại đường dẫn cố định:
+
 - **URL tải template:** `https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/mod/template.zip`
 - **Cách thực hiện:**
   1. Tải về:
@@ -129,6 +117,7 @@ Game luôn phục vụ gói mod mẫu chính thức tại đường dẫn cố �
      - `vi_du/tai-lieu-api.md` & `surface.txt`: Mặt mở API của `window.tuTien` và `window.tuTien.core`.
 
 ### Bước 3: Tải Gói Dữ Liệu Nội Dung Gốc (`content-[hash].json`)
+
 1. Tìm tên file content JSON trong bundle JS:
    Tìm chuỗi `new URL("content-[hash].json", import.meta.url).href`.
 2. Tải về file `scratch/latest_content.json`:
@@ -142,12 +131,15 @@ Game luôn phục vụ gói mod mẫu chính thức tại đường dẫn cố �
    - `/content/npc/**/*.yaml`: Nhân vật, sư phụ, thế lực.
 
 ### Bước 4: Chạy Script So Sánh Sai Khác (Diffing)
+
 Viết script Node.js trong `scratch/` để trích xuất nhanh giữa `latest_*` và `old_*`:
+
 1. **Chuỗi tiếng Việt mới xuất hiện:** Quét chuỗi có dấu tiếng Việt trong bundle mới mà bundle cũ không có $\rightarrow$ biết ngay tên các tính năng, thông báo, cơ chế mới vừa thêm.
 2. **Danh mục vật phẩm / ID mới:** Quét regex `"(phap_khi|dan_duoc|phu_luc|cong_phap|tran_ban|tran_van|ban_menh)/[a-z0-9_.-]+"` để tìm tất cả item/rune mới.
 3. **Mô-đun lõi trong `window.tuTien.core`:** Kiểm tra danh sách export xem có module nào mới hoặc bị đổi tên không (đảm bảo Tool không bị crash).
 
 ### Bước 5: Thích Ứng Tool, Nâng Phiên Bản & Dọn Dẹp Sau Cùng
+
 1. Cập nhật các enum, bộ lọc, từ điển loại vật phẩm (`LOAI_VI`, `GLUT_LOAI`, scanner chợ...), hệ thống Bản Mệnh (`bmRunes`), kinh mạch, luyện chế theo dữ liệu mới.
 2. Nâng cấp các module tương ứng (như hỗ trợ hành động mới trong Combat AI, mở rộng cơ chế Auto...).
 3. Nâng phiên bản theo đúng Quy tắc SEMVER (Mục 1 & 2):
@@ -158,12 +150,11 @@ Viết script Node.js trong `scratch/` để trích xuất nhanh giữa `latest_
    - Xóa bỏ toàn bộ các script tạm (`*.js`, `*.txt`) và bộ mốc `old_*` sinh ra trong đợt điều tra.
    - Chỉ giữ lại bộ source chuẩn hiện hành (`latest_game_bundle.js`, `latest_template_extracted`, `latest_template.zip`, `latest_content.json`) để làm mốc so sánh cho lần cập nhật sau, giữ thư mục làm việc luôn gọn gàng và tinh gọn.
 
-
-# Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## 4. Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-## 1. Think Before Coding
+### 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
@@ -174,7 +165,7 @@ Before implementing:
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-## 2. Simplicity First
+### 2. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
 
@@ -186,7 +177,7 @@ Before implementing:
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-## 3. Surgical Changes
+### 3. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
 
@@ -204,7 +195,7 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+### 4. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
