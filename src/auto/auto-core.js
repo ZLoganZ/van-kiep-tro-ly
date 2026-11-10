@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Hạ Tầng Tự Động (Auto Core Engine, Cấu Hình, Sự Kiện Tu Vi & Bảng Xác Nhận)
  */
@@ -154,9 +155,7 @@ const AU_DEF = {
     targetRelics: [],
   },
 };
-// Hằng số lấy từ code game; mô tả trên giao diện đọc lại từ đây nên đổi một chỗ là khớp hết.
-let AU_T4 = 3,
-  AU_ZAN = 2; // Săn cạn: tối đa AU_T4 lần mỗi nơi, hồi 1 lần mỗi AU_ZAN năm
+// AU_T4, AU_ZAN đã được quản lý tập trung tại src/core/bridge.js
 const AU_KT = 0.8; // Kiểm Tra Sức: cần thắng chắc từ 80% yêu thú mẫu cùng cảnh giới
 const AU_TT_MAX = 3; // Thương Thế cao nhất, game giới hạn bằng Math.min(3, …)
 const AU_TT_TEN = [
@@ -879,38 +878,7 @@ const auYield = (() => {
       ch.port2.postMessage(0);
     });
 })();
-// Bản nhẹ của ctx() cho vòng Auto: không sao chép cả kiếp chơi (game đã tự sao chép ở mỗi thao tác).
-// Chỉ dùng cho hàm CHỈ ĐỌC (đo đường, nguy hiểm, tên nơi, nơi hoang dã, mức chợ ngập); mô phỏng hay ghi thì vẫn dùng ctx().
-function ctxLite() {
-  const K = S.core,
-    st = G().state,
-    run = { ...st.run },
-    F = K.Rng,
-    o = new Map();
-  run.rngKeys = run.rngKeys || {};
-  return {
-    ...G().env,
-    run,
-    meta: st.meta,
-    rng: new F(run.rng),
-    enc: run.active,
-    noticeLines: [],
-    rngFor(r) {
-      let u = o.get(r);
-      if (!u) {
-        const l = Object.hasOwn(run.rngKeys, r)
-          ? run.rngKeys[r]
-          : undefined;
-        u =
-          l === undefined
-            ? F.fromSeed(`${run.seed}|rng|${r}`)
-            : new F(l);
-        o.set(r, u);
-      }
-      return u;
-    },
-  };
-}
+// ctxLite() đã được quản lý tập trung và có bộ nhớ đệm tại src/core/bridge.js
 
 function auLoad() {
   let o = {};
@@ -1113,6 +1081,12 @@ function auPaintSoon() {
     auPT = 0;
     auPaint();
   }, 250);
+}
+function clearAuPaintTimer() {
+  if (auPT) {
+    clearTimeout(auPT);
+    auPT = 0;
+  }
 }
 
 // Gọi một hàm của game rồi kiểm tra có lỗi không (game nuốt lỗi vào state.error, không ném ra ngoài).
@@ -1323,3 +1297,118 @@ function auBattleLevel(run, p) {
   return "hiem";
 }
 
+export {
+  AU_KEY,
+  AU_DEF,
+  AU_KT,
+  AU_TT_MAX,
+  AU_TT_TEN,
+  AU_HIEM,
+  AU_MAU,
+  auMauOf,
+  AU_MAU_ID,
+  AU_MAU_DEF,
+  auMauNorm,
+  auColorOK,
+  auMauLabel,
+  auRedPurple,
+  AU_HAC_IDS,
+  auIsHacText,
+  auIsHacEnemy,
+  auEnemyName,
+  auEncounterHac,
+  AU,
+  AU_TOC,
+  calcTotalTuVi,
+  isLoTuViEnc,
+  _tuViEncCache,
+  encGivesTuVi,
+  findBestTuViChoice,
+  findBestDiBaoChoice,
+  getItemPhaBinhCanh,
+  isAtBottleneck,
+  findPhaBinhCanhPills,
+  auYield,
+  auLoad,
+  auSave,
+  auSleep,
+  auShopKey,
+  auClamp,
+  auLog,
+  auPT,
+  auPaintSoon,
+  clearAuPaintTimer,
+  auCall,
+  auSig,
+  auLifeLeft,
+  auBag,
+  auItemName,
+  auSettle,
+  auSettleLoai,
+  auIsWild,
+  auDangerOK,
+  auHuntLeft,
+  AU_PANEL,
+  auConfirmPanel,
+  auDismissConfirm,
+  auBypassConfirm,
+  auBattleLevel,
+};
+
+Object.assign(gWin, {
+  AU_KEY,
+  AU_DEF,
+  AU_KT,
+  AU_TT_MAX,
+  AU_TT_TEN,
+  AU_HIEM,
+  AU_MAU,
+  auMauOf,
+  AU_MAU_ID,
+  AU_MAU_DEF,
+  auMauNorm,
+  auColorOK,
+  auMauLabel,
+  auRedPurple,
+  AU_HAC_IDS,
+  auIsHacText,
+  auIsHacEnemy,
+  auEnemyName,
+  auEncounterHac,
+  AU,
+  AU_TOC,
+  calcTotalTuVi,
+  isLoTuViEnc,
+  _tuViEncCache,
+  encGivesTuVi,
+  findBestTuViChoice,
+  findBestDiBaoChoice,
+  getItemPhaBinhCanh,
+  isAtBottleneck,
+  findPhaBinhCanhPills,
+  auYield,
+  auLoad,
+  auSave,
+  auSleep,
+  auShopKey,
+  auClamp,
+  auLog,
+  auPT,
+  auPaintSoon,
+  clearAuPaintTimer,
+  auCall,
+  auSig,
+  auLifeLeft,
+  auBag,
+  auItemName,
+  auSettle,
+  auSettleLoai,
+  auIsWild,
+  auDangerOK,
+  auHuntLeft,
+  AU_PANEL,
+  auConfirmPanel,
+  auDismissConfirm,
+  auBypassConfirm,
+  auBattleLevel,
+});

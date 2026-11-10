@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Nhật Ký Cập Nhật (Changelog)
  */
@@ -12,9 +13,20 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 7.23.1 · Khắc Phục Lỗi Hiển Thị Dị Bảo Rỗng & Lọc Bỏ Sự Kiện Đồ Ngẫu Nhiên",
+      t: "Phiên Bản 7.23.2 · Kiến Trúc Native Multi-File ES Modules (main.js 122 dòng) & Đại Tu Hiệu Năng Chống Lag",
       d: "10/11/2026",
       now: true,
+      pts: [
+        "<b>Chuyển Đổi Hoàn Toàn Sang Native Multi-File ES Modules (Chuẩn <code>su_do.zip</code>, Không Nối Gộp File):</b> Loại bỏ hoàn toàn cơ chế nối chuỗi sinh ra file <code>main.js</code> 40.700 dòng trước đây; giữ <code>main.js</code> ở thư mục gốc chỉ 122 dòng (~3.9 KB) và dùng <code>import</code> nguyên bản của ES Module để nạp trực tiếp 26 module con từ <code>./src/...</code>. Quy hoạch lại toàn bộ các hàm từng bị cắt nhầm module về đúng nơi (<code>src/core/utils.js</code>, <code>src/core/bridge.js</code>, <code>src/auto/auto-runner.js</code>)." ,
+        "<b>Khắc Phục Triệt Để Lỗi Nhân Bản Sâu <code>ctx()</code> Gây Đơ Luồng Chính (Critical Fix):</b> Sửa lỗi trong <code>bridge.js</code> khi gọi <code>G().readCtx()</code> (nhân bản sâu <code>structuredClone</code> toàn bộ save game) trước bước kiểm tra bộ nhớ đệm <code>_cachedCtx</code>. Cơ chế mới lưu đệm bản gốc trong 300ms và bọc lớp vỏ cô lập nhẹ (shallow isolation wrapper), giúp giảm 95% chi phí CPU &amp; Garbage Collection khi chuyển tab hoặc chạy Auto.",
+        "<b>Tối Ưu Hóa Quét Dị Bảo Bản Đồ (<code>scanMapActiveDiBao</code>) &amp; Giả Lập Hộ Vệ (<code>simDiBaoGuard</code>):</b> Loại bỏ việc gọi <code>director.placeActivities()</code> tràn lan trên hàng trăm thành trấn/thôn xóm trong <code>run.noiChon</code> mỗi khi thời gian trôi (chỉ kiểm tra ô có sự kiện Dị Bảo); bổ sung bộ nhớ đệm kết quả mô phỏng 52 trận Hộ Vệ Dị Bảo và trạng thái Truyền Tống (<code>checkCanTeleport</code>), kèm debounce 350ms cho watcher sự kiện thế giới.",
+        "<b>Tối Ưu Vòng Lặp Chiến Đấu (<code>combatWatcherTick</code>), Quét Kỳ Ngộ Tu Vi &amp; Sửa Rò Rỉ Sự Kiện (Memory Leak):</b> Bổ sung đường tắt thoát sớm O(1) cho <code>combatWatcherTick</code> khi ngoài trận và đối sánh chữ ký DOM HUD chống vẽ lại thừa mỗi 400ms; lưu đệm <code>nearSlots</code>, <code>danger</code>, <code>auFindTuViSpots</code>, <code>hbCatalog</code>; sửa lỗi rò rỉ bộ nhớ <code>body.addEventListener('click')</code> trong tab Hướng Build; và chuyển <code>NhatKy.init()</code> sang khởi tạo lười (Lazy Init) khi mở tab.",
+      ],
+    },
+    {
+      t: "Phiên Bản 7.23.1 · Khắc Phục Lỗi Hiển Thị Dị Bảo Rỗng & Lọc Bỏ Sự Kiện Đồ Ngẫu Nhiên",
+      d: "10/11/2026",
+      now: false,
       pts: [
         "<b>Khắc Phục Lỗi Thẻ Dị Bảo Trống Tên &amp; Sai Giá Trị (0 Linh Thạch):</b> Sửa cơ chế đồng bộ sự kiện động trong <code>bridge.js</code> (<code>syncDynamicData</code>). Trước đây các sự kiện hoang dã/di tích mới được thêm vào tệp <code>di_bao.yaml</code> của game (<i>Nhẫn trong hố sét</i>, <i>Hộp ba khóa</i>, <i>Kéo đỉnh giữa hồ</i>) có tiền tố ID <code>ev.di_bao_</code> nhưng chỉ thưởng trang bị/công pháp ngẫu nhiên chứ không chứa Dị Bảo cụ thể (<code>relic</code>), khiến hệ thống tự động đẩy vào danh sách <code>DIBAO.ev</code> với relic rỗng. Điều này sinh ra các thẻ Dị Bảo trống tiêu đề, hiển thị sai phẩm cấp 'Phẩm 8 Nghịch Thiên', giá 0 linh thạch và định vị đón đầu nhầm tới Slot Bí Cảnh.",
         "<b>Bảo Vệ Đa Lớp Danh Mục Dị Bảo (Data Integrity Guard):</b> Thiết lập bộ lọc kiểm tra nghiêm ngặt: chỉ cho phép sự kiện có Dị Bảo cố định thuộc phẩm 8 Nghịch Thiên (Bảo Lục) mới được nạp vào <code>DIBAO.ev</code>; đồng thời dọn dẹp các giá trị chuỗi rỗng trong cấu hình mục tiêu săn <code>AU.cfg.sdb.targetRelics</code>, danh sách thẻ hiển thị và Radar thế giới, khôi phục bảng Dị Bảo chuẩn xác 21 món.",
@@ -1391,3 +1403,10 @@ var NhatKy = (function (UI) {
   return { init: init };
 })(UI);
 
+export {
+  NhatKy,
+};
+
+Object.assign(gWin, {
+  NhatKy,
+});

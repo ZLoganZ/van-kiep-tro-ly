@@ -1,63 +1,11 @@
+import { gWin, TOOL_VER, TT, MOD } from "./utils.js";
 /**
- * Module: Cầu Nối Lõi Game (tuTien.core), Quản Lý State, Context & Mô Phỏng Trận
+ * Module: Cầu Nối Lõi Game (tuTien.core), Quản Lý State, Context (Memoized) & Mô Phỏng Trận
  */
-// Tab Lifecycle & Cleanup Manager (dọn dẹp polling timer/listeners khi chuyển tab)
-const TabLifecycle = {
-  _cleaners: [],
-  onUnmount(fn) {
-    if (typeof fn === "function") this._cleaners.push(fn);
-  },
-  cleanup() {
-    while (this._cleaners.length) {
-      try {
-        this._cleaners.pop()();
-      } catch (e) {
-        console.warn("[VKX] Tab cleanup err:", e);
-      }
-    }
-  },
-};
 
-// Quản lý Storage tập trung (hỗ trợ migration an toàn từ các key cũ)
-const StorageManager = {
-  get(k, def) {
-    try {
-      const v = localStorage.getItem(k);
-      return v !== null ? v : def;
-    } catch (e) {
-      return def;
-    }
-  },
-  getJson(k, def) {
-    try {
-      const v = localStorage.getItem(k);
-      return v ? JSON.parse(v) : def;
-    } catch (e) {
-      return def;
-    }
-  },
-  set(k, v) {
-    try {
-      localStorage.setItem(k, v);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  },
-  setJson(k, v) {
-    try {
-      localStorage.setItem(k, JSON.stringify(v));
-      return true;
-    } catch (e) {
-      return false;
-    }
-  },
-  remove(k) {
-    try {
-      localStorage.removeItem(k);
-    } catch (e) {}
-  },
-};
+// Hằng số săn cạn (được đồng bộ tự động từ balance/encounter của game qua K.sync)
+let AU_T4 = 3,
+  AU_ZAN = 2;
 
 const S = { core: null, best: null, abort: false, kmAbort: false };
 const body = UI.body,
@@ -694,6 +642,8 @@ function buildCore(tt) {
     if (s) {
       AU_T4 = s.max;
       AU_ZAN = s.hoi;
+      gWin.AU_T4 = AU_T4;
+      gWin.AU_ZAN = AU_ZAN;
     }
   };
   K.sync();
@@ -721,47 +671,6 @@ const HUD = () => TT.hud;
 const gamePanel = (name, open) =>
   TT.ui && TT.ui.gamePanel ? TT.ui.gamePanel(name, open) : false;
 const clone = (x) => structuredClone(x);
-const sleep0 = () => new Promise((r) => setTimeout(r, 0));
-
-// Background Non-blocking Scheduler: MessageChannel chống throttle khi ẩn tab
-const yieldToMain = (function () {
-  if (typeof MessageChannel !== "undefined") {
-    const ch = new MessageChannel();
-    let curResolve = null;
-    ch.port1.onmessage = () => {
-      const fn = curResolve;
-      curResolve = null;
-      if (fn) fn();
-    };
-    return () =>
-      new Promise((resolve) => {
-        curResolve = resolve;
-        ch.port2.postMessage(null);
-      });
-  }
-  return () => new Promise((resolve) => setTimeout(resolve, 0));
-})();
-
-// Bộ sinh số giả ngẫu nhiên PRNG mulberry32 tốc độ cao, phân bổ đều chu kỳ 2^32
-function createMulberry32(seed0) {
-  let a = seed0 >>> 0 || 12345;
-  return function () {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-// Helper Debounce cho các ô tìm kiếm
-function debounce(fn, ms = 150) {
-  let t;
-  return function (...args) {
-    clearTimeout(t);
-    t = setTimeout(() => fn.apply(this, args), ms);
-  };
-}
-
 // Dynamic Data Layer: Tự động quét và đồng bộ dữ liệu mới nhất từ game content gốc
 let _dynamicDataSynced = false;
 function syncDynamicGameData() {
@@ -931,69 +840,143 @@ function syncDynamicGameData() {
     console.warn("[VKX] Sync dynamic data err:", e);
   }
 }
-const pct = (x, d = 0) => (x * 100).toFixed(d).replace(".", ",") + "%";
-const num = (x, d = 1) =>
-  (Math.round(x * 10 ** d) / 10 ** d).toString().replace(".", ",");
-const esc = (s) =>
-  String(s ?? "").replace(
-    /[&<>"]/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
-  );
-const HE = {
-  kim: "Kim",
-  moc: "Mộc",
-  thuy: "Thủy",
-  hoa: "Hỏa",
-  tho: "Thổ",
-  bang: "Băng",
-  loi: "Lôi",
-  phong: "Phong",
-  am: "Ám",
-  vo_sac: "Vô sắc",
-};
-const heTen = (h) => HE[h] ?? h;
-const STAGE = ["Sơ", "Trung", "Hậu", "ĐVM"];
 
-let _cachedCtx = null;
+// ───────────────────────── 2.5. Quản lý Context (Đã sửa lỗi Memoization & Chống Nhân Bản Thừa) ─────────────────────────
+let _cachedCtxBase = null;
 let _cachedCtxSig = "";
 let _cachedCtxTime = 0;
 
+function _makeCtxSig(st) {
+  if (!st || !st.run) return "";
+  const r = st.run;
+  const nv = r.nhanVat || {};
+  const a = r.active;
+  const tr = r.tran;
+  return `${r.nam}_${r.thang}_${r.viTri}_${r.tuVi}_${r.canhGioi}_${r.tieuCanhGioi}_${r.oNoi || ""}_${r.rng || ""}_${a ? a.id + ":" + (a.done ? 1 : 0) + ":" + (a.waiting ? 1 : 0) : 0}_${tr ? (tr.hiep || 0) + ":" + (tr.ketThuc ? 1 : 0) : 0}_${nv.linhThach || 0}_${nv.thuongThe || 0}`;
+}
+
+function _wrapCtxSnapshot(base, K) {
+  const F = K && K.Rng;
+  const runCopy = {
+    ...base.run,
+    nhanVat: base.run.nhanVat
+      ? {
+          ...base.run.nhanVat,
+          tuiDo: base.run.nhanVat.tuiDo ? { ...base.run.nhanVat.tuiDo } : {},
+        }
+      : base.run.nhanVat,
+    rngKeys: base.run.rngKeys ? { ...base.run.rngKeys } : {},
+  };
+  const o = new Map();
+  return {
+    ...base,
+    run: runCopy,
+    enc: runCopy.active,
+    noticeLines: [],
+    rng: F ? new F(runCopy.rng) : base.rng,
+    rngFor(r) {
+      let u = o.get(r);
+      if (!u && F) {
+        const l = Object.hasOwn(runCopy.rngKeys, r)
+          ? runCopy.rngKeys[r]
+          : undefined;
+        u =
+          l === undefined
+            ? F.fromSeed(`${runCopy.seed}|rng|${r}`)
+            : new F(l);
+        o.set(r, u);
+      }
+      return u;
+    },
+  };
+}
+
 function ctx(opts) {
-  const rc = G().readCtx && G().readCtx(opts); // ctx chính thức của game, dựng trên bản sao kiếp đang chơi
-  if (rc) return rc;
-  const K = S.core,
-    st = G().state;
+  const g = G();
+  const K = S.core;
+  const st = g && g.state;
   if (!st || !st.run) return null;
 
-  // Memoization: tái sử dụng context nếu không truyền opts và game state chưa đổi
-  if (!opts) {
+  // Khi có opts đặc biệt, gọi trực tiếp readCtx của game
+  if (opts) {
+    if (g.readCtx) return g.readCtx(opts);
+  } else {
     const now = Date.now();
-    const sig = `${st.run.nam}_${st.run.thang}_${st.run.viTri}_${st.run.tuVi}_${st.run.canhGioi}_${st.run.oNoi || ""}_${st.run.active ? 1 : 0}_${st.run.tran ? 1 : 0}`;
-    if (
-      _cachedCtx &&
-      _cachedCtxSig === sig &&
-      now - _cachedCtxTime < 400
-    ) {
-      return _cachedCtx;
+    const sig = _makeCtxSig(st);
+    if (_cachedCtxBase && _cachedCtxSig === sig && now - _cachedCtxTime < 300) {
+      return _wrapCtxSnapshot(_cachedCtxBase, K);
     }
+    if (g.readCtx) {
+      const rc = g.readCtx();
+      if (rc) {
+        _cachedCtxBase = rc;
+        _cachedCtxSig = sig;
+        _cachedCtxTime = now;
+        return _wrapCtxSnapshot(rc, K);
+      }
+    }
+    const run = clone(st.run),
+      meta = clone(st.meta),
+      F = K.Rng,
+      o = new Map();
+    run.rngKeys ??= {};
+    const out = {
+      ...g.env,
+      run,
+      meta,
+      rng: new F(run.rng),
+      enc: run.active,
+      noticeLines: [],
+      rngFor(r) {
+        let u = o.get(r);
+        if (!u) {
+          const l = Object.hasOwn(run.rngKeys, r)
+            ? run.rngKeys[r]
+            : undefined;
+          u =
+            l === undefined
+              ? F.fromSeed(`${run.seed}|rng|${r}`)
+              : new F(l);
+          o.set(r, u);
+        }
+        return u;
+      },
+    };
+    _cachedCtxBase = out;
+    _cachedCtxSig = sig;
+    _cachedCtxTime = now;
+    return _wrapCtxSnapshot(out, K);
   }
+  return null;
+}
 
-  const run = clone(st.run),
-    meta = clone(st.meta),
-    F = K.Rng,
-    o = new Map();
-  run.rngKeys ??= {};
-  const out = {
-    ...G().env,
+// Bản nhẹ O(1) của ctx() cho các tác vụ CHỈ ĐỌC (đo đường, nguy hiểm, tên nơi, quét bản đồ)
+let _cachedLite = null;
+let _cachedLiteSig = "";
+function ctxLite() {
+  const g = G();
+  const K = S.core;
+  const st = g && g.state;
+  if (!st || !st.run) return null;
+  const sig = _makeCtxSig(st);
+  if (_cachedLite && _cachedLiteSig === sig) {
+    return _cachedLite;
+  }
+  const run = { ...st.run };
+  const F = K && K.Rng;
+  const o = new Map();
+  run.rngKeys = run.rngKeys || {};
+  _cachedLiteSig = sig;
+  _cachedLite = {
+    ...g.env,
     run,
-    meta,
-    rng: new F(run.rng),
+    meta: st.meta,
+    rng: F ? new F(run.rng) : null,
     enc: run.active,
     noticeLines: [],
     rngFor(r) {
       let u = o.get(r);
-      if (!u) {
+      if (!u && F) {
         const l = Object.hasOwn(run.rngKeys, r)
           ? run.rngKeys[r]
           : undefined;
@@ -1006,23 +989,10 @@ function ctx(opts) {
       return u;
     },
   };
-
-  if (!opts) {
-    _cachedCtx = out;
-    _cachedCtxSig = `${st.run.nam}_${st.run.thang}_${st.run.viTri}_${st.run.tuVi}_${st.run.canhGioi}_${st.run.oNoi || ""}_${st.run.active ? 1 : 0}_${st.run.tran ? 1 : 0}`;
-    _cachedCtxTime = Date.now();
-  }
-  return out;
+  return _cachedLite;
 }
+
 const nvNow = () => clone(G().state.run.nhanVat);
-const REALM_TEN = [
-  "Phàm Nhân",
-  "Luyện Khí",
-  "Trúc Cơ",
-  "Kết Đan",
-  "Nguyên Anh",
-  "Hóa Thần",
-];
 const realmName = (i) => {
   try {
     return S.core.canhGioi(i).ten;
@@ -1037,8 +1007,98 @@ const realmLabel = (cg, tc) => {
     return realmName(cg);
   }
 };
+const has = (...ks) => ks.every((k) => S.core && typeof S.core[k] === "function");
+const needMsg = (what) =>
+  `<div class="vk-mu">Phần "${what}" chưa dùng được với bản game này. Bấm "Tự kiểm tra" ở tab Tổng quan rồi chụp màn hình gửi Claude.</div>`;
 
-// ───────────────────────── 3. Mô phỏng trận ─────────────────────────
+// ───────────────────────── 3. Bản đồ, Nguy hiểm & Mô phỏng trận (Có Cache O(1)) ─────────────────────────
+function withPlace(c, slot) {
+  return {
+    ...c,
+    run: { ...c.run, viTri: slot, active: undefined },
+    enc: undefined,
+  };
+}
+
+let _dangerCacheWorld = null;
+let _dangerCacheSig = "";
+const _dangerCache = new Map();
+
+const danger = (c, slot) => {
+  try {
+    const r = c && c.run;
+    const nv = r && r.nhanVat;
+    const W = c && c.world;
+    const sig = `${r ? r.nam : 0}_${nv ? nv.canhGioi : 0}_${nv ? nv.tieuCanhGioi : 0}`;
+    if (W !== _dangerCacheWorld || sig !== _dangerCacheSig) {
+      _dangerCacheWorld = W;
+      _dangerCacheSig = sig;
+      _dangerCache.clear();
+    }
+    const key = String(slot);
+    if (_dangerCache.has(key)) return _dangerCache.get(key);
+    const res = S.core.mucHiem(S.core.doChenh(c, c.run, slot));
+    _dangerCache.set(key, res);
+    return res;
+  } catch {
+    return null;
+  }
+};
+
+const dangerTag = (d) =>
+  !d
+    ? ""
+    : `<span class="${d.id === "hiem" || d.id === "tu_dia" ? "vk-bad" : d.id === "ngang_suc" ? "" : "vk-ok"}">${esc(d.ten)}</span>`;
+
+let _nearSlotsWorld = null;
+let _nearSlotsSig = "";
+const _nearSlotsCache = new Map();
+
+function nearSlots(c, maxY) {
+  const W = c.world,
+    r = c.run,
+    cur = r.viTri,
+    nv = r.nhanVat || {};
+  const pt = (nv.trangBi && nv.trangBi.phuong_tien) || "";
+  const sig = `${cur}_${nv.canhGioi || 0}_${pt}`;
+  if (W !== _nearSlotsWorld || sig !== _nearSlotsSig) {
+    _nearSlotsWorld = W;
+    _nearSlotsSig = sig;
+    _nearSlotsCache.clear();
+  }
+  const cacheKey = String(maxY);
+  if (_nearSlotsCache.has(cacheKey)) {
+    return _nearSlotsCache.get(cacheKey);
+  }
+  let land;
+  try {
+    land = W.tho(cur);
+  } catch {}
+  const out = [];
+  for (const s of W.slots) {
+    if (s.an) continue;
+    try {
+      if (land !== undefined && W.tho(s.id) !== land) continue;
+    } catch {
+      continue;
+    }
+    let y;
+    try {
+      y = S.core.travelYears(c, s.id);
+    } catch {
+      continue;
+    }
+    if (!(y <= maxY)) continue;
+    try {
+      if (S.core.slotDaMo && !S.core.slotDaMo(c, s.id)) continue;
+    } catch {}
+    out.push({ slot: s.id, y });
+  }
+  out.sort((a, b) => a.y - b.y);
+  _nearSlotsCache.set(cacheKey, out);
+  return out;
+}
+
 const BENCH_IDS = [
   "enemy.de_tu_truc_co",
   "enemy.doc_hanh_kiem_khach",
@@ -1081,6 +1141,7 @@ function benchEnemies(cg, tcP = 0) {
   _benchEnemiesCache.set(cacheKey, res);
   return res;
 }
+
 function fight(P, E) {
   try {
     return S.core.tinhTocChien(clone(P), clone(E), {});
@@ -1088,6 +1149,7 @@ function fight(P, E) {
     return { thang: false, nHiep: 30, khiHuyetThapNhat: 0, stTa: 0 };
   }
 }
+
 function enemyAt(def, cg, tc, muc) {
   return S.core.taoBenDich(
     { ...def, canh_gioi: cg, tieu_canh_gioi: tc },
@@ -1096,3 +1158,181 @@ function enemyAt(def, cg, tc, muc) {
   );
 }
 
+// Mô phỏng nhanh 1 quái ở cảnh giới của nó, trả về chuỗi kết quả
+function simFoe(P, def, tcs) {
+  tcs =
+    tcs ||
+    (String(def.id || "").startsWith("npc.") &&
+    def.tieu_canh_gioi !== undefined
+      ? [def.tieu_canh_gioi]
+      : [0, 2]);
+  const res = tcs.map((tc) => {
+    try {
+      const E = S.core.taoBenDich(
+        { ...def, tieu_canh_gioi: tc },
+        C(),
+        def.muc ? { muc: def.muc } : {},
+      );
+      return fight(P, E).thang;
+    } catch {
+      return null;
+    }
+  });
+  if (res.every((r) => r === true))
+    return { ok: 2, txt: '<span class="vk-ok">Thắng chắc</span>' };
+  if (res.some((r) => r === true))
+    return { ok: 1, txt: "<span>Có thể thắng</span>" };
+  if (res.every((r) => r === null))
+    return { ok: -1, txt: '<span class="vk-mu">?</span>' };
+  return { ok: 0, txt: '<span class="vk-bad">Thua</span>' };
+}
+
+function foesOf(c, vars) {
+  const out = [];
+  for (const v of Object.values(vars || {})) {
+    if (typeof v !== "string") continue;
+    let def;
+    try {
+      def = S.core.timDich(c, v);
+    } catch {}
+    if (!def && C().enemies.has(v)) def = C().enemies.get(v);
+    if (def && def.ten) out.push(def);
+  }
+  return out;
+}
+
+async function scanRetreat(c, maxY, prog) {
+  const K = S.core,
+    out = [];
+  const list = nearSlots(c, maxY);
+  for (let i = 0; i < list.length; i++) {
+    if (S.abort) break;
+    if (i % 15 === 0) {
+      prog && prog(i / list.length, "Đang so chỗ bế quan…");
+      await sleep0();
+    }
+    const { slot, y } = list[i];
+    let info;
+    try {
+      info = K.chuanBiBeQuan(withPlace(c, slot));
+    } catch {
+      continue;
+    }
+    if (!info || info.chan || !(info.tuViNam > 0)) continue;
+    out.push({ slot, y, info, d: danger(c, slot) });
+  }
+  const dr = (d) =>
+    ({ an_toan: 0, ngang_suc: 1, hiem: 2, tu_dia: 3 })[d && d.id] ?? 1;
+  return out.sort(
+    (a, b) =>
+      b.info.tuViNam - a.info.tuViNam || dr(a.d) - dr(b.d) || a.y - b.y,
+  );
+}
+
+export {
+  AU_T4,
+  AU_ZAN,
+  S,
+  body,
+  tabsEl,
+  groupsEl,
+  CORE_REQUIRED,
+  CORE_OPTIONAL,
+  BM_CONST,
+  BM_RUNE_KEYS,
+  buildCore,
+  loadCore,
+  G,
+  C,
+  HUD,
+  gamePanel,
+  clone,
+  _dynamicDataSynced,
+  syncDynamicGameData,
+  _cachedCtxBase,
+  _cachedCtxSig,
+  _cachedCtxTime,
+  _makeCtxSig,
+  _wrapCtxSnapshot,
+  ctx,
+  _cachedLite,
+  _cachedLiteSig,
+  ctxLite,
+  nvNow,
+  realmName,
+  realmLabel,
+  has,
+  needMsg,
+  withPlace,
+  _dangerCacheWorld,
+  _dangerCacheSig,
+  _dangerCache,
+  danger,
+  dangerTag,
+  _nearSlotsWorld,
+  _nearSlotsSig,
+  _nearSlotsCache,
+  nearSlots,
+  BENCH_IDS,
+  _benchEnemiesCache,
+  benchEnemies,
+  fight,
+  enemyAt,
+  simFoe,
+  foesOf,
+  scanRetreat,
+};
+
+Object.assign(gWin, {
+  AU_T4,
+  AU_ZAN,
+  S,
+  body,
+  tabsEl,
+  groupsEl,
+  CORE_REQUIRED,
+  CORE_OPTIONAL,
+  BM_CONST,
+  BM_RUNE_KEYS,
+  buildCore,
+  loadCore,
+  G,
+  C,
+  HUD,
+  gamePanel,
+  clone,
+  _dynamicDataSynced,
+  syncDynamicGameData,
+  _cachedCtxBase,
+  _cachedCtxSig,
+  _cachedCtxTime,
+  _makeCtxSig,
+  _wrapCtxSnapshot,
+  ctx,
+  _cachedLite,
+  _cachedLiteSig,
+  ctxLite,
+  nvNow,
+  realmName,
+  realmLabel,
+  has,
+  needMsg,
+  withPlace,
+  _dangerCacheWorld,
+  _dangerCacheSig,
+  _dangerCache,
+  danger,
+  dangerTag,
+  _nearSlotsWorld,
+  _nearSlotsSig,
+  _nearSlotsCache,
+  nearSlots,
+  BENCH_IDS,
+  _benchEnemiesCache,
+  benchEnemies,
+  fight,
+  enemyAt,
+  simFoe,
+  foesOf,
+  scanRetreat,
+});

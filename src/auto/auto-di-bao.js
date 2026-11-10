@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Auto Săn Dị Bảo (Nghịch Thiên P8) & Cắm Trại Đón Đầu Pity
  */
@@ -847,3 +848,10 @@ async function auSdbStep(st) {
   return null;
 }
 
+export {
+  auSdbStep,
+};
+
+Object.assign(gWin, {
+  auSdbStep,
+});

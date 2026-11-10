@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Luân Hồi, Thành Tựu, Thiên Kiêu Bảng, Nhân Mạch & Quản Lý Save
  */
@@ -1349,10 +1350,68 @@ function tabLuuNapSave() {
   }
 }
 
-// Xuất giao diện điều khiển Assist cho Mod Entrypoint
-const Assist = {
-  render: () => render(),
-  stop: () => {
-    if (!kmAutoRunning()) S.abort = true;
-  },
+// Assist đã được chuyển về src/modules/navigation.js
+
+export {
+  LH_NHOM,
+  TT_NHOM,
+  NM_TEN,
+  NM_THUTU,
+  lhCard,
+  lhNote,
+  ttTen,
+  ttGroup,
+  lhLock,
+  lhRows,
+  tabLuanHoi,
+  tabThanhTuu,
+  tabDuTinhDiem,
+  tabThienKieu,
+  tabNhanMach,
+  rrLhPlan,
+  rrBuyLuanHoi,
+  rrLhPickHtml,
+  rrLhInfoText,
+  cleanseThienDao,
+  rerollRunRng,
+  doExportSave,
+  doImportSave,
+  getQuickSaves,
+  saveQuickSave,
+  deleteQuickSave,
+  downloadSaveFile,
+  copySaveToClipboard,
+  tabLuuNapSave,
 };
+
+Object.assign(gWin, {
+  LH_NHOM,
+  TT_NHOM,
+  NM_TEN,
+  NM_THUTU,
+  lhCard,
+  lhNote,
+  ttTen,
+  ttGroup,
+  lhLock,
+  lhRows,
+  tabLuanHoi,
+  tabThanhTuu,
+  tabDuTinhDiem,
+  tabThienKieu,
+  tabNhanMach,
+  rrLhPlan,
+  rrBuyLuanHoi,
+  rrLhPickHtml,
+  rrLhInfoText,
+  cleanseThienDao,
+  rerollRunRng,
+  doExportSave,
+  doImportSave,
+  getQuickSaves,
+  saveQuickSave,
+  deleteQuickSave,
+  downloadSaveFile,
+  copySaveToClipboard,
+  tabLuuNapSave,
+});

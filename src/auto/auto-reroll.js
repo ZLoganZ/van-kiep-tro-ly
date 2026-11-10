@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Auto Reroll Tư Chất (Linh Căn & Thể Chất Khởi Đầu)
  */
@@ -545,10 +546,7 @@ async function rrLoop(st) {
   } catch (e) {
     /* bỏ qua */
   }
-  if (auPT) {
-    clearTimeout(auPT);
-    auPT = 0;
-  }
+  clearAuPaintTimer();
   drawTabs();
   auPaint();
 }
@@ -730,3 +728,70 @@ c.join,
   auPaint();
 }
 
+export {
+  RR_PHAM,
+  RR_HE,
+  RR_HEMODE,
+  RR_SAMPLE,
+  RR_DAOLO,
+  RR_DAOLO_HINT,
+  rrDlOk,
+  rrDlTen,
+  rrLoPhiList,
+  rrLoPhiInfo,
+  rrBuyLoPhi,
+  rrPhamTen,
+  rrHeStr,
+  rrTcTen,
+  rrXtTen,
+  rrDesc,
+  rrTheChat,
+  rrPhamAll,
+  rrActive,
+  rrMatch,
+  rrCriteria,
+  rrMode,
+  rrSeed,
+  rrRollOnce,
+  rrReadCfg,
+  rrStart,
+  rrLoop,
+  rrStatusHtml,
+  rrModePaint,
+  rrPaint,
+  tabAutoReroll,
+};
+
+Object.assign(gWin, {
+  RR_PHAM,
+  RR_HE,
+  RR_HEMODE,
+  RR_SAMPLE,
+  RR_DAOLO,
+  RR_DAOLO_HINT,
+  rrDlOk,
+  rrDlTen,
+  rrLoPhiList,
+  rrLoPhiInfo,
+  rrBuyLoPhi,
+  rrPhamTen,
+  rrHeStr,
+  rrTcTen,
+  rrXtTen,
+  rrDesc,
+  rrTheChat,
+  rrPhamAll,
+  rrActive,
+  rrMatch,
+  rrCriteria,
+  rrMode,
+  rrSeed,
+  rrRollOnce,
+  rrReadCfg,
+  rrStart,
+  rrLoop,
+  rrStatusHtml,
+  rrModePaint,
+  rrPaint,
+  tabAutoReroll,
+});

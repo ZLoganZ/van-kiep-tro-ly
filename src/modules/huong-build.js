@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Phân Tích Hướng Build, 6 Meta Presets & Động Cơ Bền Vững Chân Khí
  */
@@ -1194,10 +1195,15 @@ function hbTraits(it) {
   return t;
 }
 
-// ── 1) Quét và cập nhật các hướng build từ dữ liệu game đang chạy
+// ── 1) Quét và cập nhật các hướng build từ dữ liệu game đang chạy (Có Cache O(1) theo bộ dữ liệu game)
+let _hbScannedItemsCount = -1;
 function hbScanBuilds() {
-  const Cc = C(),
-    items = [...Cc.items.values()].filter(
+  const Cc = C();
+  if (_hbScannedItemsCount === Cc.items.size && BUILDS.length === BUILDS_FULL.length) {
+    return [];
+  }
+  _hbScannedItemsCount = Cc.items.size;
+  const items = [...Cc.items.values()].filter(
       (it) => isKmItem(it) && !it.theo_kiep,
     );
   BUILDS.length = 0;
@@ -1318,8 +1324,11 @@ function hbElemBan(h) {
     .slice(0, 3)
     .map(([k]) => k);
 }
-// Số món theo nhóm của từng hướng (toàn game, không lọc phẩm) và số món dùng được ở cảnh giới R.
+// Số món theo nhóm của từng hướng (Có Cache theo cảnh giới R & số vật phẩm game)
+const _hbCatalogCache = new Map();
 function hbCatalog(R) {
+  const cacheKey = `${R}_${C().items.size}`;
+  if (_hbCatalogCache.has(cacheKey)) return _hbCatalogCache.get(cacheKey);
   const out = new Map();
   for (const b of BUILDS)
     out.set(b.k, {
@@ -1344,6 +1353,7 @@ function hbCatalog(R) {
       if (cg <= R) s.ok[cls === "tam" ? "tam" : "chien"]++;
     }
   }
+  _hbCatalogCache.set(cacheKey, out);
   return out;
 }
 
@@ -2225,9 +2235,10 @@ function tabAutoKm() {
     F.phMin = F.phMax;
     F.phMax = t;
   }
+  const fitMap = new Map(BUILDS.map((x) => [x.k, buildFit(x, nv, cur)]));
   const ranked = BUILDS.map((x) => ({
       b: x,
-      f: buildFit(x, nv, cur),
+      f: fitMap.get(x.k),
     })).sort((a, c) => c.f.s - a.f.s),
     top3 = ranked.slice(0, 3);
   const b = BUILDS.find((x) => x.k === cfg.kb) || ranked[0].b;
@@ -2273,7 +2284,7 @@ function tabAutoKm() {
     .join("");
   const catRows = BUILDS.map((x) => {
     const s = cat.get(x.k);
-    const fit = buildFit(x, nv, F.R);
+    const fit = fitMap.get(x.k) || buildFit(x, nv, F.R);
     const owned = fit.onKm + fit.inBag;
     return `<tr data-hk="${esc(x.k)}" style="cursor:pointer">
 <td><b>${esc(x.ten)}</b>${x.dyn ? ' <span class="vk-ok" style="font-size:11px">mới</span>' : ""}${x.k === b.k ? " ●" : ""}<br><span style="color:${fit.color};font-weight:600;font-size:11px">${fit.badge}</span> <span class="vk-mu" style="font-size:11px">(${esc(x.nhom)})</span></td>
@@ -2360,7 +2371,7 @@ function tabAutoKm() {
             (x) => x.nhom === g,
           )
             .map((x) => {
-              const fit = buildFit(x, nv, F.R);
+              const fit = fitMap.get(x.k) || buildFit(x, nv, F.R);
               return `<option value="${esc(x.k)}" ${cfg.kb === x.k ? "selected" : ""}>${esc(x.ten)} [${fit.tier}] (${fit.s > 0 ? "+" : ""}${Math.round(fit.s)}đ)</option>`;
             })
             .join("")}</optgroup>`,
@@ -2370,7 +2381,7 @@ function tabAutoKm() {
   const curPreset =
     HB_PRESETS.find((p) => p.id === (F.preset || "all")) ||
     HB_PRESETS[0];
-  const bFit = buildFit(b, nv, cur);
+  const bFit = fitMap.get(b.k) || buildFit(b, nv, cur);
 
   body.innerHTML = `
     <!-- ═════════ 1. BANNER TRẠNG THÁI BUILD & CHÂN KHÍ ═════════ -->
@@ -2672,7 +2683,7 @@ ${kmCard(b, nv)}
     };
   });
 
-  body.addEventListener("click", (ev) => {
+  body.onclick = (ev) => {
     const tcBtn = ev.target.closest && ev.target.closest(".hb-tc-btn");
     if (tcBtn && tcBtn.dataset.id) {
       ev.preventDefault();
@@ -2697,7 +2708,7 @@ ${kmCard(b, nv)}
       if (goBtn) goBtn.click();
       return;
     }
-  });
+  };
 
   const key = JSON.stringify([
     b.k,
@@ -2781,3 +2792,180 @@ ${kmCard(b, nv)}
   auKmPreview();
 }
 
+export {
+  SCHOOLS,
+  NL2S,
+  schoolsOf,
+  TIER_CG,
+  PHAM_TEN,
+  tierCg,
+  freshAt,
+  DIHOA_PCT,
+  REALM_STEPS,
+  BUILDS,
+  BUILDS_FULL,
+  HB_DROP,
+  tcMap,
+  TC_NHAN,
+  tcSgn,
+  tcBuff,
+  tcShape,
+  tcTen,
+  tcPP,
+  resolveTC,
+  BUILD_TC,
+  BUILD_TC_TRANH,
+  TA_DAO_KM,
+  BUILD_KM,
+  BUILD_PLAN,
+  elemPlan,
+  HB_NOTE,
+  planOf,
+  HE_CLS,
+  heChip,
+  planHtml,
+  oHopHtml,
+  kmTips,
+  buildMatch,
+  itemGroup,
+  GROUP_TEN,
+  BUILD_EXTRA,
+  buildFit,
+  kmCard,
+  HB_CLS,
+  HB_ACT,
+  HB_PH,
+  HB_RATIO,
+  HB_MAX_SKILLS,
+  HB_MODE,
+  HB_ITERS,
+  HB_PRESETS,
+  HB_RATIO_W,
+  HB_MIN_ITEMS,
+  HB_TA,
+  HB_TR_TEN,
+  hbCls,
+  hbCells,
+  hbTrLabel,
+  hbTraits,
+  _hbScannedItemsCount,
+  hbScanBuilds,
+  hbSumLine,
+  hbElemN,
+  hbElemBan,
+  _hbCatalogCache,
+  hbCatalog,
+  hbMatch,
+  hbHeOK,
+  hbVal,
+  hbSelect,
+  hbPlan,
+  hbPool,
+  hbNv,
+  hbBudget,
+  hbRatioPenalty,
+  hbShareOf,
+  hbRun,
+  hbSkillLine,
+  hbItemRow,
+  hbBar,
+  hbScanHtml,
+  hbItemSourceInfo,
+  hbMissingRoadmapHtml,
+  hbCompareHtml,
+  hbResultHtml,
+  HB_STEPS,
+  auRow,
+  auSel,
+  auChk,
+  tabAutoKm,
+};
+
+Object.assign(gWin, {
+  SCHOOLS,
+  NL2S,
+  schoolsOf,
+  TIER_CG,
+  PHAM_TEN,
+  tierCg,
+  freshAt,
+  DIHOA_PCT,
+  REALM_STEPS,
+  BUILDS,
+  BUILDS_FULL,
+  HB_DROP,
+  tcMap,
+  TC_NHAN,
+  tcSgn,
+  tcBuff,
+  tcShape,
+  tcTen,
+  tcPP,
+  resolveTC,
+  BUILD_TC,
+  BUILD_TC_TRANH,
+  TA_DAO_KM,
+  BUILD_KM,
+  BUILD_PLAN,
+  elemPlan,
+  HB_NOTE,
+  planOf,
+  HE_CLS,
+  heChip,
+  planHtml,
+  oHopHtml,
+  kmTips,
+  buildMatch,
+  itemGroup,
+  GROUP_TEN,
+  BUILD_EXTRA,
+  buildFit,
+  kmCard,
+  HB_CLS,
+  HB_ACT,
+  HB_PH,
+  HB_RATIO,
+  HB_MAX_SKILLS,
+  HB_MODE,
+  HB_ITERS,
+  HB_PRESETS,
+  HB_RATIO_W,
+  HB_MIN_ITEMS,
+  HB_TA,
+  HB_TR_TEN,
+  hbCls,
+  hbCells,
+  hbTrLabel,
+  hbTraits,
+  _hbScannedItemsCount,
+  hbScanBuilds,
+  hbSumLine,
+  hbElemN,
+  hbElemBan,
+  _hbCatalogCache,
+  hbCatalog,
+  hbMatch,
+  hbHeOK,
+  hbVal,
+  hbSelect,
+  hbPlan,
+  hbPool,
+  hbNv,
+  hbBudget,
+  hbRatioPenalty,
+  hbShareOf,
+  hbRun,
+  hbSkillLine,
+  hbItemRow,
+  hbBar,
+  hbScanHtml,
+  hbItemSourceInfo,
+  hbMissingRoadmapHtml,
+  hbCompareHtml,
+  hbResultHtml,
+  HB_STEPS,
+  auRow,
+  auSel,
+  auChk,
+  tabAutoKm,
+});

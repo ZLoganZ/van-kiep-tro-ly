@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Đột Phá, Thọ Nguyên, Tàng Kinh Các, Chợ, Luyện Chế 4 Nghề & Bản Mệnh Pháp Bảo
  */
@@ -905,29 +906,7 @@ function renderCho() {
     };
 }
 
-// ═════════════════════════ BẢN 2.0: các tính năng mới ═════════════════════════
-const has = (...ks) => ks.every((k) => typeof S.core[k] === "function");
-const needMsg = (what) =>
-  `<div class="vk-mu">Phần "${what}" chưa dùng được với bản game này. Bấm "Tự kiểm tra" ở tab Tổng quan rồi chụp màn hình gửi Claude.</div>`;
-// placeName đã được hoisted an toàn ở trên cho toàn bộ file
-const danger = (c, slot) => {
-  try {
-    return S.core.mucHiem(S.core.doChenh(c, c.run, slot));
-  } catch {
-    return null;
-  }
-};
-const dangerTag = (d) =>
-  !d
-    ? ""
-    : `<span class="${d.id === "hiem" || d.id === "tu_dia" ? "vk-bad" : d.id === "ngang_suc" ? "" : "vk-ok"}">${esc(d.ten)}</span>`;
-const yrs = (y) => (y < 0.05 ? "ngay đây" : num(y) + " năm");
-const cleanTxt = (x) =>
-  String(x ?? "")
-    .replace(/[-]/g, "")
-    .replace(/\{[^}]*\}/g, "…")
-    .replace(/\s+/g, " ")
-    .trim();
+// Các hàm dùng chung (has, needMsg, danger, dangerTag, yrs, cleanTxt) đã được chuyển về src/core/utils.js & src/core/bridge.js
 const HOA = { on: "Lửa nhỏ", thuong: "Lửa vừa", lieu: "Lửa lớn" };
 const NGHE = {
   luyen_dan: "Luyện đan",
@@ -943,84 +922,7 @@ const GRADE = [
   ["thuong", "Thượng"],
   ["cuc", "Cực"],
 ];
-function withPlace(c, slot) {
-  const c2 = {
-    ...c,
-    run: { ...c.run, viTri: slot, active: undefined },
-    enc: undefined,
-  };
-  return c2;
-}
-function nearSlots(c, maxY) {
-  const W = c.world,
-    cur = c.run.viTri;
-  let land;
-  try {
-    land = W.tho(cur);
-  } catch {}
-  const out = [];
-  for (const s of W.slots) {
-    if (s.an) continue;
-    try {
-      if (land !== undefined && W.tho(s.id) !== land) continue;
-    } catch {
-      continue;
-    }
-    let y;
-    try {
-      y = S.core.travelYears(c, s.id);
-    } catch {
-      continue;
-    }
-    if (!(y <= maxY)) continue;
-    try {
-      if (S.core.slotDaMo && !S.core.slotDaMo(c, s.id)) continue;
-    } catch {}
-    out.push({ slot: s.id, y });
-  }
-  return out.sort((a, b) => a.y - b.y);
-}
-// Mô phỏng nhanh 1 quái ở cảnh giới của nó, trả về chuỗi kết quả
-function simFoe(P, def, tcs) {
-  tcs =
-    tcs ||
-    (String(def.id || "").startsWith("npc.") &&
-    def.tieu_canh_gioi !== undefined
-      ? [def.tieu_canh_gioi]
-      : [0, 2]);
-  const res = tcs.map((tc) => {
-    try {
-      const E = S.core.taoBenDich(
-        { ...def, tieu_canh_gioi: tc },
-        C(),
-        def.muc ? { muc: def.muc } : {},
-      );
-      return fight(P, E).thang;
-    } catch {
-      return null;
-    }
-  });
-  if (res.every((r) => r === true))
-    return { ok: 2, txt: '<span class="vk-ok">Thắng chắc</span>' };
-  if (res.some((r) => r === true))
-    return { ok: 1, txt: "<span>Có thể thắng</span>" };
-  if (res.every((r) => r === null))
-    return { ok: -1, txt: '<span class="vk-mu">?</span>' };
-  return { ok: 0, txt: '<span class="vk-bad">Thua</span>' };
-}
-function foesOf(c, vars) {
-  const out = [];
-  for (const v of Object.values(vars || {})) {
-    if (typeof v !== "string") continue;
-    let def;
-    try {
-      def = S.core.timDich(c, v);
-    } catch {}
-    if (!def && C().enemies.has(v)) def = C().enemies.get(v);
-    if (def && def.ten) out.push(def);
-  }
-  return out;
-}
+// Các hàm bản đồ & mô phỏng (withPlace, nearSlots, simFoe, foesOf) đã được chuyển về src/core/bridge.js
 function rewardHint(def) {
   const s = JSON.stringify(def.choices || def.scenes || {}),
     out = [];
@@ -1093,33 +995,7 @@ function planData() {
   } catch {}
   return { c, nv, p };
 }
-async function scanRetreat(c, maxY, prog) {
-  const K = S.core,
-    out = [];
-  const list = nearSlots(c, maxY);
-  for (let i = 0; i < list.length; i++) {
-    if (S.abort) break;
-    if (i % 15 === 0) {
-      prog && prog(i / list.length, "Đang so chỗ bế quan…");
-      await sleep0();
-    }
-    const { slot, y } = list[i];
-    let info;
-    try {
-      info = K.chuanBiBeQuan(withPlace(c, slot));
-    } catch {
-      continue;
-    }
-    if (!info || info.chan || !(info.tuViNam > 0)) continue;
-    out.push({ slot, y, info, d: danger(c, slot) });
-  }
-  const dr = (d) =>
-    ({ an_toan: 0, ngang_suc: 1, hiem: 2, tu_dia: 3 })[d && d.id] ?? 1;
-  return out.sort(
-    (a, b) =>
-      b.info.tuViNam - a.info.tuViNam || dr(a.d) - dr(b.d) || a.y - b.y,
-  );
-}
+// scanRetreat đã được chuyển về src/core/bridge.js
 function pillCandidates(nextRealm) {
   return [...C().items.values()].filter(
     (it) =>
@@ -2389,3 +2265,168 @@ const dev0 = (nv) =>
     ? nv.natalYear.devoured
     : 0;
 
+export {
+  GLUT,
+  GLUT_TIER,
+  GLUT_BAN,
+  GLUT_MUA,
+  GLUT_CUM,
+  GLUT_LOAI,
+  glutTier,
+  glutRows,
+  glutCard,
+  TT_TEN,
+  TT_LANH,
+  statusCard,
+  sellAdvice,
+  pieceTable,
+  tabDotPha,
+  tabTran,
+  itemDesc,
+  tabTKC,
+  LOAI_TEN,
+  scanShops,
+  tabCho,
+  renderCho,
+  HOA,
+  NGHE,
+  GRADE,
+  rewardHint,
+  planData,
+  pillCandidates,
+  bestRateWith,
+  whereToGet,
+  tabDotPha2,
+  gradeBar,
+  NGHE_DON_VI,
+  NGHE_SO,
+  NGHE_HOA,
+  HOA_IDX,
+  HOA_MUC,
+  hoaTen,
+  danThem,
+  dpNghe,
+  dpRaItem,
+  recipeRows,
+  tabNghe,
+  tabLuyenDan,
+  tabCheePhu,
+  tabLuyenBao,
+  tabTranPhap,
+  BM_DEF,
+  BM_RUNE_VAL,
+  BM_HESO,
+  BM_PHAM_CG,
+  BM_TANG,
+  BM_NHOM,
+  BM_NHOM_TOIDA,
+  BM_PN,
+  bmD,
+  bmV,
+  bmP,
+  bmX,
+  bmLv,
+  bmRunes,
+  bmRuneName,
+  bmGrade,
+  bmPham,
+  bmTier,
+  bmSlots,
+  bmLuyenBao,
+  bmLife,
+  bmEligible,
+  bmCostTe,
+  bmCostUp,
+  bmWhyTe,
+  bmWhyUp,
+  bmWhyTemper,
+  bmOkTxt,
+  bmFmtY,
+  bmExpect,
+  bmCand,
+  tabBanMenh,
+  dev0,
+};
+
+Object.assign(gWin, {
+  GLUT,
+  GLUT_TIER,
+  GLUT_BAN,
+  GLUT_MUA,
+  GLUT_CUM,
+  GLUT_LOAI,
+  glutTier,
+  glutRows,
+  glutCard,
+  TT_TEN,
+  TT_LANH,
+  statusCard,
+  sellAdvice,
+  pieceTable,
+  tabDotPha,
+  tabTran,
+  itemDesc,
+  tabTKC,
+  LOAI_TEN,
+  scanShops,
+  tabCho,
+  renderCho,
+  HOA,
+  NGHE,
+  GRADE,
+  rewardHint,
+  planData,
+  pillCandidates,
+  bestRateWith,
+  whereToGet,
+  tabDotPha2,
+  gradeBar,
+  NGHE_DON_VI,
+  NGHE_SO,
+  NGHE_HOA,
+  HOA_IDX,
+  HOA_MUC,
+  hoaTen,
+  danThem,
+  dpNghe,
+  dpRaItem,
+  recipeRows,
+  tabNghe,
+  tabLuyenDan,
+  tabCheePhu,
+  tabLuyenBao,
+  tabTranPhap,
+  BM_DEF,
+  BM_RUNE_VAL,
+  BM_HESO,
+  BM_PHAM_CG,
+  BM_TANG,
+  BM_NHOM,
+  BM_NHOM_TOIDA,
+  BM_PN,
+  bmD,
+  bmV,
+  bmP,
+  bmX,
+  bmLv,
+  bmRunes,
+  bmRuneName,
+  bmGrade,
+  bmPham,
+  bmTier,
+  bmSlots,
+  bmLuyenBao,
+  bmLife,
+  bmEligible,
+  bmCostTe,
+  bmCostUp,
+  bmWhyTe,
+  bmWhyUp,
+  bmWhyTemper,
+  bmOkTxt,
+  bmFmtY,
+  bmExpect,
+  bmCand,
+  tabBanMenh,
+  dev0,
+});

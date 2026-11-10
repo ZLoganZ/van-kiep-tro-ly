@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Auto Săn Yêu & Auto Tu Luyện / Đột Phá Toàn Năng
  */
@@ -123,11 +124,20 @@ function isBienCoEnc(encId) {
   return false;
 }
 
-// Tìm các sự kiện / địa danh / node có thể tăng tu vi xung quanh
+// Tìm các sự kiện / địa danh / node có thể tăng tu vi xung quanh (Kèm bộ nhớ đệm theo tọa độ & năm)
+let _tvSpotsCacheSig = "";
+let _tvSpotsCacheRes = [];
 function auFindTuViSpots(c, cfg, st) {
   const g = G(),
     run = c.run,
     nam = typeof run.nam === "number" ? run.nam : null;
+  const maxY0 = cfg.maxY || 3;
+  const skipSz = st && st.skipEnc ? st.skipEnc.size : 0;
+  const badSz = st && st.bad ? st.bad.size : 0;
+  const tvSig = `${run.viTri}_${run.oNoi || ""}_${nam}_${maxY0}_${cfg.autoSongTu !== false ? 1 : 0}_${(cfg.mau || []).join(",")}_${skipSz}_${badSz}`;
+  if (_tvSpotsCacheSig === tvSig) {
+    return _tvSpotsCacheRes;
+  }
   const out = [];
   const seenEncs = new Set();
   const maxY = cfg.maxY || 3;
@@ -394,6 +404,9 @@ function auFindTuViSpots(c, cfg, st) {
     if (Math.abs(effB - effA) > 0.01) return effB - effA;
     return a.y - b.y;
   });
+  _tvSpotsCacheSig = tvSig;
+  _tvSpotsCacheRes = out;
+  return out;
 }
 // Đếm nơi hoang dã còn lượt săn nhưng bị bỏ vì màu không được tích.
 function auSkipColor(c, cfg, st) {
@@ -1615,3 +1628,30 @@ async function auTlStep(st) {
   return null;
 }
 
+export {
+  findHealItem,
+  auSanSpotOK,
+  auHuntSpots,
+  isBienCoEnc,
+  _tvSpotsCacheSig,
+  _tvSpotsCacheRes,
+  auFindTuViSpots,
+  auSkipColor,
+  auSanStep,
+  auHuntPower,
+  auTlStep,
+};
+
+Object.assign(gWin, {
+  findHealItem,
+  auSanSpotOK,
+  auHuntSpots,
+  isBienCoEnc,
+  _tvSpotsCacheSig,
+  _tvSpotsCacheRes,
+  auFindTuViSpots,
+  auSkipColor,
+  auSanStep,
+  auHuntPower,
+  auTlStep,
+});

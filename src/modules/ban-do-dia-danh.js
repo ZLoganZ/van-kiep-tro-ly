@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Kiếm Linh Thạch, Bản Đồ, Địa Danh, Truyền Tống, Treo Thưởng & Đồ Nên Săn
  */
@@ -276,7 +277,6 @@ function tabBanDo() {
       n,
       y,
       foes,
-      th,
       res: worst,
       d: danger(c, slot),
       left:
@@ -1836,25 +1836,7 @@ function tabTreoThuong() {
     ev.target.disabled = false;
   };
 }
-// tìm quái theo tên, không phân biệt dấu (kèm bộ nhớ đệm & đường tắt ASCII tối ưu hiệu năng)
-const foldCache = new Map();
-const fold = (x) => {
-  if (!x) return "";
-  const s = String(x);
-  if (!/[^\x00-\x7F]/.test(s)) return s.toLowerCase();
-  const cached = foldCache.get(s);
-  if (cached !== undefined) return cached;
-  const res = s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .toLowerCase();
-  if (foldCache.size < 3000) {
-    foldCache.set(s, res);
-  }
-  return res;
-};
+// fold() & foldCache đã được chuyển về src/core/utils.js
 
 // ═════════════════════════ BẢN 2.3: Đồ nên săn + Đồ trong game ═════════════════════════
 const NOT_SHOP = {
@@ -2328,3 +2310,101 @@ const CAT_ORDER = [
   "Lệnh bài",
   "Khác",
 ];
+
+export {
+  scanBounties,
+  junkItems,
+  tabTien,
+  routeSafe,
+  tabBanDo,
+  DD_LOAI,
+  ddLoai,
+  DD_TANG,
+  DD_EV_TELE,
+  ddCache,
+  DD_PHAI,
+  DD_DAO,
+  DD_TANG_TEN,
+  ddFlavor,
+  ddMota,
+  ddBuild,
+  ddTeleSources,
+  ddTeleOpts,
+  ddWaitingTele,
+  ddCleanIdleEnc,
+  ddDoTravel,
+  ddDoTeleport,
+  tabDiaDanh,
+  warnings,
+  masterInfo,
+  selfTest,
+  tongQuanExtra,
+  comboSearch,
+  LV,
+  lvTag,
+  lvRank,
+  encThreat,
+  threatHtml,
+  threatRank,
+  scanBoards,
+  tabTreoThuong,
+  NOT_SHOP,
+  sourceNote,
+  shopable,
+  fitElem,
+  quickGain,
+  tabSan,
+  DUNG_TXT,
+  itemFull,
+  categorize,
+  CAT_ORDER,
+};
+
+Object.assign(gWin, {
+  scanBounties,
+  junkItems,
+  tabTien,
+  routeSafe,
+  tabBanDo,
+  DD_LOAI,
+  ddLoai,
+  DD_TANG,
+  DD_EV_TELE,
+  ddCache,
+  DD_PHAI,
+  DD_DAO,
+  DD_TANG_TEN,
+  ddFlavor,
+  ddMota,
+  ddBuild,
+  ddTeleSources,
+  ddTeleOpts,
+  ddWaitingTele,
+  ddCleanIdleEnc,
+  ddDoTravel,
+  ddDoTeleport,
+  tabDiaDanh,
+  warnings,
+  masterInfo,
+  selfTest,
+  tongQuanExtra,
+  comboSearch,
+  LV,
+  lvTag,
+  lvRank,
+  encThreat,
+  threatHtml,
+  threatRank,
+  scanBoards,
+  tabTreoThuong,
+  NOT_SHOP,
+  sourceNote,
+  shopable,
+  fitElem,
+  quickGain,
+  tabSan,
+  DUNG_TXT,
+  itemFull,
+  categorize,
+  CAT_ORDER,
+});

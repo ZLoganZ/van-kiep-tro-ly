@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Auto Kinh Mạch (Tự Động Mở Ô, Tẩy Tủy & Xếp Mạch)
  */
@@ -478,10 +479,7 @@ async function auKmLoop(st) {
   } catch (e) {
     /* bỏ qua */
   }
-  if (auPT) {
-    clearTimeout(auPT);
-    auPT = 0;
-  }
+  clearAuPaintTimer();
   drawTabs();
   auPaint();
   auKmPreview();
@@ -648,3 +646,34 @@ function auKmPreview() {
   }
 }
 
+export {
+  AU_KM_MO_MIN,
+  AU_KM_MIN_GAIN,
+  AU_KM_MODE,
+  AU_KM_IT,
+  AU_KM_BK,
+  auKmPin,
+  auKmSig,
+  auKmApplySolution,
+  auKmPass,
+  auStartKm,
+  auKmLoop,
+  auKmStatus,
+  auKmPreview,
+};
+
+Object.assign(gWin, {
+  AU_KM_MO_MIN,
+  AU_KM_MIN_GAIN,
+  AU_KM_MODE,
+  AU_KM_IT,
+  AU_KM_BK,
+  auKmPin,
+  auKmSig,
+  auKmApplySolution,
+  auKmPass,
+  auStartKm,
+  auKmLoop,
+  auKmStatus,
+  auKmPreview,
+});

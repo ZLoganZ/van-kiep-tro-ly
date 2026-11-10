@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Điều Hướng Tab (TABS, GROUPS, Router) & Tab Tổng Quan
  */
@@ -252,8 +253,7 @@ function refreshMiniStatus() {
   if (runningList.length > 0) {
     UI.updateMiniStatus("Đang chạy: " + runningList.join(" | "), () => {
       if (AU.run && AU.run.running) auStop("Dừng từ thanh trạng thái");
-      if (typeof combatAutoActive !== "undefined")
-        combatAutoActive = false;
+      if (typeof setCombatAutoActive === "function") setCombatAutoActive(false);
       refreshMiniStatus();
     });
   } else {
@@ -596,3 +596,42 @@ Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc n
   };
 }
 
+// Xuất giao diện điều khiển Assist cho Mod Entrypoint
+const Assist = {
+  render: () => render(),
+  stop: () => {
+    if (!kmAutoRunning()) S.abort = true;
+  },
+};
+
+export {
+  TABS,
+  TNAME,
+  GROUPS,
+  grpOf,
+  keepVisible,
+  drawTabs,
+  errBox,
+  refreshMiniStatus,
+  render,
+  progressHtml,
+  bindProgress,
+  tabTongQuan,
+  Assist,
+};
+
+Object.assign(gWin, {
+  TABS,
+  TNAME,
+  GROUPS,
+  grpOf,
+  keepVisible,
+  drawTabs,
+  errBox,
+  refreshMiniStatus,
+  render,
+  progressHtml,
+  bindProgress,
+  tabTongQuan,
+  Assist,
+});

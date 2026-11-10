@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Trung Tâm Dị Bảo, Radar Bản Đồ, Pity 500 Năm & Cảnh Báo Nổi
  */
@@ -696,11 +697,40 @@ function checkOwnedRelic(id, run) {
   return false;
 }
 
-// Quét Dị Bảo thực tế đang nở trên thế giới (run.nodes, director.placeActivities, di tích run.noiChon, theGioi.dangDien)
+// Quét Dị Bảo thực tế đang nở trên thế giới (Có Cache O(1) & Lọc thông minh tránh gọi placeActivities thừa)
+let _activeDiBaoCacheSig = "";
+let _activeDiBaoCacheTime = 0;
+let _activeDiBaoCacheMap = null;
+let _dibaoKnownSlotsSet = null;
+let _dibaoKnownSlotsWorld = null;
+
+function getKnownDiBaoSlots(c) {
+  const W = ensureDiBaoWorldCache(c);
+  if (W && W === _dibaoKnownSlotsWorld && _dibaoKnownSlotsSet) {
+    return _dibaoKnownSlotsSet;
+  }
+  const sSet = new Set();
+  for (const ev of DIBAO.ev) {
+    if (ev && (ev.marker || ev.dia)) {
+      const sl = findSlotByDiaDanh(ev.marker, ev.dia, c);
+      if (sl != null) sSet.add(String(sl));
+    }
+  }
+  if (W) _dibaoKnownSlotsWorld = W;
+  _dibaoKnownSlotsSet = sSet;
+  return sSet;
+}
+
 function scanMapActiveDiBao(run, c) {
   const map = new Map();
   if (!run) return map;
   const nam = typeof run.nam === "number" ? run.nam : null;
+  const now = Date.now();
+  const nodeKeys = run.nodes ? Object.keys(run.nodes).join(",") : "";
+  const sig = `${nam}_${run.viTri}_${run.oNoi || ""}_${run.rng || ""}_${nodeKeys}`;
+  if (_activeDiBaoCacheMap && _activeDiBaoCacheSig === sig && now - _activeDiBaoCacheTime < 350) {
+    return new Map(_activeDiBaoCacheMap);
+  }
   const W = ensureDiBaoWorldCache(c);
 
   const isEventCompletedOrCooldown = (ev) => {
@@ -758,12 +788,21 @@ function scanMapActiveDiBao(run, c) {
   const hasPlaceActivities =
     director && typeof director.placeActivities === "function";
 
+  const knownDibaoSlots = getKnownDiBaoSlots(c);
   if (run.noiChon) {
     for (const [slotKey, nc] of Object.entries(run.noiChon)) {
       if (!nc) continue;
+      const dynamicPlaceEncs = [
+        ...(Array.isArray(nc.suKien) ? nc.suKien : []),
+        ...(Array.isArray(nc.contextual) ? nc.contextual : []),
+      ];
+      const hasDibaoInNc = dynamicPlaceEncs.some((id) => DIBAO.evMap.has(id));
+      const isKnownDibaoSlot = knownDibaoSlots.has(String(slotKey));
+      // Chỉ kiểm tra những nơi thực sự có sự kiện Dị Bảo hoặc là địa danh Dị Bảo (tránh quét hàng trăm thành trấn/thôn xóm vô ích gây lag!)
+      if (!hasDibaoInNc && !isKnownDibaoSlot) continue;
 
       // Nếu có director.placeActivities: dùng chính hàm của game để kiểm tra hoạt động thực sự đang mở (không bị lockedReason) tại slotKey
-      if (hasPlaceActivities) {
+      if (hasPlaceActivities && hasDibaoInNc) {
         try {
           const acts = director.placeActivities(c || ctxLite(), String(slotKey));
           if (Array.isArray(acts)) {
@@ -805,10 +844,6 @@ function scanMapActiveDiBao(run, c) {
       }
 
       // Fallback khi không gọi được director.placeActivities: chỉ quét suKien và contextual (không quét standing tĩnh)
-      const dynamicPlaceEncs = [
-        ...(Array.isArray(nc.suKien) ? nc.suKien : []),
-        ...(Array.isArray(nc.contextual) ? nc.contextual : []),
-      ];
       if (!dynamicPlaceEncs.length) continue;
 
       for (const encId of dynamicPlaceEncs) {
@@ -914,6 +949,9 @@ function scanMapActiveDiBao(run, c) {
     } catch (e) {}
   }
 
+  _activeDiBaoCacheSig = sig;
+  _activeDiBaoCacheTime = now;
+  _activeDiBaoCacheMap = new Map(map);
   return map;
 }
 
@@ -1317,12 +1355,6 @@ function playDiBaoAlertSound() {
   } catch (e) {}
 }
 
-const safeYrs = (y) =>
-  typeof yrs === "function"
-    ? yrs(y)
-    : y < 0.05
-      ? "ngay đây"
-      : num(y) + " năm";
 
 // Kiểm tra chỉ số kiểm định cho sự kiện Dị Bảo
 function checkStat(chkStr, nvIn) {
@@ -1354,21 +1386,33 @@ function checkStat(chkStr, nvIn) {
   };
 }
 
-// Kiểm tra khả năng dịch chuyển tức thời tới slot (bắt buộc kiểm tra !o.blocked để không báo ảo khi chưa có trận hoặc ngoài tầm)
+// Kiểm tra khả năng dịch chuyển tức thời tới slot (Có Cache theo vị trí & túi đồ tránh gọi g.teleportOptions lặp lại)
+let _teleCacheSig = "";
+let _teleCacheTime = 0;
+let _teleCacheOpts = null;
+
 function checkCanTeleport(slot) {
   if (slot == null || slot === "") return null;
   try {
     const g = G();
     if (!g || !g.state || !g.state.run) return null;
-    if (String(g.state.run.viTri) === String(slot)) return null;
+    const r = g.state.run;
+    if (String(r.viTri) === String(slot)) return null;
     if (
       typeof ddTeleSources !== "function" ||
       typeof ddTeleOpts !== "function"
     )
       return null;
-    const srcs = ddTeleSources(g);
-    for (const src of srcs) {
-      const opts = ddTeleOpts(g, src);
+    const now = Date.now();
+    const nv = r.nhanVat || {};
+    const sig = `${r.viTri}_${r.oNoi || ""}_${r.nam}_${nv.linhThach || 0}_${r.active ? r.active.id : ""}`;
+    if (!_teleCacheOpts || _teleCacheSig !== sig || now - _teleCacheTime > 400) {
+      const srcs = ddTeleSources(g);
+      _teleCacheOpts = srcs.map((src) => ({ src, opts: ddTeleOpts(g, src) }));
+      _teleCacheSig = sig;
+      _teleCacheTime = now;
+    }
+    for (const { src, opts } of _teleCacheOpts) {
       const o =
         opts.get(slot) ||
         opts.get(String(slot)) ||
@@ -1444,7 +1488,20 @@ function relicSynergy(relId, lc) {
   return { txt: `Hệ ${heTen(rHe)}`, cls: "vk-mu" };
 }
 
-// Giả lập chiến đấu ảo với Hộ Vệ Dị Bảo
+// Giả lập chiến đấu ảo với Hộ Vệ Dị Bảo (Có Cache kết quả mô phỏng & tái sử dụng taoBenTa)
+let _simGuardSig = "";
+let _simGuardPlayer = null;
+const _simGuardCache = new Map();
+
+function _getGuardPlayerSig(nv) {
+  if (!nv) return "";
+  const km = (nv.kinhMach && nv.kinhMach.manh) || [];
+  const kmStr = km.map((m) => `${m.item}@${m.x},${m.y},${m.xoay}`).join("|");
+  const tbStr = nv.trangBi ? Object.values(nv.trangBi).join(",") : "";
+  const bmStr = nv.natal ? `${nv.natal.item}:${nv.natal.tier}:${nv.natal.grade}` : "";
+  return `${nv.canhGioi}_${nv.tieuCanhGioi}_${Math.floor(nv.tuVi || 0)}_${nv.thuongThe || 0}_${kmStr}_${tbStr}_${bmStr}`;
+}
+
 function simDiBaoGuard(nv, e) {
   try {
     const Cc = C(),
@@ -1453,10 +1510,22 @@ function simDiBaoGuard(nv, e) {
       !K ||
       !K.taoBenTa ||
       !K.taoBenDich ||
-      typeof fight !== "function"
+      typeof fight !== "function" ||
+      !nv ||
+      !e
     )
       return null;
-    const P = K.taoBenTa(nv, Cc);
+    const pSig = _getGuardPlayerSig(nv);
+    if (pSig !== _simGuardSig || !_simGuardPlayer) {
+      _simGuardSig = pSig;
+      _simGuardPlayer = K.taoBenTa(nv, Cc);
+      _simGuardCache.clear();
+    }
+    const cacheKey = e.id || `${e.bv}_${e.bvcg}`;
+    if (_simGuardCache.has(cacheKey)) {
+      return _simGuardCache.get(cacheKey);
+    }
+    const P = _simGuardPlayer;
     let foeDef = null;
     if (e.bv && Cc.enemies) {
       const fName = fold(e.bv).trim();
@@ -1497,7 +1566,7 @@ function simDiBaoGuard(nv, e) {
     }
     const winrate = wins / stages.length;
     const winRate = Math.round(winrate * 100);
-    return {
+    const outRes = {
       winrate,
       winRate,
       wins,
@@ -1506,6 +1575,8 @@ function simDiBaoGuard(nv, e) {
       foeTen: foeDef.ten || e.bv,
       cg,
     };
+    _simGuardCache.set(cacheKey, outRes);
+    return outRes;
   } catch (err) {
     return null;
   }
@@ -1999,7 +2070,7 @@ function checkDiBaoAlert() {
     const candidates = [];
     let c = null;
     try {
-      c = ctx();
+      c = ctxLite();
     } catch (e) {}
     const K = S.core;
 
@@ -2111,14 +2182,27 @@ function checkDiBaoAlert() {
   } catch (e) {}
 }
 
-// Khởi động watcher tự động kiểm tra sự kiện Dị Bảo và cập nhật tab Dị Bảo theo thời gian thực
+// Khởi động watcher tự động kiểm tra sự kiện Dị Bảo (Có Throttle/Debounce 350ms & Kiểm tra chữ ký trạng thái chống lag khi bế quan/di chuyển)
 var lastRenderedViTri = null;
-function onWorldOrPlayerStateChange() {
-  // Khi Auto đang chạy (Săn Bảo, Tu Luyện...), Auto đã tự quản lý chu kỳ kiểm tra; bỏ qua event để tránh nghẽn luồng game
+var _lastWatcherStateSig = "";
+var _watcherThrottleTimer = null;
+
+function _runWorldOrPlayerStateCheck() {
+  _watcherThrottleTimer = null;
   if (typeof AU !== "undefined" && AU.run && AU.run.running) return;
   if (typeof document !== "undefined" && document.hidden) return;
+  try {
+    const g = G();
+    const r = g && g.state && g.state.run;
+    if (!r) return;
+    const nodeCount = r.nodes ? Object.keys(r.nodes).length : 0;
+    const sig = `${r.nam}_${r.viTri}_${r.oNoi || ""}_${nodeCount}`;
+    if (sig === _lastWatcherStateSig && S.tab !== "db") return;
+    _lastWatcherStateSig = sig;
+  } catch (e) {}
+
   checkDiBaoAlert();
-  if (S.tab === "db") {
+  if (UI && UI.isOpen && UI.isOpen() && S.tab === "db") {
     try {
       const curViTri =
         G().state && G().state.run ? String(G().state.run.viTri) : null;
@@ -2130,19 +2214,30 @@ function onWorldOrPlayerStateChange() {
   }
 }
 
-try {
-  setInterval(onWorldOrPlayerStateChange, 2500);
-  setInterval(combatWatcherTick, 400);
-  if (typeof TT !== "undefined" && TT && typeof TT.on === "function") {
-    TT.on("timePass", onWorldOrPlayerStateChange);
-    TT.on("travel", onWorldOrPlayerStateChange);
-    TT.on("worldEvent", onWorldOrPlayerStateChange);
-    TT.on("encounterEnd", onWorldOrPlayerStateChange);
-    TT.on("combatStart", combatWatcherTick);
-    TT.on("combatRound", combatWatcherTick);
-  }
-  setTimeout(checkDiBaoAlert, 1500);
-} catch (e) {}
+function onWorldOrPlayerStateChange() {
+  if (typeof AU !== "undefined" && AU.run && AU.run.running) return;
+  if (_watcherThrottleTimer) return;
+  _watcherThrottleTimer = setTimeout(_runWorldOrPlayerStateCheck, 350);
+}
+
+let _dibaoWatchersInited = false;
+function initDiBaoWatchers() {
+  if (_dibaoWatchersInited) return;
+  _dibaoWatchersInited = true;
+  try {
+    setInterval(onWorldOrPlayerStateChange, 4000);
+    setInterval(combatWatcherTick, 400);
+    if (typeof TT !== "undefined" && TT && typeof TT.on === "function") {
+      TT.on("timePass", onWorldOrPlayerStateChange);
+      TT.on("travel", onWorldOrPlayerStateChange);
+      TT.on("worldEvent", onWorldOrPlayerStateChange);
+      TT.on("encounterEnd", onWorldOrPlayerStateChange);
+      TT.on("combatStart", combatWatcherTick);
+      TT.on("combatRound", combatWatcherTick);
+    }
+    setTimeout(checkDiBaoAlert, 1500);
+  } catch (e) {}
+}
 
 // ── Tab Dị Bảo Toàn Diện (v7.3.0: Bảo Lục Luân Hồi · Thiên Đạo Bù Dị Bảo · Giả Lập Hộ Vệ · Trợ Lý Bù Điểm · Di Chuyển Thông Minh) ──
 function tabDiBao() {
@@ -2163,12 +2258,6 @@ function tabDiBao() {
     c = ctx();
   } catch (e) {}
   const K = S.core;
-  const safeYrs = (y) =>
-    typeof yrs === "function"
-      ? yrs(y)
-      : y < 0.05
-        ? "ngay đây"
-        : num(y) + " năm";
 
   S.dibao = S.dibao || { filter: "all", q: "" };
   const f = S.dibao;
@@ -3022,3 +3111,116 @@ mapActive.length > 0
   draw();
 }
 
+export {
+  DIBAO,
+  LOAI_VI,
+  CHI_SO_VI,
+  scanDiBao,
+  _lastDiBaoWorldRef,
+  slotPlaceNameCache,
+  diaDanhSlotCache,
+  ensureDiBaoWorldCache,
+  placeName,
+  findSlotByDiaDanh,
+  hasRelicItemInRun,
+  checkOwnedRelic,
+  _activeDiBaoCacheSig,
+  _activeDiBaoCacheTime,
+  _activeDiBaoCacheMap,
+  _dibaoKnownSlotsSet,
+  _dibaoKnownSlotsWorld,
+  getKnownDiBaoSlots,
+  scanMapActiveDiBao,
+  checkIsHere,
+  findDiaSlot,
+  enterDiBaoEvent,
+  DIBAO_EXTRA,
+  playDiBaoAlertSound,
+  checkStat,
+  _teleCacheSig,
+  _teleCacheTime,
+  _teleCacheOpts,
+  checkCanTeleport,
+  smartTeleportTo,
+  relicSynergy,
+  _simGuardSig,
+  _simGuardPlayer,
+  _simGuardCache,
+  _getGuardPlayerSig,
+  simDiBaoGuard,
+  findStatBoosters,
+  calcDiBaoPity,
+  lastDismissedDiBao,
+  lastDismissedMini,
+  removeDiBaoAlert,
+  removeDiBaoMini,
+  makeMiniDraggable,
+  showDiBaoMini,
+  showDiBaoAlert,
+  checkDiBaoAlert,
+  lastRenderedViTri,
+  _lastWatcherStateSig,
+  _watcherThrottleTimer,
+  _runWorldOrPlayerStateCheck,
+  onWorldOrPlayerStateChange,
+  _dibaoWatchersInited,
+  initDiBaoWatchers,
+  tabDiBao,
+};
+
+Object.assign(gWin, {
+  DIBAO,
+  LOAI_VI,
+  CHI_SO_VI,
+  scanDiBao,
+  _lastDiBaoWorldRef,
+  slotPlaceNameCache,
+  diaDanhSlotCache,
+  ensureDiBaoWorldCache,
+  placeName,
+  findSlotByDiaDanh,
+  hasRelicItemInRun,
+  checkOwnedRelic,
+  _activeDiBaoCacheSig,
+  _activeDiBaoCacheTime,
+  _activeDiBaoCacheMap,
+  _dibaoKnownSlotsSet,
+  _dibaoKnownSlotsWorld,
+  getKnownDiBaoSlots,
+  scanMapActiveDiBao,
+  checkIsHere,
+  findDiaSlot,
+  enterDiBaoEvent,
+  DIBAO_EXTRA,
+  playDiBaoAlertSound,
+  checkStat,
+  _teleCacheSig,
+  _teleCacheTime,
+  _teleCacheOpts,
+  checkCanTeleport,
+  smartTeleportTo,
+  relicSynergy,
+  _simGuardSig,
+  _simGuardPlayer,
+  _simGuardCache,
+  _getGuardPlayerSig,
+  simDiBaoGuard,
+  findStatBoosters,
+  calcDiBaoPity,
+  lastDismissedDiBao,
+  lastDismissedMini,
+  removeDiBaoAlert,
+  removeDiBaoMini,
+  makeMiniDraggable,
+  showDiBaoMini,
+  showDiBaoAlert,
+  checkDiBaoAlert,
+  lastRenderedViTri,
+  _lastWatcherStateSig,
+  _watcherThrottleTimer,
+  _runWorldOrPlayerStateCheck,
+  onWorldOrPlayerStateChange,
+  _dibaoWatchersInited,
+  initDiBaoWatchers,
+  tabDiBao,
+});

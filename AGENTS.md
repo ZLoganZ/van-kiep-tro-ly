@@ -1,19 +1,22 @@
 # 🤖 Quy Chuẩn Dành Cho AI Agent & Kỹ Sư (AGENTS.md)
 
-1. **Không sửa trực tiếp `main.js`**: `main.js` là file đầu ra được sinh tự động bởi `node build.js`. Mọi thay đổi phải thực hiện trên các file tương ứng trong thư mục `src/`, sau đó chạy `node build.js` để cập nhật `main.js`.
+1. **Kiến trúc Native Multi-File ES Modules (`main.js` + `src/**/\*.js`)\*\*:
+   - Không gộp/nối (bundle/concatenate) toàn bộ code vào `main.js` nữa.
+   - `main.js` ở thư mục gốc chỉ là file entrypoint nhỏ gọn (~122 dòng) dùng `import` để nạp các module con từ `./src/...` (tương tự chuẩn `su_do.zip` của tác giả game).
+   - Mọi logic tính năng đặt trong các module tương ứng tại `src/core/`, `src/data/`, `src/ui/`, `src/modules/`, `src/auto/`. Sau khi sửa code hoặc sửa `src/styles/ui.css`, chạy `node build.js` để đồng bộ `ui-css.js`, `version` và đóng gói `van-kiep-tro-ly-mod.zip`.
 2. **Chuẩn Game Mod Chính Thức (`window.tuTienMods`)**:
    - Không tái sử dụng cơ chế Stealth (`waitForGameReady`) của Tampermonkey.
-   - Luôn giữ cấu trúc đăng ký qua `window.tuTienMods` (`apiVersion: 1`, `id: "van_kiep_tro_ly"`) trong `build.js` và `src/index.js`, kèm `mod.yaml` hợp lệ ở thư mục gốc.
+   - Luôn giữ cấu trúc đăng ký qua `window.tuTienMods` (`apiVersion: 1`, `id: "van_kiep_tro_ly"`) trong `main.js`, kèm `mod.yaml` hợp lệ ở thư mục gốc.
 3. **Quy tắc bảo toàn logic Dị Bảo**:
    - Luôn phân biệt rõ `sc.relics` (Dị Bảo sở hữu trong kiếp hiện tại `run`) và `sc.metaRelics` (Bảo Lục Luân Hồi trong `meta.tienLo.relics`).
    - Khi kiểm tra nhân vật đã có Dị Bảo trong kiếp hiện tại hay chưa, bắt buộc dùng `checkOwnedRelic(id, run, sc)` (hoặc `hasRelicItemInRun(id, run)` khi kiểm tra vật phẩm vừa rớt sau sự kiện).
    - Khi kiểm tra khả năng truyền tống bằng `ddTeleOpts`, bắt buộc kiểm tra `!o.blocked`.
 4. **Kiểm tra trước khi bàn giao**:
-   - Luôn chạy `node build.js` và đảm bảo không có lỗi cú pháp ở bất kỳ module nào trong `src/` cũng như `main.js`.
+   - Luôn chạy `node build.js` và kiểm tra nạp ES Module (`import("./main.js")`) để đảm bảo không có lỗi cú pháp hay thiếu export ở bất kỳ module nào trong `src/` cũng như `main.js`.
 5. **Đóng gói file cài đặt Mod (`van-kiep-tro-ly-mod.zip`) & Push lên cùng commit (BẮT BUỘC)**:
-   - File `van-kiep-tro-ly-mod.zip` (chứa `mod.yaml` và `main.js`) là gói cài đặt chính thức người chơi dùng để import trực tiếp vào game (Cấu hình ➔ Mods ➔ Cài mod).
-   - Script `node build.js` đã tích hợp tự động đóng gói `van-kiep-tro-ly-mod.zip` ngay sau khi biên dịch `main.js`.
-   - Mỗi khi commit mã nguồn hoặc nâng version, **BẮT BUỘC** phải stage cả file zip (`git add .` hoặc bao gồm `van-kiep-tro-ly-mod.zip`), commit và push lên remote trong **CÙNG MỘT COMMIT**. Tuyệt đối không được commit code mà để sót file `.zip` cũ hoặc push riêng rẽ.
+   - File `van-kiep-tro-ly-mod.zip` (chứa `mod.yaml`, `main.js` và `src/**/*.js` giữ nguyên đường dẫn tương đối) là gói cài đặt chính thức người chơi dùng để import trực tiếp vào game (Cấu hình ➔ Mods ➔ Cài mod).
+   - Script `node build.js` tự động đóng gói `van-kiep-tro-ly-mod.zip`.
+   - Mỗi khi commit mã nguồn hoặc nâng version, **BẮT BUỘC** phải stage cả file zip (`git add .` hoặc bao gồm `van-kiep-tro-ly-mod.zip`), commit và push lên remote trong **CÙNG MỘT COMMIT**.
 
 ## 1. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
 
@@ -24,19 +27,6 @@ Mỗi khi có bất kỳ thay đổi nào trong mã nguồn dự án, **BẮT BU
 | **Enhance / Sửa Bug**       | **PATCH**     | Tăng số cuối (`x.y.Z` $\rightarrow$ `x.y.Z+1`)                              | `7.6.1` $\rightarrow$ `7.6.2` |
 | **Tính Năng Mới (Feature)** | **MINOR**     | Tăng số giữa (`x.Y.0` $\rightarrow$ `x.Y+1.0`), reset patch về `0`          | `7.6.2` $\rightarrow$ `7.7.0` |
 | **Đại Tu Kiến Trúc Lớn**    | **MAJOR**     | **CHỈ nâng khi NGƯỜI DÙNG YÊU CẦU TRỰC TIẾP**, reset minor & patch về `0.0` | `7.7.0` $\rightarrow$ `8.0.0` |
-
-### Chi Tiết Cụ Thể:
-
-1. **Nâng PATCH (`x.y.Z`):**
-   - Áp dụng khi:
-     - **Sửa bug (Bug fixes):** Sửa lỗi tính toán, sửa logic combat, sửa lỗi hiển thị UI, xử lý ngoại lệ undefined/null, fix lỗi tương thích API game.
-     - **Enhance (Tối ưu & Cải tiến):** Tinh chỉnh logic hiện có, nâng cấp thuật toán, cải thiện hiệu năng (performance), làm đẹp giao diện/CSS có sẵn, bổ sung visual feedback / delay nhịp đánh.
-2. **Nâng MINOR (`x.Y.0`):**
-   - Áp dụng khi:
-     - Bổ sung **chức năng mới hoàn toàn (New Features)**: Thêm Tab mới vào menu, thêm Module/Cơ chế mới (ví dụ: thêm Auto mới, thêm hệ thống gợi ý mới, thêm bảng phân tích mới).
-3. **Nâng MAJOR (`X.0.0`):**
-   - **TUYỆT ĐỐI KHÔNG TỰ Ý NÂNG MAJOR.**
-   - Chỉ nâng khi **User yêu cầu rõ ràng** trong câu lệnh (ví dụ: _"hãy nâng lên bản 8.0.0"_, _"chuyển sang major version mới"_).
 
 ---
 
@@ -57,31 +47,17 @@ Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả c
      ] },
      ```
    - Chuyển mục phiên bản liền trước thành `now: false`.
-3. **Biên dịch mã nguồn & Đóng gói file Mod:**
+3. **Đồng bộ & Đóng gói file Mod:**
    - Chạy lệnh:
      ```bash
      node build.js
      ```
    - Script sẽ tự động:
-     - Ghép nối các module từ `src/` thành `main.js` với `TOOL_VER = "x.y.z"`.
-     - Cập nhật số phiên bản trong `mod.yaml`.
-     - Đóng gói file cài đặt `van-kiep-tro-ly-mod.zip` (gồm `mod.yaml` và `main.js`).
-4. **Kiểm tra cú pháp:**
-   - Chạy `node build.js --check` để đảm bảo không có lỗi cú pháp ở bất kỳ file nào.
-5. **Commit Git & Push Lên Remote:**
-   - Stage toàn bộ thay đổi bao gồm cả file zip:
-     ```bash
-     git add .
-     ```
-   - Viết thông điệp commit rõ ràng theo chuẩn:
-     - Bug fix / Enhance: `fix(combat): ...` hoặc `feat(ui): enhance ... bump to vx.y.z`
-     - Feature mới: `feat: add [tên chức năng] bump to vx.y.0`
-   - Push lên GitHub:
-     ```bash
-     git push origin main
-     ```
-
----
+     - Đồng bộ `TOOL_VER = "x.y.z"` trong `src/core/utils.js` và `version` trong `mod.yaml`.
+     - Đồng bộ `src/styles/ui.css` sang `src/styles/ui-css.js`.
+     - Đóng gói file cài đặt `van-kiep-tro-ly-mod.zip` (gồm `mod.yaml`, `main.js` và `src/**/*.js`).
+4. **Commit Git & Push Lên Remote:**
+   - Stage toàn bộ thay đổi bao gồm cả file zip (`git add .`), commit và push lên GitHub.
 
 ## 3. CẨM NANG ĐIỀU TRA & THÍCH ỨNG KHI GAME CÓ BẢN UPDATE MỚI
 

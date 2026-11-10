@@ -1,3 +1,5 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { UI_CSS } from "../styles/ui-css.js";
 /**
  * Module: Giao Diện Chung (UI Shell & Responsive Fit Engine)
  */
@@ -75,19 +77,13 @@ var UI = (function () {
       });
     }
     var SEL =
-      "h3,h4,summary,button,th,label,option,small,.vkx-ttl span,#vkx-toast";
+      "h3:not([data-tc]),h4:not([data-tc]),summary:not([data-tc]),button:not([data-tc]),th:not([data-tc]),label:not([data-tc]),option:not([data-tc]),small:not([data-tc]),.vkx-ttl span:not([data-tc]),#vkx-toast:not([data-tc])";
     function fixNode(root) {
       if (!root || !root.isConnected) return;
       try {
-        var els = [];
-        if (root.nodeType === 1) {
-          if (root.matches && root.matches(SEL)) els.push(root);
-          var q = root.querySelectorAll ? root.querySelectorAll(SEL) : [];
-          for (var a = 0; a < q.length; a++) els.push(q[a]);
-        }
-        for (var i = 0; i < els.length; i++) {
-          var el = els[i];
-          if (el.hasAttribute && el.hasAttribute("data-tc")) continue;
+        var q = root.querySelectorAll ? root.querySelectorAll(SEL) : [];
+        for (var i = 0; i < q.length; i++) {
+          var el = q[i];
           var ch = el.childNodes;
           for (var j = 0; j < ch.length; j++) {
             if (ch[j].nodeType === 3) {
@@ -97,7 +93,7 @@ var UI = (function () {
               if (w !== v) ch[j].nodeValue = w;
             }
           }
-          if (el.setAttribute) el.setAttribute("data-tc", "1");
+          el.setAttribute("data-tc", "1");
         }
       } catch (e) {}
     }
@@ -1032,3 +1028,10 @@ var UI = (function () {
   return api;
 })();
 
+export {
+  UI,
+};
+
+Object.assign(gWin, {
+  UI,
+});

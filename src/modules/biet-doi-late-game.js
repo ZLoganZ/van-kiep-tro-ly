@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Biệt Đội Late Game · Kinh Mạch Tối Thượng (Best-in-Slot Solver)
  */
@@ -1107,3 +1108,24 @@ ${
   }
 }
 
+export {
+  bisDeduceElements,
+  bisSelectPool,
+  createBisMockNv,
+  makeBisEval,
+  bisGreedy,
+  bisGetItemHuntingGuide,
+  bisSolve,
+  tabBis,
+};
+
+Object.assign(gWin, {
+  bisDeduceElements,
+  bisSelectPool,
+  createBisMockNv,
+  makeBisEval,
+  bisGreedy,
+  bisGetItemHuntingGuide,
+  bisSolve,
+  tabBis,
+});

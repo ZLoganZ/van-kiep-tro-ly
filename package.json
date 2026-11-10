@@ -1,6 +1,6 @@
 {
   "name": "van-kiep-tro-ly-mod",
-  "version": "7.23.1",
+  "version": "7.23.2",
   "description": "Mod Trợ Lý toàn diện cho game Vạn Kiếp Tu Tiên (Multi-file Modular Architecture)",
   "main": "main.js",
   "scripts": {
@@ -8,5 +8,6 @@
     "check": "node build.js --check"
   },
   "author": "LoganZ · Kỹ Sư",
-  "license": "MIT"
+  "license": "MIT",
+  "type": "module"
 }

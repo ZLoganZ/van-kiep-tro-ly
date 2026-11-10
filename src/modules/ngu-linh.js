@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Wiki & Quản Lý Ngự Linh (Tổng Quan, Của Tôi, Sinh Vật, Vật Phẩm, Cơ Duyên)
  */
@@ -42,11 +43,7 @@ const NLW_DH = {
   hoang_nguyen: "Đồng Hoang",
   hoang_mac: "Hoang Mạc",
 };
-const tcWord = (s) =>
-  String(s || "").replace(
-    /(^|[\s(\-\/])(\p{L})/gu,
-    (m, a, b) => a + b.toUpperCase(),
-  );
+// tcWord() đã được chuyển về src/core/utils.js
 const nlItemName = (id) => {
   const it = C().items.get(id);
   return tcWord(
@@ -433,3 +430,40 @@ ${r[6].length ? `<br><span style="font-size:13px">Có thể nhận: ${r[6].map((
   draw();
 }
 
+export {
+  NLW_SCH,
+  NLW_TEN,
+  NLW_GRP,
+  NLW_NOI,
+  NLW_DH,
+  nlItemName,
+  nlEnemies,
+  nlEnemyById,
+  nlIsItem,
+  nlGroupOf,
+  nlSel,
+  tabNLW,
+  tabNLM,
+  tabNLS,
+  tabNLV,
+  tabNLC,
+};
+
+Object.assign(gWin, {
+  NLW_SCH,
+  NLW_TEN,
+  NLW_GRP,
+  NLW_NOI,
+  NLW_DH,
+  nlItemName,
+  nlEnemies,
+  nlEnemyById,
+  nlIsItem,
+  nlGroupOf,
+  nlSel,
+  tabNLW,
+  tabNLM,
+  tabNLS,
+  tabNLV,
+  tabNLC,
+});

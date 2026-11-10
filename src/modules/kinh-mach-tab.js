@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Tab Kinh Mạch, Lĩnh Ngộ, Phép Tính Giả Định & Tẩy Ô
  */
@@ -1556,3 +1557,67 @@ function sellTotal(c, id, it, qty) {
     total += (q - whole) * unit(n);
   return { total, first, left: Math.max(0, whole - n) };
 }
+
+export {
+  isKmItem,
+  lnApply,
+  lnPrep,
+  lnYears,
+  lnTag,
+  fitNote,
+  kmOpenable,
+  kmAutoRunning,
+  kmAborted,
+  kmApplyDiff,
+  applyManh,
+  kmApplyLoadouts,
+  kmSolve,
+  rankOpenCandidate,
+  kmOpenSearch,
+  wiManh,
+  wiEval,
+  kmWhatIfRealm,
+  kmWhatIfRemove,
+  kmWhatIfRecolor,
+  HE_VI,
+  findOptimalRecolors,
+  statRows,
+  optimizeMode,
+  kmManualHtml,
+  kmManualBind,
+  copyText,
+  showBest,
+  sellTotal,
+};
+
+Object.assign(gWin, {
+  isKmItem,
+  lnApply,
+  lnPrep,
+  lnYears,
+  lnTag,
+  fitNote,
+  kmOpenable,
+  kmAutoRunning,
+  kmAborted,
+  kmApplyDiff,
+  applyManh,
+  kmApplyLoadouts,
+  kmSolve,
+  rankOpenCandidate,
+  kmOpenSearch,
+  wiManh,
+  wiEval,
+  kmWhatIfRealm,
+  kmWhatIfRemove,
+  kmWhatIfRecolor,
+  HE_VI,
+  findOptimalRecolors,
+  statRows,
+  optimizeMode,
+  kmManualHtml,
+  kmManualBind,
+  copyText,
+  showBest,
+  sellTotal,
+});

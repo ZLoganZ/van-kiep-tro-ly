@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Dữ Liệu Tĩnh & Dự Phòng (Ngự Linh, Thể Chất, Hướng Build)
  */
@@ -3723,3 +3724,18 @@ var THE_CHAT_DB = {
   },
 };
 
+export {
+  NL_META,
+  NL_RITUAL,
+  NL_ENC,
+  NL_ENEMY,
+  THE_CHAT_DB,
+};
+
+Object.assign(gWin, {
+  NL_META,
+  NL_RITUAL,
+  NL_ENC,
+  NL_ENEMY,
+  THE_CHAT_DB,
+});

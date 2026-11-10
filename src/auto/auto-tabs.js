@@ -1,3 +1,4 @@
+import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
 /**
  * Module: Giao Diện Các Tab Tự Động (Auto Tu Luyện, Auto Tác Chiến, Auto Săn Dị Bảo, Auto Buôn Bán)
  */
@@ -1171,3 +1172,18 @@ function tabAutoBuon() {
   };
 }
 
+export {
+  tabAutoTuLuyen,
+  tabAutoTacChien,
+  tabAutoSdb,
+  tabAutoSan,
+  tabAutoBuon,
+};
+
+Object.assign(gWin, {
+  tabAutoTuLuyen,
+  tabAutoTacChien,
+  tabAutoSdb,
+  tabAutoSan,
+  tabAutoBuon,
+});
