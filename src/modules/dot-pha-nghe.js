@@ -1,4 +1,9 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, sleep0, pct, num, esc, yrs, cleanTxt, fold, heTen, STAGE } from "../core/utils.js";
+import { S, body, C, clone, ctx, nvNow, realmName, realmLabel, has, needMsg, withPlace, danger, dangerTag, nearSlots, fight, enemyAt, simFoe, foesOf, scanRetreat } from "../core/bridge.js";
+import { anneal } from "./kinh-mach-engine.js";
+import { errBox, progressHtml, bindProgress } from "./navigation.js";
+import { placeName } from "./di-bao.js";
+import { lnTag, sellTotal } from "./kinh-mach-tab.js";
 /**
  * Module: Đột Phá, Thọ Nguyên, Tàng Kinh Các, Chợ, Luyện Chế 4 Nghề & Bản Mệnh Pháp Bảo
  */

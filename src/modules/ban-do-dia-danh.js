@@ -1,4 +1,11 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TOOL_VER, TT, sleep0, debounce, pct, num, esc, yrs, cleanTxt, tcWord, foldCache, fold, heTen } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { AU_T4, AU_ZAN, S, body, G, C, clone, ctx, ctxLite, nvNow, realmName, has, needMsg, withPlace, danger, dangerTag, nearSlots, simFoe, foesOf } from "../core/bridge.js";
+import { buildCandidates, anneal, stripDead, evalCurrent } from "./kinh-mach-engine.js";
+import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
+import { placeName } from "./di-bao.js";
+import { kmOpenable, sellTotal } from "./kinh-mach-tab.js";
+import { glutRows, glutCard, statusCard, itemDesc, NGHE, rewardHint, planData, whereToGet, recipeRows, bmD, bmEligible, bmCostTe } from "./dot-pha-nghe.js";
 /**
  * Module: Kiếm Linh Thạch, Bản Đồ, Địa Danh, Truyền Tống, Treo Thưởng & Đồ Nên Săn
  */

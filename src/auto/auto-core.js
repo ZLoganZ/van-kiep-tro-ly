@@ -1,4 +1,7 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT } from "../core/utils.js";
+import { NL_ENEMY } from "../data/static-data.js";
+import { AU_T4, AU_ZAN, S, G, C, ctxLite, has, danger } from "../core/bridge.js";
+import { DIBAO } from "../modules/di-bao.js";
 /**
  * Module: Hạ Tầng Tự Động (Auto Core Engine, Cấu Hình, Sự Kiện Tu Vi & Bảng Xác Nhận)
  */

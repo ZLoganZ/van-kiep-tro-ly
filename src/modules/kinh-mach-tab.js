@@ -1,4 +1,8 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, sleep0, pct, num, esc, heTen } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, G, C, clone, nvNow, realmLabel, has, benchEnemies } from "../core/bridge.js";
+import { gocHe, heTacDong, oHop, oKhac, hySet, biasSummary, capCtxOf, capUp, capTierMatch, kmScalablePower, makeEval, greedy, anneal, polish, coverNote, stripDead, evalCurrent, drawGrid } from "./kinh-mach-engine.js";
+import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
 /**
  * Module: Tab Kinh Mạch, Lĩnh Ngộ, Phép Tính Giả Định & Tẩy Ô
  */

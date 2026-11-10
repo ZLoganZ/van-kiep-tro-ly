@@ -1,4 +1,5 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, sleep0, yieldToMain, createMulberry32, pct, num, esc, heTen } from "../core/utils.js";
+import { S, C, clone, has, benchEnemies, fight } from "../core/bridge.js";
 /**
  * Module: Động Cơ Tối Ưu Hóa Kinh Mạch 4.0 & Kết Xuất Sơ Đồ Lưới
  */

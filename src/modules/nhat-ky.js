@@ -1,4 +1,19 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TOOL_VER, MOD, TabLifecycle, debounce, fold } from "../core/utils.js";
+import { UI_CSS } from "../styles/ui-css.js";
+import { UI } from "../ui/shell.js";
+import { S, body, CORE_REQUIRED, G, C, HUD, gamePanel, clone, ctx, has, danger, nearSlots, benchEnemies } from "../core/bridge.js";
+import { genSlack, biasCtx, biasInfo, kmItemPower, kmScalablePower, simulateQiCycle, makeEval, buildCandidates, greedy, anneal, smartFillRemainingGaps, polish, coverNote, stripDead, drawGrid } from "./kinh-mach-engine.js";
+import { render } from "./navigation.js";
+import { DIBAO, scanDiBao, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, checkCanTeleport, smartTeleportTo, simDiBaoGuard, checkDiBaoAlert } from "./di-bao.js";
+import { kmOpenSearch, findOptimalRecolors, statRows } from "./kinh-mach-tab.js";
+import { ddBuild, ddTeleOpts } from "./ban-do-dia-danh.js";
+import { buildFit, hbCatalog, hbVal, hbPlan, hbRatioPenalty } from "./huong-build.js";
+import { auIsHacText, AU, encGivesTuVi, findBestDiBaoChoice } from "../auto/auto-core.js";
+import { estimateSkillDamage, auFightStep, auFightInstant, syncGameCombatAutomation, combatWatcherTick } from "../auto/combat-ai.js";
+import { auFindTuViSpots } from "../auto/auto-tu-luyen.js";
+import { auSdbStep } from "../auto/auto-di-bao.js";
+import { auPending, auPick, auPaint } from "../auto/auto-runner.js";
+import { makeBisEval, bisGreedy } from "./biet-doi-late-game.js";
 /**
  * Module: Nhật Ký Cập Nhật (Changelog)
  */

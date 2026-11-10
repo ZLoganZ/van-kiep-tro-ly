@@ -1,4 +1,8 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, pct, num, esc, heTen } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, loadCore, G, C, clone, has } from "../core/bridge.js";
+import { drawTabs } from "../modules/navigation.js";
+import { AU, AU_TOC, auYield, auSave, auSleep, auClamp, auLog, auPaintSoon, clearAuPaintTimer } from "./auto-core.js";
 /**
  * Module: Auto Reroll Tư Chất (Linh Căn & Thể Chất Khởi Đầu)
  */

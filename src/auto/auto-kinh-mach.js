@@ -1,4 +1,11 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, num, esc } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, loadCore, G, C, clone, nvNow, has } from "../core/bridge.js";
+import { evalCurrent, drawGrid } from "../modules/kinh-mach-engine.js";
+import { drawTabs, errBox } from "../modules/navigation.js";
+import { isKmItem, kmAborted, kmApplyDiff, kmApplyLoadouts, kmSolve, kmOpenSearch, HE_VI, findOptimalRecolors, statRows } from "../modules/kinh-mach-tab.js";
+import { BUILDS, HB_RATIO, HB_RATIO_W, hbScanBuilds } from "../modules/huong-build.js";
+import { AU, auSleep, auLog, auPaintSoon, clearAuPaintTimer, auCall } from "./auto-core.js";
 /**
  * Module: Auto Kinh Mạch (Tự Động Mở Ô, Tẩy Tủy & Xếp Mạch)
  */

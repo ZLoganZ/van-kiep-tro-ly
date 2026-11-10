@@ -1,4 +1,9 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT, debounce, pct, num, esc, tcWord, fold, HE, heTen, STAGE, TC_RARE } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, G, C, realmName, has } from "../core/bridge.js";
+import { errBox, render } from "./navigation.js";
+import { sourceNote, itemFull, categorize, CAT_ORDER } from "./ban-do-dia-danh.js";
+import { NLW_TEN } from "./ngu-linh.js";
 /**
  * Module: Tra Cứu Vật Phẩm & Quái Vật Toàn Diện
  */

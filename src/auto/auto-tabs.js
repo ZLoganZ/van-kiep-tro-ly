@@ -1,4 +1,14 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, num, esc, yrs, safeYrs, fold } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, loadCore, G, C, HUD, ctxLite, realmName, has, dangerTag } from "../core/bridge.js";
+import { errBox, progressHtml, bindProgress } from "../modules/navigation.js";
+import { DIBAO, scanDiBao, placeName, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, checkCanTeleport, smartTeleportTo, calcDiBaoPity } from "../modules/di-bao.js";
+import { ddDoTravel } from "../modules/ban-do-dia-danh.js";
+import { AU_KT, auMauLabel, AU, auSave, auCall } from "./auto-core.js";
+import { _lastAiDecisionText, updateCombatOverlay } from "./combat-ai.js";
+import { auHuntSpots, auSkipColor, auHuntPower } from "./auto-tu-luyen.js";
+import { auPlanTrade } from "./auto-buon-ban.js";
+import { auReadCfg, auFld, auHiemSel, auTocSel, auTTSel, auControls, auBind, auMauHtml } from "./auto-runner.js";
 /**
  * Module: Giao Diện Các Tab Tự Động (Auto Tu Luyện, Auto Tác Chiến, Auto Săn Dị Bảo, Auto Buôn Bán)
  */

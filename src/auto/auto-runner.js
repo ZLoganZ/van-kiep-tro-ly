@@ -1,4 +1,16 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, num, esc } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, loadCore, G, C, realmName, has, danger } from "../core/bridge.js";
+import { drawTabs, refreshMiniStatus } from "../modules/navigation.js";
+import { DIBAO, scanDiBao, hasRelicItemInRun, checkOwnedRelic, calcDiBaoPity, removeDiBaoAlert, removeDiBaoMini } from "../modules/di-bao.js";
+import { BUILDS, HB_RATIO, HB_MAX_SKILLS } from "../modules/huong-build.js";
+import { AU_TT_MAX, AU_TT_TEN, AU_MAU, auMauOf, AU_MAU_ID, AU_MAU_DEF, auMauNorm, auColorOK, auMauLabel, auIsHacEnemy, auEnemyName, auEncounterHac, AU, AU_TOC, calcTotalTuVi, encGivesTuVi, findBestTuViChoice, findBestDiBaoChoice, auYield, auSave, auSleep, auClamp, auLog, auPaintSoon, clearAuPaintTimer, auCall, auSig, auLifeLeft, auBattleLevel } from "./auto-core.js";
+import { auFightInstant } from "./combat-ai.js";
+import { AU_KM_MODE, AU_KM_IT, AU_KM_BK, auStartKm, auKmStatus } from "./auto-kinh-mach.js";
+import { auSanStep, auTlStep } from "./auto-tu-luyen.js";
+import { auSdbStep } from "./auto-di-bao.js";
+import { auBuonStep } from "./auto-buon-ban.js";
+import { rrPaint } from "./auto-reroll.js";
 /**
  * Module: Bộ Điều Phối Vòng Lặp Auto Chung, Xử Lý Sự Kiện (auPending/auPick) & Ràng Buộc UI Auto
  */

@@ -1,4 +1,9 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT, pct, num } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, G, C, ctx, ctxLite, realmName, has, danger, nearSlots, simFoe, scanRetreat } from "../core/bridge.js";
+import { placeName } from "../modules/di-bao.js";
+import { planData } from "../modules/dot-pha-nghe.js";
+import { AU_KT, AU_TT_MAX, AU_TT_TEN, AU_HIEM, auMauOf, auColorOK, auMauLabel, auRedPurple, auIsHacEnemy, AU, isLoTuViEnc, encGivesTuVi, isAtBottleneck, findPhaBinhCanhPills, auLog, auCall, auLifeLeft, auItemName, auIsWild, auHuntLeft, auBypassConfirm } from "./auto-core.js";
 /**
  * Module: Auto Săn Yêu & Auto Tu Luyện / Đột Phá Toàn Năng
  */

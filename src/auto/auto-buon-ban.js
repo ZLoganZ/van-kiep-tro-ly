@@ -1,4 +1,7 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, sleep0, num, yrs } from "../core/utils.js";
+import { S, G, C, ctx, ctxLite, has, nearSlots } from "../core/bridge.js";
+import { placeName } from "../modules/di-bao.js";
+import { AU_TT_MAX, AU_TT_TEN, AU, auYield, auShopKey, auLog, auCall, auLifeLeft, auBag, auDangerOK } from "./auto-core.js";
 /**
  * Module: Auto Buôn Bán & Quản Lý Trạng Thái / Giao Diện Auto Chung
  */

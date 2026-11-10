@@ -1,4 +1,4 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin } from "../core/utils.js";
 /**
  * Module: Dữ Liệu Tĩnh & Dự Phòng (Ngự Linh, Thể Chất, Hướng Build)
  */

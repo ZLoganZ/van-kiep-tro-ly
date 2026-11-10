@@ -1,4 +1,7 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, debounce, pct, num, esc, tcWord, fold, heTen } from "../core/utils.js";
+import { NL_META, NL_RITUAL, NL_ENC, NL_ENEMY } from "../data/static-data.js";
+import { S, body, C, nvNow, realmName, has } from "../core/bridge.js";
+import { itemFull } from "./ban-do-dia-danh.js";
 /**
  * Module: Wiki & Quản Lý Ngự Linh (Tổng Quan, Của Tôi, Sinh Vật, Vật Phẩm, Cơ Duyên)
  */

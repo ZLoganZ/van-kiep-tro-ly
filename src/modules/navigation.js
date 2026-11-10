@@ -1,4 +1,6 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TOOL_VER, TabLifecycle, sleep0, pct, num, esc, fold, heTen, STAGE } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, tabsEl, groupsEl, loadCore, G, C, ctx, nvNow, realmName, realmLabel, fight, enemyAt } from "../core/bridge.js";
 /**
  * Module: Điều Hướng Tab (TABS, GROUPS, Router) & Tab Tổng Quan
  */

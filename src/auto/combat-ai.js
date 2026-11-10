@@ -1,4 +1,8 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT, esc } from "../core/utils.js";
+import { S, body, G, C, HUD, has } from "../core/bridge.js";
+import { KHAC_HE, gocHe, heTacDong } from "../modules/kinh-mach-engine.js";
+import { refreshMiniStatus } from "../modules/navigation.js";
+import { AU, auSave, auCall } from "./auto-core.js";
 /**
  * Module: Siêu AI Tác Chiến 3.0 (5-Phase Tactical Engine), HUD Chiến Đấu & Vòng Lặp Auto
  */
@@ -25,6 +29,8 @@ let _lastAiActionCount = 0;
 function setAiDecision(txt) {
   _lastAiDecisionText = txt || "Đang phân tích…";
   _lastAiActionCount++;
+  gWin._lastAiDecisionText = _lastAiDecisionText;
+  gWin._lastAiActionCount = _lastAiActionCount;
   try {
     const el =
       combatOverlayEl &&
@@ -1489,11 +1495,12 @@ function auFightInstant() {
 
 // ═════════ GIAO DIỆN NỔI TÁC CHIẾN TRONG TRẬN 3.0 (DRAGGABLE & COLLAPSIBLE HUD) ═════════
 let combatAutoActive = false;
-gWin.setCombatAutoActive(false);
+gWin.combatAutoActive = false;
 function setCombatAutoActive(v) {
   combatAutoActive = !!v;
   gWin.combatAutoActive = combatAutoActive;
 }
+gWin.setCombatAutoActive = setCombatAutoActive;
 let combatOverlayEl = null;
 let combatHudCollapsed = false;
 let lastSyncedCombatAutomationStr = "";
@@ -2016,6 +2023,7 @@ export {
   combatStepTimer,
   auFightStep,
   auFightInstant,
+  combatAutoActive,
   setCombatAutoActive,
   combatOverlayEl,
   combatHudCollapsed,
@@ -2037,6 +2045,7 @@ Object.assign(gWin, {
   combatStepTimer,
   auFightStep,
   auFightInstant,
+  combatAutoActive,
   setCombatAutoActive,
   combatOverlayEl,
   combatHudCollapsed,

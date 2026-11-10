@@ -1,4 +1,10 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT, num, esc } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, loadCore, G, C, clone, ctx, ctxLite, realmLabel, has } from "../core/bridge.js";
+import { errBox, render, Assist } from "./navigation.js";
+import { placeName } from "./di-bao.js";
+import { AU } from "../auto/auto-core.js";
+import { rrLoPhiInfo } from "../auto/auto-reroll.js";
 /**
  * Module: Luân Hồi, Thành Tựu, Thiên Kiêu Bảng, Nhân Mạch & Quản Lý Save
  */

@@ -1,4 +1,6 @@
-import { gWin, TOOL_VER, TT, MOD } from "./utils.js";
+import { gWin, TT, sleep0, esc, REALM_TEN, TC_RARE } from "./utils.js";
+import { UI } from "../ui/shell.js";
+import { NL_META, NL_ENEMY, THE_CHAT_DB } from "../data/static-data.js";
 /**
  * Module: Cầu Nối Lõi Game (tuTien.core), Quản Lý State, Context (Memoized) & Mô Phỏng Trận
  */

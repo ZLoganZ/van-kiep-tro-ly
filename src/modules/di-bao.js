@@ -1,4 +1,8 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, TT, num, esc, safeYrs, fold, heTen } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, G, C, ctx, ctxLite, realmName, has, fight } from "../core/bridge.js";
+import { SINH_HE, KHAC_HE, GOC_HE } from "./kinh-mach-engine.js";
+import { render } from "./navigation.js";
 /**
  * Module: Trung Tâm Dị Bảo, Radar Bản Đồ, Pity 500 Năm & Cảnh Báo Nổi
  */

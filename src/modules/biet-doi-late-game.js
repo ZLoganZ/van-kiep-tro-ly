@@ -1,4 +1,11 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, sleep0, pct, num, esc, heTen } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { S, body, G, C, clone, realmName, has, benchEnemies, fight } from "../core/bridge.js";
+import { gocHe, buildCandidates, anneal, polish, drawGrid } from "./kinh-mach-engine.js";
+import { render, progressHtml } from "./navigation.js";
+import { DIBAO } from "./di-bao.js";
+import { copyText } from "./kinh-mach-tab.js";
+import { TC_LOAI, tcBuild, tcGo } from "./tra-cuu.js";
 /**
  * Module: Biệt Đội Late Game · Kinh Mạch Tối Thượng (Best-in-Slot Solver)
  */

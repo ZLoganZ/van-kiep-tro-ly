@@ -1,4 +1,7 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, num, safeYrs } from "../core/utils.js";
+import { S, G, C, ctxLite, has, scanRetreat } from "../core/bridge.js";
+import { DIBAO, scanDiBao, placeName, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, enterDiBaoEvent, checkStat, checkCanTeleport, smartTeleportTo, simDiBaoGuard, findStatBoosters, calcDiBaoPity, removeDiBaoAlert, showDiBaoMini } from "../modules/di-bao.js";
+import { AU_TT_MAX, AU_TT_TEN, AU, auLog, auCall, auLifeLeft, auBypassConfirm } from "./auto-core.js";
 /**
  * Module: Auto Săn Dị Bảo (Nghịch Thiên P8) & Cắm Trại Đón Đầu Pity
  */

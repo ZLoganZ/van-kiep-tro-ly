@@ -1,4 +1,12 @@
-import { gWin, TOOL_VER, TT, MOD } from "../core/utils.js";
+import { gWin, pct, num, esc, tcWord, heTen, STAGE } from "../core/utils.js";
+import { UI } from "../ui/shell.js";
+import { THE_CHAT_DB } from "../data/static-data.js";
+import { S, body, C, clone, ctx, nvNow, realmName, has } from "../core/bridge.js";
+import { gocHe, sinhRa, sinhBoi, khacBoi, oDungDuoc, hySet, evalCurrent, drawGrid } from "./kinh-mach-engine.js";
+import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
+import { isKmItem, lnTag, kmOpenable, kmAutoRunning, applyManh, optimizeMode, kmManualHtml, kmManualBind, copyText } from "./kinh-mach-tab.js";
+import { pieceTable, whereToGet } from "./dot-pha-nghe.js";
+import { sourceNote, itemFull } from "./ban-do-dia-danh.js";
 /**
  * Module: Phân Tích Hướng Build, 6 Meta Presets & Động Cơ Bền Vững Chân Khí
  */
