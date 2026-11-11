@@ -262,7 +262,8 @@ var UI = (function () {
 
   /* ---- Active Tab Glider Engine ---- */
   function updateGlider(targetBtn, gliderEl, isVertical, immediate) {
-    if (!targetBtn || !gliderEl) return;
+    if (gliderEl) gliderEl.classList.remove('active');
+    return;
     var w = targetBtn.offsetWidth,
       h = targetBtn.offsetHeight;
     if (!w && !h) return;
