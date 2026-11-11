@@ -1,6 +1,15 @@
 import { gWin, TT, num, esc, safeYrs, fold, heTen } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, G, C, ctx, ctxLite, realmName, has, fight } from "../core/bridge.js";
+import {
+  S,
+  body,
+  G,
+  C,
+  ctx,
+  ctxLite,
+  realmName,
+  fight,
+} from "../core/bridge.js";
 import { SINH_HE, KHAC_HE, GOC_HE } from "./kinh-mach-engine.js";
 import { render } from "./navigation.js";
 /**
@@ -71,7 +80,8 @@ const DIBAO = {
       relic: "item.thai_co_long_lan",
       gate: [5, 5],
       hc: 120,
-      dia: null,
+      dia: "Hàn Giao Lĩnh",
+      aliases: ["Hàn Giao Lĩnh", "Hàn Giao", "Giao Lĩnh"],
       marker: null,
       p: 0.07,
       bv: "Giao Hoàng",
@@ -99,13 +109,14 @@ const DIBAO = {
       relic: "item.phong_thien_an",
       gate: null,
       hc: 120,
-      dia: null,
+      dia: "Triều Khư",
+      aliases: ["Triều Khư", "Bến Triều Khư", "Đêm Triều Khư"],
       marker: null,
       p: 0.07,
       bv: "Ngũ Tổ Tàn Trận",
       bvcg: 5,
       chk: null,
-      noi: null,
+      noi: "Biển khơi",
     },
     {
       id: "ev.bien_thuyen_rong",
@@ -113,13 +124,14 @@ const DIBAO = {
       relic: "item.thai_hu_chu",
       gate: null,
       hc: 120,
-      dia: null,
+      dia: "Bến Lạc Khư",
+      aliases: ["Bến Lạc Khư", "Lạc Khư", "Bến Đò Lạc Khư"],
       marker: null,
       p: 0.03,
       bv: null,
       bvcg: null,
       chk: "than_thuc +100",
-      noi: null,
+      noi: "Bến cảng",
     },
     {
       id: "ev.di_bao_hon_thap",
@@ -455,8 +467,7 @@ function scanDiBao(roots) {
     }
     if (Array.isArray(o.newRelics)) {
       for (const r of o.newRelics) {
-        if (typeof r === "string" && r.startsWith("item."))
-          runRelics.add(r);
+        if (typeof r === "string" && r.startsWith("item.")) runRelics.add(r);
       }
     }
     if (!nodes && o.nodes && typeof o.nodes === "object") {
@@ -468,14 +479,12 @@ function scanDiBao(roots) {
     if (!m || typeof m !== "object") return;
     if (m.tienLo && Array.isArray(m.tienLo.relics)) {
       for (const r of m.tienLo.relics) {
-        if (typeof r === "string" && r.startsWith("item."))
-          metaRelicSet.add(r);
+        if (typeof r === "string" && r.startsWith("item.")) metaRelicSet.add(r);
       }
     }
     if (Array.isArray(m.relics)) {
       for (const r of m.relics) {
-        if (typeof r === "string" && r.startsWith("item."))
-          metaRelicSet.add(r);
+        if (typeof r === "string" && r.startsWith("item.")) metaRelicSet.add(r);
       }
     }
   }
@@ -521,7 +530,7 @@ function ensureDiBaoWorldCache(c) {
   }
 }
 
-// Lấy tên địa danh của một slot (kèm cache O(1) theo thế giới hiện tại)
+// Lấy tên địa danh của một slot (kèm cache O(1) theo thế giới hiện tại, hỗ trợ cả điểm biển seaPoint)
 function placeName(c, slot) {
   if (slot == null) return "";
   const W = ensureDiBaoWorldCache(c);
@@ -534,9 +543,13 @@ function placeName(c, slot) {
         const inf = W.info(slot);
         if (inf) {
           if (inf.ten) res = inf.ten;
-          else if (inf.diaDanh && inf.diaDanh.ten)
-            res = inf.diaDanh.ten;
+          else if (inf.diaDanh && inf.diaDanh.ten) res = inf.diaDanh.ten;
+          else if (inf.seaPoint && inf.seaPoint.ten) res = inf.seaPoint.ten;
         }
+      }
+      if (!res && typeof W.seaPoint === "function") {
+        const sp = W.seaPoint(slot);
+        if (sp && (sp.ten || sp.name)) res = sp.ten || sp.name;
       }
       if (!res && typeof W.diaDanh === "function") {
         const s = W.slot
@@ -556,56 +569,146 @@ function placeName(c, slot) {
   return res;
 }
 
-// Dò tìm ID slot từ marker hoặc tên địa danh (hỗ trợ cả s.id, s.dia_danh, s.marker và tên chuẩn hóa)
-function findSlotByDiaDanh(diaDanhId, diaName, c) {
+// Dò tìm ID slot từ marker, tên địa danh hoặc điểm biển seaPoint (hỗ trợ cả s.id, s.dia_danh, s.marker, W.seaPoint và aliases)
+function findSlotByDiaDanh(diaDanhId, diaName, c, evObj) {
   const W = ensureDiBaoWorldCache(c);
-  const cacheKey = (diaDanhId || "") + "::" + (diaName || "");
-  if (diaDanhSlotCache.has(cacheKey))
-    return diaDanhSlotCache.get(cacheKey);
+  const evIdKey = evObj && evObj.id ? evObj.id : "";
+  const cacheKey = (diaDanhId || "") + "::" + (diaName || "") + "::" + evIdKey;
+  if (diaDanhSlotCache.has(cacheKey)) return diaDanhSlotCache.get(cacheKey);
   try {
     if (!W || !Array.isArray(W.slots)) return null;
-    if (diaDanhId) {
-      const targetId = String(diaDanhId);
-      const byMarker = W.slots.find(
-        (s) =>
-          s &&
-          (String(s.id) === targetId ||
-            String(s.dia_danh) === targetId ||
-            (s.marker != null && String(s.marker) === targetId)),
+    if (!evObj && Array.isArray(DIBAO.ev)) {
+      evObj = DIBAO.ev.find(
+        (e) =>
+          e &&
+          ((diaDanhId && e.marker === diaDanhId) ||
+            (diaName && e.dia && fold(e.dia).trim() === fold(diaName).trim())),
       );
-      if (byMarker && byMarker.id != null) {
-        const res = String(byMarker.id);
-        diaDanhSlotCache.set(cacheKey, res);
-        return res;
+    }
+
+    const targetIds = new Set();
+    if (diaDanhId) targetIds.add(String(diaDanhId));
+    if (evObj) {
+      if (evObj.marker) targetIds.add(String(evObj.marker));
+      const slug = evObj.id ? evObj.id.replace(/^ev\.(di_bao_|bien_)/, "") : "";
+      if (slug) {
+        targetIds.add(slug);
+        targetIds.add("sea:" + slug);
+        targetIds.add("bien:" + slug);
+        targetIds.add("hoang:" + slug);
+      }
+      try {
+        const Cc = C();
+        const encDef = Cc && Cc.encounters && Cc.encounters.get(evObj.id);
+        if (encDef) {
+          if (encDef.marker) targetIds.add(String(encDef.marker));
+          if (encDef.slot != null) targetIds.add(String(encDef.slot));
+          if (encDef.dia_danh) targetIds.add(String(encDef.dia_danh));
+          if (encDef.sea_point) targetIds.add(String(encDef.sea_point));
+        }
+      } catch (e) {}
+    }
+
+    if (targetIds.size > 0) {
+      for (const s of W.slots) {
+        if (!s || s.id == null) continue;
+        const sId = String(s.id);
+        const sDd = s.dia_danh != null ? String(s.dia_danh) : "";
+        const sMk = s.marker != null ? String(s.marker) : "";
+        const sSea =
+          s.sea != null
+            ? String(s.sea)
+            : s.sea_point != null
+              ? String(s.sea_point)
+              : "";
+        if (
+          targetIds.has(sId) ||
+          (sDd && targetIds.has(sDd)) ||
+          (sMk && targetIds.has(sMk)) ||
+          (sSea && targetIds.has(sSea))
+        ) {
+          diaDanhSlotCache.set(cacheKey, sId);
+          return sId;
+        }
+        if (typeof W.seaPoint === "function") {
+          try {
+            const sp = W.seaPoint(s.id);
+            if (
+              sp &&
+              ((sp.id && targetIds.has(String(sp.id))) ||
+                (sp.marker && targetIds.has(String(sp.marker))))
+            ) {
+              diaDanhSlotCache.set(cacheKey, sId);
+              return sId;
+            }
+          } catch (e) {}
+        }
       }
     }
-    if (diaName) {
-      const fTarget = fold(diaName).trim();
+
+    const rawNames = [];
+    if (diaName) rawNames.push(diaName);
+    if (evObj) {
+      if (evObj.dia && !rawNames.includes(evObj.dia)) rawNames.push(evObj.dia);
+      if (Array.isArray(evObj.aliases)) {
+        for (const al of evObj.aliases) {
+          if (al && !rawNames.includes(al)) rawNames.push(al);
+        }
+      }
+      try {
+        const Cc = C();
+        const encDef = Cc && Cc.encounters && Cc.encounters.get(evObj.id);
+        if (encDef && (encDef.dia || encDef.dia_danh)) {
+          rawNames.push(encDef.dia || encDef.dia_danh);
+        }
+      } catch (e) {}
+    }
+
+    const fTargets = rawNames
+      .map((n) => fold(String(n || "")).trim())
+      .filter(Boolean);
+
+    if (fTargets.length > 0) {
       // 1. Ưu tiên khớp chính xác qua ddBuild nếu có
       try {
         if (typeof ddBuild === "function") {
           const X = ddBuild(c || ctxLite());
           if (X && Array.isArray(X.list)) {
-            const exactDd = X.list.find((x) => fold(x.name).trim() === fTarget);
-            if (exactDd && exactDd.id != null) {
-              const res = String(exactDd.id);
-              diaDanhSlotCache.set(cacheKey, res);
-              return res;
+            for (const fT of fTargets) {
+              const exactDd = X.list.find((x) => fold(x.name).trim() === fT);
+              if (exactDd && exactDd.id != null) {
+                const res = String(exactDd.id);
+                diaDanhSlotCache.set(cacheKey, res);
+                return res;
+              }
             }
           }
         }
       } catch (e) {}
 
-      // 2. Quét trên W.slots (ưu tiên khớp chính xác trước, khớp một phần sau)
+      // 2. Quét trên W.slots (bao gồm cả W.seaPoint, W.info, W.diaDanh)
       let partialMatch = null;
       for (const s of W.slots) {
         if (!s || s.id == null) continue;
         const names = [];
+        if (s.ten) names.push(s.ten);
+        if (typeof W.seaPoint === "function") {
+          try {
+            const sp = W.seaPoint(s.id);
+            if (sp) {
+              if (sp.ten) names.push(sp.ten);
+              if (sp.name) names.push(sp.name);
+              if (sp.id) names.push(String(sp.id).replace(/_/g, " "));
+            }
+          } catch (e) {}
+        }
         if (typeof W.info === "function") {
           try {
             const inf = W.info(s.id);
             if (inf) {
               if (inf.diaDanh && inf.diaDanh.ten) names.push(inf.diaDanh.ten);
+              if (inf.seaPoint && inf.seaPoint.ten)
+                names.push(inf.seaPoint.ten);
               if (inf.ten) names.push(inf.ten);
             }
           } catch (e) {}
@@ -629,12 +732,15 @@ function findSlotByDiaDanh(diaDanhId, diaName, c) {
         for (const nm of names) {
           const fNm = fold(nm).trim();
           if (!fNm) continue;
-          if (fNm === fTarget) {
+          if (fTargets.includes(fNm)) {
             const res = String(s.id);
             diaDanhSlotCache.set(cacheKey, res);
             return res;
           }
-          if (!partialMatch && (fNm.includes(fTarget) || fTarget.includes(fNm))) {
+          if (
+            !partialMatch &&
+            fTargets.some((fT) => fNm.includes(fT) || fT.includes(fNm))
+          ) {
             partialMatch = String(s.id);
           }
         }
@@ -646,6 +752,71 @@ function findSlotByDiaDanh(diaDanhId, diaName, c) {
     }
   } catch (e) {}
   return null;
+}
+
+// Tìm danh sách các slot ứng viên để tuần tra / kích hoạt Đạo Diễn cho Dị Bảo (đặc biệt với Dị Bảo biển / bến cảng / hoang dã)
+function findCandidateSlotsForRelicEv(ev, c, run) {
+  if (!ev) return [];
+  const ctxObj = c || ctxLite();
+  const W = ensureDiBaoWorldCache(ctxObj);
+  const directSlot = findSlotByDiaDanh(ev.marker, ev.dia, ctxObj, ev);
+  if (directSlot != null) return [String(directSlot)];
+  if (!W || !Array.isArray(W.slots)) return [];
+
+  const curRun = run || (G() && G().state && G().state.run);
+  const K = S.core;
+  const isSeaEv =
+    (ev.id && ev.id.startsWith("ev.bien_")) ||
+    ev.noi === "Biển khơi" ||
+    ev.noi === "Bến cảng";
+
+  const candidates = [];
+  for (const s of W.slots) {
+    if (!s || s.id == null || s.an) continue;
+    const sId = String(s.id);
+    if (K && typeof K.slotDaMo === "function") {
+      try {
+        if (!K.slotDaMo(ctxObj, s.id)) continue;
+      } catch (e) {}
+    }
+    let matched = false;
+    if (isSeaEv) {
+      try {
+        if (typeof W.seaPoint === "function" && W.seaPoint(s.id)) {
+          matched = true;
+        }
+      } catch (e) {}
+      if (!matched) {
+        const pNm = fold(placeName(ctxObj, s.id));
+        if (/(ben|cang|bien|dao|khu|hai|thuyen|do)/.test(pNm)) {
+          matched = true;
+        }
+      }
+    } else if (ev.noi === "Hoang dã" || ev.id === "ev.di_bao_han_giao_linh") {
+      let isWildSlot = !s.dia_danh;
+      if (!isWildSlot && typeof W.info === "function") {
+        try {
+          const inf = W.info(s.id);
+          if (inf && (!inf.slot || !inf.slot.co_dinh)) isWildSlot = true;
+        } catch (e) {}
+      }
+      if (isWildSlot) matched = true;
+    }
+
+    if (matched) {
+      let y = 999;
+      if (K && typeof K.travelYears === "function" && curRun) {
+        try {
+          const ty = K.travelYears(ctxObj, s.id);
+          if (Number.isFinite(ty)) y = ty;
+        } catch (e) {}
+      }
+      candidates.push({ slot: sId, y });
+    }
+  }
+
+  candidates.sort((a, b) => a.y - b.y);
+  return candidates.slice(0, 8).map((x) => x.slot);
 }
 
 // Kiểm tra nhân vật có đang thực sự cầm/trang bị vật phẩm Dị Bảo trong kiếp này không
@@ -669,8 +840,7 @@ function hasRelicItemInRun(id, run) {
     nv.kinhMach &&
     Array.isArray(nv.kinhMach.loadouts) &&
     nv.kinhMach.loadouts.some(
-      (bo) =>
-        Array.isArray(bo) && bo.some((m) => m && m.item === id),
+      (bo) => Array.isArray(bo) && bo.some((m) => m && m.item === id),
     )
   )
     return true;
@@ -715,9 +885,17 @@ function getKnownDiBaoSlots(c) {
   }
   const sSet = new Set();
   for (const ev of DIBAO.ev) {
-    if (ev && (ev.marker || ev.dia)) {
-      const sl = findSlotByDiaDanh(ev.marker, ev.dia, c);
+    if (ev) {
+      const sl = findSlotByDiaDanh(ev.marker, ev.dia, c, ev);
       if (sl != null) sSet.add(String(sl));
+    }
+  }
+  if (W && Array.isArray(W.slots) && typeof W.seaPoint === "function") {
+    for (const s of W.slots) {
+      if (!s || s.id == null || s.an) continue;
+      try {
+        if (W.seaPoint(s.id)) sSet.add(String(s.id));
+      } catch (e) {}
     }
   }
   if (W) _dibaoKnownSlotsWorld = W;
@@ -725,14 +903,28 @@ function getKnownDiBaoSlots(c) {
   return sSet;
 }
 
-function scanMapActiveDiBao(run, c) {
+function scanMapActiveDiBao(run, c, forceFresh) {
   const map = new Map();
   if (!run) return map;
   const nam = typeof run.nam === "number" ? run.nam : null;
   const now = Date.now();
   const nodeKeys = run.nodes ? Object.keys(run.nodes).join(",") : "";
-  const sig = `${nam}_${run.viTri}_${run.oNoi || ""}_${run.rng || ""}_${nodeKeys}`;
-  if (_activeDiBaoCacheMap && _activeDiBaoCacheSig === sig && now - _activeDiBaoCacheTime < 350) {
+  let ncDibaoSig = "";
+  if (run.noiChon) {
+    for (const [k, nc] of Object.entries(run.noiChon)) {
+      if (!nc) continue;
+      const sk = Array.isArray(nc.suKien) ? nc.suKien.join("|") : "";
+      const cx = Array.isArray(nc.contextual) ? nc.contextual.join("|") : "";
+      if (sk || cx) ncDibaoSig += `${k}:${sk},${cx};`;
+    }
+  }
+  const sig = `${nam}_${run.viTri}_${run.oNoi || ""}_${run.rng || ""}_${nodeKeys}_${ncDibaoSig}`;
+  if (
+    !forceFresh &&
+    _activeDiBaoCacheMap &&
+    _activeDiBaoCacheSig === sig &&
+    now - _activeDiBaoCacheTime < 350
+  ) {
     return new Map(_activeDiBaoCacheMap);
   }
   const W = ensureDiBaoWorldCache(c);
@@ -759,11 +951,7 @@ function scanMapActiveDiBao(run, c) {
   if (run.nodes) {
     for (const [slotStr, n] of Object.entries(run.nodes)) {
       if (!n || !n.encounter) continue;
-      if (
-        n.hetHanNam !== undefined &&
-        nam != null &&
-        n.hetHanNam <= nam
-      )
+      if (n.hetHanNam !== undefined && nam != null && n.hetHanNam <= nam)
         continue;
       const ev = DIBAO.evMap.get(n.encounter);
       if (!ev || isEventCompletedOrCooldown(ev)) continue;
@@ -806,27 +994,37 @@ function scanMapActiveDiBao(run, c) {
       if (!hasDibaoInNc && !isKnownDibaoSlot) continue;
 
       // Nếu có director.placeActivities: dùng chính hàm của game để kiểm tra hoạt động thực sự đang mở (không bị lockedReason) tại slotKey
-      if (hasPlaceActivities && hasDibaoInNc) {
+      if (hasPlaceActivities && (hasDibaoInNc || isKnownDibaoSlot)) {
         try {
-          const acts = director.placeActivities(c || ctxLite(), String(slotKey));
+          const acts = director.placeActivities(
+            c || ctxLite(),
+            String(slotKey),
+          );
           if (Array.isArray(acts)) {
             for (const a of acts) {
               if (!a || !a.id || map.has(a.id) || a.lockedReason) continue;
               const ev = DIBAO.evMap.get(a.id);
               if (!ev || isEventCompletedOrCooldown(ev)) continue;
+              if (
+                ev.gate &&
+                run.nhanVat &&
+                (run.nhanVat.canhGioi ?? 0) < ev.gate[0]
+              )
+                continue;
 
-              let remYears = undefined;
               const isTemp =
                 (Array.isArray(nc.suKien) && nc.suKien.includes(a.id)) ||
                 (Array.isArray(nc.contextual) && nc.contextual.includes(a.id));
-              if (
-                isTemp &&
-                nc.namLamMoi !== undefined &&
-                nam != null &&
-                nam >= nc.namLamMoi &&
-                nam - nc.namLamMoi < 5
-              ) {
-                remYears = Math.max(0, 5 - (nam - nc.namLamMoi));
+              const isSeaOrSpecial =
+                ev.id.startsWith("ev.bien_") || a.loai === "overlay";
+              if (!isTemp && !isSeaOrSpecial && !hasDibaoInNc) continue;
+
+              let remYears = undefined;
+              if (isTemp && nc.namLamMoi !== undefined && nam != null) {
+                if (nam - nc.namLamMoi >= 5) continue;
+                if (nam >= nc.namLamMoi) {
+                  remYears = Math.max(0, 5 - (nam - nc.namLamMoi));
+                }
               }
 
               map.set(ev.id, {
@@ -834,9 +1032,7 @@ function scanMapActiveDiBao(run, c) {
                 slot: slotKey,
                 actId: a.id,
                 hetHanNam:
-                  remYears != null && nam != null
-                    ? nam + remYears
-                    : undefined,
+                  remYears != null && nam != null ? nam + remYears : undefined,
                 vars: nc.vars,
                 source: "placeActivity",
                 ev,
@@ -854,11 +1050,7 @@ function scanMapActiveDiBao(run, c) {
         if (!encId || map.has(encId)) continue;
         const ev = DIBAO.evMap.get(encId);
         if (!ev || isEventCompletedOrCooldown(ev)) continue;
-        if (
-          ev.gate &&
-          run.nhanVat &&
-          (run.nhanVat.canhGioi ?? 0) < ev.gate[0]
-        )
+        if (ev.gate && run.nhanVat && (run.nhanVat.canhGioi ?? 0) < ev.gate[0])
           continue;
 
         let remYears = undefined;
@@ -873,9 +1065,7 @@ function scanMapActiveDiBao(run, c) {
           encId: ev.id,
           slot: slotKey,
           hetHanNam:
-            remYears != null && nam != null
-              ? nam + remYears
-              : undefined,
+            remYears != null && nam != null ? nam + remYears : undefined,
           vars: nc.vars,
           source: "noiChon",
           ev,
@@ -887,27 +1077,20 @@ function scanMapActiveDiBao(run, c) {
   // 3. Quét từ theGioi.dangDien (thế cục thế giới đang diễn ra)
   if (run.theGioi && Array.isArray(run.theGioi.dangDien)) {
     for (const dd of run.theGioi.dangDien) {
-      if (
-        !dd ||
-        (dd.denNam !== undefined && nam != null && dd.denNam <= nam)
-      )
+      if (!dd || (dd.denNam !== undefined && nam != null && dd.denNam <= nam))
         continue;
       const slot = dd.slot;
       try {
         const cnt = C();
         const theCucContent =
-          cnt && cnt.theCuc && cnt.theCuc.get
-            ? cnt.theCuc.get(dd.id)
-            : null;
+          cnt && cnt.theCuc && cnt.theCuc.get ? cnt.theCuc.get(dd.id) : null;
         if (theCucContent && Array.isArray(theCucContent.encounter)) {
           for (const encId of theCucContent.encounter) {
             if (!encId || map.has(encId)) continue;
             const ev = DIBAO.evMap.get(encId);
             if (ev && !isEventCompletedOrCooldown(ev)) {
               const resolvedSlot =
-                slot != null
-                  ? slot
-                  : findSlotByDiaDanh(ev.marker, ev.dia, c);
+                slot != null ? slot : findSlotByDiaDanh(ev.marker, ev.dia, c);
               if (resolvedSlot != null) {
                 map.set(ev.id, {
                   encId: ev.id,
@@ -928,9 +1111,7 @@ function scanMapActiveDiBao(run, c) {
   if (hasPlaceActivities) {
     try {
       const curSlots = new Set(
-        [run.oNoi, run.viTri]
-          .filter((x) => x != null && x !== "")
-          .map(String),
+        [run.oNoi, run.viTri].filter((x) => x != null && x !== "").map(String),
       );
       for (const curSlot of curSlots) {
         const acts = director.placeActivities(c || ctxLite(), curSlot);
@@ -1081,11 +1262,7 @@ function findDiaSlot(c, diaName, marker) {
         run = (c && c.run) || (g && g.state && g.state.run);
       if (run && checkIsHere(c, run, diaName, null)) {
         return String(
-          run.viTri != null
-            ? run.viTri
-            : run.oNoi != null
-              ? run.oNoi
-              : "",
+          run.viTri != null ? run.viTri : run.oNoi != null ? run.oNoi : "",
         );
       }
     } catch (e) {}
@@ -1359,7 +1536,6 @@ function playDiBaoAlertSound() {
   } catch (e) {}
 }
 
-
 // Kiểm tra chỉ số kiểm định cho sự kiện Dị Bảo
 function checkStat(chkStr, nvIn) {
   if (!chkStr) return { ok: true, text: "Không yêu cầu" };
@@ -1402,15 +1578,16 @@ function checkCanTeleport(slot) {
     if (!g || !g.state || !g.state.run) return null;
     const r = g.state.run;
     if (String(r.viTri) === String(slot)) return null;
-    if (
-      typeof ddTeleSources !== "function" ||
-      typeof ddTeleOpts !== "function"
-    )
+    if (typeof ddTeleSources !== "function" || typeof ddTeleOpts !== "function")
       return null;
     const now = Date.now();
     const nv = r.nhanVat || {};
     const sig = `${r.viTri}_${r.oNoi || ""}_${r.nam}_${nv.linhThach || 0}_${r.active ? r.active.id : ""}`;
-    if (!_teleCacheOpts || _teleCacheSig !== sig || now - _teleCacheTime > 400) {
+    if (
+      !_teleCacheOpts ||
+      _teleCacheSig !== sig ||
+      now - _teleCacheTime > 400
+    ) {
       const srcs = ddTeleSources(g);
       _teleCacheOpts = srcs.map((src) => ({ src, opts: ddTeleOpts(g, src) }));
       _teleCacheSig = sig;
@@ -1502,7 +1679,9 @@ function _getGuardPlayerSig(nv) {
   const km = (nv.kinhMach && nv.kinhMach.manh) || [];
   const kmStr = km.map((m) => `${m.item}@${m.x},${m.y},${m.xoay}`).join("|");
   const tbStr = nv.trangBi ? Object.values(nv.trangBi).join(",") : "";
-  const bmStr = nv.natal ? `${nv.natal.item}:${nv.natal.tier}:${nv.natal.grade}` : "";
+  const bmStr = nv.natal
+    ? `${nv.natal.item}:${nv.natal.tier}:${nv.natal.grade}`
+    : "";
   return `${nv.canhGioi}_${nv.tieuCanhGioi}_${Math.floor(nv.tuVi || 0)}_${nv.thuongThe || 0}_${kmStr}_${tbStr}_${bmStr}`;
 }
 
@@ -1543,8 +1722,7 @@ function simDiBaoGuard(nv, e) {
       foeDef =
         [...Cc.enemies.values()].find(
           (x) => (x.canh_gioi ?? 0) === cg && x.muc === "tinh_anh",
-        ) ||
-        [...Cc.enemies.values()].find((x) => (x.canh_gioi ?? 0) === cg);
+        ) || [...Cc.enemies.values()].find((x) => (x.canh_gioi ?? 0) === cg);
     }
     if (!foeDef) return null;
 
@@ -1693,9 +1871,7 @@ function calcDiBaoPity(run, nv, sc, targetRelics) {
       mult: "1.0",
       guaranteed: false,
       topCamping: [],
-      allTargetOwned: relSet
-        ? [...relSet].every((r) => isOwned(r))
-        : false,
+      allTargetOwned: relSet ? [...relSet].every((r) => isOwned(r)) : false,
     };
   }
 
@@ -1754,7 +1930,7 @@ function calcDiBaoPity(run, nv, sc, targetRelics) {
   }
 
   const topCamping = eventWaits
-    .filter((x) => x.e.dia)
+    .filter((x) => x.e && (x.e.dia || x.e.noi || x.e.id))
     .sort((a, b) => {
       const relA = DIBAO.rel[a.e.relic] || {};
       const relB = DIBAO.rel[b.e.relic] || {};
@@ -1779,14 +1955,12 @@ var lastDismissedMini = null;
 
 function removeDiBaoAlert() {
   const alertEl = document.getElementById("vkx-dibao-alert");
-  if (alertEl && alertEl.parentNode)
-    alertEl.parentNode.removeChild(alertEl);
+  if (alertEl && alertEl.parentNode) alertEl.parentNode.removeChild(alertEl);
 }
 
 function removeDiBaoMini() {
   const miniEl = document.getElementById("vkx-dibao-mini");
-  if (miniEl && miniEl.parentNode)
-    miniEl.parentNode.removeChild(miniEl);
+  if (miniEl && miniEl.parentNode) miniEl.parentNode.removeChild(miniEl);
 }
 
 function makeMiniDraggable(el) {
@@ -1814,18 +1988,12 @@ function makeMiniDraggable(el) {
     el.style.left =
       Math.max(
         8,
-        Math.min(
-          window.innerWidth - el.offsetWidth - 8,
-          dragSt.ox + dx,
-        ),
+        Math.min(window.innerWidth - el.offsetWidth - 8, dragSt.ox + dx),
       ) + "px";
     el.style.top =
       Math.max(
         8,
-        Math.min(
-          window.innerHeight - el.offsetHeight - 8,
-          dragSt.oy + dy,
-        ),
+        Math.min(window.innerHeight - el.offsetHeight - 8, dragSt.oy + dy),
       ) + "px";
   });
   const endDrag = function () {
@@ -1873,10 +2041,8 @@ function showDiBaoMini(t, isHere) {
       const maxL = Math.max(8, window.innerWidth - 180);
       const maxT = Math.max(8, window.innerHeight - 40);
       miniEl.style.transform = "none";
-      miniEl.style.left =
-        Math.min(Math.max(8, savedPos.left), maxL) + "px";
-      miniEl.style.top =
-        Math.min(Math.max(8, savedPos.top), maxT) + "px";
+      miniEl.style.left = Math.min(Math.max(8, savedPos.left), maxL) + "px";
+      miniEl.style.top = Math.min(Math.max(8, savedPos.top), maxT) + "px";
     } else {
       miniEl.style.top = "12px";
       miniEl.style.left = "50%";
@@ -2083,8 +2249,7 @@ function checkDiBaoAlert() {
       const encId = item.encId;
       const slot = item.slot;
       const hetHanNam = item.hetHanNam;
-      if (hetHanNam !== undefined && nam != null && hetHanNam <= nam)
-        continue;
+      if (hetHanNam !== undefined && nam != null && hetHanNam <= nam) continue;
 
       const ev = item.ev || DIBAO.evMap.get(encId);
       if (ev && !isOwned(ev.relic)) {
@@ -2300,7 +2465,8 @@ function tabDiBao() {
   // Chuẩn bị danh sách 21 Dị Bảo
   const allDb = [];
   for (const e of DIBAO.ev) {
-    if (!e || !e.relic || typeof e.relic !== "string" || !e.relic.trim()) continue;
+    if (!e || !e.relic || typeof e.relic !== "string" || !e.relic.trim())
+      continue;
     const relInfo =
       DIBAO.rel[e.relic] ||
       (Cc && Cc.items ? Cc.items.get(e.relic) : null) ||
@@ -2353,9 +2519,7 @@ function tabDiBao() {
   // 2 Boss Hóa Thần Dị Bảo
   for (const bid of DIBAO.boss) {
     const relInfo =
-      DIBAO.rel[bid] ||
-      (Cc && Cc.items ? Cc.items.get(bid) : null) ||
-      {};
+      DIBAO.rel[bid] || (Cc && Cc.items ? Cc.items.get(bid) : null) || {};
     const extra = DIBAO_EXTRA[bid] || {};
     const done = isOwned(bid);
     const isCarry =
@@ -2364,8 +2528,7 @@ function tabDiBao() {
     allDb.push({
       id: bid,
       ten: relInfo.ten || bid,
-      loai:
-        relInfo.loai || (bid.includes("dan") ? "dan_duoc" : "phap_khi"),
+      loai: relInfo.loai || (bid.includes("dan") ? "dan_duoc" : "phap_khi"),
       pham_cap: 8,
       gia: relInfo.gia || 0,
       bd: isCarry,
@@ -2398,8 +2561,7 @@ function tabDiBao() {
   const baoLucPoints = metaRelics.length * 5;
 
   // Tính toán bảo hiểm Pity
-  const sdbCfg =
-    (typeof AU !== "undefined" && AU.cfg && AU.cfg.sdb) || {};
+  const sdbCfg = (typeof AU !== "undefined" && AU.cfg && AU.cfg.sdb) || {};
   const validEvs = DIBAO.ev.filter(
     (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
   );
@@ -2497,11 +2659,7 @@ function tabDiBao() {
             const relInf = DIBAO.rel[cp.e.relic] || {};
             const pctVal = Math.round((cp.w || 0) * 100);
             const pctStr =
-              cp.wait >= 500
-                ? " · 100% 🔥"
-                : pctVal > 0
-                  ? ` · ${pctVal}%`
-                  : "";
+              cp.wait >= 500 ? " · 100% 🔥" : pctVal > 0 ? ` · ${pctVal}%` : "";
             return `
             <div style="background:var(--bg3);padding:4px 8px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:center;gap:6px">
               <span>📍 <b>${esc(cp.e.dia)}</b> (${esc(relInf.ten || cp.e.relic)}${pctStr})</span>
@@ -2525,8 +2683,8 @@ function tabDiBao() {
 
       <!-- Mục tiêu Dị Bảo đang nở trên Map -->
       ${
-mapActive.length > 0
-  ? `
+        mapActive.length > 0
+          ? `
 <div class="vk-card" style="border:1px solid #ff3366">
   <h3 style="margin:0 0 8px;color:#ff3366;display:flex;align-items:center;gap:6px">
     <span class="do-radar-pulse" style="width:10px;height:10px;border-radius:50%;background:#ff3366"></span>
@@ -2541,8 +2699,7 @@ mapActive.length > 0
         } catch (err) {}
       }
       const canTele = checkCanTeleport(r.node.slot);
-      const walkRisk =
-        r.nodeLeft != null && isFinite(y) && r.nodeLeft < y;
+      const walkRisk = r.nodeLeft != null && isFinite(y) && r.nodeLeft < y;
       const isHere =
         run &&
         (String(run.viTri) === String(r.node.slot) ||
@@ -2575,7 +2732,7 @@ mapActive.length > 0
     .join("")}
 </div>
       `
-  : ""
+          : ""
       }
 
       <!-- Bộ lọc Dị Bảo -->
@@ -2638,8 +2795,7 @@ mapActive.length > 0
           (fold(x.e.ten).includes(qStr) ||
             fold(x.e.dia || "").includes(qStr) ||
             fold(x.e.bv || "").includes(qStr));
-        const matchMota =
-          x.extra && fold(x.extra.mota || "").includes(qStr);
+        const matchMota = x.extra && fold(x.extra.mota || "").includes(qStr);
         if (!matchName && !matchEv && !matchMota) return false;
       }
       return true;
@@ -2670,9 +2826,7 @@ mapActive.length > 0
 
         // Huy hiệu
         const badges = [];
-        badges.push(
-          '<span class="do-badge-nt">Phẩm 8 Nghịch Thiên</span>',
-        );
+        badges.push('<span class="do-badge-nt">Phẩm 8 Nghịch Thiên</span>');
         if (r.guide)
           badges.push(
             '<span class="do-badge-guide">🔔 Dẫn Hồn (Không Tốn Ô Bến Đò)</span>',
@@ -2762,8 +2916,7 @@ mapActive.length > 0
             run &&
             (String(run.viTri) === String(r.node.slot) ||
               String(run.oNoi) === String(r.node.slot));
-          const isInside =
-            run && String(run.oNoi) === String(r.node.slot);
+          const isInside = run && String(run.oNoi) === String(r.node.slot);
           travelBox = `
     <div style="margin-top:8px;padding:6px;background:rgba(255,51,102,0.1);border:1px solid #ff3366;border-radius:4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px">
       <span style="font-size:12px">📍 <b>${esc(c ? placeName(c, r.node.slot) : "Slot " + r.node.slot)}</b> · Hạn: <b style="color:#f59e0b">${r.nodeLeft != null ? r.nodeLeft + " năm" : "Vô hạn"}</b> · Đi: <b>${isHere ? "Ngay đây ✓" : safeYrs(y)}</b></span>
@@ -2917,9 +3070,7 @@ mapActive.length > 0
         const relName = (DIBAO.rel[rId] && DIBAO.rel[rId].ten) || rId;
         try {
           UI.notify(
-            "🎯 Đã chọn mục tiêu: " +
-              relName +
-              " trong Auto Săn Dị Bảo.",
+            "🎯 Đã chọn mục tiêu: " + relName + " trong Auto Săn Dị Bảo.",
           );
         } catch (e) {}
         S.tab = "asdb";
@@ -2957,7 +3108,11 @@ mapActive.length > 0
       if (rId && rId.trim()) {
         const sdbCfg = AU.cfg.sdb;
         const validEvs = DIBAO.ev.filter(
-          (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+          (e) =>
+            e &&
+            e.relic &&
+            typeof e.relic === "string" &&
+            e.relic.trim() !== "",
         );
         if (!Array.isArray(sdbCfg.targetRelics)) {
           sdbCfg.targetRelics = validEvs.map((e) => e.relic);
@@ -2987,8 +3142,7 @@ mapActive.length > 0
       return;
     }
 
-    const autoCfgBtn =
-      ev.target.closest && ev.target.closest("#db-auto-cfg");
+    const autoCfgBtn = ev.target.closest && ev.target.closest("#db-auto-cfg");
     if (autoCfgBtn) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -3027,8 +3181,7 @@ mapActive.length > 0
       return;
     }
 
-    const travelBtn =
-      ev.target.closest && ev.target.closest(".do-btn-travel");
+    const travelBtn = ev.target.closest && ev.target.closest(".do-btn-travel");
     if (travelBtn) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -3069,8 +3222,7 @@ mapActive.length > 0
       return;
     }
 
-    const teleBtn =
-      ev.target.closest && ev.target.closest(".do-btn-teleport");
+    const teleBtn = ev.target.closest && ev.target.closest(".do-btn-teleport");
     if (teleBtn) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -3126,6 +3278,7 @@ export {
   ensureDiBaoWorldCache,
   placeName,
   findSlotByDiaDanh,
+  findCandidateSlotsForRelicEv,
   hasRelicItemInRun,
   checkOwnedRelic,
   _activeDiBaoCacheSig,
@@ -3183,6 +3336,7 @@ Object.assign(gWin, {
   ensureDiBaoWorldCache,
   placeName,
   findSlotByDiaDanh,
+  findCandidateSlotsForRelicEv,
   hasRelicItemInRun,
   checkOwnedRelic,
   _activeDiBaoCacheSig,

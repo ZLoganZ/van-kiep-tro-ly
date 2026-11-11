@@ -1,8 +1,23 @@
-import { gWin, sleep0, pct, num, esc, heTen } from "../core/utils.js";
+import { gWin, sleep0, num, esc, heTen } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, G, C, clone, realmName, has, benchEnemies, fight } from "../core/bridge.js";
-import { gocHe, buildCandidates, anneal, polish, drawGrid } from "./kinh-mach-engine.js";
-import { render, progressHtml } from "./navigation.js";
+import {
+  S,
+  body,
+  G,
+  C,
+  clone,
+  realmName,
+  benchEnemies,
+  fight,
+} from "../core/bridge.js";
+import {
+  gocHe,
+  buildCandidates,
+  anneal,
+  polish,
+  drawGrid,
+} from "./kinh-mach-engine.js";
+import { render } from "./navigation.js";
 import { DIBAO } from "./di-bao.js";
 import { copyText } from "./kinh-mach-tab.js";
 import { TC_LOAI, tcBuild, tcGo } from "./tra-cuu.js";
@@ -162,9 +177,7 @@ function bisSelectPool(deduced, targetRealm, mode) {
   const setForbidden = new Set(
     deduced.forbidden.map((h) => String(h).toLowerCase()),
   );
-  const baseHeSet = new Set(
-    deduced.baseHe.map((h) => String(h).toLowerCase()),
-  );
+  const baseHeSet = new Set(deduced.baseHe.map((h) => String(h).toLowerCase()));
   const baseRootSet = new Set(
     deduced.baseRoots.map((h) => String(h).toLowerCase()),
   );
@@ -203,9 +216,7 @@ function bisSelectPool(deduced, targetRealm, mode) {
 
     // Thưởng tương thích Linh Căn hiện tại:
     const matchesBaseHe = heArr.some((h) => baseHeSet.has(h));
-    const matchesBaseRoot = heArr.some((h) =>
-      baseRootSet.has(gocHe(h)),
-    );
+    const matchesBaseRoot = heArr.some((h) => baseRootSet.has(gocHe(h)));
     const matchesRelRoot = heArr.some((h) => relRootSet.has(gocHe(h)));
 
     if (matchesBaseHe) {
@@ -229,8 +240,7 @@ function bisSelectPool(deduced, targetRealm, mode) {
         score += Math.min(30, Math.round(totalUy / 10));
       }
     } else if (mode === "tu") {
-      if (it.biDong && (it.biDong.toc_do || it.biDong.dot_pha))
-        score += 55;
+      if (it.biDong && (it.biDong.toc_do || it.biDong.dot_pha)) score += 55;
     } else {
       // bal
       if (it.biDong && (it.biDong.hp || it.biDong.giap)) score += 40;
@@ -238,10 +248,7 @@ function bisSelectPool(deduced, targetRealm, mode) {
     }
 
     // Dị bảo thế giới hoặc Boss rơi:
-    if (
-      DIBAO.ev.some((e) => e.relic === it.id) ||
-      DIBAO.boss.includes(it.id)
-    ) {
+    if (DIBAO.ev.some((e) => e.relic === it.id) || DIBAO.boss.includes(it.id)) {
       score += 30;
     }
 
@@ -282,9 +289,7 @@ function bisSelectPool(deduced, targetRealm, mode) {
 
   // Nếu thiếu, bù thêm các món còn lại có điểm cao nhất
   if (pool.length < 32) {
-    const remaining = [...cpList, ...pkList].sort(
-      (a, b) => b.score - a.score,
-    );
+    const remaining = [...cpList, ...pkList].sort((a, b) => b.score - a.score);
     for (const entry of remaining) {
       addEntry(entry);
       if (pool.length >= 36) break;
@@ -330,9 +335,7 @@ function makeBisEval(nv0, enemies, mode, deduced) {
     c = C();
   const cache = new Map();
   const g = K.luoiKinhMach(c, nv0);
-  const baseHeSet = new Set(
-    deduced.baseHe.map((h) => String(h).toLowerCase()),
-  );
+  const baseHeSet = new Set(deduced.baseHe.map((h) => String(h).toLowerCase()));
   const baseRootSet = new Set(
     deduced.baseRoots.map((h) => String(h).toLowerCase()),
   );
@@ -377,12 +380,8 @@ function makeBisEval(nv0, enemies, mode, deduced) {
       const heArr = Array.isArray(heRaw) ? heRaw : [heRaw];
       let chosenHe =
         heArr.find((h) => baseHeSet.has(String(h).toLowerCase())) ||
-        heArr.find((h) =>
-          baseRootSet.has(gocHe(String(h).toLowerCase())),
-        ) ||
-        heArr.find((h) =>
-          relRootSet.has(gocHe(String(h).toLowerCase())),
-        ) ||
+        heArr.find((h) => baseRootSet.has(gocHe(String(h).toLowerCase()))) ||
+        heArr.find((h) => relRootSet.has(gocHe(String(h).toLowerCase()))) ||
         heArr[0] ||
         "vo_sac";
       chosenHe = String(chosenHe).toLowerCase();
@@ -406,8 +405,7 @@ function makeBisEval(nv0, enemies, mode, deduced) {
       const hpLeft = r.khiHuyetThapNhat / Math.max(1, P.khiHuyetToiDa);
       const dealt = Math.min(
         1,
-        ((r.stTa || 0) * Math.max(1, r.nHiep)) /
-          Math.max(1, E.khiHuyetToiDa),
+        ((r.stTa || 0) * Math.max(1, r.nHiep)) / Math.max(1, E.khiHuyetToiDa),
       );
       if (r.thang) {
         wins++;
@@ -439,33 +437,23 @@ function makeBisEval(nv0, enemies, mode, deduced) {
     manh.forEach((p) => {
       const it = c.items.get(p.m.item);
       if (!it) return;
-      const itHeArr = (
-        Array.isArray(it.he) ? it.he : [it.he || "vo_sac"]
-      ).map((h) => String(h).toLowerCase());
+      const itHeArr = (Array.isArray(it.he) ? it.he : [it.he || "vo_sac"]).map(
+        (h) => String(h).toLowerCase(),
+      );
       if (itHeArr.some((h) => baseHeSet.has(h))) lcBonus += 25;
-      else if (itHeArr.some((h) => baseRootSet.has(gocHe(h))))
-        lcBonus += 15;
-      else if (itHeArr.some((h) => relRootSet.has(gocHe(h))))
-        lcBonus += 8;
+      else if (itHeArr.some((h) => baseRootSet.has(gocHe(h)))) lcBonus += 15;
+      else if (itHeArr.some((h) => relRootSet.has(gocHe(h)))) lcBonus += 8;
     });
 
     let s;
     if (mode === "tu")
-      s =
-        0.3 * fightScore +
-        500 * toc +
-        400 * dp +
-        thong * 5 -
-        ng +
-        llScore;
-    else if (mode === "danh")
-      s = fightScore * 1.5 + thong * 2 - ng + llScore;
+      s = 0.3 * fightScore + 500 * toc + 400 * dp + thong * 5 - ng + llScore;
+    else if (mode === "danh") s = fightScore * 1.5 + thong * 2 - ng + llScore;
     else s = fightScore + 35 * toc + 25 * dp + thong * 2 - ng + llScore;
 
     s += lcBonus;
     s -= dead * 80; // Phạt nặng mảnh không thông
-    s +=
-      12 * manh.reduce((a, p) => a + (p.cells ? p.cells.length : 0), 0);
+    s += 12 * manh.reduce((a, p) => a + (p.cells ? p.cells.length : 0), 0);
 
     const out = { s, wins, P, R, nvFinal: nv };
     cache.set(key, out);
@@ -531,9 +519,7 @@ async function bisGreedy(mockNv, customEval, onProg) {
 
     validCands.sort(
       (a, b) =>
-        b.prio +
-        b.cn.cells.length * 2 -
-        (a.prio + a.cn.cells.length * 2),
+        b.prio + b.cn.cells.length * 2 - (a.prio + a.cn.cells.length * 2),
     );
     const topCandidates = validCands.slice(0, 15);
     for (const { cn } of topCandidates) {
@@ -569,9 +555,7 @@ function bisGetItemHuntingGuide(it) {
       name: dbEv.ten,
       place: dbEv.dia || dbEv.noi || "Hoang dã",
       check: dbEv.chk ? dbEv.chk.replace(/_/g, " ") : null,
-      boss: dbEv.bv
-        ? `${dbEv.bv} (${realmName(dbEv.bvcg ?? 5)})`
-        : null,
+      boss: dbEv.bv ? `${dbEv.bv} (${realmName(dbEv.bvcg ?? 5)})` : null,
     };
   }
 
@@ -784,8 +768,7 @@ ${
     .join("");
 
   const currentLcKey = deduced.baseHe.join("-");
-  const currentLcName =
-    deduced.baseHe.map(heTen).join(" - ") || "Phàm Căn";
+  const currentLcName = deduced.baseHe.map(heTen).join(" - ") || "Phàm Căn";
   const res = S.bisResult;
 
   let outdatedHtml = "";
@@ -1073,24 +1056,17 @@ ${
       S.bisRunning = true;
       S.bisPct = 0;
       S.bisMsg =
-        "Bắt đầu quét toàn bộ data game theo Linh Căn " +
-        currentLcName +
-        "...";
+        "Bắt đầu quét toàn bộ data game theo Linh Căn " + currentLcName + "...";
       render();
 
       try {
         const targetRealm = S.bisRealm || 5;
         const mode = S.bisMode || "danh";
-        const out = await bisSolve(
-          nv,
-          targetRealm,
-          mode,
-          (pct, msg) => {
-            S.bisPct = pct;
-            if (msg) S.bisMsg = msg;
-            render();
-          },
-        );
+        const out = await bisSolve(nv, targetRealm, mode, (pct, msg) => {
+          S.bisPct = pct;
+          if (msg) S.bisMsg = msg;
+          render();
+        });
         S.bisResult = {
           ...out,
           targetRealm,

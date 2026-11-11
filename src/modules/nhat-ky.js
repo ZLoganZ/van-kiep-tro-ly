@@ -1,19 +1,5 @@
-import { gWin, TOOL_VER, MOD, TabLifecycle, debounce, fold } from "../core/utils.js";
-import { UI_CSS } from "../styles/ui-css.js";
+import { gWin } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, CORE_REQUIRED, G, C, HUD, gamePanel, clone, ctx, has, danger, nearSlots, benchEnemies } from "../core/bridge.js";
-import { genSlack, biasCtx, biasInfo, kmItemPower, kmScalablePower, simulateQiCycle, makeEval, buildCandidates, greedy, anneal, smartFillRemainingGaps, polish, coverNote, stripDead, drawGrid } from "./kinh-mach-engine.js";
-import { render } from "./navigation.js";
-import { DIBAO, scanDiBao, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, checkCanTeleport, smartTeleportTo, simDiBaoGuard, checkDiBaoAlert } from "./di-bao.js";
-import { kmOpenSearch, findOptimalRecolors, statRows } from "./kinh-mach-tab.js";
-import { ddBuild, ddTeleOpts } from "./ban-do-dia-danh.js";
-import { buildFit, hbCatalog, hbVal, hbPlan, hbRatioPenalty } from "./huong-build.js";
-import { auIsHacText, AU, encGivesTuVi, findBestDiBaoChoice } from "../auto/auto-core.js";
-import { estimateSkillDamage, auFightStep, auFightInstant, syncGameCombatAutomation, combatWatcherTick } from "../auto/combat-ai.js";
-import { auFindTuViSpots } from "../auto/auto-tu-luyen.js";
-import { auSdbStep } from "../auto/auto-di-bao.js";
-import { auPending, auPick, auPaint } from "../auto/auto-runner.js";
-import { makeBisEval, bisGreedy } from "./biet-doi-late-game.js";
 /**
  * Module: Nhật Ký Cập Nhật (Changelog)
  */
@@ -28,11 +14,32 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 7.23.2 · Kiến Trúc Native Multi-File ES Modules (main.js 122 dòng) & Đại Tu Hiệu Năng Chống Lag",
-      d: "10/11/2026",
+      t: "Phiên Bản 8.0.0 · Đại Trùng Tu Giao Diện Thiên Cơ Tinh Bàn (Celestial Command Deck UI/UX Overhaul)",
+      d: "11/11/2026",
       now: true,
       pts: [
-        "<b>Chuyển Đổi Hoàn Toàn Sang Native Multi-File ES Modules (Chuẩn <code>su_do.zip</code>, Không Nối Gộp File):</b> Loại bỏ hoàn toàn cơ chế nối chuỗi sinh ra file <code>main.js</code> 40.700 dòng trước đây; giữ <code>main.js</code> ở thư mục gốc chỉ 122 dòng (~3.9 KB) và dùng <code>import</code> nguyên bản của ES Module để nạp trực tiếp 26 module con từ <code>./src/...</code>. Quy hoạch lại toàn bộ các hàm từng bị cắt nhầm module về đúng nơi (<code>src/core/utils.js</code>, <code>src/core/bridge.js</code>, <code>src/auto/auto-runner.js</code>)." ,
+        "<b>Thiết Kế Mới Toàn Diện — Thiên Cơ Tinh Bàn (Celestial Command Deck v8.0):</b> Lột xác 100% ngôn ngữ thị giác sang phong cách <i>Kính Mờ Huyền Huyễn Đa Tầng (Holographic Xianxia Glassmorphism)</i> với viền ánh kim lưỡng cực, lưới trận pháp tinh vân nền, thẻ Ngọc Giản <code>.vk-card</code> khúc xạ ánh sáng và nút Pháp Bảo <b>☯ Tinh Bàn</b> xoay động đa vòng (tự động phát sáng hào quang ngọc bích khi có tác vụ Auto đang chạy).",
+        "<b>6 Hệ Chủ Đề Linh Giới Đa Tầng &amp; Bảng Chọn Nhanh Trực Quan:</b> Nâng cấp toàn diện bảng màu với 6 chủ đề tu chân: <b>🌌 Thái Hư Tinh Không</b> (mặc định mới), <b>👑 Thiên Đình Kim Quế</b>, <b>🌿 Thanh Luân Tiên Cảnh</b>, <b>🩸 Cửu U Huyết Nguyệt</b>, <b>⚡ Tử Tiêu Lôi Vực</b> và <b>📜 Thủy Mặc Cổ Quyển</b>. Hỗ trợ chuyển đổi tức thì qua nút <code>🎨</code> trên thanh tiêu đề hoặc chọn trực tiếp từ dải chip chủ đề trong thanh Tìm Nhanh (<code>🔎 / Ctrl+K</code>).",
+        "<b>Thanh Linh Giác Nhân Vật Trực Tuyến (<code>#vkx-char-hud</code>) &amp; Bố Cục Bento Tổng Quan:</b> Bổ sung dải telemetry nhân vật ngay dưới thanh tiêu đề, tự động đồng bộ theo thời gian thực <i>Đạo Hiệu, Cảnh Giới, Thọ Nguyên còn lại, Linh Thạch, Vị Trí hiện tại, Thương Thế</i> kèm nút <b>⚡ Lưu Nhanh (Quick Save)</b> 1 chạm mọi lúc mọi nơi. Thiết kế lại thẻ Tổng Quan theo dạng <b>Bento KPI Grid</b> kèm thanh tiến trình Thọ Nguyên trực quan.",
+        "<b>3 Chế Độ Bố Cục Linh Hoạt (<code>◫</code> Neo Phải / Neo Trái / Đại Tinh Bàn Studio):</b> Bổ sung nút chuyển đổi bố cục <code>◫</code> trên thanh tiêu đề cho phép ghim cửa sổ sang <b>Neo Trái</b> (tránh che bảng thông tin bên phải của game) hoặc mở rộng sang chế độ <b>Đại Tinh Bàn Toàn Cảnh (1040px)</b> trên màn hình PC lớn.",
+      ],
+    },
+    {
+      t: "Phiên Bản 7.23.3 · Khắc Phục Triệt Để Auto Săn Dị Bảo Biển / Hoang Dã (Thái Hư Chu, Phong Thiên Ấn, Thái Cổ Long Lân)",
+      d: "11/11/2026",
+      now: false,
+      pts: [
+        "<b>Bổ Sung Địa Danh &amp; Hỗ Trợ Điểm Biển (<code>W.seaPoint</code>) Cho 3 Dị Bảo Đặc Thù:</b> Cập nhật đầy đủ định danh địa điểm cho <b>Thái Hư Chu</b> (<i>Bến Lạc Khư</i>), <b>Phong Thiên Ấn</b> (<i>Triều Khư</i>) và <b>Thái Cổ Long Lân</b> (<i>Hàn Giao Lĩnh / Hoang dã</i>); nâng cấp <code>findSlotByDiaDanh</code>, <code>placeName</code> và <code>findCandidateSlotsForRelicEv</code> quét toàn diện cả <code>W.seaPoint</code> lẫn các ô hoang dã/bến cảng thay vì để <code>dia: null</code> khiến danh sách cắm trại <code>topCamping</code> bị rỗng.",
+        "<b>Khắc Phục Lỗi Bỏ Sót Hoạt Động Dị Bảo Trong <code>scanMapActiveDiBao</code>:</b> Sửa điều kiện gọi <code>director.placeActivities()</code> tại các tọa độ Dị Bảo đã biết (<code>hasDibaoInNc || isKnownDibaoSlot</code>) và bổ sung chữ ký <code>noiChon</code> vào bộ nhớ đệm, đảm bảo nhận diện tức thì sự kiện Thuyền Rồng tại Bến Lạc Khư cũng như các sự kiện Dị Bảo vừa mở khóa.",
+        "<b>Sửa Lỗi Rời Đi Ngay Sau Khi <code>enterNode</code> &amp; Kẹt Vĩnh Viễn Ở Động Phủ (<code>noRetreatCampSlots</code>):</b> Quét lại ngay trạng thái sự kiện sau khi gọi <code>enterNode</code>/<code>enterPlace</code> ở Bước 8.3 trước khi kiểm tra bế quan; đồng thời tự động làm mới <code>noRetreatCampSlots</code> định kỳ sau mỗi 1–2 nhịp bế quan (hoặc ngay khi Pity &ge; 450 năm) để Auto chủ động tuần tra tới điểm Dị Bảo kích hoạt <code>refreshPlaceEncounters</code> thay vì ngồi chết dí ở Động Phủ hàng nghìn năm.",
+      ],
+    },
+    {
+      t: "Phiên Bản 7.23.2 · Kiến Trúc Native Multi-File ES Modules (main.js 122 dòng) & Đại Tu Hiệu Năng Chống Lag",
+      d: "10/11/2026",
+      now: false,
+      pts: [
+        "<b>Chuyển Đổi Hoàn Toàn Sang Native Multi-File ES Modules (Chuẩn <code>su_do.zip</code>, Không Nối Gộp File):</b> Loại bỏ hoàn toàn cơ chế nối chuỗi sinh ra file <code>main.js</code> 40.700 dòng trước đây; giữ <code>main.js</code> ở thư mục gốc chỉ 122 dòng (~3.9 KB) và dùng <code>import</code> nguyên bản của ES Module để nạp trực tiếp 26 module con từ <code>./src/...</code>. Quy hoạch lại toàn bộ các hàm từng bị cắt nhầm module về đúng nơi (<code>src/core/utils.js</code>, <code>src/core/bridge.js</code>, <code>src/auto/auto-runner.js</code>).",
         "<b>Khắc Phục Triệt Để Lỗi Nhân Bản Sâu <code>ctx()</code> Gây Đơ Luồng Chính (Critical Fix):</b> Sửa lỗi trong <code>bridge.js</code> khi gọi <code>G().readCtx()</code> (nhân bản sâu <code>structuredClone</code> toàn bộ save game) trước bước kiểm tra bộ nhớ đệm <code>_cachedCtx</code>. Cơ chế mới lưu đệm bản gốc trong 300ms và bọc lớp vỏ cô lập nhẹ (shallow isolation wrapper), giúp giảm 95% chi phí CPU &amp; Garbage Collection khi chuyển tab hoặc chạy Auto.",
         "<b>Tối Ưu Hóa Quét Dị Bảo Bản Đồ (<code>scanMapActiveDiBao</code>) &amp; Giả Lập Hộ Vệ (<code>simDiBaoGuard</code>):</b> Loại bỏ việc gọi <code>director.placeActivities()</code> tràn lan trên hàng trăm thành trấn/thôn xóm trong <code>run.noiChon</code> mỗi khi thời gian trôi (chỉ kiểm tra ô có sự kiện Dị Bảo); bổ sung bộ nhớ đệm kết quả mô phỏng 52 trận Hộ Vệ Dị Bảo và trạng thái Truyền Tống (<code>checkCanTeleport</code>), kèm debounce 350ms cho watcher sự kiện thế giới.",
         "<b>Tối Ưu Vòng Lặp Chiến Đấu (<code>combatWatcherTick</code>), Quét Kỳ Ngộ Tu Vi &amp; Sửa Rò Rỉ Sự Kiện (Memory Leak):</b> Bổ sung đường tắt thoát sớm O(1) cho <code>combatWatcherTick</code> khi ngoài trận và đối sánh chữ ký DOM HUD chống vẽ lại thừa mỗi 400ms; lưu đệm <code>nearSlots</code>, <code>danger</code>, <code>auFindTuViSpots</code>, <code>hbCatalog</code>; sửa lỗi rò rỉ bộ nhớ <code>body.addEventListener('click')</code> trong tab Hướng Build; và chuyển <code>NhatKy.init()</code> sang khởi tạo lười (Lazy Init) khi mở tab.",
@@ -1365,9 +1372,7 @@ var NhatKy = (function (UI) {
       t: "Bản 2.3",
       d: "",
       now: false,
-      pts: [
-        "Thêm <b>Đồ Nên Săn</b> và <b>Đồ Trong Game</b> (tab Tra Cứu).",
-      ],
+      pts: ["Thêm <b>Đồ Nên Săn</b> và <b>Đồ Trong Game</b> (tab Tra Cứu)."],
     },
     {
       t: "Bản 2.1",
@@ -1410,17 +1415,12 @@ var NhatKy = (function (UI) {
     if (!root) return;
     inited = true;
     root.innerHTML =
-      '<div class="vm-hint">' +
-      HINT +
-      "</div>" +
-      LOG.map(verCard).join("");
+      '<div class="vm-hint">' + HINT + "</div>" + LOG.map(verCard).join("");
   }
   return { init: init };
 })(UI);
 
-export {
-  NhatKy,
-};
+export { NhatKy };
 
 Object.assign(gWin, {
   NhatKy,

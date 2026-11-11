@@ -1,7 +1,18 @@
 import { gWin, sleep0, num, yrs } from "../core/utils.js";
 import { S, G, C, ctx, ctxLite, has, nearSlots } from "../core/bridge.js";
 import { placeName } from "../modules/di-bao.js";
-import { AU_TT_MAX, AU_TT_TEN, AU, auYield, auShopKey, auLog, auCall, auLifeLeft, auBag, auDangerOK } from "./auto-core.js";
+import {
+  AU_TT_MAX,
+  AU_TT_TEN,
+  AU,
+  auYield,
+  auShopKey,
+  auLog,
+  auCall,
+  auLifeLeft,
+  auBag,
+  auDangerOK,
+} from "./auto-core.js";
 /**
  * Module: Auto Buôn Bán & Quản Lý Trạng Thái / Giao Diện Auto Chung
  */
@@ -45,20 +56,14 @@ function auOffers(cc, slot, id, def) {
   const K = S.core,
     Cc = C(),
     rows = [];
-  if (
-    def.ke_hang &&
-    def.ke_hang.length &&
-    has("shelfStock", "giaMua")
-  ) {
+  if (def.ke_hang && def.ke_hang.length && has("shelfStock", "giaMua")) {
     try {
       for (const e of K.shelfStock(cc, id, slot) || []) {
         const it = Cc.items.get(e.itemId);
         if (!it) continue;
         const pf = e.priceFactor ?? 1,
           gia =
-            pf === 1
-              ? undefined
-              : Math.max(1, Math.round((it.gia || 0) * pf));
+            pf === 1 ? undefined : Math.max(1, Math.round((it.gia || 0) * pf));
         let price;
         try {
           price = K.giaMua(cc, e.itemId, gia, 0);
@@ -198,10 +203,7 @@ async function auPlanTrade(cfg, prog) {
   for (let bi = 0; bi < buyShops.length; bi++) {
     const b = buyShops[bi];
     if (prog)
-      prog(
-        0.6 + (0.4 * bi) / buyShops.length,
-        "Đang so giá các chuyến…",
-      );
+      prog(0.6 + (0.4 * bi) / buyShops.length, "Đang so giá các chuyến…");
     await auYield();
     if (prog && S.abort)
       return {
@@ -353,11 +355,7 @@ function auGoStep(st, slot, encId) {
     const r2 = G().state.run;
     if (!r.ok)
       return {
-        stop:
-          "Không đi tới được " +
-          placeName(ctxLite(), slot) +
-          ": " +
-          r.err,
+        stop: "Không đi tới được " + placeName(ctxLite(), slot) + ": " + r.err,
       };
     if (r2.viTri !== slot && !r2.active && !r2.tran && !r2.bienCo)
       return {
@@ -373,8 +371,7 @@ function auGoStep(st, slot, encId) {
   const r3 = G().state.run;
   if (!r3.active)
     return {
-      stop:
-        "Tiệm không mở được" + (r3.thongBao ? ": " + r3.thongBao : ""),
+      stop: "Tiệm không mở được" + (r3.thongBao ? ": " + r3.thongBao : ""),
     };
   return null;
 }
@@ -408,9 +405,7 @@ async function auBuonStep(st) {
     if (auLifeLeft() < cfg.tho)
       return {
         stop:
-          "Thọ Nguyên còn dưới " +
-          cfg.tho +
-          " năm, dừng để bảo vệ Thọ Nguyên",
+          "Thọ Nguyên còn dưới " + cfg.tho + " năm, dừng để bảo vệ Thọ Nguyên",
       };
     if ((g.state.run.nhanVat.thuongThe || 0) >= AU_TT_MAX)
       return {
@@ -487,9 +482,7 @@ async function auBuonStep(st) {
     if (!offer) {
       st.phase = "plan";
       st.route = null;
-      auLog(
-        "Tiệm không còn bán " + route.it.ten + ", lập kế hoạch lại.",
-      );
+      auLog("Tiệm không còn bán " + route.it.ten + ", lập kế hoạch lại.");
       const r = auCall(() => g.leaveShop());
       return r.ok ? null : { stop: r.err };
     }
@@ -520,10 +513,7 @@ async function auBuonStep(st) {
       const cost = g.shopBuyQuote(offer.index, k);
       if (!cost || cost > budget) break;
       const rev = auSellEst(route.ccs, route.itemId, k * offer.perBuy);
-      if (
-        rev - cost >= (cost * cfg.lai) / 100 &&
-        rev - cost > bestProfit
-      ) {
+      if (rev - cost >= (cost * cfg.lai) / 100 && rev - cost > bestProfit) {
         q = k;
         bestProfit = rev - cost;
       }
@@ -532,9 +522,7 @@ async function auBuonStep(st) {
       st.phase = "plan";
       st.route = null;
       auLog(
-        "Giá mua thực tế ở " +
-          route.buy.name +
-          " không còn đủ lãi, bỏ chuyến.",
+        "Giá mua thực tế ở " + route.buy.name + " không còn đủ lãi, bỏ chuyến.",
       );
       const r = auCall(() => g.leaveShop());
       return r.ok ? null : { stop: r.err };
@@ -545,10 +533,7 @@ async function auBuonStep(st) {
     const bought = auBag(route.itemId) - b0;
     if (!r.ok || bought < 1)
       return {
-        stop:
-          "Mua không được " +
-          route.it.ten +
-          (r.err ? ": " + r.err : ""),
+        stop: "Mua không được " + route.it.ten + (r.err ? ": " + r.err : ""),
       };
     st.bought = bought;
     st.left = bought;
@@ -628,20 +613,14 @@ async function auBuonStep(st) {
       const quote = g.shopSellQuote(route.itemId, qty);
       if (quote < costPart)
         why =
-          "Giá thu thực tế " +
-          quote +
-          " thấp hơn vốn " +
-          Math.round(costPart);
+          "Giá thu thực tế " + quote + " thấp hơn vốn " + Math.round(costPart);
     }
     if (why) {
       // bán xuyên: không dừng ngay, rời tiệm rồi dò tiệm khác trong phạm vi
       const r = auCall(() => g.leaveShop());
       if (!r.ok) return { stop: r.err };
       auLog(
-        why +
-          ". Dò nơi bán khác trong " +
-          num(cfg.banY) +
-          " năm đường.",
+        why + ". Dò nơi bán khác trong " + num(cfg.banY) + " năm đường.",
         "vk-bad",
       );
       st.phase = "pickSell";
@@ -669,14 +648,11 @@ async function auBuonStep(st) {
     const r2 = auCall(() => g.leaveShop());
     if (!r2.ok) return { stop: r2.err };
     if (st.left > 0 && auBag(route.itemId) > 0) {
-      auLog(
-        "Còn " + st.left + " món chưa bán, bán tiếp xuyên khoảng cách.",
-      );
+      auLog("Còn " + st.left + " món chưa bán, bán tiếp xuyên khoảng cách.");
       st.phase = "pickSell";
       return null;
     }
-    const profit =
-      st.rev - (st.cost * st.sold) / Math.max(1, st.bought);
+    const profit = st.rev - (st.cost * st.sold) / Math.max(1, st.bought);
     st.profit += profit;
     st.trips++;
     auLog(

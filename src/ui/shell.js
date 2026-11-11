@@ -6,10 +6,12 @@ import { UI_CSS } from "../styles/ui-css.js";
 /* ═══════════════ GIAO DIỆN CHUNG (SHELL) ═══════════════ */
 var UI = (function () {
   var THEMES = [
-    ["uMinh", "U Minh Ma Vực"],
-    ["thanhHu", "Thanh Hư Kiếm"],
-    ["cuuU", "Cửu U Huyết Ma"],
-    ["tuLoi", "Tử Lôi Thiên"],
+    ["thaiHu", "🌌 Thái Hư Tinh Không"],
+    ["kimQue", "👑 Thiên Đình Kim Quế"],
+    ["thanhLuan", "🌿 Thanh Luân Tiên Cảnh"],
+    ["huyetMa", "🩸 Cửu U Huyết Nguyệt"],
+    ["tuLoi", "⚡ Tử Tiêu Lôi Vực"],
+    ["huyenMac", "📜 Thủy Mặc Cổ Quyển"],
   ];
   function ls(k, v) {
     try {
@@ -33,21 +35,32 @@ var UI = (function () {
 
   var win = document.createElement("div");
   win.id = "vkx-win";
+  var themeChipsHtml = THEMES.map(function (t) {
+    return '<button type="button" class="vkx-theme-chip" data-th="' + t[0] + '">' + t[1] + "</button>";
+  }).join("");
   win.innerHTML =
     '<div class="vkx-hd" id="vkx-hd">' +
-    '<div class="vkx-logo">☯</div>' +
-    '<div class="vkx-ttl"><b>Vạn Kiếp Tu Tiên Tool</b>' +
-    '<div class="vkx-ttl-sub"><span>LoganZ · Kỹ Sư · Bản Mod · Trợ Lý</span><em class="vkx-ver">v' +
+    '<div class="vkx-logo" title="Thiên Cơ Tinh Bàn v' + TOOL_VER + '">☯</div>' +
+    '<div class="vkx-ttl"><b>Vạn Kiếp Trợ Lý · Tinh Bàn</b>' +
+    '<div class="vkx-ttl-sub"><span id="vkx-theme-lbl">🌌 Thái Hư Tinh Không</span> · <span id="vkx-layout-lbl">Neo Phải</span><em class="vkx-ver">v' +
     TOOL_VER +
     "</em></div></div>" +
-    '<button class="vkx-ib" id="vkx-qbtn" title="Tìm nhanh chức năng / Tab (Phím tắt: Ctrl+K)">🔎</button>' +
-    '<button class="vkx-ib" id="vkx-theme" title="Đổi giao diện">🎨</button>' +
+    '<button class="vkx-ib" id="vkx-qbtn" title="Tìm nhanh chức năng / Tab & Đổi Chủ Đề (Phím tắt: Ctrl+K)">🔎</button>' +
+    '<button class="vkx-ib" id="vkx-layout" title="Đổi bố cục: Neo Phải / Neo Trái / Đại Tinh Bàn Toàn Cảnh">◫</button>' +
+    '<button class="vkx-ib" id="vkx-theme" title="Đổi Chủ Đề Linh Giới (6 hệ màu)">🎨</button>' +
     '<button class="vkx-ib" id="vkx-zoom" title="Cỡ giao diện (Tự động · 85% … 150%)">🔍</button>' +
     '<button class="vkx-ib" id="vkx-min" title="Thu nhỏ thành thanh nổi (Alt+M hoặc đúp chuột tiêu đề)">—</button>' +
     '<button class="vkx-ib x" id="vkx-close" title="Đóng cửa sổ (Esc / Alt+T)">✕</button>' +
     "</div>" +
-    '<div id="vkx-qbar"><input id="vkx-qbar-inp" type="search" placeholder="🔎 Gõ tên tab hoặc tính năng (vd: kinh mạch, dị bảo, đột phá, lưu save, tác chiến)..." autocomplete="off"><div id="vkx-qbar-hits"></div></div>' +
-    '<div class="vkx-seg"><button data-s="tl">🧭 Trợ Lý</button><button data-s="nk">📜 Nhật Ký Cập Nhật</button></div>' +
+    '<div id="vkx-char-hud">' +
+    '<div class="vkx-hud-pills" id="vkx-char-pills">' +
+    '<span class="vkx-hud-pill realm">☯ Thiên Cơ Tinh Bàn v' + TOOL_VER + '</span>' +
+    '<span class="vkx-hud-pill">Sẵn sàng đồng bộ linh thức…</span>' +
+    "</div>" +
+    '<button type="button" class="vkx-hud-qsave" id="vkx-hud-qsave-btn" title="Lưu nhanh điểm dự phòng (Quick Save)">⚡ Lưu Nhanh</button>' +
+    "</div>" +
+    '<div id="vkx-qbar"><input id="vkx-qbar-inp" type="search" placeholder="🔎 Gõ tên tab hoặc tính năng (vd: kinh mạch, dị bảo, đột phá, lưu save, tác chiến)..." autocomplete="off"><div class="vkx-theme-strip">' + themeChipsHtml + '</div><div id="vkx-qbar-hits"></div></div>' +
+    '<div class="vkx-seg"><button data-s="tl">🔮 Đài Chỉ Huy Trợ Lý</button><button data-s="nk">📜 Nhật Ký Phiên Bản</button></div>' +
     '<div id="vkx-mini-status" class="vkx-mini-bar" style="display:none"></div>' +
     '<div class="vkx-sec" id="vkx-sec-nk"><div class="vkx-scroll" id="vkx-nk-body"></div></div>' +
     '<div class="vkx-sec" id="vkx-sec-tl">' +
@@ -59,8 +72,8 @@ var UI = (function () {
 
   var fab = document.createElement("button");
   fab.id = "vkx-fab";
-  fab.title = "Mở Vạn Kiếp Tu Tiên Tool";
-  fab.textContent = "☯";
+  fab.title = "Mở Vạn Kiếp Trợ Lý · Thiên Cơ Tinh Bàn (Kéo để di chuyển)";
+  fab.innerHTML = '<span class="vkx-g">☯</span><span class="vkx-s">Tinh Bàn</span>';
   document.body.appendChild(fab);
 
   var toastEl = document.createElement("div");
@@ -130,6 +143,7 @@ var UI = (function () {
     if (!text) {
       bar.style.display = "none";
       bar.innerHTML = "";
+      if (fab) fab.classList.remove("vkx-fab-running");
       _miniStartTs = 0;
       _miniLastStop = null;
       if (_miniTimerId) {
@@ -142,6 +156,7 @@ var UI = (function () {
     _miniLastStop = onStop;
     var elapsedStr = _fmtElapsed(Date.now() - _miniStartTs);
     bar.style.display = "flex";
+    if (fab) fab.classList.add("vkx-fab-running");
     bar.innerHTML =
       '<span class="vkx-mini-badge"><span class="vkx-mini-dot"></span><span>' +
       text +
@@ -170,10 +185,13 @@ var UI = (function () {
   (function () {
     var saved = ls("vkx_theme");
     var legacyMap = {
-      mucNgoc: "uMinh",
+      mucNgoc: "thaiHu",
       tuTieu: "tuLoi",
-      giayCo: "thanhHu",
-      huyenAnh: "uMinh",
+      giayCo: "thanhLuan",
+      huyenAnh: "thaiHu",
+      uMinh: "thaiHu",
+      thanhHu: "thanhLuan",
+      cuuU: "huyetMa",
     };
     if (saved && legacyMap[saved]) saved = legacyMap[saved];
     for (var i = 0; i < THEMES.length; i++) {
@@ -184,13 +202,37 @@ var UI = (function () {
     }
     themeIdx = 0;
   })();
-  function applyTheme() {
+  function applyTheme(customKey) {
+    if (customKey) {
+      for (var j = 0; j < THEMES.length; j++) {
+        if (THEMES[j][0] === customKey) {
+          themeIdx = j;
+          break;
+        }
+      }
+    }
+    var curKey = THEMES[themeIdx][0];
+    var curName = THEMES[themeIdx][1];
     [win, fab, toastEl].forEach(function (el) {
-      el.setAttribute("data-vkx-theme", THEMES[themeIdx][0]);
+      el.setAttribute("data-vkx-theme", curKey);
     });
-    ls("vkx_theme", THEMES[themeIdx][0]);
+    var tLbl = win.querySelector("#vkx-theme-lbl");
+    if (tLbl) tLbl.textContent = curName;
+    win.querySelectorAll(".vkx-theme-chip").forEach(function (chip) {
+      chip.classList.toggle("active", chip.getAttribute("data-th") === curKey);
+    });
+    ls("vkx_theme", curKey);
   }
   applyTheme();
+  win.querySelectorAll(".vkx-theme-chip").forEach(function (chip) {
+    chip.onclick = function () {
+      var tk = chip.getAttribute("data-th");
+      if (tk) {
+        applyTheme(tk);
+        notify("🎨 Chủ đề Linh Giới: " + THEMES[themeIdx][1]);
+      }
+    };
+  });
 
   /* ---- toast ---- */
   var toastTimer = null;
@@ -272,13 +314,29 @@ var UI = (function () {
   }
 
   /* ---- mở / đóng / chuyển phần ---- */
+  var _hudQsaveCb = null;
+  var _hudQsaveBtn = win.querySelector("#vkx-hud-qsave-btn");
+  if (_hudQsaveBtn) {
+    _hudQsaveBtn.onclick = function (e) {
+      e.stopPropagation();
+      if (typeof _hudQsaveCb === "function") _hudQsaveCb();
+    };
+  }
+  function updateCharHud(pillsHtml, onQuickSave) {
+    var pillsEl = win.querySelector("#vkx-char-pills");
+    if (pillsEl && pillsHtml) pillsEl.innerHTML = pillsHtml;
+    if (typeof onQuickSave === "function") _hudQsaveCb = onQuickSave;
+  }
+
   var api = {
     win: win,
     fab: fab,
     notify: notify,
     updateMiniStatus: updateMiniStatus,
+    updateCharHud: updateCharHud,
     updateGlider: updateGlider,
     updateGliders: updateGliders,
+    applyTheme: applyTheme,
     nkBody: win.querySelector("#vkx-nk-body"),
     tabs: win.querySelector("#vkx-tabs"),
     groups: win.querySelector("#vkx-groups"),
@@ -287,6 +345,9 @@ var UI = (function () {
     _section: "tl",
     _secCb: null,
     _openCb: null,
+  };
+  api.setSec = function (name) {
+    return api.setSection(name);
   };
   var segBtns = win.querySelectorAll(".vkx-seg button");
 
@@ -534,8 +595,35 @@ var UI = (function () {
   win.querySelector("#vkx-theme").onclick = function () {
     themeIdx = (themeIdx + 1) % THEMES.length;
     applyTheme();
-    notify("🎨 Giao diện: " + THEMES[themeIdx][1]);
+    notify("🎨 Chủ đề Linh Giới: " + THEMES[themeIdx][1]);
   };
+  var LAYOUT_MODES = [
+    ["right", "Neo Phải"],
+    ["left", "Neo Trái"],
+    ["studio", "Đại Tinh Bàn"],
+  ];
+  function syncLayoutLabel() {
+    var cur = ls("vkx_ui_layout") || "right";
+    var found = LAYOUT_MODES.find(function (x) { return x[0] === cur; }) || LAYOUT_MODES[0];
+    var lLbl = win.querySelector("#vkx-layout-lbl");
+    if (lLbl) lLbl.textContent = found[1];
+  }
+  syncLayoutLabel();
+  var layoutBtn = win.querySelector("#vkx-layout");
+  if (layoutBtn) {
+    layoutBtn.onclick = function () {
+      var cur = ls("vkx_ui_layout") || "right";
+      var idx = 0;
+      for (var i = 0; i < LAYOUT_MODES.length; i++) {
+        if (LAYOUT_MODES[i][0] === cur) { idx = i; break; }
+      }
+      var next = LAYOUT_MODES[(idx + 1) % LAYOUT_MODES.length];
+      ls("vkx_ui_layout", next[0]);
+      syncLayoutLabel();
+      if (api.fit && api.fit.run) api.fit.run();
+      notify("◫ Bố cục hiển thị: " + next[1]);
+    };
+  }
 
   /* tránh phím gõ trong bảng kích hoạt phím tắt của game */
   ["keydown", "keyup", "keypress"].forEach(function (t) {
@@ -779,14 +867,20 @@ var UI = (function () {
         win.style.setProperty("--vkx-win-pl", ins.l / k + "px");
         win.style.setProperty("--vkx-win-pr", ins.r / k + "px");
       } else {
-        var wideOk = effW >= 1000,
+        var layoutMode = ls("vkx_ui_layout") || "right";
+        var isStudio = layoutMode === "studio";
+        var isDockLeft = layoutMode === "left";
+        win.classList.toggle("vkx-studio", isStudio);
+        win.classList.toggle("vkx-dock-left", isDockLeft);
+        var wideOk = effW >= 960,
+          maxWideW = isStudio ? 1040 : 880,
           w = wideOk
-            ? Math.min(860, effW - 28)
-            : Math.min(m.coarse ? 520 : 480, effW - 16),
+            ? Math.min(maxWideW, effW - 28)
+            : Math.min(m.coarse ? 540 : 520, effW - 16),
           h = wideOk
             ? Math.min(effH - 28, 940)
-            : Math.min(effH * 0.88, 800),
-          r = 16,
+            : Math.min(effH * 0.88, 820),
+          r = isDockLeft ? Math.max(16, Math.round(effW - w - 16)) : 16,
           t = 16;
         wide = wideOk;
         if (dragged) {

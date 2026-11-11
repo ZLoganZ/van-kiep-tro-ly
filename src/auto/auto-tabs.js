@@ -1,14 +1,41 @@
-import { gWin, num, esc, yrs, safeYrs, fold } from "../core/utils.js";
+import { gWin, num, esc, yrs, fold } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, HUD, ctxLite, realmName, has, dangerTag } from "../core/bridge.js";
+import {
+  S,
+  body,
+  loadCore,
+  G,
+  ctxLite,
+  realmName,
+  dangerTag,
+} from "../core/bridge.js";
 import { errBox, progressHtml, bindProgress } from "../modules/navigation.js";
-import { DIBAO, scanDiBao, placeName, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, checkCanTeleport, smartTeleportTo, calcDiBaoPity } from "../modules/di-bao.js";
+import {
+  DIBAO,
+  scanDiBao,
+  placeName,
+  findSlotByDiaDanh,
+  checkOwnedRelic,
+  scanMapActiveDiBao,
+  checkCanTeleport,
+  smartTeleportTo,
+  calcDiBaoPity,
+} from "../modules/di-bao.js";
 import { ddDoTravel } from "../modules/ban-do-dia-danh.js";
 import { AU_KT, auMauLabel, AU, auSave, auCall } from "./auto-core.js";
 import { _lastAiDecisionText, updateCombatOverlay } from "./combat-ai.js";
 import { auHuntSpots, auSkipColor, auHuntPower } from "./auto-tu-luyen.js";
 import { auPlanTrade } from "./auto-buon-ban.js";
-import { auReadCfg, auFld, auHiemSel, auTocSel, auTTSel, auControls, auBind, auMauHtml } from "./auto-runner.js";
+import {
+  auReadCfg,
+  auFld,
+  auHiemSel,
+  auTocSel,
+  auTTSel,
+  auControls,
+  auBind,
+  auMauHtml,
+} from "./auto-runner.js";
 /**
  * Module: Giao Diện Các Tab Tự Động (Auto Tu Luyện, Auto Tác Chiến, Auto Săn Dị Bảo, Auto Buôn Bán)
  */
@@ -201,79 +228,79 @@ function tabAutoTacChien() {
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13.5px"><input type="checkbox" id="au-tc-overlay" ${c.autoCombatOverlay !== false ? "checked" : ""}> <b>Hiển Thị Thanh HUD Chiến Thuật Nổi [⚔️ Siêu AI 3.0] Trong Trận (Kéo Thả &amp; Thu Gọn Được)</b></label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-auto-in-combat" ${c.autoInCombat ? "checked" : ""}> Tự động bật Tự Đánh ngay khi vừa bước vào trận đấu</label>
       ${sel(
-"au-tc-ai-mode",
-"🧠 Chế Độ Bộ Não AI (AI Engine)",
-[
-  ["smart_v3", "🌟 Siêu AI 3.0 (Chuỗi 5 Pha Toàn Diện — Khuyên dùng)"],
-  ["aggressive", "🔥 Tổng Công Kích Tốc Chiến (Dồn sát thương tối đa)"],
-  [
-    "defensive",
-    "🛡️ Vững Như Bàn Thạch (Ưu tiên Khiên, Hồi Phục & Khóa)",
-  ],
-  ["game_core", "⚙️ AI Mặc Định Của Game (nextAutomatedAction)"],
-],
-c.aiEngineMode || "smart_v3",
+        "au-tc-ai-mode",
+        "🧠 Chế Độ Bộ Não AI (AI Engine)",
+        [
+          ["smart_v3", "🌟 Siêu AI 3.0 (Chuỗi 5 Pha Toàn Diện — Khuyên dùng)"],
+          ["aggressive", "🔥 Tổng Công Kích Tốc Chiến (Dồn sát thương tối đa)"],
+          [
+            "defensive",
+            "🛡️ Vững Như Bàn Thạch (Ưu tiên Khiên, Hồi Phục & Khóa)",
+          ],
+          ["game_core", "⚙️ AI Mặc Định Của Game (nextAutomatedAction)"],
+        ],
+        c.aiEngineMode || "smart_v3",
       )}
       ${sel(
-"au-tc-item-policy",
-"🎒 Chính Sách Tiêu Hao Đan Dược & Phù Lục",
-[
-  ["auto", "✅ Tự Động Thông Minh (Theo cấu hình chi tiết bên dưới)"],
-  ["boss_only", "👑 Chỉ Dùng Khi Gặp Boss / Tinh Anh (Hoặc HP < 20%)"],
-  [
-    "save_all",
-    "🔒 Khóa Toàn Bộ Đan & Phù (Tiết kiệm 100% khi cày quái)",
-  ],
-],
-c.itemPolicy || "auto",
+        "au-tc-item-policy",
+        "🎒 Chính Sách Tiêu Hao Đan Dược & Phù Lục",
+        [
+          ["auto", "✅ Tự Động Thông Minh (Theo cấu hình chi tiết bên dưới)"],
+          ["boss_only", "👑 Chỉ Dùng Khi Gặp Boss / Tinh Anh (Hoặc HP < 20%)"],
+          [
+            "save_all",
+            "🔒 Khóa Toàn Bộ Đan & Phù (Tiết kiệm 100% khi cày quái)",
+          ],
+        ],
+        c.itemPolicy || "auto",
       )}
       ${sel(
-"au-tc-speed",
-"⏱ Tốc Độ Nhịp Đánh Trong Trận",
-[
-  ["normal", "⏱ Tiêu Chuẩn (200ms — Quan sát rõ từng chiêu)"],
-  ["fast", "🚀 Nhanh Mượt (80ms — Cân bằng tốc độ & hiệu ứng)"],
-  ["instant", "⚡ Siêu Tốc (15ms — Xả toàn bộ combo tức thì)"],
-],
-c.speed || "normal",
+        "au-tc-speed",
+        "⏱ Tốc Độ Nhịp Đánh Trong Trận",
+        [
+          ["normal", "⏱ Tiêu Chuẩn (200ms — Quan sát rõ từng chiêu)"],
+          ["fast", "🚀 Nhanh Mượt (80ms — Cân bằng tốc độ & hiệu ứng)"],
+          ["instant", "⚡ Siêu Tốc (15ms — Xả toàn bộ combo tức thì)"],
+        ],
+        c.speed || "normal",
       )}
       ${sel(
-"au-tc-target-prio",
-"🎯 Chiến Thuật Chọn Mục Tiêu (Targeting)",
-[
-  ["smart", "🧠 Tối Ưu Chiến Thuật (Dứt điểm nhanh + Diệt hồi máu/nộ)"],
-  [
-    "boss",
-    "👑 Ưu Tiên Trùm / Thủ Lĩnh (Dồn sát thương Boss & Tinh Anh)",
-  ],
-  [
-    "threat",
-    "⚡ Ưu Tiên Mối Đe Dọa (Kẻ đang tụ đại chiêu / Triệu hồi)",
-  ],
-  [
-    "weakest",
-    "🎯 Diệt Kẻ Yếu Trước (Hạ nhanh quái thấp máu giảm sát thương)",
-  ],
-  [
-    "counter",
-    "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ ×1.35)",
-  ],
-],
-c.targetPrio || "smart",
+        "au-tc-target-prio",
+        "🎯 Chiến Thuật Chọn Mục Tiêu (Targeting)",
+        [
+          ["smart", "🧠 Tối Ưu Chiến Thuật (Dứt điểm nhanh + Diệt hồi máu/nộ)"],
+          [
+            "boss",
+            "👑 Ưu Tiên Trùm / Thủ Lĩnh (Dồn sát thương Boss & Tinh Anh)",
+          ],
+          [
+            "threat",
+            "⚡ Ưu Tiên Mối Đe Dọa (Kẻ đang tụ đại chiêu / Triệu hồi)",
+          ],
+          [
+            "weakest",
+            "🎯 Diệt Kẻ Yếu Trước (Hạ nhanh quái thấp máu giảm sát thương)",
+          ],
+          [
+            "counter",
+            "🔥 Tương Khắc Ngũ Hành (Nhắm mục tiêu bị khắc hệ ×1.35)",
+          ],
+        ],
+        c.targetPrio || "smart",
       )}
       ${sel(
-"au-tc-te-huyet",
-"🩸 Tế Huyết Bản Mệnh (Đốt Thọ Nguyên & Khí Huyết)",
-[
-  ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên tuyệt đối)"],
-  [
-    "boss",
-    "👑 Chỉ Khi Gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)",
-  ],
-  ["emergency", "🚨 Chỉ Khi Nguy Cấp (Khí huyết < 35% trước Boss)"],
-  ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
-],
-c.teHuyetMode || "off",
+        "au-tc-te-huyet",
+        "🩸 Tế Huyết Bản Mệnh (Đốt Thọ Nguyên & Khí Huyết)",
+        [
+          ["off", "⛔ Tắt (Mặc định — Bảo toàn thọ nguyên tuyệt đối)"],
+          [
+            "boss",
+            "👑 Chỉ Khi Gặp Boss / Kẻ Địch Mạnh (Xả sát thương bộc phát)",
+          ],
+          ["emergency", "🚨 Chỉ Khi Nguy Cấp (Khí huyết < 35% trước Boss)"],
+          ["always", "🔥 Luôn Dùng (Mỗi trận 1 lần — Cảnh báo: Rất hao thọ)"],
+        ],
+        c.teHuyetMode || "off",
       )}
     </div>
 
@@ -283,46 +310,46 @@ c.teHuyetMode || "off",
 Tự động tính chính xác lượng hồi sau khi trừ <b>Dược Kháng</b> (<code>estimatePillRestore</code>), khớp số viên cần uống để không lãng phí (<code>pillWasted</code>), và phân tách giới hạn phẩm đan giữa <b>Quái Thường</b> và <b>Boss</b>.
       </div>
       ${sel(
-"au-tc-heal-mode",
-"❤️ Chế Độ Cắn Đan Hồi Khí Huyết",
-[
-  ["smart", "🧠 Thông Minh (Tự nâng ngưỡng khi địch tụ Đại Chiêu)"],
-  [
-    "boss_only",
-    "👑 Chỉ Đánh Boss / Tinh Anh (Hoặc khi nguy kịch < 18%)",
-  ],
-  ["always", "⚡ Luôn Cắn Theo Ngưỡng Cố Định"],
-  ["off", "⛔ Tắt Tự Cắn Đan Hồi Huyết"],
-],
-c.healPillMode || "smart",
+        "au-tc-heal-mode",
+        "❤️ Chế Độ Cắn Đan Hồi Khí Huyết",
+        [
+          ["smart", "🧠 Thông Minh (Tự nâng ngưỡng khi địch tụ Đại Chiêu)"],
+          [
+            "boss_only",
+            "👑 Chỉ Đánh Boss / Tinh Anh (Hoặc khi nguy kịch < 18%)",
+          ],
+          ["always", "⚡ Luôn Cắn Theo Ngưỡng Cố Định"],
+          ["off", "⛔ Tắt Tự Cắn Đan Hồi Huyết"],
+        ],
+        c.healPillMode || "smart",
       )}
       ${auFld("au-tc-heal-hp", "Ngưỡng Máu Tự Cắn Đan Thường", c.healHpThreshold != null ? c.healHpThreshold : 35, "(% HP)")}
       ${auFld("au-tc-heal-panic-hp", "Ngưỡng Máu An Toàn Trước Đại Chiêu Boss", c.healBossPanicHp != null ? c.healBossPanicHp : 55, "(% HP — tự cắn đan sớm khi địch tụ nộ)")}
       ${sel(
-"au-tc-spirit-mode",
-"💧 Chế Độ Cắn Đan Hồi Linh Lực (Mana)",
-[
-  ["on_demand", "🧠 Khi Dưới Ngưỡng HOẶC Khi Cần Linh Lực Xuất Chiêu"],
-  ["threshold_only", "📉 Chỉ Khi % Linh Lực Tụt Dưới Ngưỡng"],
-  ["boss_only", "👑 Chỉ Cắn Đan Linh Lực Khi Đánh Boss / Tinh Anh"],
-  ["off", "⛔ Tắt Tự Cắn Đan Linh Lực"],
-],
-c.spiritPillMode || "on_demand",
+        "au-tc-spirit-mode",
+        "💧 Chế Độ Cắn Đan Hồi Linh Lực (Mana)",
+        [
+          ["on_demand", "🧠 Khi Dưới Ngưỡng HOẶC Khi Cần Linh Lực Xuất Chiêu"],
+          ["threshold_only", "📉 Chỉ Khi % Linh Lực Tụt Dưới Ngưỡng"],
+          ["boss_only", "👑 Chỉ Cắn Đan Linh Lực Khi Đánh Boss / Tinh Anh"],
+          ["off", "⛔ Tắt Tự Cắn Đan Linh Lực"],
+        ],
+        c.spiritPillMode || "on_demand",
       )}
       ${auFld("au-tc-spirit-mp", "Ngưỡng Linh Lực Tự Cắn Đan Hồi Khí", c.spiritThreshold != null ? c.spiritThreshold : 20, "(% Linh Lực)")}
       ${sel(
-"au-tc-burst-mode",
-"🔥 Chế Độ Cắn Đan Bộc Phát (Tăng Sát Thương)",
-[
-  [
-    "boss_combo",
-    "🎯 Chuẩn Combo Boss (Gặp Boss + Có sẵn chiêu mạnh + Địch >30% HP)",
-  ],
-  ["boss_any", "👑 Gặp Boss / Tinh Anh Là Cắn Ngay Đầu Trận"],
-  ["always", "⚔️ Dùng Ở Mọi Trận Đấu Khi Có Chiêu"],
-  ["off", "⛔ Tắt Đan Bộc Phát"],
-],
-c.burstPillMode || "boss_combo",
+        "au-tc-burst-mode",
+        "🔥 Chế Độ Cắn Đan Bộc Phát (Tăng Sát Thương)",
+        [
+          [
+            "boss_combo",
+            "🎯 Chuẩn Combo Boss (Gặp Boss + Có sẵn chiêu mạnh + Địch >30% HP)",
+          ],
+          ["boss_any", "👑 Gặp Boss / Tinh Anh Là Cắn Ngay Đầu Trận"],
+          ["always", "⚔️ Dùng Ở Mọi Trận Đấu Khi Có Chiêu"],
+          ["off", "⛔ Tắt Đan Bộc Phát"],
+        ],
+        c.burstPillMode || "boss_combo",
       )}
       ${auFld("au-tc-max-resist", "Trần Dược Kháng Tối Đa Cho Phép", c.maxDrugResistance != null ? c.maxDrugResistance : 70, "(% Kháng — tự vượt trần nếu máu < 20%)")}
       ${auFld("au-tc-pill-grade-norm", "Phẩm Đan Tối Đa Khi Đánh Quái Thường", c.maxPillGradeNormal != null ? c.maxPillGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên — giữ đan quý)")}
@@ -336,71 +363,71 @@ c.burstPillMode || "boss_combo",
 Điều phối chính xác thời điểm dán <b>Phù Hộ Thuẫn</b>, ném <b>Phù Khống Chế</b> ngắt đại chiêu, đan xen <b>Phù Công Kích Khắc Hệ</b> sau khi đã Phá Giáp, và khai triển <b>Trận Bàn</b>.
       </div>
       ${sel(
-"au-tc-shield-tal-mode",
-"🛡️ Chế Độ Dùng Phù Hộ Thuẫn (Giáp Phù)",
-[
-  [
-    "predictive",
-    "🧠 Dự Báo Đỡ Đòn (Khi địch tụ Đại Chiêu hoặc HP dưới ngưỡng)",
-  ],
-  ["always_keep", "🛡️ Luôn Duy Trì Lớp Khiên Phù Mỗi Khi Cạn"],
-  ["boss_only", "👑 Chỉ Dùng Phù Hộ Thuẫn Trước Boss / Tinh Anh"],
-  ["off", "⛔ Tắt Phù Hộ Thuẫn"],
-],
-c.shieldTalismanMode || "predictive",
+        "au-tc-shield-tal-mode",
+        "🛡️ Chế Độ Dùng Phù Hộ Thuẫn (Giáp Phù)",
+        [
+          [
+            "predictive",
+            "🧠 Dự Báo Đỡ Đòn (Khi địch tụ Đại Chiêu hoặc HP dưới ngưỡng)",
+          ],
+          ["always_keep", "🛡️ Luôn Duy Trì Lớp Khiên Phù Mỗi Khi Cạn"],
+          ["boss_only", "👑 Chỉ Dùng Phù Hộ Thuẫn Trước Boss / Tinh Anh"],
+          ["off", "⛔ Tắt Phù Hộ Thuẫn"],
+        ],
+        c.shieldTalismanMode || "predictive",
       )}
       ${auFld("au-tc-shield-hp", "Ngưỡng Máu Tự Dán Phù Hộ Thuẫn", c.shieldHpThreshold != null ? c.shieldHpThreshold : 55, "(% HP khi chưa có khiên)")}
       ${sel(
-"au-tc-cc-tal-mode",
-"⛓️ Chế Độ Dùng Phù Khống Chế (Định Thân / Choáng)",
-[
-  [
-    "interrupt",
-    "⚡ Ngắt Đại Chiêu & Khóa Boss (Khi địch tụ nộ / Boss / HP < 48%)",
-  ],
-  ["boss_lock", "👑 Khóa Chặt Boss / Tinh Anh Ngay Khi Hết Miễn Khống"],
-  ["emergency", "🚨 Chỉ Dùng Cứu Mạng Khi Máu Nguy Kịch (< 42% HP)"],
-  ["always", "❄️ Luôn Dùng Khi Địch Chưa Bị Khống Chế"],
-  ["off", "⛔ Tắt Phù Khống Chế"],
-],
-c.ccTalismanMode || "interrupt",
+        "au-tc-cc-tal-mode",
+        "⛓️ Chế Độ Dùng Phù Khống Chế (Định Thân / Choáng)",
+        [
+          [
+            "interrupt",
+            "⚡ Ngắt Đại Chiêu & Khóa Boss (Khi địch tụ nộ / Boss / HP < 48%)",
+          ],
+          ["boss_lock", "👑 Khóa Chặt Boss / Tinh Anh Ngay Khi Hết Miễn Khống"],
+          ["emergency", "🚨 Chỉ Dùng Cứu Mạng Khi Máu Nguy Kịch (< 42% HP)"],
+          ["always", "❄️ Luôn Dùng Khi Địch Chưa Bị Khống Chế"],
+          ["off", "⛔ Tắt Phù Khống Chế"],
+        ],
+        c.ccTalismanMode || "interrupt",
       )}
       ${sel(
-"au-tc-atk-tal-mode",
-"🗡️ Chế Độ Ném Phù Công Kích (Sát Thương 0 Mana)",
-[
-  [
-    "smart_weave",
-    "🧠 Đan Xen Thông Minh (Sau khi xả chiêu vào Boss / Khi hết mana / Kết liễu)",
-  ],
-  [
-    "zero_mana",
-    "💧 Tiết Kiệm: Chỉ Ném Khi Cạn Linh Lực Hoặc Toàn Bộ Chiêu Đang Hồi",
-  ],
-  [
-    "boss_burst",
-    "👑 Dồn Sát Thương Boss: Xả Phù Khắc Hệ Tối Đa Vào Boss / Tinh Anh",
-  ],
-  ["always", "🔥 Luôn Ném Ở Mọi Trận Đấu"],
-  ["off", "⛔ Tắt Phù Công Kích"],
-],
-c.atkTalismanMode || "smart_weave",
+        "au-tc-atk-tal-mode",
+        "🗡️ Chế Độ Ném Phù Công Kích (Sát Thương 0 Mana)",
+        [
+          [
+            "smart_weave",
+            "🧠 Đan Xen Thông Minh (Sau khi xả chiêu vào Boss / Khi hết mana / Kết liễu)",
+          ],
+          [
+            "zero_mana",
+            "💧 Tiết Kiệm: Chỉ Ném Khi Cạn Linh Lực Hoặc Toàn Bộ Chiêu Đang Hồi",
+          ],
+          [
+            "boss_burst",
+            "👑 Dồn Sát Thương Boss: Xả Phù Khắc Hệ Tối Đa Vào Boss / Tinh Anh",
+          ],
+          ["always", "🔥 Luôn Ném Ở Mọi Trận Đấu"],
+          ["off", "⛔ Tắt Phù Công Kích"],
+        ],
+        c.atkTalismanMode || "smart_weave",
       )}
       ${auFld("au-tc-talisman-grade-norm", "Phẩm Phù Tối Đa Khi Đánh Quái Thường", c.talismanGradeNormal != null ? c.talismanGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên)")}
       ${auFld("au-tc-talisman-grade", "Phẩm Phù Tối Đa Khi Đánh Boss / Tâm Ma", c.talismanGrade != null ? c.talismanGrade : 6, "(1: Phàm → 8: Nghịch Thiên)")}
       ${sel(
-"au-tc-formation-mode",
-"阵 Chế Độ Khai Triển Trận Bàn (bay_tran)",
-[
-  [
-    "boss_or_danger",
-    "🧠 Khi Gặp Boss/Tinh Anh Hoặc Khi Nguy Hiểm (HP < 65% / Địch >= 2)",
-  ],
-  ["boss_only", "👑 Chỉ Bày Trận Khi Gặp Boss / Tinh Anh"],
-  ["always", "⚡ Luôn Bày Trận Đầu Mọi Trận Đấu"],
-  ["off", "⛔ Tắt Tự Động Bày Trận Bàn"],
-],
-c.formationMode || "boss_or_danger",
+        "au-tc-formation-mode",
+        "阵 Chế Độ Khai Triển Trận Bàn (bay_tran)",
+        [
+          [
+            "boss_or_danger",
+            "🧠 Khi Gặp Boss/Tinh Anh Hoặc Khi Nguy Hiểm (HP < 65% / Địch >= 2)",
+          ],
+          ["boss_only", "👑 Chỉ Bày Trận Khi Gặp Boss / Tinh Anh"],
+          ["always", "⚡ Luôn Bày Trận Đầu Mọi Trận Đấu"],
+          ["off", "⛔ Tắt Tự Động Bày Trận Bàn"],
+        ],
+        c.formationMode || "boss_or_danger",
       )}
     </div>
 
@@ -599,12 +626,8 @@ function tabAutoSdb() {
 
   // Thống kê nhanh
   const totalRelics = validEvs.length;
-  const ownedCount = validEvs.filter((e) =>
-    isOwnedItem(e.relic),
-  ).length;
-  const metaCount = validEvs.filter((e) =>
-    metaRelicsSet.has(e.relic),
-  ).length;
+  const ownedCount = validEvs.filter((e) => isOwnedItem(e.relic)).length;
+  const metaCount = validEvs.filter((e) => metaRelicsSet.has(e.relic)).length;
   const baoLucPoints = metaRelicsSet.size * 5;
 
   // Quét Dị Bảo thực tế đang nở trên thế giới
@@ -614,8 +637,7 @@ function tabAutoSdb() {
     for (const item of activeMap.values()) {
       const ev = item.ev || DIBAO.evMap.get(item.encId);
       if (!ev) continue;
-      if (item.hetHanNam !== undefined && item.hetHanNam <= run.nam)
-        continue;
+      if (item.hetHanNam !== undefined && item.hetHanNam <= run.nam) continue;
       const relInf = DIBAO.rel[ev.relic] || {};
       let y = Infinity;
       try {
@@ -714,11 +736,7 @@ function tabAutoSdb() {
                     cp.wait > 0
                       ? ` (chờ ${cp.wait}n · ×${(cp.mult || 1).toFixed(1)})`
                       : "";
-                  const s = findSlotByDiaDanh(
-                    cp.e.marker,
-                    cp.e.dia,
-                    cLite,
-                  );
+                  const s = findSlotByDiaDanh(cp.e.marker, cp.e.dia, cLite);
                   const isHere =
                     run &&
                     s != null &&
@@ -1182,13 +1200,7 @@ function tabAutoBuon() {
   };
 }
 
-export {
-  tabAutoTuLuyen,
-  tabAutoTacChien,
-  tabAutoSdb,
-  tabAutoSan,
-  tabAutoBuon,
-};
+export { tabAutoTuLuyen, tabAutoTacChien, tabAutoSdb, tabAutoSan, tabAutoBuon };
 
 Object.assign(gWin, {
   tabAutoTuLuyen,

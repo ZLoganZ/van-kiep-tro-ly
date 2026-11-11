@@ -1,148 +1,177 @@
 /* ═════════════════════════════════════════════════════════════════════════
-   LAYER 1: DESIGN TOKENS & 4 CULTIVATION THEMES
+   LAYER 1: DESIGN TOKENS & 6 CELESTIAL CULTIVATION THEMES (v8.0.0)
    ═════════════════════════════════════════════════════════════════════════ */
 #vkx-win, #vkx-fab, #vkx-toast, #vkx-dibao-mini, #vkx-dibao-alert {
-  /* Standard Tokens */
-  --vkx-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --vkx-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
+  --vkx-font: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --vkx-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius-xs: 5px;
+  --radius-sm: 9px;
+  --radius-md: 13px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 999px;
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 36px var(--shade), 0 0 24px var(--glow);
-  --shadow-glow: 0 0 16px var(--glow);
-  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-sm: 0 3px 10px rgba(0, 0, 0, 0.38);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.52);
+  --shadow-lg: 0 22px 60px var(--shade), 0 0 32px var(--glow);
+  --shadow-glow: 0 0 18px var(--glow);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --dur-fast: 0.15s;
-  --dur-normal: 0.25s;
+  --dur-normal: 0.24s;
   --dur-panel: 0.32s;
-  --glass-blur: blur(16px);
-
-  /* Legacy Typo Compatibility Alias */
+  --glass-blur: blur(22px) saturate(155%);
   --mu: var(--mut);
-
-  /* Color Scheme */
   color-scheme: dark;
+  font-variant-numeric: tabular-nums;
 
-  /* Theme 1: uMinh (U Minh Ma Vực - Mặc định) */
-  --bg: #090a0f;
-  --bg2: #12141d;
-  --bg3: #181b27;
-  --line: rgba(230, 195, 106, 0.16);
-  --txt: #f4f5f8;
-  --mut: #8f96aa;
-  --acc: #e6c36a;
-  --acc2: #f59e0b;
-  --ink: #161102;
+  /* Default Theme 1: thaiHu (🌌 Thái Hư Tinh Không - Astral Cyan & Starlight Gold) */
+  --bg: #050914;
+  --bg2: #0b1326;
+  --bg3: #121f3d;
+  --line: rgba(56, 189, 248, 0.22);
+  --txt: #f1f5f9;
+  --mut: #94a3b8;
+  --acc: #38bdf8;
+  --acc2: #fbbf24;
+  --ink: #030712;
   --ok: #10b981;
   --bad: #f43f5e;
   --warn: #fbbf24;
-  --glow: rgba(230, 195, 106, 0.28);
-  --shade: rgba(0, 0, 0, 0.78);
-  --hi: rgba(230, 195, 106, 0.08);
-  --glass-bg: rgba(18, 20, 29, 0.82);
-  --glass-border: rgba(230, 195, 106, 0.18);
+  --glow: rgba(56, 189, 248, 0.30);
+  --shade: rgba(2, 5, 14, 0.84);
+  --hi: rgba(56, 189, 248, 0.10);
+  --glass-bg: rgba(9, 16, 34, 0.86);
+  --glass-border: rgba(56, 189, 248, 0.26);
 }
 
-/* Theme 1: uMinh explicit selector */
-#vkx-win[data-vkx-theme="uMinh"],
-#vkx-fab[data-vkx-theme="uMinh"],
-#vkx-toast[data-vkx-theme="uMinh"],
-[data-vkx-theme="uMinh"] {
-  --bg: #090a0f;
-  --bg2: #12141d;
-  --bg3: #181b27;
-  --line: rgba(230, 195, 106, 0.16);
-  --txt: #f4f5f8;
-  --mut: #8f96aa;
-  --acc: #e6c36a;
-  --acc2: #f59e0b;
-  --ink: #161102;
+/* Theme 1: thaiHu & legacy uMinh */
+#vkx-win[data-vkx-theme="thaiHu"], #vkx-fab[data-vkx-theme="thaiHu"], #vkx-toast[data-vkx-theme="thaiHu"], [data-vkx-theme="thaiHu"],
+#vkx-win[data-vkx-theme="uMinh"], #vkx-fab[data-vkx-theme="uMinh"], #vkx-toast[data-vkx-theme="uMinh"], [data-vkx-theme="uMinh"] {
+  --bg: #050914;
+  --bg2: #0b1326;
+  --bg3: #121f3d;
+  --line: rgba(56, 189, 248, 0.22);
+  --txt: #f1f5f9;
+  --mut: #94a3b8;
+  --acc: #38bdf8;
+  --acc2: #fbbf24;
+  --ink: #030712;
   --ok: #10b981;
   --bad: #f43f5e;
   --warn: #fbbf24;
-  --glow: rgba(230, 195, 106, 0.28);
-  --shade: rgba(0, 0, 0, 0.78);
-  --hi: rgba(230, 195, 106, 0.08);
-  --glass-bg: rgba(18, 20, 29, 0.82);
-  --glass-border: rgba(230, 195, 106, 0.18);
+  --glow: rgba(56, 189, 248, 0.30);
+  --shade: rgba(2, 5, 14, 0.84);
+  --hi: rgba(56, 189, 248, 0.10);
+  --glass-bg: rgba(9, 16, 34, 0.86);
+  --glass-border: rgba(56, 189, 248, 0.26);
 }
 
-/* Theme 2: thanhHu (Thanh Hư Kiếm) */
-#vkx-win[data-vkx-theme="thanhHu"],
-#vkx-fab[data-vkx-theme="thanhHu"],
-#vkx-toast[data-vkx-theme="thanhHu"],
-[data-vkx-theme="thanhHu"] {
-  --bg: #06110f;
-  --bg2: #0c1c18;
-  --bg3: #132722;
-  --line: rgba(45, 212, 191, 0.18);
+/* Theme 2: kimQue (👑 Thiên Đình Kim Quế - Sovereign Gold & Imperial Obsidian) */
+#vkx-win[data-vkx-theme="kimQue"], #vkx-fab[data-vkx-theme="kimQue"], #vkx-toast[data-vkx-theme="kimQue"], [data-vkx-theme="kimQue"] {
+  --bg: #090806;
+  --bg2: #14110b;
+  --bg3: #211b11;
+  --line: rgba(245, 158, 11, 0.24);
+  --txt: #fef3c7;
+  --mut: #bca882;
+  --acc: #f59e0b;
+  --acc2: #fde68a;
+  --ink: #140d02;
+  --ok: #10b981;
+  --bad: #fb7185;
+  --warn: #fbbf24;
+  --glow: rgba(245, 158, 11, 0.30);
+  --shade: rgba(8, 6, 3, 0.84);
+  --hi: rgba(245, 158, 11, 0.10);
+  --glass-bg: rgba(18, 15, 10, 0.88);
+  --glass-border: rgba(245, 158, 11, 0.28);
+}
+
+/* Theme 3: thanhLuan & legacy thanhHu (🌿 Thanh Luân Tiên Cảnh - Immortal Jade) */
+#vkx-win[data-vkx-theme="thanhLuan"], #vkx-fab[data-vkx-theme="thanhLuan"], #vkx-toast[data-vkx-theme="thanhLuan"], [data-vkx-theme="thanhLuan"],
+#vkx-win[data-vkx-theme="thanhHu"], #vkx-fab[data-vkx-theme="thanhHu"], #vkx-toast[data-vkx-theme="thanhHu"], [data-vkx-theme="thanhHu"] {
+  --bg: #040e0b;
+  --bg2: #091d17;
+  --bg3: #102e25;
+  --line: rgba(16, 185, 129, 0.24);
   --txt: #ecfdf5;
-  --mut: #7fa499;
-  --acc: #2dd4bf;
-  --acc2: #34d399;
-  --ink: #011915;
+  --mut: #86efac;
+  --acc: #10b981;
+  --acc2: #fbbf24;
+  --ink: #021710;
   --ok: #34d399;
   --bad: #fb7185;
   --warn: #facc15;
-  --glow: rgba(45, 212, 191, 0.28);
-  --shade: rgba(2, 9, 7, 0.75);
-  --hi: rgba(45, 212, 191, 0.09);
-  --glass-bg: rgba(12, 28, 24, 0.82);
-  --glass-border: rgba(45, 212, 191, 0.20);
+  --glow: rgba(16, 185, 129, 0.30);
+  --shade: rgba(2, 9, 7, 0.82);
+  --hi: rgba(16, 185, 129, 0.10);
+  --glass-bg: rgba(8, 25, 20, 0.86);
+  --glass-border: rgba(16, 185, 129, 0.26);
 }
 
-/* Theme 3: cuuU (Cửu U Huyết Ma) */
-#vkx-win[data-vkx-theme="cuuU"],
-#vkx-fab[data-vkx-theme="cuuU"],
-#vkx-toast[data-vkx-theme="cuuU"],
-[data-vkx-theme="cuuU"] {
-  --bg: #0d0608;
-  --bg2: #190c11;
-  --bg3: #241117;
-  --line: rgba(255, 51, 102, 0.20);
-  --txt: #fff1f2;
-  --mut: #a6858c;
-  --acc: #ff3366;
-  --acc2: #fb7185;
+/* Theme 4: huyetMa & legacy cuuU (🩸 Cửu U Huyết Nguyệt - Crimson Abyss) */
+#vkx-win[data-vkx-theme="huyetMa"], #vkx-fab[data-vkx-theme="huyetMa"], #vkx-toast[data-vkx-theme="huyetMa"], [data-vkx-theme="huyetMa"],
+#vkx-win[data-vkx-theme="cuuU"], #vkx-fab[data-vkx-theme="cuuU"], #vkx-toast[data-vkx-theme="cuuU"], [data-vkx-theme="cuuU"] {
+  --bg: #0f0407;
+  --bg2: #1c080e;
+  --bg3: #2c0d16;
+  --line: rgba(244, 63, 94, 0.25);
+  --txt: #ffe4e6;
+  --mut: #fda4af;
+  --acc: #fb7185;
+  --acc2: #fbbf24;
   --ink: #190006;
   --ok: #4ade80;
-  --bad: #ff2a5f;
+  --bad: #f43f5e;
   --warn: #fbbf24;
-  --glow: rgba(255, 51, 102, 0.30);
-  --shade: rgba(10, 2, 5, 0.80);
-  --hi: rgba(255, 51, 102, 0.10);
-  --glass-bg: rgba(25, 12, 17, 0.84);
-  --glass-border: rgba(255, 51, 102, 0.22);
+  --glow: rgba(244, 63, 94, 0.32);
+  --shade: rgba(10, 2, 5, 0.84);
+  --hi: rgba(244, 63, 94, 0.11);
+  --glass-bg: rgba(26, 8, 13, 0.87);
+  --glass-border: rgba(244, 63, 94, 0.28);
 }
 
-/* Theme 4: tuLoi (Tử Lôi Thiên) */
-#vkx-win[data-vkx-theme="tuLoi"],
-#vkx-fab[data-vkx-theme="tuLoi"],
-#vkx-toast[data-vkx-theme="tuLoi"],
-[data-vkx-theme="tuLoi"] {
-  --bg: #0a0815;
-  --bg2: #130f25;
-  --bg3: #1b1535;
-  --line: rgba(168, 85, 247, 0.22);
+/* Theme 5: tuLoi (⚡ Tử Tiêu Lôi Vực - Violet Thunder) */
+#vkx-win[data-vkx-theme="tuLoi"], #vkx-fab[data-vkx-theme="tuLoi"], #vkx-toast[data-vkx-theme="tuLoi"], [data-vkx-theme="tuLoi"] {
+  --bg: #080412;
+  --bg2: #120a24;
+  --bg3: #1d1138;
+  --line: rgba(192, 132, 252, 0.25);
   --txt: #f5f3ff;
-  --mut: #9d93b9;
-  --acc: #a855f7;
+  --mut: #c4b5fd;
+  --acc: #c084fc;
   --acc2: #38bdf8;
   --ink: #0c021c;
   --ok: #34d399;
   --bad: #fb7185;
   --warn: #fcd34d;
-  --glow: rgba(168, 85, 247, 0.30);
-  --shade: rgba(5, 3, 13, 0.80);
+  --glow: rgba(168, 85, 247, 0.32);
+  --shade: rgba(5, 3, 13, 0.84);
   --hi: rgba(168, 85, 247, 0.11);
-  --glass-bg: rgba(19, 15, 37, 0.84);
-  --glass-border: rgba(168, 85, 247, 0.24);
+  --glass-bg: rgba(18, 10, 36, 0.87);
+  --glass-border: rgba(192, 132, 252, 0.28);
+}
+
+/* Theme 6: huyenMac (📜 Thủy Mặc Cổ Quyển - Ancient Scroll & Cinnabar) */
+#vkx-win[data-vkx-theme="huyenMac"], #vkx-fab[data-vkx-theme="huyenMac"], #vkx-toast[data-vkx-theme="huyenMac"], [data-vkx-theme="huyenMac"] {
+  --bg: #0c0a09;
+  --bg2: #171412;
+  --bg3: #241f1c;
+  --line: rgba(251, 146, 60, 0.24);
+  --txt: #f5f5f4;
+  --mut: #a8a29e;
+  --acc: #fb923c;
+  --acc2: #fcd34d;
+  --ink: #140c04;
+  --ok: #4ade80;
+  --bad: #f87171;
+  --warn: #fbbf24;
+  --glow: rgba(251, 146, 60, 0.28);
+  --shade: rgba(8, 6, 5, 0.85);
+  --hi: rgba(251, 146, 60, 0.10);
+  --glass-bg: rgba(22, 19, 17, 0.88);
+  --glass-border: rgba(251, 146, 60, 0.26);
 }
 
 /* ═════════════════════════════════════════════════════════════════════════
@@ -2395,4 +2424,255 @@ table.au-tb tr:last-child td {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   LAYER 6: V8.0.0 "THIÊN CƠ TINH BÀN" HOLOGRAPHIC ENHANCEMENTS
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Khung cửa sổ Đa Tầng & Lưới Trận Pháp Tinh Vân */
+#vkx-win {
+  background:
+    radial-gradient(circle at 12% 0%, var(--glow) 0%, transparent 42%),
+    radial-gradient(circle at 92% 100%, var(--hi) 0%, transparent 45%),
+    linear-gradient(168deg, var(--bg2) 0%, var(--bg) 100%) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.82),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 1px 0 0 rgba(255, 255, 255, 0.16) inset,
+    0 0 36px var(--glow) !important;
+}
+#vkx-win::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px, 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+#vkx-win > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Chế độ Đại Tinh Bàn Toàn Cảnh (.vkx-studio) */
+#vkx-win.vkx-wide.vkx-studio #vkx-sec-tl.on {
+  grid-template-columns: 184px 1fr;
+}
+
+/* 2. Thanh Linh Giác Nhân Vật Trực Tuyến (#vkx-char-hud) */
+#vkx-char-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0%, var(--bg3) 50%, rgba(0, 0, 0, 0.42) 100%);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#vkx-char-hud::-webkit-scrollbar {
+  display: none;
+}
+#vkx-win.vkx-minimized #vkx-char-hud {
+  display: none !important;
+}
+.vkx-hud-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.vkx-hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--txt);
+  white-space: nowrap;
+}
+.vkx-hud-pill.realm {
+  background: linear-gradient(135deg, var(--hi), rgba(251, 191, 36, 0.14));
+  border-color: var(--acc);
+  color: var(--acc2);
+  font-weight: 800;
+}
+.vkx-hud-pill.warn {
+  background: rgba(244, 63, 94, 0.16);
+  border-color: rgba(244, 63, 94, 0.48);
+  color: #fda4af;
+}
+.vkx-hud-pill.ok {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.42);
+  color: #6ee7b7;
+}
+.vkx-hud-qsave {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.24), rgba(56, 189, 248, 0.18));
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.vkx-hud-qsave:hover {
+  background: rgba(16, 185, 129, 0.38);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+}
+
+/* 3. Dải Chọn Nhanh 6 Chủ Đề Linh Giới (.vkx-theme-strip trong #vkx-qbar) */
+.vkx-theme-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--line);
+}
+.vkx-theme-chip {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line);
+  color: var(--mut);
+  padding: 3.5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vkx-theme-chip:hover,
+.vkx-theme-chip.active {
+  background: linear-gradient(135deg, var(--bg3), var(--bg2));
+  border-color: var(--acc2);
+  color: var(--acc2);
+  box-shadow: 0 2px 10px var(--glow);
+}
+
+/* 4. Thẻ Ngọc Giản Kính Mờ (.vk-card) & Bento KPI Grid (.vk-bento-grid) */
+.vk-card {
+  position: relative;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.035) 0%, rgba(0, 0, 0, 0.28) 100%), var(--bg2) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease;
+}
+.vk-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--acc), var(--acc2), transparent);
+  opacity: 0.48;
+  pointer-events: none;
+}
+.vk-card:hover {
+  border-color: var(--acc) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.46), 0 0 16px var(--hi) !important;
+}
+
+.vk-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.vk-bento-tile {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+.vk-bento-tile:hover {
+  border-color: var(--acc);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+.vk-bento-lbl {
+  font-size: 10.5px;
+  color: var(--mut);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+}
+.vk-bento-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--txt);
+}
+
+/* 5. Nút Pháp Bảo Thái Cực Xoay Động (#vkx-fab) */
+@keyframes vkxSpinSlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+#vkx-fab {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  background: radial-gradient(circle at 32% 28%, var(--bg3) 0%, var(--bg2) 60%, var(--bg) 100%) !important;
+  border: 1.5px solid var(--acc) !important;
+}
+#vkx-fab::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--acc);
+  opacity: 0.6;
+  animation: vkxSpinSlow 14s linear infinite;
+  pointer-events: none;
+}
+#vkx-fab:hover::before {
+  opacity: 1;
+  border-color: var(--acc2);
+  animation-duration: 5s;
+}
+#vkx-fab .vkx-g {
+  font-size: 22px;
+  line-height: 1;
+  background: linear-gradient(135deg, #ffffff 0%, var(--acc) 55%, var(--acc2) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 900;
+}
+#vkx-fab .vkx-s {
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: var(--acc2);
+  margin-top: 1px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+#vkx-fab.vkx-fab-running {
+  border-color: var(--ok) !important;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 22px rgba(16, 185, 129, 0.65) !important;
 }

@@ -1,11 +1,63 @@
-import { gWin, TOOL_VER, TT, sleep0, debounce, pct, num, esc, yrs, cleanTxt, tcWord, foldCache, fold, heTen } from "../core/utils.js";
+import {
+  gWin,
+  TOOL_VER,
+  TT,
+  sleep0,
+  debounce,
+  pct,
+  num,
+  esc,
+  yrs,
+  cleanTxt,
+  tcWord,
+  fold,
+  heTen,
+} from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { AU_T4, AU_ZAN, S, body, G, C, clone, ctx, ctxLite, nvNow, realmName, has, needMsg, withPlace, danger, dangerTag, nearSlots, simFoe, foesOf } from "../core/bridge.js";
-import { buildCandidates, anneal, stripDead, evalCurrent } from "./kinh-mach-engine.js";
-import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
+import {
+  AU_T4,
+  AU_ZAN,
+  S,
+  body,
+  G,
+  C,
+  clone,
+  ctx,
+  ctxLite,
+  nvNow,
+  realmName,
+  has,
+  needMsg,
+  withPlace,
+  danger,
+  dangerTag,
+  nearSlots,
+  simFoe,
+  foesOf,
+} from "../core/bridge.js";
+import {
+  buildCandidates,
+  anneal,
+  stripDead,
+  evalCurrent,
+} from "./kinh-mach-engine.js";
+import { errBox, progressHtml, bindProgress } from "./navigation.js";
 import { placeName } from "./di-bao.js";
 import { kmOpenable, sellTotal } from "./kinh-mach-tab.js";
-import { glutRows, glutCard, statusCard, itemDesc, NGHE, rewardHint, planData, whereToGet, recipeRows, bmD, bmEligible, bmCostTe } from "./dot-pha-nghe.js";
+import {
+  glutRows,
+  glutCard,
+  statusCard,
+  itemDesc,
+  NGHE,
+  rewardHint,
+  planData,
+  whereToGet,
+  recipeRows,
+  bmD,
+  bmEligible,
+  bmCostTe,
+} from "./dot-pha-nghe.js";
 /**
  * Module: Kiếm Linh Thạch, Bản Đồ, Địa Danh, Truyền Tống, Treo Thưởng & Đồ Nên Săn
  */
@@ -34,8 +86,7 @@ async function scanBounties(c, maxY, prog) {
       let worst = { ok: 2, txt: '<span class="vk-mu">không rõ</span>' };
       for (const f of foes) {
         const r = simFoe(P, f);
-        if (r.ok < worst.ok || worst.txt.includes("không rõ"))
-          worst = r;
+        if (r.ok < worst.ok || worst.txt.includes("không rõ")) worst = r;
       }
       let y2 = 0;
       try {
@@ -70,11 +121,7 @@ function junkItems(c, nv) {
     if (!(n > 0) || onGrid.has(id) || equip.has(id)) continue;
     const it = Cc.items.get(id);
     if (!it || !it.gia) continue;
-    if (
-      ["don_phuong", "lenh_bai", "phuong_tien", "tru_vat"].includes(
-        it.loai,
-      )
-    )
+    if (["don_phuong", "lenh_bai", "phuong_tien", "tru_vat"].includes(it.loai))
       continue;
     const keepPill =
       it.dot_pha ||
@@ -106,9 +153,7 @@ function tabTien() {
   const junk = junkItems(c, nv);
   const sum = junk
     .filter(
-      (x) =>
-        !x.keep.startsWith("đan quý") &&
-        !x.keep.startsWith("nguyên liệu"),
+      (x) => !x.keep.startsWith("đan quý") && !x.keep.startsWith("nguyên liệu"),
     )
     .reduce((s, x) => s + x.total, 0);
   let bong = "";
@@ -133,15 +178,15 @@ function tabTien() {
     <div class="vk-card"><h3>Treo thưởng</h3><div class="vk-mu">Xem tab <b>Treo thưởng</b>: liệt kê việc ở các bảng quanh đây, thưởng bao nhiêu và đánh có thắng không.</div></div>
     <div class="vk-card"><h3>Đồ trong túi bán được</h3>
       ${
-junk.length
-  ? `<div class="vk-mu" style="font-size:13px">Bán hết phần không cần giữ được khoảng <b>${Math.round(sum)}</b> linh thạch (giá ở chỗ đang đứng, đã tính chợ ngập hàng).</div><table class="vk-t"><tr><th>Món</th><th>SL</th><th>Tổng</th></tr>${junk
-      .slice(0, 40)
-      .map(
-        (x) =>
-          `<tr><td>${esc(x.it.ten)}${x.keep ? `<br><span class="vk-mu" style="font-size:12px">${x.keep}</span>` : ""}</td><td>${x.n}</td><td>${Math.round(x.total)}${x.left > 0 ? `<br><span class="vk-bad" style="font-size:11px">tiệm thu ${x.n - x.left}/${x.n}</span>` : ""}</td></tr>`,
-      )
-      .join("")}</table>`
-  : '<div class="vk-mu">Túi không có gì đáng bán.</div>'
+        junk.length
+          ? `<div class="vk-mu" style="font-size:13px">Bán hết phần không cần giữ được khoảng <b>${Math.round(sum)}</b> linh thạch (giá ở chỗ đang đứng, đã tính chợ ngập hàng).</div><table class="vk-t"><tr><th>Món</th><th>SL</th><th>Tổng</th></tr>${junk
+              .slice(0, 40)
+              .map(
+                (x) =>
+                  `<tr><td>${esc(x.it.ten)}${x.keep ? `<br><span class="vk-mu" style="font-size:12px">${x.keep}</span>` : ""}</td><td>${x.n}</td><td>${Math.round(x.total)}${x.left > 0 ? `<br><span class="vk-bad" style="font-size:11px">tiệm thu ${x.n - x.left}/${x.n}</span>` : ""}</td></tr>`,
+              )
+              .join("")}</table>`
+          : '<div class="vk-mu">Túi không có gì đáng bán.</div>'
       }</div>`;
   if (body.querySelector("#vk-tt"))
     body.querySelector("#vk-tt").onclick = async (ev) => {
@@ -158,8 +203,7 @@ junk.length
         list.sort(
           (a, b) =>
             (b.res.ok >= 1) - (a.res.ok >= 1) ||
-            b.v.thuong / (1 + b.y + b.y2) -
-              a.v.thuong / (1 + a.y + a.y2),
+            b.v.thuong / (1 + b.y + b.y2) - a.v.thuong / (1 + a.y + a.y2),
         );
         body.querySelector("#vk-tto").innerHTML = list.length
           ? `<table class="vk-t"><tr><th>Việc</th><th>Thưởng</th><th>Sức</th></tr>` +
@@ -241,10 +285,7 @@ function routeSafe(c, target) {
   path.reverse();
   let len = 0;
   for (let i = 1; i < path.length; i++)
-    len += Math.hypot(
-      path[i].x - path[i - 1].x,
-      path[i].y - path[i - 1].y,
-    );
+    len += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
   return { path, len };
 }
 function tabBanDo() {
@@ -286,8 +327,7 @@ function tabBanDo() {
       foes,
       res: worst,
       d: danger(c, slot),
-      left:
-        n.hetHanNam !== undefined ? n.hetHanNam - run.nam : undefined,
+      left: n.hetHanNam !== undefined ? n.hetHanNam - run.nam : undefined,
     });
   }
   items.sort((a, b) => a.y - b.y);
@@ -436,23 +476,16 @@ function ddFlavor(x) {
   }
   if (!map || typeof map.values !== "function") return "";
   for (const d of map.values()) {
-    if (!d || !Array.isArray(d.loai) || !d.loai.includes(x.loai))
-      continue;
+    if (!d || !Array.isArray(d.loai) || !d.loai.includes(x.loai)) continue;
     const pool = []
       .concat(d.mo_ta || [])
       .filter(
-        (t) =>
-          typeof t === "string" &&
-          t &&
-          !/\{(?!dia_danh\})[^}]*\}/.test(t),
+        (t) => typeof t === "string" && t && !/\{(?!dia_danh\})[^}]*\}/.test(t),
       );
     if (!pool.length) return "";
     let h = 0;
-    for (const ch of String(x.id))
-      h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return cleanTxt(
-      pool[h % pool.length].replace(/\{dia_danh\}/g, x.name),
-    );
+    for (const ch of String(x.id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return cleanTxt(pool[h % pool.length].replace(/\{dia_danh\}/g, x.name));
   }
   return "";
 }
@@ -465,22 +498,16 @@ function ddMota(x) {
       if (x.phai)
         f.push(
           "Phái " +
-            (DD_PHAI[x.phai] ||
-              tcWord(String(x.phai).replace(/_/g, " "))),
+            (DD_PHAI[x.phai] || tcWord(String(x.phai).replace(/_/g, " "))),
         );
       const he = [].concat(x.he || []).filter(Boolean);
       if (he.length) f.push("Hệ " + he.map(heTen).join(" / "));
-      if (x.phai)
-        f.push(DD_DAO[x.dao || "chinh"] || tcWord(String(x.dao)));
+      if (x.phai) f.push(DD_DAO[x.dao || "chinh"] || tcWord(String(x.dao)));
     } else {
       f.push(tang || ddLoai(x.loai));
       if (x.qg) f.push(x.qg);
     }
-    if (
-      x.loai === "thanh" ||
-      x.loai === "kinh_do" ||
-      x.tang === "dai_tong_mon"
-    )
+    if (x.loai === "thanh" || x.loai === "kinh_do" || x.tang === "dai_tong_mon")
       f.push("Có Trận Truyền Tống");
     if (x.ht) f.push("Có Hộ Thành Đại Trận");
   } catch (e) {
@@ -650,10 +677,7 @@ function ddDoTravel(slot) {
     return { ok: true, msg: "Bạn đang đứng ở đây rồi." };
   const r = auCall(() => {
     if (typeof g.travelTo === "function") g.travelTo(String(slot));
-    else if (
-      typeof TT !== "undefined" &&
-      typeof TT.travelTo === "function"
-    )
+    else if (typeof TT !== "undefined" && typeof TT.travelTo === "function")
       TT.travelTo(String(slot));
   });
   if (!r.ok)
@@ -675,7 +699,8 @@ function ddDoTeleport(slot, src) {
   const g = G();
   if (!g || !g.state || !g.state.run)
     return { ok: false, msg: "Chưa có kiếp nào đang chơi." };
-  const targetSlot = src && src.targetSlot !== undefined ? src.targetSlot : slot;
+  const targetSlot =
+    src && src.targetSlot !== undefined ? src.targetSlot : slot;
   if (String(g.state.run.viTri) === String(targetSlot))
     return { ok: true, msg: "Bạn đang đứng ở đây rồi." };
   if (!ddWaitingTele(g)) {
@@ -697,7 +722,11 @@ function ddDoTeleport(slot, src) {
             return false;
           }
         });
-        if (!id && g.state.run.oNoi !== g.state.run.viTri && typeof g.enterNode === "function") {
+        if (
+          !id &&
+          g.state.run.oNoi !== g.state.run.viTri &&
+          typeof g.enterNode === "function"
+        ) {
           try {
             g.enterNode(g.state.run.viTri);
           } catch (e) {}
@@ -735,8 +764,7 @@ function ddDoTeleport(slot, src) {
         const ch =
           v &&
           (v.choices || []).find(
-            (x) =>
-              x.available && /truyền tống/i.test(String(x.text || "")),
+            (x) => x.available && /truyền tống/i.test(String(x.text || "")),
           );
         if (!ch)
           return {
@@ -849,8 +877,7 @@ function tabDiaDanh() {
         (x.tang && DD_TANG[x.tang] ? " · " + esc(DD_TANG[x.tang]) : ""),
     );
     if (x.qg) row("Quốc Gia", esc(x.qg));
-    if (x.cap !== undefined && x.cap !== null)
-      row("Cấp Nền", esc(num(x.cap)));
+    if (x.cap !== undefined && x.cap !== null) row("Cấp Nền", esc(num(x.cap)));
     const known = (run.daKhamPha || []).includes(x.id);
     let fog = false;
     try {
@@ -921,8 +948,7 @@ function tabDiaDanh() {
           )
           .join(" ")
       : `<button class="vk-btn dd-tp" disabled>Dịch Chuyển Đến</button>`;
-    const goDis =
-      here || fog || !!(run.active || run.tran || run.bienCo);
+    const goDis = here || fog || !!(run.active || run.tran || run.bienCo);
     return `${rows.join("")}<div style="margin-top:6px"><b style="font-size:13px">Truyền Tống</b>${tele2}</div>
 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px"><button class="vk-btn sec dd-go" data-id="${esc(x.id)}" ${goDis ? "disabled" : ""}>Đi Đến${isFinite(y) && !here ? " (" + esc(yrs(y)) + ")" : ""}</button>${tpBtns}</div>`;
   };
@@ -932,8 +958,7 @@ function tabDiaDanh() {
       run = g.state.run;
     tele = null;
     if (!run) {
-      body.innerHTML =
-        '<div class="vk-card">Chưa có kiếp nào đang chơi.</div>';
+      body.innerHTML = '<div class="vk-card">Chưa có kiếp nào đang chơi.</div>';
       return;
     }
     const c = ctxLite(),
@@ -960,11 +985,9 @@ function tabDiaDanh() {
     for (const x of X.list) {
       if (f.loai && x.loai !== f.loai) continue;
       if (f.qg && x.qg !== f.qg) continue;
-      if (f.cl && (f.cl === "cung" ? x.tho !== cur : x.tho === cur))
-        continue;
+      if (f.cl && (f.cl === "cung" ? x.tho !== cur : x.tho === cur)) continue;
       if (f.kham && !knownSet.has(x.id) && x.id !== run.viTri) continue;
-      if (toks.length && !toks.every((t) => x.key.includes(t)))
-        continue;
+      if (toks.length && !toks.every((t) => x.key.includes(t))) continue;
       if (!f.may && x.id !== run.viTri) {
         let ok = true;
         try {
@@ -985,14 +1008,10 @@ function tabDiaDanh() {
     }
     if (f.sort === "ten")
       res.sort((a, b) => a.name.localeCompare(b.name, "vi"));
-    else
-      res.sort(
-        (a, b) => a.d - b.d || a.name.localeCompare(b.name, "vi"),
-      );
+    else res.sort((a, b) => a.d - b.d || a.name.localeCompare(b.name, "vi"));
     if (toks.length)
       res.sort(
-        (a, b) =>
-          (b.key.startsWith(q) ? 1 : 0) - (a.key.startsWith(q) ? 1 : 0),
+        (a, b) => (b.key.startsWith(q) ? 1 : 0) - (a.key.startsWith(q) ? 1 : 0),
       );
     if (f.focus) {
       const i = res.findIndex((x) => x.id === f.focus);
@@ -1023,8 +1042,7 @@ function tabDiaDanh() {
         .join("") +
         (res.length > shown.length
           ? `<button class="vk-btn sec" id="dd-more" style="width:100%">Xem Thêm ${Math.min(30, res.length - shown.length)} Địa Danh</button>`
-          : "") ||
-      '<div class="vk-card vk-mu">Không thấy địa danh nào.</div>';
+          : "") || '<div class="vk-card vk-mu">Không thấy địa danh nào.</div>';
     body.querySelectorAll("#dd-list details").forEach((el) => {
       const fill = () => {
         const x = shown[+el.dataset.i];
@@ -1142,17 +1160,12 @@ function warnings() {
     w = [];
   try {
     const left = K.thoNguyenToiDa(nv) - nv.tuoi;
-    if (left < 30)
-      w.push(["bad", `Thọ chỉ còn ${Math.floor(left)} năm.`]);
+    if (left < 30) w.push(["bad", `Thọ chỉ còn ${Math.floor(left)} năm.`]);
   } catch {}
   if (has("chuanBiBeQuan", "retreatTargetGain")) {
     try {
       const { p } = planData();
-      if (
-        p.need > 0 &&
-        p.hereYears !== Infinity &&
-        p.hereYears > p.left - 5
-      )
+      if (p.need > 0 && p.hereYears !== Infinity && p.hereYears > p.left - 5)
         w.push([
           "bad",
           `Bế quan ở chỗ này cần ~${Math.ceil(p.hereYears)} năm mới tới Đại viên mãn, nhưng thọ chỉ còn ${Math.floor(p.left)} năm. Xem tab Đột phá.`,
@@ -1178,15 +1191,12 @@ function warnings() {
   if (has("thieuDeKhaoHach"))
     for (const ng of Object.keys(nv.nghe || {})) {
       try {
-        const r = K.thieuDeKhaoHach(c, ng).find((x) =>
-          x.includes("rớt"),
-        );
+        const r = K.thieuDeKhaoHach(c, ng).find((x) => x.includes("rớt"));
         if (r) w.push(["", `${NGHE[ng] || ng}: ${r}.`]);
       } catch {}
     }
   const seen = new Map();
-  for (const l of run.log || [])
-    if (l.expiresAt && l.key) seen.set(l.key, l);
+  for (const l of run.log || []) if (l.expiresAt && l.key) seen.set(l.key, l);
   for (const l of seen.values()) {
     const d = l.expiresAt - run.nam;
     if (d > 0.05 && d < 0.6)
@@ -1202,9 +1212,7 @@ function masterInfo(c) {
     (n) => n.song && n.danhPhan === "su_phu",
   );
   return ms
-    .map(
-      (m) => `${esc(m.ten)} (thiện cảm ${Math.round(m.haoCam ?? 0)})`,
-    )
+    .map((m) => `${esc(m.ten)} (thiện cảm ${Math.round(m.haoCam ?? 0)})`)
     .join(", ");
 }
 async function selfTest(out) {
@@ -1282,12 +1290,7 @@ async function selfTest(out) {
       const encs = K.facilitiesAt(c, slot);
       for (const id of encs) {
         const d = C().encounters.get(id);
-        if (
-          d &&
-          d.kind === "cua_hang" &&
-          d.ke_hang &&
-          d.ke_hang.length
-        ) {
+        if (d && d.kind === "cua_hang" && d.ke_hang && d.ke_hang.length) {
           K.shelfStock({ ...c, noi: slot }, id, slot);
           return "ok";
         }
@@ -1316,11 +1319,7 @@ async function selfTest(out) {
   await t("Ước lượng trận của game", () => {
     if (!has("revealedCombatRisk")) throw new Error("thiếu hàm");
     const c = ctx();
-    const r = S.core.revealedCombatRisk(
-      c,
-      [...C().enemies.keys()][0],
-      {},
-    );
+    const r = S.core.revealedCombatRisk(c, [...C().enemies.keys()][0], {});
     if (!r) throw new Error("không trả kết quả");
     return r.level;
   });
@@ -1487,8 +1486,7 @@ async function selfTest(out) {
       "doAction",
       "choose",
     ])
-      if (typeof g[k] !== "function")
-        throw new Error("game thiếu hàm " + k);
+      if (typeof g[k] !== "function") throw new Error("game thiếu hàm " + k);
     const b = ddBuild(ctxLite());
     if (!b.list.length) throw new Error("không đọc được địa danh");
     const o = g.teleportOptions({ kind: "array" });
@@ -1504,8 +1502,7 @@ async function selfTest(out) {
   await t("Tra Cứu (Vật Phẩm · Quái Vật)", () => {
     S.tcx = null;
     const X = tcBuild();
-    if (!X.items.length || !X.mons.length)
-      throw new Error("không có dữ liệu");
+    if (!X.items.length || !X.mons.length) throw new Error("không có dữ liệu");
     const it = X.items.find((x) => X.drops.has(x.id)) || X.items[0];
     tcItemHtml(it);
     tcMonHtml(X.mons[0]);
@@ -1611,9 +1608,7 @@ async function comboSearch(prog) {
       for (let k = j + 1; k < cand.length; k++)
         sets.push([cand[i], cand[j], cand[k]]);
     }
-  const ok = sets.filter(
-    (s) => s.reduce((a, m) => a + m.r.price, 0) <= money,
-  );
+  const ok = sets.filter((s) => s.reduce((a, m) => a + m.r.price, 0) <= money);
   const res = [];
   for (let i = 0; i < ok.length && !S.abort; i++) {
     const s = ok[i];
@@ -1626,8 +1621,7 @@ async function comboSearch(prog) {
       mode: "bal",
       iters: 450,
       init: base.manh,
-      onProg: (f) =>
-        prog((i + f) / ok.length, `Thử bộ ${i + 1}/${ok.length}…`),
+      onProg: (f) => prog((i + f) / ok.length, `Thử bộ ${i + 1}/${ok.length}…`),
     });
     res.push({
       s,
@@ -1667,8 +1661,7 @@ function encThreat(encId, slot, vars, nam) {
       }),
     );
   walk(def.choices);
-  for (const sc of Object.values(def.scenes || {}))
-    walk(sc && sc.choices);
+  for (const sc of Object.values(def.scenes || {})) walk(sc && sc.choices);
   const out = [],
     seen = new Set();
   for (const { ch, ef } of effs) {
@@ -1757,8 +1750,7 @@ async function scanBoards(maxY, withSect, prog) {
   for (let i = 0; i < out.length; i++) {
     if (S.abort) break;
     if (i % 4 === 0) {
-      prog &&
-        prog(0.5 + (0.5 * i) / out.length, "Đang thử sức từng việc…");
+      prog && prog(0.5 + (0.5 * i) / out.length, "Đang thử sức từng việc…");
       await sleep0();
     }
     const r = out[i];
@@ -1785,8 +1777,7 @@ function tabTreoThuong() {
       y,
       bRealm,
       th: encThreat(v.enc, v.slot, v.vars, run.nam + y),
-      left:
-        v.hetHanNam !== undefined ? v.hetHanNam - run.nam : undefined,
+      left: v.hetHanNam !== undefined ? v.hetHanNam - run.nam : undefined,
     };
   });
   body.innerHTML = `
@@ -1806,10 +1797,8 @@ function tabTreoThuong() {
       .sort(
         (a, b) =>
           (threatRank(b.th) >= 2) - (threatRank(a.th) >= 2) ||
-          ((b.v.thuong || 0) + 3 * (b.v.congHien || 0)) /
-            (0.3 + b.y + b.y2) -
-            ((a.v.thuong || 0) + 3 * (a.v.congHien || 0)) /
-              (0.3 + a.y + a.y2),
+          ((b.v.thuong || 0) + 3 * (b.v.congHien || 0)) / (0.3 + b.y + b.y2) -
+            ((a.v.thuong || 0) + 3 * (a.v.congHien || 0)) / (0.3 + a.y + a.y2),
       );
     body.querySelector("#vk-tbo").innerHTML = rows.length
       ? `<table class="vk-t"><tr><th>Việc</th><th>Thưởng</th><th>Sức</th></tr>${rows
@@ -1895,8 +1884,7 @@ function fitElem(it, nv) {
   const hs = it.he && it.he.length ? it.he : ["vo_sac"];
   let s = 0;
   for (const h of hs) {
-    s +=
-      share(h) * 2 + (lc.has(h) ? 1 : 0) + (h === "vo_sac" ? 0.4 : 0);
+    s += share(h) * 2 + (lc.has(h) ? 1 : 0) + (h === "vo_sac" ? 0.4 : 0);
   }
   return s / hs.length;
 }
@@ -1910,10 +1898,7 @@ function quickGain(nv, baseManh, id) {
     const n2 = clone(nv0);
     n2.kinhMach.manh = manh;
     const R = K.tinhKinhMach(n2, Cc);
-    const uy = (R.chieu || []).reduce(
-      (a, x) => a + (x.uyLuc || 0) / 10,
-      0,
-    );
+    const uy = (R.chieu || []).reduce((a, x) => a + (x.uyLuc || 0) / 10, 0);
     return (
       R.linhLuc +
       6 * (R.biDong.toc_do || 0) +
@@ -1949,9 +1934,7 @@ function quickGain(nv, baseManh, id) {
           )
           .filter((i) => i >= 0);
         if (hit.length > 3) continue;
-        const manh = nv0.kinhMach.manh.filter(
-          (p, i) => !hit.includes(i),
-        );
+        const manh = nv0.kinhMach.manh.filter((p, i) => !hit.includes(i));
         const nvT = clone(nv0);
         nvT.kinhMach.manh = manh.map((p) => ({ ...p }));
         let err;
@@ -2112,8 +2095,7 @@ const DUNG_TXT = (d) => {
             `${{ than_thuc: "thần thức", ngo_tinh: "ngộ tính", than_phap: "thân pháp", can_cot: "căn cốt", dao_tam: "đạo tâm", khi_van: "khí vận" }[a] || a} +${b}`,
         )
         .join(", "),
-    dung_truyen_tong_phu: () =>
-      `truyền tống tới trận đã biết, tầm ${v.tam}`,
+    dung_truyen_tong_phu: () => `truyền tống tới trận đã biết, tầm ${v.tam}`,
     do_duong: () => "dò đường quanh vùng",
     tranh_hiem: () => "tránh nguy hiểm",
     truyen_am: () => "truyền âm",
@@ -2188,9 +2170,7 @@ function itemFull(it) {
   if (typeof it.khuon === "string" && it.khuon.startsWith("enemy.")) {
     const en = C().enemies.get(it.khuon);
     if (en)
-      out.push(
-        `${it.loai === "trung_thu" ? "nở ra" : "luyện ra"}: ${en.ten}`,
-      );
+      out.push(`${it.loai === "trung_thu" ? "nở ra" : "luyện ra"}: ${en.ten}`);
   }
   if (it.ngu_linh && it.ngu_linh.o)
     out.push(
@@ -2216,8 +2196,7 @@ function itemFull(it) {
   if (it.loai === "don_phuong" && it.day) {
     const dp = C().donPhuong.get(it.day);
     const raId = dp && (dp.ra || dp.san_pham || dp.ket_qua);
-    const ra =
-      raId && C().items.get(typeof raId === "object" ? raId.id : raId);
+    const ra = raId && C().items.get(typeof raId === "object" ? raId.id : raId);
     if (ra)
       out.push(
         `dạy ${{ luyen_dan: "luyện", luyen_bao: "luyện", che_phu: "chế" }[dp.nghe] || "làm"} ${ra.ten}${dp.chu ? " (cần " + dp.chu.map((x) => (C().items.get(x.id)?.ten || x.id) + " ×" + x.so).join(", ") + (dp.linh_thach ? ", " + dp.linh_thach + " linh thạch" : "") + ")" : ""}`,
@@ -2236,21 +2215,14 @@ function categorize(it) {
       ? "Đấu pháp (công pháp có chiêu)"
       : "Tâm pháp (tu luyện, bị động)";
   if (it.loai === "phap_khi")
-    return it.chieu
-      ? "Pháp khí chiến đấu"
-      : "Pháp bảo bị động (giáp, ngọc…)";
+    return it.chieu ? "Pháp khí chiến đấu" : "Pháp bảo bị động (giáp, ngọc…)";
   if (it.loai === "dan_duoc") {
     if (it.dot_pha) return "Đan tăng tỉ lệ đột phá";
     if (dung.includes("pha_binh_canh")) return "Đan phá bình cảnh";
     if (dung.includes("tho_nguyen")) return "Đan tăng thọ";
-    if (dung.includes("_cell"))
-      return "Đan kinh mạch (khai thông, đổi màu)";
+    if (dung.includes("_cell")) return "Đan kinh mạch (khai thông, đổi màu)";
     if (dung.includes("duong_pham")) return "Đan nâng phẩm đạo cơ";
-    if (
-      it.tu_luyen ||
-      dung.includes('"tu_vi"') ||
-      dung.includes('"tu_luyen"')
-    )
+    if (it.tu_luyen || dung.includes('"tu_vi"') || dung.includes('"tu_luyen"'))
       return "Đan tăng tu luyện / tu vi";
     if (dung.includes('"heal')) return "Đan chữa thương";
     if (dung.includes("tam_ma")) return "Đan giảm tâm ma";
@@ -2277,8 +2249,7 @@ function categorize(it) {
           : "Phù bút";
   if (it.loai === "di_hoa") return "Dị hỏa";
   if (it.loai === "phu_luc") return "Phù lục";
-  if (it.loai === "don_phuong")
-    return "Bí Phương / Đơn Phương (công thức)";
+  if (it.loai === "don_phuong") return "Bí Phương / Đơn Phương (công thức)";
   if (it.loai === "linh_duoc") return "Linh dược";
   if (it.loai === "yeu_tai") return "Yêu tài";
   if (it.loai === "nguyen_lieu") return "Nguyên liệu";

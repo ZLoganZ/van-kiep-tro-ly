@@ -1,8 +1,26 @@
-import { gWin, TT, debounce, pct, num, esc, tcWord, fold, HE, heTen, STAGE, TC_RARE } from "../core/utils.js";
+import {
+  gWin,
+  TT,
+  debounce,
+  pct,
+  num,
+  esc,
+  tcWord,
+  fold,
+  HE,
+  heTen,
+  STAGE,
+  TC_RARE,
+} from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, G, C, realmName, has } from "../core/bridge.js";
+import { S, body, G, C, realmName } from "../core/bridge.js";
 import { errBox, render } from "./navigation.js";
-import { sourceNote, itemFull, categorize, CAT_ORDER } from "./ban-do-dia-danh.js";
+import {
+  sourceNote,
+  itemFull,
+  categorize,
+  CAT_ORDER,
+} from "./ban-do-dia-danh.js";
 import { NLW_TEN } from "./ngu-linh.js";
 /**
  * Module: Tra Cứu Vật Phẩm & Quái Vật Toàn Diện
@@ -342,8 +360,7 @@ function tcBuild() {
           uu: typeof r.uu_tien === "number" ? r.uu_tien : 1,
         });
       else if (r.add_item) {
-        const id =
-            typeof r.add_item === "string" ? r.add_item : r.add_item.id,
+        const id = typeof r.add_item === "string" ? r.add_item : r.add_item.id,
           ng =
             r.if && typeof r.if.ngau_nhien === "number"
               ? r.if.ngau_nhien
@@ -395,11 +412,7 @@ function tcBuild() {
     reItem.lastIndex = 0;
     while ((m = reItem.exec(txt))) {
       const role =
-        m[1] === "mua"
-          ? "ban"
-          : m[1] === "remove_item"
-            ? "can"
-            : "nhan";
+        m[1] === "mua" ? "ban" : m[1] === "remove_item" ? "can" : "nhan";
       let mp = X.evItem.get(m[2]);
       if (!mp) X.evItem.set(m[2], (mp = new Map()));
       if (!mp.has(def.id) || RANK[role] > RANK[mp.get(def.id)])
@@ -430,14 +443,9 @@ function tcBuild() {
       for (const mm of X.mons) {
         const e = mm.e;
         if (lo2 && !lo2.includes(e.loai)) continue;
-        if (tg.length && !tg.some((t) => (e.tag || []).includes(t)))
-          continue;
+        if (tg.length && !tg.some((t) => (e.tag || []).includes(t))) continue;
         if (hq.length && !hq.includes(e.ho_quai)) continue;
-        if (
-          tc.length &&
-          !tc.includes(e.toc) &&
-          !tc.includes("toc." + e.toc)
-        )
+        if (tc.length && !tc.includes(e.toc) && !tc.includes("toc." + e.toc))
           continue;
         if (e.canh_gioi < lo || e.canh_gioi > hi) continue;
         let s = X.evMon.get(e.id);
@@ -451,8 +459,7 @@ function tcBuild() {
     for (const c of r.chu || []) tcAdd(X.recIn, c.id, r);
   }
   for (const it of Cc.items.values()) {
-    if (it.loai === "don_phuong" && it.day)
-      tcAdd(X.teach, it.day, it.id);
+    if (it.loai === "don_phuong" && it.day) tcAdd(X.teach, it.day, it.id);
     if (typeof it.khuon === "string" && it.khuon.startsWith("enemy."))
       tcAdd(X.eggOf, it.khuon, it.id);
   }
@@ -460,9 +467,7 @@ function tcBuild() {
     for (const t of m.e.tien_hoa || []) tcAdd(X.evoFrom, t.id, m.id);
   try {
     for (const t of Cc.towers.values())
-      for (const m of JSON.stringify(t).matchAll(
-        /"(enemy\.[a-z0-9_]+)"/g,
-      ))
+      for (const m of JSON.stringify(t).matchAll(/"(enemy\.[a-z0-9_]+)"/g))
         X.tower.add(m[1]);
   } catch (e) {
     /* bỏ qua */
@@ -515,8 +520,7 @@ const tcDropP = (d, it) => {
   if (d.kind === "quy")
     return Math.min(
       1,
-      (R.dH[Math.min(R.dH.length, Math.max(1, it.pham_cap || 1)) - 1] ??
-        0.05) *
+      (R.dH[Math.min(R.dH.length, Math.max(1, it.pham_cap || 1)) - 1] ?? 0.05) *
         (R.rank[d.mon.e.muc || "thuong"] ?? 1) *
         d.uu,
     );
@@ -553,9 +557,7 @@ function tcItemHtml(x) {
     rows.push(tcRow("Hệ", esc(it.he.map(heTen).join(" / "))));
   if (it.gia) rows.push(tcRow("Giá Gốc", it.gia + " Linh Thạch"));
   if (own)
-    rows.push(
-      tcRow("Đang Có Trong Túi", `<span class="vk-ok">${own}</span>`),
-    );
+    rows.push(tcRow("Đang Có Trong Túi", `<span class="vk-ok">${own}</span>`));
   if (typeof it.khuon === "string" && Cc.enemies.has(it.khuon))
     rows.push(tcRow("Nở Ra", tcLk("q", it.khuon, tcMonName(it.khuon))));
   out.push(rows.join(""));
@@ -581,9 +583,7 @@ function tcItemHtml(x) {
       "món quý ngự linh: game không ghi nguồn bán / rơi cụ thể, xem thêm tab Ngự Linh",
     );
   if (note.length)
-    out.push(
-      tcSec("Ghi Chú Nguồn", tcPills(note.map((s) => esc(tcWord(s))))),
-    );
+    out.push(tcSec("Ghi Chú Nguồn", tcPills(note.map((s) => esc(tcWord(s))))));
 
   // ── Nơi xuất hiện
   const where = [];
@@ -622,9 +622,7 @@ function tcItemHtml(x) {
     for (const [eid, role] of evs) {
       const def = Cc.encounters.get(eid);
       if (!def) continue;
-      (role === "ban" ? sells : role === "nhan" ? gets : needs).push(
-        def,
-      );
+      (role === "ban" ? sells : role === "nhan" ? gets : needs).push(def);
     }
   if (sells.length)
     where.push(
@@ -683,9 +681,7 @@ function tcItemHtml(x) {
         esc(it.dia_hinh.map((d) => TC_DH[d] || tcWord(d)).join(", ")),
     );
   if (it.xuat_xu)
-    org.push(
-      "Đặc Sản: " + esc(TC_QUOC[it.xuat_xu] || tcWord(it.xuat_xu)),
-    );
+    org.push("Đặc Sản: " + esc(TC_QUOC[it.xuat_xu] || tcWord(it.xuat_xu)));
   const hq = []
     .concat(it.ho_quai || [])
     .map((id) => {
@@ -727,9 +723,7 @@ function tcItemHtml(x) {
       );
   }
   const use = [
-    ...new Map(
-      (X.recIn.get(it.id) || []).map((r) => [r.ra, r]),
-    ).values(),
+    ...new Map((X.recIn.get(it.id) || []).map((r) => [r.ra, r])).values(),
   ];
   if (use.length)
     where.push(
@@ -786,9 +780,7 @@ function tcMonHtml(m) {
           : ""),
     ),
   );
-  rows.push(
-    tcRow("Mức", esc(TC_MUC[e.muc || "thuong"] || tcWord(e.muc))),
-  );
+  rows.push(tcRow("Mức", esc(TC_MUC[e.muc || "thuong"] || tcWord(e.muc))));
   if (e.he && e.he.length)
     rows.push(tcRow("Hệ", esc(e.he.map(heTen).join(" / "))));
   const st = [];
@@ -808,10 +800,7 @@ function tcMonHtml(m) {
         "Đặc Tính",
         esc(
           e.dac_tinh
-            .map(
-              (d) =>
-                TC_TRAIT[d] || tcWord(String(d).replace(/_/g, " ")),
-            )
+            .map((d) => TC_TRAIT[d] || tcWord(String(d).replace(/_/g, " ")))
             .join(", "),
         ),
       ),
@@ -826,9 +815,7 @@ function tcMonHtml(m) {
     out.push(
       `<div style="margin:6px 0;font-size:13px;line-height:1.5">${esc(tcMoTa(e))}</div>`,
     );
-  const ch = (e.chieu || [])
-    .map((id) => Cc.chieuDich.get(id))
-    .filter(Boolean);
+  const ch = (e.chieu || []).map((id) => Cc.chieuDich.get(id)).filter(Boolean);
   if (ch.length)
     out.push(
       tcSec(
@@ -851,21 +838,13 @@ function tcMonHtml(m) {
         : toc && toc.dia_hinh) || [];
   if (dh.length)
     where.push(
-      tcSec(
-        "Địa Hình",
-        esc(dh.map((d) => TC_DH[d] || tcWord(d)).join(", ")),
-      ),
+      tcSec("Địa Hình", esc(dh.map((d) => TC_DH[d] || tcWord(d)).join(", "))),
     );
   if (toc && toc.lanh_dia && toc.lanh_dia.length)
     where.push(tcSec("Lãnh Địa Của Tộc", esc(toc.lanh_dia.join(", "))));
   const gen = Cc.encounters.get("ev.yeu_thu_lang_thang"),
     gsp = gen && gen.vars && gen.vars.yeu_thu;
-  if (
-    e.loai === "yeu_thu" &&
-    gsp &&
-    gsp.canh_gioi &&
-    (e.canh_gioi ?? 0) >= 0
-  ) {
+  if (e.loai === "yeu_thu" && gsp && gsp.canh_gioi && (e.canh_gioi ?? 0) >= 0) {
     const rel = gsp.canh_gioi,
       a = Math.max(0, e.canh_gioi - rel[1]),
       b = Math.min(5, e.canh_gioi - rel[0]);
@@ -932,12 +911,9 @@ function tcMonHtml(m) {
         },
       });
     else if (r.add_item) {
-      const id =
-          typeof r.add_item === "string" ? r.add_item : r.add_item.id,
+      const id = typeof r.add_item === "string" ? r.add_item : r.add_item.id,
         ng =
-          r.if && typeof r.if.ngau_nhien === "number"
-            ? r.if.ngau_nhien
-            : null;
+          r.if && typeof r.if.ngau_nhien === "number" ? r.if.ngau_nhien : null;
       if (typeof id === "string")
         drop.push({
           id,
@@ -982,9 +958,7 @@ function tcMonHtml(m) {
   const dl = [...bestD.values()].sort((a, b) => b.p - a.p);
   const tab = Cc.lootTables.get(
     e.roi_bang ||
-      (e.tag && e.tag.includes("ta_vat")
-        ? "loot.ta_vat"
-        : "loot." + e.loai),
+      (e.tag && e.tag.includes("ta_vat") ? "loot.ta_vat" : "loot." + e.loai),
   );
   const gl = tab
     ? [...(tab.dong || [])].map(
@@ -1003,9 +977,7 @@ function tcMonHtml(m) {
     `<div style="margin-top:8px;border-top:1px dashed var(--line);padding-top:4px"><b style="color:var(--acc2)">Rơi Đồ</b></div>`,
   );
   out.push(
-    top.length
-      ? `<div style="font-size:13px">${top.join(" · ")}</div>`
-      : "",
+    top.length ? `<div style="font-size:13px">${top.join(" · ")}</div>` : "",
   );
   out.push(
     dl.length
@@ -1057,10 +1029,7 @@ function tcMonHtml(m) {
 function tcFullKey(x, isV) {
   if (x.full === null) {
     try {
-      if (isV)
-        x.full = fold(
-          tcMoTa(x.it) + " " + itemFull(x.it) + " " + x.cat,
-        );
+      if (isV) x.full = fold(tcMoTa(x.it) + " " + itemFull(x.it) + " " + x.cat);
       else
         x.full = fold(
           [
@@ -1197,9 +1166,8 @@ function tabTraCuu(k) {
       )
       .join('<i class="tc-gap"></i>');
     const act =
-      [...body.querySelectorAll(".tc-row select")].filter(
-        (el) => el.value,
-      ).length +
+      [...body.querySelectorAll(".tc-row select")].filter((el) => el.value)
+        .length +
       (f.desc ? 1 : 0) +
       (isV && f.own ? 1 : 0);
     $("tc-fsum").textContent =
@@ -1219,9 +1187,7 @@ function tabTraCuu(k) {
             ? [
                 TC_LOAI[x.it.loai] || tcWord(String(x.it.loai)),
                 x.it.pham_cap ? "Phẩm " + x.it.pham_cap : "",
-                x.it.canh_gioi !== undefined
-                  ? tcRealm(x.it.canh_gioi)
-                  : "",
+                x.it.canh_gioi !== undefined ? tcRealm(x.it.canh_gioi) : "",
                 (x.it.he || []).map(heTen).join("/"),
               ]
             : [
@@ -1248,8 +1214,7 @@ function tabTraCuu(k) {
         .join("") +
         (res.length > shown.length
           ? `<button class="vk-btn sec" id="tc-more" style="width:100%">Xem Thêm ${Math.min(40, res.length - shown.length)} Kết Quả</button>`
-          : "") ||
-      '<div class="vk-card vk-mu">Không thấy kết quả nào.</div>';
+          : "") || '<div class="vk-card vk-mu">Không thấy kết quả nào.</div>';
     body.querySelectorAll("#tc-list details").forEach((el) => {
       const fill = () => {
         if (el.dataset.done) return;
@@ -1315,8 +1280,7 @@ function tabTraCuu(k) {
       tcGo(a.dataset.k, a.dataset.id);
       return;
     }
-    const yb =
-      ev.target.closest && ev.target.closest(".tc-btn-copy-yaml");
+    const yb = ev.target.closest && ev.target.closest(".tc-btn-copy-yaml");
     if (yb) {
       ev.preventDefault();
       const id = yb.dataset.id;

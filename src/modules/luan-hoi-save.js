@@ -1,7 +1,17 @@
 import { gWin, TT, num, esc } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, clone, ctx, ctxLite, realmLabel, has } from "../core/bridge.js";
-import { errBox, render, Assist } from "./navigation.js";
+import {
+  S,
+  body,
+  loadCore,
+  G,
+  C,
+  clone,
+  ctx,
+  ctxLite,
+  realmLabel,
+} from "../core/bridge.js";
+import { errBox, render } from "./navigation.js";
 import { placeName } from "./di-bao.js";
 import { AU } from "../auto/auto-core.js";
 import { rrLoPhiInfo } from "../auto/auto-reroll.js";
@@ -57,14 +67,9 @@ var NM_THUTU = [
   "phan_boi",
 ];
 var lhCard = (h, inner) =>
-  '<div class="vk-card">' +
-  (h ? "<h3>" + h + "</h3>" : "") +
-  inner +
-  "</div>";
+  '<div class="vk-card">' + (h ? "<h3>" + h + "</h3>" : "") + inner + "</div>";
 var lhNote = (t) =>
-  '<div class="vk-mu" style="font-size:12px;margin:4px 0">' +
-  t +
-  "</div>";
+  '<div class="vk-mu" style="font-size:12px;margin:4px 0">' + t + "</div>";
 var ttTen = (id) => {
   try {
     const t = C().thanhTuu.get(id);
@@ -75,17 +80,14 @@ var ttTen = (id) => {
 };
 var ttGroup = (id) => {
   const k = String(id).split(".")[1] || "";
-  return /^vo_nhai_uyen/.test(k)
-    ? "Vô Nhai Uyên"
-    : TT_NHOM[k] || "Khác";
+  return /^vo_nhai_uyen/.test(k) ? "Vô Nhai Uyên" : TT_NHOM[k] || "Khác";
 };
 
 // Điều kiện khóa: đúng như hàm kiểm tra của game (cần thành tựu nào, cần trải bao nhiêu kiếp).
 function lhLock(meta, m) {
   const have = (meta.tienLo && meta.tienLo.thanhTuu) || [];
   const need = (m.can || []).filter((s) => !have.includes(s));
-  if (need.length)
-    return m.goi_y || "cần " + need.map(ttTen).join(", ");
+  if (need.length) return m.goi_y || "cần " + need.map(ttTen).join(", ");
   if (m.can_kiep && (Number(meta.kiep) || 0) < m.can_kiep)
     return m.goi_y || "cần trải " + m.can_kiep + " kiếp";
   return "";
@@ -110,9 +112,7 @@ function lhRows(meta) {
       max: lo ? 1 : nac.length,
       gia: nx ? Number(nx.gia) : undefined,
       moTaNac: nx ? nx.mo_ta : (nac[tier - 1] || {}).mo_ta || "",
-      left: nac
-        .slice(tier)
-        .reduce((s, n) => s + (Number(n.gia) || 0), 0),
+      left: nac.slice(tier).reduce((s, n) => s + (Number(n.gia) || 0), 0),
       khoa: nx ? lhLock(meta, m) : "",
     });
   }
@@ -194,9 +194,7 @@ function tabLuanHoi() {
         out = { loi: (e && e.message) || String(e) };
       }
       UI.notify(
-        out && out.loi
-          ? out.loi
-          : (out && out.loiLaoDo) || "Đã mua " + r.ten,
+        out && out.loi ? out.loi : (out && out.loiLaoDo) || "Đã mua " + r.ten,
       );
       render();
     };
@@ -208,10 +206,7 @@ function tabThanhTuu() {
     meta = g && g.state && g.state.meta,
     cm = C().thanhTuu;
   if (!meta || !cm) {
-    body.innerHTML = lhCard(
-      "",
-      "Chưa đọc được danh sách thành tựu của game.",
-    );
+    body.innerHTML = lhCard("", "Chưa đọc được danh sách thành tựu của game.");
     return;
   }
   const earned = new Set((meta.tienLo && meta.tienLo.thanhTuu) || []),
@@ -222,8 +217,7 @@ function tabThanhTuu() {
     if (S.core && S.core.tinhDiemKiep) {
       try {
         (
-          (S.core.tinhDiemKiep(clone(run), clone(meta), C()) || {})
-            .moi || []
+          (S.core.tinhDiemKiep(clone(run), clone(meta), C()) || {}).moi || []
         ).forEach((x) => pending.add(x));
       } catch (e) {
         note =
@@ -245,8 +239,7 @@ function tabThanhTuu() {
   }
   const unlock = {};
   for (const m of C().moKhoa.values())
-    for (const k of m.can || [])
-      (unlock[k] = unlock[k] || []).push(m.ten);
+    for (const k of m.can || []) (unlock[k] = unlock[k] || []).push(m.ten);
   const all = [...cm.values()],
     f = S.ttF || "all";
   const sumE = all
@@ -413,8 +406,7 @@ function tabThienKieu() {
           )
       : lhNote("Kiếp này chưa tới kỳ lập bảng đầu tiên."),
   );
-  if (ds.length)
-    html += lhCard("Bảng Hiện Tại", ds.map(rowHtml).join(""));
+  if (ds.length) html += lhCard("Bảng Hiện Tại", ds.map(rowHtml).join(""));
   if (live)
     html += lhCard(
       "Nếu Bảng Cập Nhật Ngay Bây Giờ",
@@ -525,8 +517,7 @@ function tabNhanMach() {
     ) +
     lhCard(
       "Danh Sách",
-      (ls.slice(0, 200).map(rowHtml).join("") ||
-        lhNote("Chưa có ai khớp.")) +
+      (ls.slice(0, 200).map(rowHtml).join("") || lhNote("Chưa có ai khớp.")) +
         (ls.length > 200
           ? lhNote("Chỉ hiện 200 người đầu, hãy lọc thêm.")
           : ""),
@@ -554,11 +545,7 @@ function rrLhPlan(meta) {
     if (m.nhom === "lo_phi" || !ids.has(m.id)) continue;
     const nac = m.nac || [],
       lock = lhLock(meta, m);
-    for (
-      let t = Number((meta.moKhoa || {})[m.id]) || 0;
-      t < nac.length;
-      t++
-    ) {
+    for (let t = Number((meta.moKhoa || {})[m.id]) || 0; t < nac.length; t++) {
       if (lock) {
         stuck.push(m.ten + ": " + lock);
         break;
@@ -689,10 +676,7 @@ function cleanseThienDao() {
       lives: [],
     };
     try {
-      localStorage.setItem(
-        "tu-tien:thien-dao:v1",
-        JSON.stringify(cleanMemory),
-      );
+      localStorage.setItem("tu-tien:thien-dao:v1", JSON.stringify(cleanMemory));
     } catch (e) {}
 
     const g = G();
@@ -714,8 +698,7 @@ function cleanseThienDao() {
         });
       }
       if (typeof g.dismissThienDao === "function") g.dismissThienDao();
-      if (typeof g.dismissSaveWarning === "function")
-        g.dismissSaveWarning();
+      if (typeof g.dismissSaveWarning === "function") g.dismissSaveWarning();
     }
     return true;
   } catch (err) {
@@ -736,8 +719,7 @@ function rerollRunRng(run) {
 
 function doExportSave() {
   const g = G();
-  if (!g || !g.state)
-    return { ok: false, msg: "Chưa có dữ liệu trò chơi." };
+  if (!g || !g.state) return { ok: false, msg: "Chưa có dữ liệu trò chơi." };
 
   const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
   const meta = clone(g.state.meta);
@@ -802,9 +784,7 @@ function doExportSave() {
     data: saveStr,
     fileName,
     name: (nv && nv.ten) || "Vô Danh",
-    realm: nv
-      ? realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0)
-      : "Ngoài Kiếp",
+    realm: nv ? realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0) : "Ngoài Kiếp",
     year: run ? run.nam : 0,
     meta,
     run,
@@ -944,9 +924,7 @@ function saveQuickSave(note = "") {
     realm: exp.realm || "Phàm Nhân",
     year: exp.run ? exp.run.nam : 0,
     pName,
-    note:
-      note.trim() ||
-      `Lưu tại ${pName} (Năm ${exp.run ? exp.run.nam : 0})`,
+    note: note.trim() || `Lưu tại ${pName} (Năm ${exp.run ? exp.run.nam : 0})`,
     data: exp.data,
   };
 
@@ -1227,9 +1205,7 @@ function tabLuuNapSave() {
     btnImport.onclick = () => {
       const val = txtInp.value.trim();
       if (!val) {
-        alert(
-          "⚠️ Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản!",
-        );
+        alert("⚠️ Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản!");
         return;
       }
       const cleanTd = body.querySelector("#sv-opt-cleantd")
@@ -1256,8 +1232,7 @@ function tabLuuNapSave() {
           rerollRng: reroll,
         });
         btnImport.disabled = false;
-        btnImport.textContent =
-          "⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)";
+        btnImport.textContent = "⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)";
         if (res.ok) {
           try {
             UI.notify(res.msg);
@@ -1346,9 +1321,7 @@ function tabLuuNapSave() {
   const btnClearAllQs = body.querySelector("#sv-btn-clear-all-qs");
   if (btnClearAllQs) {
     btnClearAllQs.onclick = () => {
-      if (
-        !confirm("Bạn có chắc muốn xóa TẤT CẢ các bản Lưu Nhanh không?")
-      )
+      if (!confirm("Bạn có chắc muốn xóa TẤT CẢ các bản Lưu Nhanh không?"))
         return;
       localStorage.removeItem("vkx_quick_saves");
       tabLuuNapSave();

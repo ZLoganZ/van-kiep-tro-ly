@@ -1,7 +1,32 @@
 import { gWin, num, safeYrs } from "../core/utils.js";
-import { S, G, C, ctxLite, has, scanRetreat } from "../core/bridge.js";
-import { DIBAO, scanDiBao, placeName, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, enterDiBaoEvent, checkStat, checkCanTeleport, smartTeleportTo, simDiBaoGuard, findStatBoosters, calcDiBaoPity, removeDiBaoAlert, showDiBaoMini } from "../modules/di-bao.js";
-import { AU_TT_MAX, AU_TT_TEN, AU, auLog, auCall, auLifeLeft, auBypassConfirm } from "./auto-core.js";
+import { S, G, C, ctxLite, scanRetreat } from "../core/bridge.js";
+import {
+  DIBAO,
+  scanDiBao,
+  placeName,
+  findSlotByDiaDanh,
+  findCandidateSlotsForRelicEv,
+  checkOwnedRelic,
+  scanMapActiveDiBao,
+  enterDiBaoEvent,
+  checkStat,
+  checkCanTeleport,
+  smartTeleportTo,
+  simDiBaoGuard,
+  findStatBoosters,
+  calcDiBaoPity,
+  removeDiBaoAlert,
+  showDiBaoMini,
+} from "../modules/di-bao.js";
+import {
+  AU_TT_MAX,
+  AU_TT_TEN,
+  AU,
+  auLog,
+  auCall,
+  auLifeLeft,
+  auBypassConfirm,
+} from "./auto-core.js";
 /**
  * Module: Auto Săn Dị Bảo (Nghịch Thiên P8) & Cắm Trại Đón Đầu Pity
  */
@@ -107,7 +132,7 @@ async function auSdbStep(st) {
 
   const activeTargets = [];
   const ignoredTargets = [];
-  const activeMap = scanMapActiveDiBao(run, c);
+  const activeMap = scanMapActiveDiBao(run, c, true);
 
   for (const item of activeMap.values()) {
     const ev = item.ev || DIBAO.evMap.get(item.encId);
@@ -116,11 +141,7 @@ async function auSdbStep(st) {
     const slot = item.slot;
 
     // Kiểm tra hạn năm nếu có
-    if (
-      item.hetHanNam !== undefined &&
-      nam != null &&
-      item.hetHanNam <= nam
-    )
+    if (item.hetHanNam !== undefined && nam != null && item.hetHanNam <= nam)
       continue;
 
     const owned = isOwned(ev.relic);
@@ -334,33 +355,19 @@ async function auSdbStep(st) {
           let curNv =
             (G().state && G().state.run && G().state.run.nhanVat) || nv;
           let curChk = checkStat(target.e.chk, curNv);
-          if (
-            curChk &&
-            !curChk.ok &&
-            curChk.key &&
-            curChk.req > curChk.cur
-          ) {
+          if (curChk && !curChk.ok && curChk.key && curChk.req > curChk.cur) {
             const gap = curChk.req - curChk.cur;
             const boosters = findStatBoosters(curChk.key, gap);
-            const pills = (
-              (boosters && boosters.bagItems) ||
-              []
-            ).filter(
+            const pills = ((boosters && boosters.bagItems) || []).filter(
               (b) => b.loai === "dan_duoc" && b.val > 0 && b.count > 0,
             );
             let gained = 0;
             for (const pItem of pills) {
-              while (
-                gained < gap &&
-                curNv.tuiDo &&
-                curNv.tuiDo[pItem.id] > 0
-              ) {
+              while (gained < gap && curNv.tuiDo && curNv.tuiDo[pItem.id] > 0) {
                 const prevVal = checkStat(target.e.chk, curNv).cur;
                 const rUse = auCall((gg) => gg.useItem(pItem.id));
                 curNv =
-                  (G().state &&
-                    G().state.run &&
-                    G().state.run.nhanVat) ||
+                  (G().state && G().state.run && G().state.run.nhanVat) ||
                   curNv;
                 const nextVal = checkStat(target.e.chk, curNv).cur;
                 if (!rUse.ok || nextVal <= prevVal) break;
@@ -381,9 +388,7 @@ async function auSdbStep(st) {
       if (cfg.autoQuickSave && st.savedEnc !== target.encId) {
         st.savedEnc = target.encId;
         try {
-          saveQuickSave(
-            `Trước trận Dị Bảo: ${target.title} (${target.pName})`,
-          );
+          saveQuickSave(`Trước trận Dị Bảo: ${target.title} (${target.pName})`);
           auLog(
             `💾 [Quick Save] Đã tự động chụp bản lưu trước trận «${target.title}» tại ${target.pName}. (Nếu xịt 7%, bạn có thể vào tab [Lưu & Nạp Save] bật 'Tẩy Thiên Cơ' để gieo quẻ mới!).`,
             "vk-ok",
@@ -438,10 +443,7 @@ async function auSdbStep(st) {
           g.dongThongBao();
         } catch (e) {}
       }
-      if (
-        curRun.longNotice &&
-        typeof g.closeLongNotice === "function"
-      ) {
+      if (curRun.longNotice && typeof g.closeLongNotice === "function") {
         try {
           g.closeLongNotice();
         } catch (e) {}
@@ -456,10 +458,7 @@ async function auSdbStep(st) {
       );
       const resTele = smartTeleportTo(target.slot);
       if (resTele.ok) {
-        auLog(
-          `⚡ Truyền tống thành công tới ${target.pName}!`,
-          "vk-ok",
-        );
+        auLog(`⚡ Truyền tống thành công tới ${target.pName}!`, "vk-ok");
         return null;
       }
       auLog(
@@ -503,9 +502,7 @@ async function auSdbStep(st) {
 
   // 8. NẾU CHƯA CÓ DỊ BẢO NÀO NỞ TRÊN BẢN ĐỒ:
   const targetEvs = validEvs.filter((e) => targetRelicSet.has(e.relic));
-  const unownedCount = targetEvs.filter(
-    (e) => !isOwned(e.relic),
-  ).length;
+  const unownedCount = targetEvs.filter((e) => !isOwned(e.relic)).length;
   if (unownedCount === 0) {
     const allUnowned = validEvs.filter((e) => !isOwned(e.relic)).length;
     if (allUnowned === 0 || !allowAllSpawns) {
@@ -543,28 +540,41 @@ async function auSdbStep(st) {
   st.noRetreatCampSlots = st.noRetreatCampSlots || new Set();
   st.campEnteredSlots = st.campEnteredSlots || new Set();
 
-  // 8.1. Xác định địa điểm cắm trại tối ưu nhất từ danh sách mục tiêu (bỏ qua các slot đã xác nhận không thể bế quan để tránh lặp ping-pong)
+  // 8.1. Xác định địa điểm cắm trại / tuần tra tối ưu nhất từ danh sách mục tiêu (hỗ trợ cả Dị Bảo biển / bến cảng / hoang dã)
   let targetCampSlot = null;
   let targetCampName = null;
   let targetCampRelic = null;
 
   if (pity.topCamping && pity.topCamping.length > 0) {
     for (const cp of pity.topCamping) {
-      if (cp.e && (cp.e.marker || cp.e.dia)) {
-        const s = findSlotByDiaDanh(cp.e.marker, cp.e.dia, c);
-        if (s != null && !st.noRetreatCampSlots.has(String(s))) {
-          targetCampSlot = String(s);
-          targetCampName = cp.e.dia;
-          targetCampRelic = cp.e;
-          break;
-        }
+      if (!cp.e) continue;
+      const candSlots =
+        typeof findCandidateSlotsForRelicEv === "function"
+          ? findCandidateSlotsForRelicEv(cp.e, c, run)
+          : [];
+      if (!candSlots.length && (cp.e.marker || cp.e.dia)) {
+        const s0 = findSlotByDiaDanh(cp.e.marker, cp.e.dia, c, cp.e);
+        if (s0 != null) candSlots.push(String(s0));
+      }
+      const availSlot = candSlots.find(
+        (sl) => sl != null && !st.noRetreatCampSlots.has(String(sl)),
+      );
+      if (availSlot != null) {
+        targetCampSlot = String(availSlot);
+        targetCampName =
+          placeName(c, targetCampSlot) ||
+          cp.e.dia ||
+          cp.e.noi ||
+          "Slot " + targetCampSlot;
+        targetCampRelic = cp.e;
+        break;
       }
     }
   }
 
   const curSlot = run.viTri != null ? String(run.viTri) : "";
 
-  // 8.2. Nếu có địa danh đón đầu cụ thể và chưa có mặt tại đó:
+  // 8.2. Nếu có địa danh đón đầu / tuần tra cụ thể và chưa có mặt tại đó:
   if (targetCampSlot && curSlot !== targetCampSlot) {
     st.phaseDesc = `Di chuyển tới ${targetCampName} đón đầu Dị Bảo`;
     st.targetTitle = `Đón đầu: ${targetCampName}`;
@@ -577,27 +587,21 @@ async function auSdbStep(st) {
     }
 
     // Ưu tiên truyền tống nếu được bật
-    if (
-      cfg.dungTruyenTong !== false &&
-      checkCanTeleport(targetCampSlot)
-    ) {
+    if (cfg.dungTruyenTong !== false && checkCanTeleport(targetCampSlot)) {
       auLog(
-        `⚡ Phát hiện truyền tống! Truyền tống tức thì tới ${targetCampName} (Slot ${targetCampSlot}) để cắm trại đón đầu...`,
+        `⚡ Phát hiện truyền tống! Truyền tống tức thì tới ${targetCampName} (Slot ${targetCampSlot}) để cắm trại / kiểm tra Dị Bảo...`,
         "vk-ok",
       );
       const resTele = smartTeleportTo(targetCampSlot);
       if (resTele.ok) {
         st.campEnteredSlots.delete(targetCampSlot);
-        auLog(
-          `⚡ Truyền tống thành công tới ${targetCampName}!`,
-          "vk-ok",
-        );
+        auLog(`⚡ Truyền tống thành công tới ${targetCampName}!`, "vk-ok");
         return null;
       }
     }
 
     auLog(
-      `🚀 Di chuyển tới địa danh đón đầu ${targetCampName} (Slot ${targetCampSlot}) để cắm trại chờ Dị Bảo nở...`,
+      `🚀 Di chuyển tới ${targetCampName} (Slot ${targetCampSlot}) để kích hoạt cơ duyên & chờ Dị Bảo nở...`,
       "vk-ok",
     );
     const rTrav = auCall(() => g.travelTo(targetCampSlot));
@@ -627,7 +631,7 @@ async function auSdbStep(st) {
     }
   }
 
-  // 8.3. Nếu đã tới địa danh đón đầu, thử tiến vào node (oNoi) đúng 1 lần duy nhất (tránh lặp vô hạn ở các danh thắng hoang:* không set oNoi):
+  // 8.3. Nếu đã tới địa danh đón đầu, tiến vào node (oNoi) để kích hoạt refreshPlaceEncounters và kiểm tra ngay sự kiện Dị Bảo:
   if (
     targetCampSlot &&
     curSlot === targetCampSlot &&
@@ -636,16 +640,21 @@ async function auSdbStep(st) {
   ) {
     st.campEnteredSlots.add(targetCampSlot);
     auCall(() => {
-      if (typeof g.enterNode === "function")
-        g.enterNode(targetCampSlot);
-      else if (typeof g.enterPlace === "function")
-        g.enterPlace(targetCampSlot);
+      if (typeof g.enterNode === "function") g.enterNode(targetCampSlot);
+      else if (typeof g.enterPlace === "function") g.enterPlace(targetCampSlot);
     });
     const rAfterCampEnter = G().state && G().state.run;
-    if (
-      rAfterCampEnter &&
-      (rAfterCampEnter.active || rAfterCampEnter.tran)
-    ) {
+    if (rAfterCampEnter && (rAfterCampEnter.active || rAfterCampEnter.tran)) {
+      st.tried = 0;
+      return null;
+    }
+    // Quét lại ngay lập tức sau khi enterNode/enterPlace vì refreshPlaceEncounters vừa chạy tại slot này!
+    const freshMap = scanMapActiveDiBao(
+      rAfterCampEnter || run,
+      ctxLite(),
+      true,
+    );
+    if (freshMap && freshMap.size > 0) {
       st.tried = 0;
       return null;
     }
@@ -711,16 +720,11 @@ async function auSdbStep(st) {
   }
 
   let sitYears = pity.waitYears >= 450 ? 1 : Math.min(3, maxCanSit);
-  if (
-    hereInfo &&
-    Array.isArray(hereInfo.moc) &&
-    hereInfo.moc.length > 0
-  ) {
+  if (hereInfo && Array.isArray(hereInfo.moc) && hereInfo.moc.length > 0) {
     const validMocs = hereInfo.moc.filter(
       (m) => m <= (pity.waitYears >= 450 ? 1 : Math.min(5, maxCanSit)),
     );
-    if (validMocs.length > 0)
-      sitYears = validMocs[validMocs.length - 1];
+    if (validMocs.length > 0) sitYears = validMocs[validMocs.length - 1];
     else sitYears = Math.min(hereInfo.moc[0], maxCanSit);
   }
   if (sitYears <= 0) sitYears = 1;
@@ -758,11 +762,7 @@ async function auSdbStep(st) {
         g.dongThongBao();
       } catch (e) {}
     }
-    if (
-      rRun &&
-      rRun.longNotice &&
-      typeof g.closeLongNotice === "function"
-    ) {
+    if (rRun && rRun.longNotice && typeof g.closeLongNotice === "function") {
       try {
         g.closeLongNotice();
       } catch (e) {}
@@ -814,11 +814,7 @@ async function auSdbStep(st) {
         g.closeEncounter();
       } catch (e) {}
     }
-    if (
-      rAfter &&
-      rAfter.thongBao &&
-      typeof g.dongThongBao === "function"
-    ) {
+    if (rAfter && rAfter.thongBao && typeof g.dongThongBao === "function") {
       try {
         g.dongThongBao();
       } catch (e) {}
@@ -838,22 +834,31 @@ async function auSdbStep(st) {
       return null;
     }
     return {
-      stop:
-        "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
+      stop: "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
     };
   }
   st.tried = 0;
 
-  const namSau =
-    G().state && G().state.run ? G().state.run.nam : namTruoc;
+  const namSau = G().state && G().state.run ? G().state.run.nam : namTruoc;
   const deltaY = Math.max(0, namSau - namTruoc);
   st.retreatYearsDone = (st.retreatYearsDone || 0) + deltaY;
+  st.patrolRetreatCount = (st.patrolRetreatCount || 0) + 1;
+
+  // Sau khi đã bế quan trôi năm (đặc biệt khi Pity >= 450 hoặc mỗi 2 chu kỳ bế quan),
+  // xóa danh sách tạm khóa noRetreatCampSlots & campEnteredSlots để Auto bay tới tuần tra / kích hoạt refreshPlaceEncounters tại điểm Dị Bảo mục tiêu!
+  const nextWait = (pity.waitYears || 0) + deltaY;
+  if (
+    (nextWait >= 450 && st.patrolRetreatCount >= 1) ||
+    st.patrolRetreatCount >= 2
+  ) {
+    st.patrolRetreatCount = 0;
+    if (st.noRetreatCampSlots) st.noRetreatCampSlots.clear();
+    if (st.campEnteredSlots) st.campEnteredSlots.clear();
+  }
   return null;
 }
 
-export {
-  auSdbStep,
-};
+export { auSdbStep };
 
 Object.assign(gWin, {
   auSdbStep,

@@ -234,8 +234,50 @@ if (UI) {
 const errBox = (e) =>
   `<div class="vk-err"><b>Có lỗi:</b> ${esc((e && e.message) || e)}<br><span class="vk-mu" style="font-size:12px">Tool ${TOOL_VER}${S.core ? " · game " + esc(S.core.bundle) : ""}. Nếu lỗi lặp lại, chụp màn hình gửi Claude.</span></div>`;
 
+// Đồng bộ Thanh Linh Giác Nhân Vật (#vkx-char-hud) theo thời gian thực
+function syncCharHudBar() {
+  if (!UI || typeof UI.updateCharHud !== "function") return;
+  try {
+    const g = G();
+    if (!g || !g.state || !g.state.run || !S.core) {
+      UI.updateCharHud(
+        '<span class="vkx-hud-pill realm">☯ Thiên Cơ Tinh Bàn</span><span class="vkx-hud-pill">Chưa vào kiếp tu luyện</span>',
+        null,
+      );
+      return;
+    }
+    const c = ctx();
+    const run = c.run;
+    const nv = run.nhanVat;
+    const K = S.core;
+    const tho = K.thoNguyenToiDa(nv);
+    const rem = Math.max(0, Math.floor(tho - nv.tuoi));
+    const realmStr = realmLabel(nv.canhGioi, nv.tieuCanhGioi);
+    let curPlace = run.viTri || "—";
+    try {
+      curPlace = (typeof gWin.placeName === 'function' ? gWin.placeName(c, run.viTri) : run.viTri) || run.viTri;
+    } catch (e) {}
+    const pillRealm = `<span class="vkx-hud-pill realm" title="Đạo hiệu & Cảnh giới hiện tại">☯ ${esc(nv.ten)} · ${esc(realmStr)}</span>`;
+    const pillAge = `<span class="vkx-hud-pill ${rem < 15 ? "warn" : ""}" title="Tuổi / Thọ nguyên tối đa">⏳ ${Math.floor(nv.tuoi)}/${tho} (${rem}n)</span>`;
+    const pillStone = `<span class="vkx-hud-pill ok" title="Linh thạch hiện có">💎 ${num(Math.floor(nv.linhThach || 0))}</span>`;
+    const pillLoc = `<span class="vkx-hud-pill" title="Vị trí hiện tại">📍 ${esc(curPlace)}</span>`;
+    const pillInj = nv.thuongThe
+      ? `<span class="vkx-hud-pill warn" title="Thương thế">🩸 Thương ${nv.thuongThe}</span>`
+      : "";
+    UI.updateCharHud(pillRealm + pillAge + pillStone + pillLoc + pillInj, () => {
+      const res = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác") : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
+      if (res && res.ok) {
+        UI.notify("⚡ " + res.msg);
+      } else if (res) {
+        UI.notify("⚠️ " + res.msg);
+      }
+    });
+  } catch (e) {}
+}
+
 // Cập nhật Mini Status Bar toàn cục theo trạng thái các tác vụ Auto
 function refreshMiniStatus() {
+  syncCharHudBar();
   if (!UI || typeof UI.updateMiniStatus !== "function") return;
   const runningList = [];
   if (AU.run && AU.run.running) {
@@ -345,10 +387,11 @@ async function render() {
     }
     S.abort = false;
     if (S.core && S.core.sync) S.core.sync();
+    syncCharHudBar();
     ({
       tq: () => {
         tabTongQuan();
-        tongQuanExtra();
+        if (typeof gWin.tongQuanExtra === 'function') gWin.tongQuanExtra();
       },
       sv: tabLuuNapSave,
       dp: tabDotPha2,
@@ -471,16 +514,41 @@ function tabTongQuan() {
           )}</span><b>${num(l.expiresAt - run.nam)} năm</b></div>`,
       )
       .join("") || '<div class="vk-mu">Không có.</div>';
+  const thoPct = Math.min(100, Math.max(0, Math.round((nv.tuoi / Math.max(1, tho)) * 100)));
+  const remTho = Math.max(0, Math.floor(tho - nv.tuoi));
   body.innerHTML = `
-    <div class="vk-card"><h3>${esc(nv.ten)}</h3>
-      <div class="vk-row"><span>Cảnh giới</span><b>${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</b></div>
-      <div class="vk-row"><span>Tuổi / thọ</span><b>${Math.floor(nv.tuoi)} / ${tho} <span class="vk-mu">(còn ${Math.floor(tho - nv.tuoi)} năm)</span></b></div>
-      <div class="vk-row"><span>Linh căn</span><b>${esc(lc)}</b></div>
-      <div class="vk-row"><span>Thương thế</span><b>${nv.thuongThe ? `<span class="vk-bad">${nv.thuongThe} bậc</span>` : "Lành lặn"}</b></div>
-      <div class="vk-row"><span>Lịch luyện</span><b>${num(nv.lichLuyen || 0)}${(nv.lichLuyen || 0) < 2 ? ' <span class="vk-bad">sắp cạn — đi đánh/đi xa để hồi</span>' : ""}</b></div>
-      <div class="vk-row"><span>Linh thạch · Cống hiến</span><b>${Math.floor(nv.linhThach || 0)} · ${Math.floor(nv.congHien || 0)}</b></div>
-      <div class="vk-row"><span>Nghề</span><b style="text-align:right">${nghe}</b></div>
-      <div class="vk-row"><span>Lượt khai thông kinh mạch</span><b>${(nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0}</b></div>
+    <div class="vk-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <h3 style="margin:0">${esc(nv.ten)}</h3>
+        <span class="pl pl-pick" style="margin:0;font-size:12px">☯ ${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</span>
+      </div>
+      <div style="margin:6px 0 10px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
+          <span class="vk-mu">Thọ nguyên đạo lộ (${Math.floor(nv.tuoi)} / ${tho} năm)</span>
+          <b class="${remTho < 20 ? "vk-bad" : "vk-ok"}">Còn ${remTho} năm (${100 - thoPct}%)</b>
+        </div>
+        <div class="vk-bar"><i style="width:${thoPct}%"></i></div>
+      </div>
+      <div class="vk-bento-grid" style="margin-bottom:10px">
+        <div class="vk-bento-tile">
+          <span class="vk-bento-lbl">🧬 Linh Căn</span>
+          <span class="vk-bento-val" style="font-size:12px;color:var(--gold2)">${esc(lc)}</span>
+        </div>
+        <div class="vk-bento-tile">
+          <span class="vk-bento-lbl">💎 Linh Thạch · Cống Hiến</span>
+          <span class="vk-bento-val" style="color:var(--jade)">${num(Math.floor(nv.linhThach || 0))} <span class="vk-mu" style="font-weight:500">· ${num(Math.floor(nv.congHien || 0))}</span></span>
+        </div>
+        <div class="vk-bento-tile">
+          <span class="vk-bento-lbl">⚔️ Lịch Luyện · Thương Thế</span>
+          <span class="vk-bento-val">${num(nv.lichLuyen || 0)} · ${nv.thuongThe ? `<span class="vk-bad">Thương ${nv.thuongThe}</span>` : '<span class="vk-ok">Lành lặn</span>'}</span>
+        </div>
+        <div class="vk-bento-tile">
+          <span class="vk-bento-lbl">🌀 Lượt Mở Kinh Mạch</span>
+          <span class="vk-bento-val" style="color:var(--gold)">${(nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0} lượt</span>
+        </div>
+      </div>
+      <div class="vk-row"><span>Nghề tu chân</span><b style="text-align:right">${nghe}</b></div>
+      ${(nv.lichLuyen || 0) < 2 ? '<div class="vk-note" style="border-left-color:var(--rose);color:#fda4af">⚠️ Lịch luyện sắp cạn — hãy đi đánh quái hoặc du lịch xa để hồi phục.</div>' : ""}
     </div>
     <div class="vk-card"><h3>Sư môn</h3>${sect}</div>
     <div class="vk-card"><h3>Cơ duyên sắp hết hạn</h3>${dip}</div>
@@ -515,7 +583,7 @@ Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc n
         "",
       );
       if (note === null) return;
-      const res = saveQuickSave(note);
+      const res = gWin.saveQuickSave(note);
       if (res.ok) {
         try {
           UI.notify(res.msg);
@@ -528,9 +596,9 @@ Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc n
   const tqExp = body.querySelector("#tq-btn-export");
   if (tqExp) {
     tqExp.onclick = () => {
-      const exp = doExportSave();
+      const exp = gWin.doExportSave();
       if (exp.ok) {
-        downloadSaveFile(exp.data, exp.fileName);
+        gWin.downloadSaveFile(exp.data, exp.fileName);
         try {
           UI.notify("💾 Đã tải tệp save: " + exp.fileName);
         } catch (e) {}
@@ -542,7 +610,7 @@ Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc n
   const tqClean = body.querySelector("#tq-btn-cleantd");
   if (tqClean) {
     tqClean.onclick = () => {
-      cleanseThienDao();
+      gWin.cleanseThienDao();
       try {
         UI.notify("🧹 Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo!");
       } catch (e) {}
