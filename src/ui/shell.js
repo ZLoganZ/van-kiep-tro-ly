@@ -36,28 +36,18 @@ var UI = (function () {
   var win = document.createElement("div");
   win.id = "vkx-win";
   var themeChipsHtml = THEMES.map(function (t) {
-    return (
-      '<button type="button" class="vkx-theme-chip" data-th="' +
-      t[0] +
-      '">' +
-      t[1] +
-      "</button>"
-    );
+    return '<button type="button" class="vkx-theme-chip" data-th="' + t[0] + '">' + t[1] + "</button>";
   }).join("");
   win.innerHTML =
     '<div class="vkx-hd" id="vkx-hd">' +
-    '  <div class="vkx-logo" title="Huyền Thiên Đạo Đài OS v' +
-    TOOL_VER +
-    '">☯</div>' +
+    '  <div class="vkx-logo" title="Huyền Thiên Đạo Đài OS v' + TOOL_VER + '">☯</div>' +
     '  <div class="vkx-ttl"><b>Huyền Thiên Đạo Đài</b>' +
-    '    <div class="vkx-ttl-sub"><span id="vkx-theme-lbl">🌌 Thái Hư Tinh Không</span> · <span id="vkx-layout-lbl">Đạo Đài Rộng</span><em class="vkx-ver">v' +
-    TOOL_VER +
-    "</em></div>" +
-    "  </div>" +
+    '    <div class="vkx-ttl-sub"><span id="vkx-theme-lbl">🌌 Thái Hư Tinh Không</span> · <span id="vkx-layout-lbl">Đạo Đài Rộng</span><em class="vkx-ver">v' + TOOL_VER + '</em></div>' +
+    '  </div>' +
     '  <div class="vkx-seg">' +
     '    <button data-s="tl" title="Đài Chỉ Huy Trợ Lý">🔮 Đạo Đài</button>' +
     '    <button data-s="nk" title="Nhật Ký Phiên Bản">📜 Nhật Ký</button>' +
-    "  </div>" +
+    '  </div>' +
     '  <div class="vkx-hd-tools">' +
     '    <button class="vkx-ib" id="vkx-qbtn" title="Tìm nhanh Tab & Đổi Chủ Đề (Ctrl+K)">🔎</button>' +
     '    <button class="vkx-ib" id="vkx-subpos" title="Đổi vị trí thanh Tab Con: Đặt Trên Đầu / Đặt Dưới Đáy (Dock)">⇅</button>' +
@@ -66,26 +56,22 @@ var UI = (function () {
     '    <button class="vkx-ib" id="vkx-zoom" title="Cỡ giao diện (Tự động · 85% … 150%)">🔍</button>' +
     '    <button class="vkx-ib" id="vkx-min" title="Thu nhỏ thành thanh nổi (Alt+M)">—</button>' +
     '    <button class="vkx-ib x" id="vkx-close" title="Đóng cửa sổ (Esc / Alt+T)">✕</button>' +
-    "  </div>" +
-    "</div>" +
+    '  </div>' +
+    '</div>' +
     '<div id="vkx-char-hud">' +
     '  <div class="vkx-hud-pills" id="vkx-char-pills">' +
-    '    <span class="vkx-hud-pill realm">☯ Đạo Đài OS v' +
-    TOOL_VER +
-    "</span>" +
+    '    <span class="vkx-hud-pill realm">☯ Đạo Đài OS v' + TOOL_VER + '</span>' +
     '    <span class="vkx-hud-pill">Chờ đồng bộ linh thức…</span>' +
-    "  </div>" +
+    '  </div>' +
     '  <div class="vkx-hud-actions">' +
     '    <button type="button" class="vkx-hud-jump" data-jump="tq" title="Về Tổng Quan">🏠</button>' +
     '    <button type="button" class="vkx-hud-jump" data-jump="atl" title="Auto Tu Luyện">🧘</button>' +
     '    <button type="button" class="vkx-hud-jump" data-jump="db" title="Radar Dị Bảo">👑</button>' +
     '    <button type="button" class="vkx-hud-jump" data-jump="akm" title="Tối Ưu Kinh Mạch">🧬</button>' +
     '    <button type="button" class="vkx-hud-qsave" id="vkx-hud-qsave-btn" title="Lưu nhanh điểm dự phòng (Quick Save)">⚡ Quick Save</button>' +
-    "  </div>" +
-    "</div>" +
-    '<div id="vkx-qbar"><input id="vkx-qbar-inp" type="search" placeholder="🔎 Gõ tên tab hoặc tính năng (vd: kinh mạch, dị bảo, đột phá, lưu save, tác chiến)..." autocomplete="off"><div class="vkx-theme-strip">' +
-    themeChipsHtml +
-    '</div><div id="vkx-qbar-hits"></div></div>' +
+    '  </div>' +
+    '</div>' +
+    '<div id="vkx-qbar"><input id="vkx-qbar-inp" type="search" placeholder="🔎 Gõ tên tab hoặc tính năng (vd: kinh mạch, dị bảo, đột phá, lưu save, tác chiến)..." autocomplete="off"><div class="vkx-theme-strip">' + themeChipsHtml + '</div><div id="vkx-qbar-hits"></div></div>' +
     '<div id="vkx-mini-status" class="vkx-mini-bar" style="display:none"></div>' +
     '<div class="vkx-sec" id="vkx-sec-nk"><div class="vkx-scroll" id="vkx-nk-body"></div></div>' +
     '<div class="vkx-sec" id="vkx-sec-tl">' +
@@ -93,17 +79,16 @@ var UI = (function () {
     '    <div class="vkx-rail-hdr">DANH MỤC</div>' +
     '    <div id="vkx-groups"><div class="vkx-tab-glider"></div></div>' +
     '    <button class="vk-btn sec" id="vk-rf" title="Làm mới dữ liệu tab hiện tại">↻<span>Làm Mới</span></button>' +
-    "  </div>" +
+    '  </div>' +
     '  <div class="vkx-subbar"><div id="vkx-tabs"><div class="vkx-tab-glider"></div></div></div>' +
     '  <div class="vkx-scroll" id="vkx-body"></div>' +
-    "</div>";
+    '</div>';
   document.body.appendChild(win);
 
   var fab = document.createElement("button");
   fab.id = "vkx-fab";
   fab.title = "Mở Huyền Thiên Đạo Đài OS (Kéo để di chuyển)";
-  fab.innerHTML =
-    '<span class="vkx-g">☯</span><span class="vkx-s">Đạo Đài</span>';
+  fab.innerHTML = '<span class="vkx-g">☯</span><span class="vkx-s">Đạo Đài</span>';
   document.body.appendChild(fab);
 
   var toastEl = document.createElement("div");
@@ -398,8 +383,12 @@ var UI = (function () {
     ls("vkx_sec", name);
     for (var i = 0; i < segBtns.length; i++)
       segBtns[i].classList.toggle("on", segBtns[i].dataset.s === name);
-    win.querySelector("#vkx-sec-nk").classList.toggle("on", name === "nk");
-    win.querySelector("#vkx-sec-tl").classList.toggle("on", name === "tl");
+    win
+      .querySelector("#vkx-sec-nk")
+      .classList.toggle("on", name === "nk");
+    win
+      .querySelector("#vkx-sec-tl")
+      .classList.toggle("on", name === "tl");
     if (name === "tl") {
       requestAnimationFrame(function () {
         updateGliders(true);
@@ -492,7 +481,8 @@ var UI = (function () {
   var qHits = win.querySelector("#vkx-qbar-hits");
   api.toggleQuickSearch = function (forceOpen) {
     if (!qBar) return;
-    if (win.classList.contains("vkx-minimized")) api.toggleMinimize(false);
+    if (win.classList.contains("vkx-minimized"))
+      api.toggleMinimize(false);
     if (api._section !== "tl") api.setSection("tl");
     var open =
       typeof forceOpen === "boolean"
@@ -501,7 +491,8 @@ var UI = (function () {
     qBar.classList.toggle("on", open);
     if (open && qInp) {
       qInp.value = "";
-      if (typeof api._onQuickSearch === "function") api._onQuickSearch("");
+      if (typeof api._onQuickSearch === "function")
+        api._onQuickSearch("");
       setTimeout(function () {
         try {
           qInp.focus();
@@ -551,7 +542,10 @@ var UI = (function () {
         : [window.innerWidth, window.innerHeight];
     }
     function size() {
-      return [(fab.offsetWidth || 50) * kk(), (fab.offsetHeight || 50) * kk()];
+      return [
+        (fab.offsetWidth || 50) * kk(),
+        (fab.offsetHeight || 50) * kk(),
+      ];
     }
     function place(x, y) {
       var s = size(),
@@ -567,7 +561,10 @@ var UI = (function () {
     }
     api.refitFab = function () {
       if (fab.style.left)
-        place(parseFloat(fab.style.left) || 0, parseFloat(fab.style.top) || 0);
+        place(
+          parseFloat(fab.style.left) || 0,
+          parseFloat(fab.style.top) || 0,
+        );
     };
     try {
       var sv = JSON.parse(ls("vkx_fab") || "null");
@@ -634,10 +631,7 @@ var UI = (function () {
   ];
   function syncLayoutLabel() {
     var cur = ls("vkx_ui_layout") || "right";
-    var found =
-      LAYOUT_MODES.find(function (x) {
-        return x[0] === cur;
-      }) || LAYOUT_MODES[0];
+    var found = LAYOUT_MODES.find(function (x) { return x[0] === cur; }) || LAYOUT_MODES[0];
     var lLbl = win.querySelector("#vkx-layout-lbl");
     if (lLbl) lLbl.textContent = found[1];
   }
@@ -648,10 +642,7 @@ var UI = (function () {
       var cur = ls("vkx_ui_layout") || "right";
       var idx = 0;
       for (var i = 0; i < LAYOUT_MODES.length; i++) {
-        if (LAYOUT_MODES[i][0] === cur) {
-          idx = i;
-          break;
-        }
+        if (LAYOUT_MODES[i][0] === cur) { idx = i; break; }
       }
       var next = LAYOUT_MODES[(idx + 1) % LAYOUT_MODES.length];
       ls("vkx_ui_layout", next[0]);
@@ -671,11 +662,7 @@ var UI = (function () {
       var next = cur === "bottom" ? "top" : "bottom";
       ls("vkx_sub_pos", next);
       applySubPos(next);
-      notify(
-        next === "bottom"
-          ? "⇅ Đã chuyển Thanh Tab Con xuống Đáy (Dock Mode)"
-          : "⇅ Đã chuyển Thanh Tab Con lên Đầu",
-      );
+      notify(next === "bottom" ? "⇅ Đã chuyển Thanh Tab Con xuống Đáy (Dock Mode)" : "⇅ Đã chuyển Thanh Tab Con lên Đầu");
     };
   }
 
@@ -712,7 +699,11 @@ var UI = (function () {
     if (e.altKey && (e.key === "t" || e.key === "T")) {
       e.preventDefault();
       api.toggle();
-    } else if (e.altKey && (e.key === "m" || e.key === "M") && api.isOpen()) {
+    } else if (
+      e.altKey &&
+      (e.key === "m" || e.key === "M") &&
+      api.isOpen()
+    ) {
       e.preventDefault();
       api.toggleMinimize();
     }
@@ -777,7 +768,8 @@ var UI = (function () {
     };
     (function () {
       var sv = ls("vkx_scale");
-      for (var i = 0; i < SCALES.length; i++) if (SCALES[i][0] === sv) idx = i;
+      for (var i = 0; i < SCALES.length; i++)
+        if (SCALES[i][0] === sv) idx = i;
     })();
     var probe = document.createElement("div");
     probe.style.cssText =
@@ -891,7 +883,10 @@ var UI = (function () {
       win.classList.toggle("vkx-m", phone);
       win.classList.toggle("vkx-t", m.coarse);
       win.classList.toggle("vkx-xs", effW < 370);
-      win.classList.toggle("vkx-land", phone && effH <= 520 && effW > effH);
+      win.classList.toggle(
+        "vkx-land",
+        phone && effH <= 520 && effW > effH,
+      );
       var wide = false;
       win.style.left = "auto";
       win.style.width = "";
@@ -923,7 +918,9 @@ var UI = (function () {
           w = wideOk
             ? Math.min(maxWideW, effW - 24)
             : Math.min(m.coarse ? 580 : 560, effW - 16),
-          h = wideOk ? Math.min(effH - 24, 940) : Math.min(effH * 0.9, 840),
+          h = wideOk
+            ? Math.min(effH - 24, 940)
+            : Math.min(effH * 0.9, 840),
           r = isDockLeft ? Math.max(12, Math.round(effW - w - 12)) : 12,
           t = 12;
         wide = wideOk;
@@ -1166,7 +1163,9 @@ var UI = (function () {
   return api;
 })();
 
-export { UI };
+export {
+  UI,
+};
 
 Object.assign(gWin, {
   UI,

@@ -1,56 +1,12 @@
 import { gWin, num, esc } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, realmName } from "../core/bridge.js";
+import { S, body, loadCore, G, C, realmName, has, danger } from "../core/bridge.js";
 import { drawTabs, refreshMiniStatus } from "../modules/navigation.js";
-import {
-  DIBAO,
-  scanDiBao,
-  hasRelicItemInRun,
-  checkOwnedRelic,
-  calcDiBaoPity,
-  removeDiBaoAlert,
-  removeDiBaoMini,
-} from "../modules/di-bao.js";
+import { DIBAO, scanDiBao, hasRelicItemInRun, checkOwnedRelic, calcDiBaoPity, removeDiBaoAlert, removeDiBaoMini } from "../modules/di-bao.js";
 import { BUILDS, HB_RATIO, HB_MAX_SKILLS } from "../modules/huong-build.js";
-import {
-  AU_TT_MAX,
-  AU_TT_TEN,
-  AU_MAU,
-  auMauOf,
-  AU_MAU_ID,
-  AU_MAU_DEF,
-  auMauNorm,
-  auColorOK,
-  auMauLabel,
-  auIsHacEnemy,
-  auEnemyName,
-  auEncounterHac,
-  AU,
-  AU_TOC,
-  calcTotalTuVi,
-  encGivesTuVi,
-  findBestTuViChoice,
-  findBestDiBaoChoice,
-  auYield,
-  auSave,
-  auSleep,
-  auClamp,
-  auLog,
-  auPaintSoon,
-  clearAuPaintTimer,
-  auCall,
-  auSig,
-  auLifeLeft,
-  auBattleLevel,
-} from "./auto-core.js";
+import { AU_TT_MAX, AU_TT_TEN, AU_MAU, auMauOf, AU_MAU_ID, AU_MAU_DEF, auMauNorm, auColorOK, auMauLabel, auIsHacEnemy, auEnemyName, auEncounterHac, AU, AU_TOC, calcTotalTuVi, encGivesTuVi, findBestTuViChoice, findBestDiBaoChoice, auYield, auSave, auSleep, auClamp, auLog, auPaintSoon, clearAuPaintTimer, auCall, auSig, auLifeLeft, auBattleLevel } from "./auto-core.js";
 import { auFightInstant } from "./combat-ai.js";
-import {
-  AU_KM_MODE,
-  AU_KM_IT,
-  AU_KM_BK,
-  auStartKm,
-  auKmStatus,
-} from "./auto-kinh-mach.js";
+import { AU_KM_MODE, AU_KM_IT, AU_KM_BK, auStartKm, auKmStatus } from "./auto-kinh-mach.js";
 import { auSanStep, auTlStep } from "./auto-tu-luyen.js";
 import { auSdbStep } from "./auto-di-bao.js";
 import { auBuonStep } from "./auto-buon-ban.js";
@@ -141,7 +97,9 @@ function auPending(st, opt) {
       return "ok";
     }
     if (opt.hunt && opt.neHac) {
-      const hd = (run.tran.dich || []).find((d) => auIsHacEnemy(d.id, d.ten));
+      const hd = (run.tran.dich || []).find((d) =>
+        auIsHacEnemy(d.id, d.ten),
+      );
       if (hd)
         return {
           stop:
@@ -188,7 +146,8 @@ function auPending(st, opt) {
     }
     if (opt.danhAi) {
       const r = auCall(() => g.hanhDongTran({ loai: "giao_chien" }));
-      if (!r.ok) return { stop: "Không bắt đầu giao chiến được: " + r.err };
+      if (!r.ok)
+        return { stop: "Không bắt đầu giao chiến được: " + r.err };
       auLog(
         "Trận " +
           m[0] +
@@ -217,14 +176,17 @@ function auPending(st, opt) {
   }
   if (run.active) {
     const a = run.active;
-    if (opt.shopId && a.id === opt.shopId && g.shopView()) return "idle";
+    if (opt.shopId && a.id === opt.shopId && g.shopView())
+      return "idle";
     if (a.done) {
       let encView = null;
       try {
-        if (typeof g.encounterView === "function") encView = g.encounterView();
+        if (typeof g.encounterView === "function")
+          encView = g.encounterView();
       } catch (e) {}
       const encTen = (encView && encView.ten) || a.ten || a.id;
-      const trans = (encView && encView.transcript) || a.transcript || [];
+      const trans =
+        (encView && encView.transcript) || a.transcript || [];
       const ketQua = (encView && encView.ketQua) || a.ketQua;
 
       // Trích xuất kết quả kiểm định & lời kể diễn biến từ transcript của game
@@ -271,7 +233,8 @@ function auPending(st, opt) {
       st.lastThuongThe = (curNv && curNv.thuongThe) || 0;
 
       const isRelicEv =
-        opt.sdb && (a.id.startsWith("ev.di_bao") || DIBAO.evMap.has(a.id));
+        opt.sdb &&
+        (a.id.startsWith("ev.di_bao") || DIBAO.evMap.has(a.id));
       const r = auCall(() => g.closeEncounter());
       if (!r.ok) return { stop: "Không đóng được việc: " + r.err };
       if (encGivesTuVi(a.id) > 0) {
@@ -339,7 +302,8 @@ function auPending(st, opt) {
         if (allowTha) {
           let xuTriList = [];
           try {
-            if (typeof g.cachXuTri === "function") xuTriList = g.cachXuTri();
+            if (typeof g.cachXuTri === "function")
+              xuTriList = g.cachXuTri();
           } catch (e) {}
           const canTha =
             !xuTriList.length || xuTriList.some((x) => x.id === "tha");
@@ -454,7 +418,10 @@ function auPending(st, opt) {
           st.hacSlot = run.viTri;
           st.hacStreak = (st.hacStreak || 0) + 1;
           const rng1 = G().state.run && G().state.run.rng;
-          if ((rng0 !== undefined && rng1 === rng0) || st.hacStreak >= 4) {
+          if (
+            (rng0 !== undefined && rng1 === rng0) ||
+            st.hacStreak >= 4
+          ) {
             st.bad.add(run.viTri);
             st.hacStreak = 0;
             auLog(
@@ -524,7 +491,8 @@ function auPending(st, opt) {
     st.lastThuongThe = (curNvBefore && curNvBefore.thuongThe) || 0;
 
     const pickDesc =
-      (pick.text || "Lựa chọn") + (pick.chance ? ` [${pick.chance}]` : "");
+      (pick.text || "Lựa chọn") +
+      (pick.chance ? ` [${pick.chance}]` : "");
     if (!isFightChoice) {
       auLog(`» Chọn: «${pickDesc}»...`, "vk-mu");
     } else if (isApexFight) {
@@ -534,7 +502,8 @@ function auPending(st, opt) {
       );
     }
     const r = auCall(() => g.choose(pick.index));
-    if (!r.ok) return { stop: "Không chọn được “" + pick.text + "”: " + r.err };
+    if (!r.ok)
+      return { stop: "Không chọn được “" + pick.text + "”: " + r.err };
     const runAfter = G().state.run;
     if (isFightChoice && runAfter && !runAfter.tran) {
       // Trận được game tự giải quyết ngay trong choose() qua cơ chế "Tự Tốc Chiến" (tuTocChien) mà không mở màn hình vào trận (§10.4)
@@ -596,7 +565,9 @@ function auPick(v, opt) {
       // Bên Đánh Quái: Tuyệt đối KHÔNG chọn "Song tu, cùng nhập định" (tránh bị kẹt vào bế quan nhập định)
       const leave = cs.find((x) => x.thoat || /thôi/i.test(x.text));
       if (leave) return leave;
-      const nonMeditation = cs.find((c) => !/nhập định|bế quan/i.test(c.text));
+      const nonMeditation = cs.find(
+        (c) => !/nhập định|bế quan/i.test(c.text),
+      );
       if (nonMeditation) return nonMeditation;
     }
   }
@@ -633,24 +604,38 @@ function auPick(v, opt) {
 
     if (v.id === "ev.san_yeu") {
       const cBoss = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
-      const cNorm = cs.find((x) => !x.thoat && !/đầu đàn/i.test(x.text));
+      const cNorm = cs.find(
+        (x) => !x.thoat && !/đầu đàn/i.test(x.text),
+      );
 
       if (sanMucTieu === "chi_dau_dan") {
-        if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+        if (
+          cBoss &&
+          (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))
+        ) {
           return cBoss;
         }
         const leave = cs.find((x) => x.thoat);
         if (leave) return leave;
       } else if (sanMucTieu === "thuong") {
-        if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+        if (
+          cNorm &&
+          (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))
+        ) {
           return cNorm;
         }
       } else {
         // uu_tien_dau_dan (Mặc định)
-        if (cBoss && (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))) {
+        if (
+          cBoss &&
+          (!cBoss.risk || auColorOK(cBoss.risk.level, opt.mau))
+        ) {
           return cBoss;
         }
-        if (cNorm && (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))) {
+        if (
+          cNorm &&
+          (!cNorm.risk || auColorOK(cNorm.risk.level, opt.mau))
+        ) {
           return cNorm;
         }
       }
@@ -678,15 +663,24 @@ function auPick(v, opt) {
     }
 
     if (v.id === "ev.san_yeu_thu") {
-      const c = cs.find((x) => !x.thoat && /săn|chiến|đánh/i.test(x.text));
+      const c = cs.find(
+        (x) => !x.thoat && /săn|chiến|đánh/i.test(x.text),
+      );
       if (c && (!c.risk || auColorOK(c.risk.level, opt.mau))) return c;
     }
 
     if (v.id === "ev.tm_yeu_dau_dan") {
-      const cHelp = cs.find((x) => !x.thoat && /cùng.*ra tay/i.test(x.text));
-      const cDirect = cs.find((x) => !x.thoat && /đầu đàn/i.test(x.text));
+      const cHelp = cs.find(
+        (x) => !x.thoat && /cùng.*ra tay/i.test(x.text),
+      );
+      const cDirect = cs.find(
+        (x) => !x.thoat && /đầu đàn/i.test(x.text),
+      );
       const pickTm = cHelp || cDirect;
-      if (pickTm && (!pickTm.risk || auColorOK(pickTm.risk.level, opt.mau)))
+      if (
+        pickTm &&
+        (!pickTm.risk || auColorOK(pickTm.risk.level, opt.mau))
+      )
         return pickTm;
     }
 
@@ -880,7 +874,12 @@ function auReadCfg(kind) {
     };
     c.mode = sel("au-tl-mode", c.mode || "be_quan");
     c.targetRealm = Math.floor(
-      num0("au-tl-realm", 0, 5, c.targetRealm != null ? c.targetRealm : 5),
+      num0(
+        "au-tl-realm",
+        0,
+        5,
+        c.targetRealm != null ? c.targetRealm : 5,
+      ),
     );
     c.targetSubRealm = Math.floor(
       num0(
@@ -896,16 +895,27 @@ function auReadCfg(kind) {
     c.useCultPills = ck("au-tl-cult-pills", c.useCultPills);
     c.useBreakPills = ck("au-tl-break-pills", c.useBreakPills);
     c.autoBeatDemons = ck("au-tl-demons", c.autoBeatDemons);
-    c.autoBreakBottleneck = ck("au-tl-bottleneck", c.autoBreakBottleneck);
+    c.autoBreakBottleneck = ck(
+      "au-tl-bottleneck",
+      c.autoBreakBottleneck,
+    );
     c.autoThaMang = ck("au-tl-auto-tha", c.autoThaMang !== false);
-    c.autoEnemyEscape = ck("au-tl-enemy-escape", c.autoEnemyEscape !== false);
+    c.autoEnemyEscape = ck(
+      "au-tl-enemy-escape",
+      c.autoEnemyEscape !== false,
+    );
     // Các tùy chọn khi chọn chế độ Đánh Quái (Săn Yêu):
     c.maxY = num0("au-tl-maxy", 0.5, 30, c.maxY != null ? c.maxY : 3);
     c.tran = Math.floor(
       num0("au-tl-tran", 0, 9999, c.tran != null ? c.tran : 20),
     );
     c.thuong = Math.floor(
-      num0("au-tl-thuong", 1, AU_TT_MAX, c.thuong != null ? c.thuong : 2),
+      num0(
+        "au-tl-thuong",
+        1,
+        AU_TT_MAX,
+        c.thuong != null ? c.thuong : 2,
+      ),
     );
     const k = q("au-tl-kt");
     if (k) c.kt = k.checked;
@@ -913,14 +923,23 @@ function auReadCfg(kind) {
     if (nh) c.neHac = nh.checked;
     const da = q("au-tl-danh-ai");
     if (da) c.danhAi = da.checked;
-    c.uuTienSuKienTuVi = ck("au-tl-tu-vi-events", c.uuTienSuKienTuVi !== false);
+    c.uuTienSuKienTuVi = ck(
+      "au-tl-tu-vi-events",
+      c.uuTienSuKienTuVi !== false,
+    );
     c.autoSongTu = ck("au-tl-song-tu", c.autoSongTu !== false);
-    c.sanMucTieu = sel("au-tl-san-target", c.sanMucTieu || "uu_tien_dau_dan");
+    c.sanMucTieu = sel(
+      "au-tl-san-target",
+      c.sanMucTieu || "uu_tien_dau_dan",
+    );
     c.autoDuongThuong = ck(
       "au-tl-auto-duong-thuong",
       c.autoDuongThuong !== false,
     );
-    c.uuTienCapNen = ck("au-tl-uu-tien-cap-nen", c.uuTienCapNen !== false);
+    c.uuTienCapNen = ck(
+      "au-tl-uu-tien-cap-nen",
+      c.uuTienCapNen !== false,
+    );
     const m = AU_MAU_ID.filter((x) => {
       const el = q("au-tl-mau-" + x);
       return el ? el.checked : (c.mau || []).includes(x);
@@ -957,7 +976,12 @@ function auReadCfg(kind) {
     c.targetPrio = sel("au-tc-target-prio", c.targetPrio || "smart");
     c.teHuyetMode = sel("au-tc-te-huyet", c.teHuyetMode || "off");
     c.healPillMode = sel("au-tc-heal-mode", c.healPillMode || "smart");
-    c.healHpThreshold = num0("au-tc-heal-hp", 10, 85, c.healHpThreshold);
+    c.healHpThreshold = num0(
+      "au-tc-heal-hp",
+      10,
+      85,
+      c.healHpThreshold,
+    );
     c.healBossPanicHp = num0(
       "au-tc-heal-panic-hp",
       20,
@@ -974,10 +998,21 @@ function auReadCfg(kind) {
       85,
       c.spiritThreshold != null ? c.spiritThreshold : 20,
     );
-    c.burstPillMode = sel("au-tc-burst-mode", c.burstPillMode || "boss_combo");
+    c.burstPillMode = sel(
+      "au-tc-burst-mode",
+      c.burstPillMode || "boss_combo",
+    );
     c.useBurstPill = c.burstPillMode !== "off";
-    c.cleansePillMode = ck("au-tc-cleanse-pill", c.cleansePillMode !== false);
-    c.maxDrugResistance = num0("au-tc-max-resist", 15, 95, c.maxDrugResistance);
+    c.cleansePillMode = ck(
+      "au-tc-cleanse-pill",
+      c.cleansePillMode !== false,
+    );
+    c.maxDrugResistance = num0(
+      "au-tc-max-resist",
+      15,
+      95,
+      c.maxDrugResistance,
+    );
     c.maxPillGradeNormal = Math.floor(
       num0(
         "au-tc-pill-grade-norm",
@@ -1049,21 +1084,33 @@ function auReadCfg(kind) {
       c.preventOverkill !== false,
     );
     c.aoePriority = ck("au-tc-aoe-prio", c.aoePriority !== false);
-    c.prioritizeNatal = ck("au-tc-natal-prio", c.prioritizeNatal !== false);
+    c.prioritizeNatal = ck(
+      "au-tc-natal-prio",
+      c.prioritizeNatal !== false,
+    );
     c.autoNormalAttack = ck(
       "au-tc-normal-attack",
       c.autoNormalAttack !== false,
     );
-    c.smartFinisher = ck("au-tc-smart-finisher", c.smartFinisher !== false);
+    c.smartFinisher = ck(
+      "au-tc-smart-finisher",
+      c.smartFinisher !== false,
+    );
     c.comboSequence = ck("au-tc-combo", c.comboSequence !== false);
-    c.emergencyThieuDot = ck("au-tc-thieu-dot", c.emergencyThieuDot !== false);
+    c.emergencyThieuDot = ck(
+      "au-tc-thieu-dot",
+      c.emergencyThieuDot !== false,
+    );
     c.thieuDotHp = num0(
       "au-tc-thieu-dot-hp",
       10,
       50,
       c.thieuDotHp != null ? c.thieuDotHp : 20,
     );
-    c.emergencyEscape = ck("au-tc-emergency-escape", !!c.emergencyEscape);
+    c.emergencyEscape = ck(
+      "au-tc-emergency-escape",
+      !!c.emergencyEscape,
+    );
     c.escapeHp = num0(
       "au-tc-escape-hp",
       5,
@@ -1071,7 +1118,10 @@ function auReadCfg(kind) {
       c.escapeHp != null ? c.escapeHp : 16,
     );
     c.autoThaMang = ck("au-tc-auto-tha", c.autoThaMang !== false);
-    c.autoEnemyEscape = ck("au-tc-enemy-escape", c.autoEnemyEscape !== false);
+    c.autoEnemyEscape = ck(
+      "au-tc-enemy-escape",
+      c.autoEnemyEscape !== false,
+    );
     auSave();
     return;
   }
@@ -1130,8 +1180,14 @@ function auReadCfg(kind) {
     c.dungTruyenTong = ck("au-sdb-tele", c.dungTruyenTong !== false);
     c.danhAi = ck("au-sdb-danh-ai", c.danhAi !== false);
     c.autoThaMang = ck("au-sdb-auto-tha", c.autoThaMang !== false);
-    c.autoEnemyEscape = ck("au-sdb-enemy-escape", c.autoEnemyEscape !== false);
-    c.sanMoiDiBaoXuatThe = ck("au-sdb-san-moi", c.sanMoiDiBaoXuatThe !== false);
+    c.autoEnemyEscape = ck(
+      "au-sdb-enemy-escape",
+      c.autoEnemyEscape !== false,
+    );
+    c.sanMoiDiBaoXuatThe = ck(
+      "au-sdb-san-moi",
+      c.sanMoiDiBaoXuatThe !== false,
+    );
     c.autoQuickSave = ck("au-sdb-auto-qs", !!c.autoQuickSave);
     c.minWinRate = num0("au-sdb-winrate", 10, 100, c.minWinRate || 70);
     c.cheDoCho = sel("au-sdb-chedo", c.cheDoCho || "camp");
@@ -1248,7 +1304,10 @@ function auStatusHtml(kind) {
     rows.push(["Dị Bảo Đoạt Được", (st.relicsWon || 0) + " món"]);
     rows.push([
       "Bảo Lục Luân Hồi",
-      metaRelics2.length + " / 21 (+ " + metaRelics2.length * 5 + " điểm)",
+      metaRelics2.length +
+        " / 21 (+ " +
+        metaRelics2.length * 5 +
+        " điểm)",
     ]);
     rows.push([
       "Thiên Đạo Bù (Pity)",
@@ -1262,7 +1321,10 @@ function auStatusHtml(kind) {
     ]);
     rows.push([
       "Hành Động Hiện Tại",
-      esc(st.phaseDesc || (st.camping ? "Cắm trại tại " + st.camping : "—")),
+      esc(
+        st.phaseDesc ||
+          (st.camping ? "Cắm trại tại " + st.camping : "—"),
+      ),
     ]);
   } else if (kind === "tl") {
     const tr = Number(
@@ -1295,7 +1357,11 @@ function auStatusHtml(kind) {
     // Tính toán tổng lượng tu vi đã tăng trong phiên Auto
     try {
       const runNow = G().state && G().state.run;
-      if (runNow && runNow.nhanVat && typeof calcTotalTuVi === "function") {
+      if (
+        runNow &&
+        runNow.nhanVat &&
+        typeof calcTotalTuVi === "function"
+      ) {
         const nowTotal = calcTotalTuVi(runNow.nhanVat);
         if (st.startTotalTuVi == null) st.startTotalTuVi = nowTotal;
         st.tuViGained = Math.max(0, nowTotal - st.startTotalTuVi);
@@ -1317,7 +1383,10 @@ function auStatusHtml(kind) {
       }
       if (st.hacSkipped) rows.push(["Số Lần Né Hạc", st.hacSkipped]);
     } else {
-      rows.push(["Số Năm Đã Bế Quan", num(st.retreatYearsDone || 0) + " năm"]);
+      rows.push([
+        "Số Năm Đã Bế Quan",
+        num(st.retreatYearsDone || 0) + " năm",
+      ]);
     }
     rows.push(["Đột Phá Thành Công", (st.breakouts || 0) + " lần"]);
     if (st.breakoutFails)
@@ -1325,7 +1394,10 @@ function auStatusHtml(kind) {
     if (st.bottlenecksBroken)
       rows.push(["Bình Cảnh Đã Phá", st.bottlenecksBroken + " lần"]);
   } else if (kind === "san") {
-    rows.push(["Số Trận Đã Đánh", st.fights + " (thắng " + st.wins + ")"]);
+    rows.push([
+      "Số Trận Đã Đánh",
+      st.fights + " (thắng " + st.wins + ")",
+    ]);
     if (st.hacSkipped) rows.push(["Số Lần Né Hạc", st.hacSkipped]);
   } else {
     rows.push(["Số Chuyến Đã Xong", st.trips]);
@@ -1351,7 +1423,10 @@ function auStatusHtml(kind) {
     "Tốc Độ Thực",
     num(
       st.steps /
-        Math.max(0.001, ((st.tEnd || performance.now()) - st.t0) / 1000),
+        Math.max(
+          0.001,
+          ((st.tEnd || performance.now()) - st.t0) / 1000,
+        ),
       1,
     ) + " bước/giây",
   ]);
@@ -1364,16 +1439,12 @@ function auStatusHtml(kind) {
     ]);
     rows.push(["Thọ Nguyên Còn", Math.floor(auLifeLeft()) + " năm"]);
   }
-  return (
-    `<div class="vkx-tele-grid">` +
-    rows
-      .map(
-        (r) =>
-          `<div class="vkx-tele-box"><span class="vkx-tele-lbl">${r[0]}</span><b class="vkx-tele-val">${r[1]}</b></div>`,
-      )
-      .join("") +
-    `</div>`
-  );
+  return `<div class="vkx-tele-grid">` + rows
+    .map(
+      (r) =>
+        `<div class="vkx-tele-box"><span class="vkx-tele-lbl">${r[0]}</span><b class="vkx-tele-val">${r[1]}</b></div>`,
+    )
+    .join("") + `</div>`;
 }
 function auLogHtml() {
   return AU.log.length
@@ -1407,7 +1478,9 @@ function auPaint() {
         ? "rgba(61,220,151,0.2)"
         : "rgba(255,255,255,0.08)";
       pill.style.color = run ? "#3ddc97" : "var(--mut)";
-      pill.style.border = run ? "1px solid #3ddc97" : "1px solid transparent";
+      pill.style.border = run
+        ? "1px solid #3ddc97"
+        : "1px solid transparent";
     }
     if (txt) {
       if (run) {
@@ -1430,8 +1503,7 @@ function auPaint() {
     if (tgtEl) {
       const sdbCfg = AU.cfg && AU.cfg.sdb ? AU.cfg.sdb : {};
       const validEvs = DIBAO.ev.filter(
-        (e) =>
-          e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
+        (e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
       );
       const targetRelics = (
         Array.isArray(sdbCfg.targetRelics)

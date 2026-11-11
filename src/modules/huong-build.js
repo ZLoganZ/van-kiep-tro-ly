@@ -1,29 +1,10 @@
 import { gWin, pct, num, esc, tcWord, heTen, STAGE } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
 import { THE_CHAT_DB } from "../data/static-data.js";
-import { S, body, C, clone, ctx, nvNow, realmName } from "../core/bridge.js";
-import {
-  gocHe,
-  sinhRa,
-  sinhBoi,
-  khacBoi,
-  oDungDuoc,
-  hySet,
-  evalCurrent,
-  drawGrid,
-} from "./kinh-mach-engine.js";
+import { S, body, C, clone, ctx, nvNow, realmName, has } from "../core/bridge.js";
+import { gocHe, sinhRa, sinhBoi, khacBoi, oDungDuoc, hySet, evalCurrent, drawGrid } from "./kinh-mach-engine.js";
 import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
-import {
-  isKmItem,
-  lnTag,
-  kmOpenable,
-  kmAutoRunning,
-  applyManh,
-  optimizeMode,
-  kmManualHtml,
-  kmManualBind,
-  copyText,
-} from "./kinh-mach-tab.js";
+import { isKmItem, lnTag, kmOpenable, kmAutoRunning, applyManh, optimizeMode, kmManualHtml, kmManualBind, copyText } from "./kinh-mach-tab.js";
 import { pieceTable, whereToGet } from "./dot-pha-nghe.js";
 import { sourceNote, itemFull } from "./ban-do-dia-danh.js";
 /**
@@ -53,7 +34,8 @@ const schoolsOf = (it) => {
   const t = (it.tag || []).filter((x) => SCHOOLS.includes(x));
   const nl = it.ngu_linh && NL2S[it.ngu_linh.loai];
   if (nl && !t.includes(nl)) t.push(nl);
-  if ((it.tag || []).includes("nghich") && !t.includes("ma")) t.push("ma");
+  if ((it.tag || []).includes("nghich") && !t.includes("ma"))
+    t.push("ma");
   return t;
 };
 // Phẩm → cảnh giới mà món còn đủ sức (code game: uy bị kẹp khi vượt quá cảnh giới (bậc phẩm)+1; hiệu ứng giảm nửa khi vượt 2, mất khi vượt 3)
@@ -69,7 +51,9 @@ const PHAM_TEN = [
   "Nghịch Thiên",
 ];
 const tierCg = (it) =>
-  it.tran_phai ? 4 : TIER_CG[Math.max(1, Math.min(8, it.pham_cap || 2)) - 1];
+  it.tran_phai
+    ? 4
+    : TIER_CG[Math.max(1, Math.min(8, it.pham_cap || 2)) - 1];
 const freshAt = (it, R) => R <= tierCg(it) + 1;
 const DIHOA_PCT = [0, 0, 6, 8, 10, 12, 15, 20];
 
@@ -315,10 +299,14 @@ function tcBuff(t) {
         out.push("Uy lực " + heTen(h) + " " + tcSgn(x));
     } else if (k === "ep_bang")
       out.push("Ép " + Math.round(v * 100) + "% Băng");
-    else if (k === "ep_am") out.push("Ép " + Math.round(v * 100) + "% Ám");
-    else if (k === "doc_tang") out.push("Giữ thêm " + v + " bản độc phát tác");
+    else if (k === "ep_am")
+      out.push("Ép " + Math.round(v * 100) + "% Ám");
+    else if (k === "doc_tang")
+      out.push("Giữ thêm " + v + " bản độc phát tác");
     else if (k === "doc_duong")
-      out.push("Dưỡng độc: hồi " + Math.round(v * 100) + "% độc phát tác");
+      out.push(
+        "Dưỡng độc: hồi " + Math.round(v * 100) + "% độc phát tác",
+      );
     else if (k === "doat_sinh")
       out.push("Đoạt sinh " + Math.round(v * 100) + "%");
     else if (k === "than_am") {
@@ -678,7 +666,9 @@ function elemPlan(b) {
       ],
     ],
     pick:
-      "B nếu có ≥ 2 món " + heTen(me) + " phẩm tương đương; còn không thì A.",
+      "B nếu có ≥ 2 món " +
+      heTen(me) +
+      " phẩm tương đương; còn không thì A.",
   };
 }
 const HB_NOTE = {};
@@ -698,7 +688,11 @@ function planOf(b) {
   if (b.k === "ma") {
     let ng = 0;
     for (const it of C().items.values())
-      if (isKmItem(it) && !it.theo_kiep && (it.tag || []).includes("nghich"))
+      if (
+        isKmItem(it) &&
+        !it.theo_kiep &&
+        (it.tag || []).includes("nghich")
+      )
         ng++;
     if (ng) sum += " Có " + ng + " món nhãn Nghịch.";
   }
@@ -903,7 +897,11 @@ function buildFit(b, nv, R0) {
     if (kh && lc.includes(kh) && !banMenh.includes(bh)) {
       s -= 4;
       cons.push(
-        "Khắc hệ: " + heTen(kh) + " khắc " + heTen(bh) + " (−15% nếu kề nhau)",
+        "Khắc hệ: " +
+          heTen(kh) +
+          " khắc " +
+          heTen(bh) +
+          " (−15% nếu kề nhau)",
       );
     }
   });
@@ -917,7 +915,9 @@ function buildFit(b, nv, R0) {
     s += 10;
     why.push("thể chất đắc đạo");
     pros.push(
-      "Thể chất " + hopTC.map(tcTen).join(", ") + " kích hoạt tiềm năng tối đa",
+      "Thể chất " +
+        hopTC.map(tcTen).join(", ") +
+        " kích hoạt tiềm năng tối đa",
     );
   }
   const trTC = (BUILD_TC_TRANH[b.k] || []).find((x) =>
@@ -1001,10 +1001,10 @@ function kmCard(b, nv) {
       ${tranh.length ? `<div style=\"margin-top:8px\"><b>Nên tránh</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${tranh.map((k) => line(k, "phản phệ " + tcPP(k))).join("")}</ul></div>` : ""}
       ${tranh.includes(cur) ? '<div style=\"color:#b45309;font-size:13px;margin-top:6px\">⚠️ Thể chất hiện tại của bạn thuộc nhóm nên tránh với hướng này.</div>' : ""}
       <div style=\"margin-top:8px\"><b>Cách xếp lên kinh mạch</b><ul style=\"margin:4px 0 0;padding-left:18px;font-size:14px\">${kmTips(
-        b,
+b,
       )
-        .map((x) => `<li>${resolveTC(x)}</li>`)
-        .join("")}</ul></div>${planHtml(b)}${oHopHtml(b)}</div>`;
+.map((x) => `<li>${resolveTC(x)}</li>`)
+.join("")}</ul></div>${planHtml(b)}${oHopHtml(b)}</div>`;
 }
 
 // ═════════════════════════ HƯỚNG BUILD 6.9.0 ═════════════════════════
@@ -1167,7 +1167,13 @@ const HB_TR_TEN = {
   ma_hoa: "Ma Hóa",
 };
 const hbCls = (it) =>
-  it.loai === "cong_phap" ? (it.chieu ? "dau" : "tam") : it.chieu ? "pk" : "bv";
+  it.loai === "cong_phap"
+    ? it.chieu
+      ? "dau"
+      : "tam"
+    : it.chieu
+      ? "pk"
+      : "bv";
 const hbCells = (it) =>
   (it.hinh || []).reduce(
     (a, r) => a + [...String(r)].filter((ch) => ch !== ".").length,
@@ -1201,16 +1207,13 @@ function hbTraits(it) {
 let _hbScannedItemsCount = -1;
 function hbScanBuilds() {
   const Cc = C();
-  if (
-    _hbScannedItemsCount === Cc.items.size &&
-    BUILDS.length === BUILDS_FULL.length
-  ) {
+  if (_hbScannedItemsCount === Cc.items.size && BUILDS.length === BUILDS_FULL.length) {
     return [];
   }
   _hbScannedItemsCount = Cc.items.size;
   const items = [...Cc.items.values()].filter(
-    (it) => isKmItem(it) && !it.theo_kiep,
-  );
+      (it) => isKmItem(it) && !it.theo_kiep,
+    );
   BUILDS.length = 0;
   BUILDS.push(...BUILDS_FULL);
   HB_DROP.length = 0;
@@ -1276,7 +1279,9 @@ function hbSumLine(b) {
     if (hbCls(it) === "tam") n.tam++;
     if (it.chieu) {
       const d = it.chieu.dang;
-      ch[d === "cong" ? "cong" : d === "khong_che" ? "khong_che" : "thu"]++;
+      ch[
+        d === "cong" ? "cong" : d === "khong_che" ? "khong_che" : "thu"
+      ]++;
     }
     for (const h of it.he || []) he[h] = (he[h] || 0) + 1;
   }
@@ -1315,11 +1320,14 @@ const hbElemN = (h) => {
 function hbElemBan(h) {
   const cnt = new Map();
   for (const it of C().items.values()) {
-    if (!isKmItem(it) || it.theo_kiep || !(it.he || []).includes(h)) continue;
+    if (!isKmItem(it) || it.theo_kiep || !(it.he || []).includes(h))
+      continue;
     for (const k of schoolsOf(it)) cnt.set(k, (cnt.get(k) || 0) + 1);
   }
   return [...cnt.entries()]
-    .filter(([k, n]) => n >= 2 && BUILDS.some((b) => b.k === k && !b.elem))
+    .filter(
+      ([k, n]) => n >= 2 && BUILDS.some((b) => b.k === k && !b.elem),
+    )
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
     .map(([k]) => k);
@@ -1361,9 +1369,11 @@ function hbCatalog(R) {
 function hbMatch(b, it, fallback) {
   const sch = schoolsOf(it),
     isTa =
-      sch.some((s) => HB_TA.includes(s)) || (it.tag || []).includes("nghich"),
+      sch.some((s) => HB_TA.includes(s)) ||
+      (it.tag || []).includes("nghich"),
     taB = b.nhom === "Tà đạo";
-  if (!taB && (isTa || (it.tag || []).includes("liem_tuc"))) return null; // mảnh tà làm lưới ngả tà: hướng chính đạo không lấy
+  if (!taB && (isTa || (it.tag || []).includes("liem_tuc")))
+    return null; // mảnh tà làm lưới ngả tà: hướng chính đạo không lấy
   const fam = buildMatch(b, it),
     hs = it.he || [];
   let w;
@@ -1436,7 +1446,11 @@ function hbVal(it, R, w, F) {
     v +=
       (40 *
         (ch.uy || 0) *
-        (ch.dang === "cong" ? 1 : ch.dang === "khong_che" ? 0.8 : 0.65) +
+        (ch.dang === "cong"
+          ? 1
+          : ch.dang === "khong_che"
+            ? 0.8
+            : 0.65) +
         6 * (ch.effects || []).length) *
         Math.max(0.05, capF) +
       4 * (it.pham_cap || 1);
@@ -1464,14 +1478,18 @@ function hbVal(it, R, w, F) {
     if (ch && ch.dang === "khong_che") v *= 2.1;
     if (
       ch &&
-      (ch.effects || []).some((e) => ["chill", "haste"].includes(e.kind))
+      (ch.effects || []).some((e) =>
+        ["chill", "haste"].includes(e.kind),
+      )
     )
       v *= 1.6;
   } else if (pre === "drain") {
     if (
       (ch && ch.ma_hoa) ||
       (ch &&
-        (ch.effects || []).some((e) => ["poison", "bleed"].includes(e.kind)))
+        (ch.effects || []).some((e) =>
+          ["poison", "bleed"].includes(e.kind),
+        ))
     )
       v *= 1.9;
   }
@@ -1512,7 +1530,8 @@ function hbSelect(b, R, F, nvReal) {
     const cls = hbCls(it),
       cells = hbCells(it) || 1,
       val = hbVal(it, R, m.w, F);
-    for (const tr of hbTraits(it)) traits.set(tr, (traits.get(tr) || 0) + 1);
+    for (const tr of hbTraits(it))
+      traits.set(tr, (traits.get(tr) || 0) + 1);
     all.push({
       it,
       cls,
@@ -1525,7 +1544,8 @@ function hbSelect(b, R, F, nvReal) {
   }
   const by = { tam: [], dau: [], pk: [], bv: [] };
   for (const x of all) by[x.cls].push(x);
-  for (const k of Object.keys(by)) by[k].sort((a, c) => c.dens - a.dens);
+  for (const k of Object.keys(by))
+    by[k].sort((a, c) => c.dens - a.dens);
   return { all, by, skip, traits };
 }
 // Phép tính ô: B ô thông (không tính đan điền) chia theo tỉ lệ t cho Tâm Pháp, phần còn lại cho Chiến Pháp (Đấu Pháp + Pháp Khí + Bảo Vật).
@@ -1579,7 +1599,8 @@ function hbPlan(sel, B, t) {
       ? sel.by.dau.find(
           (x) =>
             x.it.chieu &&
-            (x.it.chieu.dang === "thu" || x.it.chieu.dang === "hoi_phuc"),
+            (x.it.chieu.dang === "thu" ||
+              x.it.chieu.dang === "hoi_phuc"),
         )
       : null,
     sel.by.bv[0],
@@ -1773,7 +1794,8 @@ function hbSkillLine(it) {
         (ch.phi || 0) +
         (ch.hoi ? ", hồi " + ch.hoi : "") +
         ((ch.effects || []).length
-          ? ", " + ch.effects.map((e) => hbTrLabel("ef." + e.kind)).join("/")
+          ? ", " +
+            ch.effects.map((e) => hbTrLabel("ef." + e.kind)).join("/")
           : "") +
         ")",
     );
@@ -1789,7 +1811,9 @@ function hbSkillLine(it) {
 }
 function hbItemRow(it) {
   const nv = nvNow(),
-    own = nv.tuiDo[it.id] > 0 || nv.kinhMach.manh.some((m) => m.item === it.id);
+    own =
+      nv.tuiDo[it.id] > 0 ||
+      nv.kinhMach.manh.some((m) => m.item === it.id);
   const src = sourceNote(it),
     where = typeof whereToGet === "function" ? whereToGet(it.id) : "";
   return `<tr><td><b>${esc(it.ten)}</b>${own ? ' <span class="vk-ok" style="font-size:12px">có</span>' : ""}${lnTag(it)} <button class="vk-btn sec hb-tc-btn" data-id="${esc(it.id)}" style="padding:1px 6px;font-size:11px;margin-left:4px;cursor:pointer">🔍 Tra Cứu</button><br><span class="vk-mu" style="font-size:12px">${HB_CLS[hbCls(it)]} · ${HB_ACT[hbCls(it)]} · ${hbCells(it)} ô · ${it.he && it.he.length ? esc(it.he.map(heTen).join("/")) + " · " : ""}${HB_PH[(it.pham_cap || 1) - 1] || ""} · từ ${esc(realmName(it.canh_gioi ?? 0))}</span><br><span style="font-size:13px">${itemFull(it)}</span>${src.length ? `<br><span class="vk-mu" style="font-size:12px">${esc(src.join(" · "))}</span>` : ""}${where && !own ? `<br><span class="vk-mu" style="font-size:12px">Có ở: ${where}</span>` : ""}</td><td style="white-space:nowrap">${it.gia ? "~" + it.gia : "—"}</td></tr>`;
@@ -1810,7 +1834,10 @@ function hbScanHtml(b, F, sel, plan, rt) {
     )
     .join("");
   const act = [...plan.chien.filter((x) => x.it.chieu)].slice(0, 8),
-    pas = [...plan.tam, ...plan.chien.filter((x) => !x.it.chieu)].slice(0, 8);
+    pas = [...plan.tam, ...plan.chien.filter((x) => !x.it.chieu)].slice(
+      0,
+      8,
+    );
   const line = (x) =>
     `<li><b>${esc(x.it.ten)}</b> <span class="vk-mu" style="font-size:12px">(${HB_CLS[x.cls]} · ${x.cells} ô${x.have ? " · có" : ""})</span><br><span style="font-size:12px">${hbSkillLine(x.it)}</span></li>`;
   const warn = [];
@@ -1952,10 +1979,13 @@ function hbMissingRoadmapHtml(miss) {
         );
       }
       if (srcInfo.terrain.length) {
-        sources.push(`<b>Địa hình:</b> ${esc(srcInfo.terrain.join(", "))}`);
+        sources.push(
+          `<b>Địa hình:</b> ${esc(srcInfo.terrain.join(", "))}`,
+        );
       }
       const note = sourceNote(it);
-      if (note.length && !sources.length) sources.push(esc(note.join(" · ")));
+      if (note.length && !sources.length)
+        sources.push(esc(note.join(" · ")));
       if (!sources.length)
         sources.push(
           '<span class="vk-mu">Chưa ghi nhận nguồn trực tiếp trong bản game này</span>',
@@ -2045,7 +2075,10 @@ function hbCompareHtml(nvReal, F, res) {
     if (!P || !P.chieu) return 0;
     return P.chieu
       .filter((x) => x && x.dang !== undefined && (x.phi || 0) > 0)
-      .reduce((a, x) => a + (x.phi || 0) / Math.max(1, (x.hoi || 0) + 1), 0);
+      .reduce(
+        (a, x) => a + (x.phi || 0) / Math.max(1, (x.hoi || 0) + 1),
+        0,
+      );
   };
   const curDrain = calcDrain(cur.P);
   const newDrain = calcDrain(res.P);
@@ -2101,7 +2134,8 @@ function hbResultHtml(b, F, r) {
     })
     .join("");
   const curPre =
-    HB_PRESETS.find((p) => p.id === (F.preset || "all")) || HB_PRESETS[0];
+    HB_PRESETS.find((p) => p.id === (F.preset || "all")) ||
+    HB_PRESETS[0];
 
   return `<div class="vk-ok" style="margin:6px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
 <span>Kinh mạch <b>${esc(realmName(F.R))}</b> theo hướng <b>${esc(b.ten)}</b> · Preset: <b>${esc(curPre.name)}</b></span>
@@ -2230,7 +2264,8 @@ function tabAutoKm() {
   const groups = [...new Set(BUILDS.map((x) => x.nhom))];
   const o = (v, c2, txt) =>
     `<option value="${esc(v)}" ${String(v) === String(c2) ? "selected" : ""}>${esc(txt)}</option>`;
-  const phOpts = (v, pre) => HB_PH.map((t, i) => o(i + 1, v, pre + t)).join("");
+  const phOpts = (v, pre) =>
+    HB_PH.map((t, i) => o(i + 1, v, pre + t)).join("");
   const heOpts = [
     "kim",
     "moc",
@@ -2248,8 +2283,12 @@ function tabAutoKm() {
     ),
   );
   const trOpts = [...sel.traits.entries()]
-    .sort((x, y) => hbTrLabel(x[0]).localeCompare(hbTrLabel(y[0]), "vi"))
-    .map(([k, n]) => o(k, F.dt, "Đặc Tính: " + hbTrLabel(k) + " (" + n + ")"))
+    .sort((x, y) =>
+      hbTrLabel(x[0]).localeCompare(hbTrLabel(y[0]), "vi"),
+    )
+    .map(([k, n]) =>
+      o(k, F.dt, "Đặc Tính: " + hbTrLabel(k) + " (" + n + ")"),
+    )
     .join("");
   const catRows = BUILDS.map((x) => {
     const s = cat.get(x.k);
@@ -2270,7 +2309,9 @@ function tabAutoKm() {
     : "";
   const dp = [...Cc.items.values()].filter(
     (it) =>
-      it.loai === "dan_duoc" && it.dot_pha && it.dot_pha.canh_gioi === F.R + 1,
+      it.loai === "dan_duoc" &&
+      it.dot_pha &&
+      it.dot_pha.canh_gioi === F.R + 1,
   );
   const steps =
     HB_STEPS[b.k] && HB_STEPS[b.k][F.R]
@@ -2289,7 +2330,8 @@ function tabAutoKm() {
       const it = Cc.items.get(m.item);
       if (it && it.chieu && (it.chieu.phi || 0) > 0) {
         curCostSkills.push(it);
-        curDrain += (it.chieu.phi || 0) / Math.max(1, (it.chieu.hoi || 0) + 1);
+        curDrain +=
+          (it.chieu.phi || 0) / Math.max(1, (it.chieu.hoi || 0) + 1);
       }
     }
   }
@@ -2333,7 +2375,9 @@ function tabAutoKm() {
     `<select class="vk-sel" id="au-km-kb" style="width:230px"><option value="">Không Ép (Theo Hệ Số Game)</option>${groups
       .map(
         (g) =>
-          `<optgroup label="${esc(g)}">${BUILDS.filter((x) => x.nhom === g)
+          `<optgroup label="${esc(g)}">${BUILDS.filter(
+            (x) => x.nhom === g,
+          )
             .map((x) => {
               const fit = fitMap.get(x.k) || buildFit(x, nv, F.R);
               return `<option value="${esc(x.k)}" ${cfg.kb === x.k ? "selected" : ""}>${esc(x.ten)} [${fit.tier}] (${fit.s > 0 ? "+" : ""}${Math.round(fit.s)}đ)</option>`;
@@ -2343,7 +2387,8 @@ function tabAutoKm() {
       .join("")}</select>`,
   );
   const curPreset =
-    HB_PRESETS.find((p) => p.id === (F.preset || "all")) || HB_PRESETS[0];
+    HB_PRESETS.find((p) => p.id === (F.preset || "all")) ||
+    HB_PRESETS[0];
   const bFit = fitMap.get(b.k) || buildFit(b, nv, cur);
 
   body.innerHTML = `
@@ -2390,27 +2435,27 @@ function tabAutoKm() {
       </div>
 
       ${auSel(
-        "au-km-ratio",
-        "Tỉ Lệ Tâm Pháp : Chiến Pháp",
-        Object.entries(HB_RATIO).map(([k, v]) => [k, v[0]]),
-        cfg.ratio,
+"au-km-ratio",
+"Tỉ Lệ Tâm Pháp : Chiến Pháp",
+Object.entries(HB_RATIO).map(([k, v]) => [k, v[0]]),
+cfg.ratio,
       )}
       ${auSel(
-        "au-km-maxskills",
-        "Giới Hạn Chiêu Thức Chủ Động",
-        Object.entries(HB_MAX_SKILLS).map(([k, v]) => [k, v[0]]),
-        cfg.maxSkills || "3",
+"au-km-maxskills",
+"Giới Hạn Chiêu Thức Chủ Động",
+Object.entries(HB_MAX_SKILLS).map(([k, v]) => [k, v[0]]),
+cfg.maxSkills || "3",
       )}
       ${auSel("au-km-mode", "Chế Độ Ưu Tiên", AU_KM_MODE, cfg.mode)}
       ${auSel(
-        "au-km-dir",
-        "Hướng Xếp Khí Vận",
-        [
-          ["", "Theo Hệ Số Game"],
-          ["tien", "Tiên Tu · Tương Sinh (Khuyên Dùng)"],
-          ["ma", "Ma Tu · Tương Khắc"],
-        ],
-        cfg.dir,
+"au-km-dir",
+"Hướng Xếp Khí Vận",
+[
+  ["", "Theo Hệ Số Game"],
+  ["tien", "Tiên Tu · Tương Sinh (Khuyên Dùng)"],
+  ["ma", "Ma Tu · Tương Khắc"],
+],
+cfg.dir,
       )}
       ${auSel("au-km-it", "Độ Kỹ Luyện Kim", AU_KM_IT, cfg.iters)}
       ${auChk("au-km-prio", "Ưu Tiên Theo Hệ Linh Căn Và Huyệt Đạo", cfg.prio)}
@@ -2611,7 +2656,9 @@ ${kmCard(b, nv)}
       /* bỏ qua */
     }
     tabAutoKm();
-    UI.notify("Đã quét lại " + C().items.size + " món trong dữ liệu game.");
+    UI.notify(
+      "Đã quét lại " + C().items.size + " món trong dữ liệu game.",
+    );
   };
   body.querySelector("#au-run").onclick = () => auStartKm(false);
   body.querySelector("#au-prev").onclick = () => auStartKm(true);
@@ -2657,7 +2704,8 @@ ${kmCard(b, nv)}
       tcGo(tcLkEl.dataset.k, tcLkEl.dataset.id);
       return;
     }
-    const fbBtn = ev.target.closest && ev.target.closest("#hb-fallback-btn");
+    const fbBtn =
+      ev.target.closest && ev.target.closest("#hb-fallback-btn");
     if (fbBtn) {
       ev.preventDefault();
       F.src = "own";
@@ -2720,7 +2768,9 @@ ${kmCard(b, nv)}
           }),
         );
         UI.notify(
-          ok ? "📋 Đã chép cách xếp vào clipboard." : "❌ Không chép được.",
+          ok
+            ? "📋 Đã chép cách xếp vào clipboard."
+            : "❌ Không chép được.",
         );
       };
   };

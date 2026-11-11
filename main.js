@@ -73,11 +73,7 @@ function runTroLy(tt, mod) {
 
   if (UI.isOpen()) {
     if (UI._section === "tl") Assist.render();
-    else if (
-      UI._section === "nk" &&
-      NhatKy &&
-      typeof NhatKy.init === "function"
-    ) {
+    else if (UI._section === "nk" && NhatKy && typeof NhatKy.init === "function") {
       NhatKy.init();
     }
   }

@@ -1,15 +1,6 @@
-import {
-  gWin,
-  debounce,
-  pct,
-  num,
-  esc,
-  tcWord,
-  fold,
-  heTen,
-} from "../core/utils.js";
+import { gWin, debounce, pct, num, esc, tcWord, fold, heTen } from "../core/utils.js";
 import { NL_META, NL_RITUAL, NL_ENC, NL_ENEMY } from "../data/static-data.js";
-import { S, body, C, nvNow, realmName } from "../core/bridge.js";
+import { S, body, C, nvNow, realmName, has } from "../core/bridge.js";
 import { itemFull } from "./ban-do-dia-danh.js";
 /**
  * Module: Wiki & Quản Lý Ngự Linh (Tổng Quan, Của Tôi, Sinh Vật, Vật Phẩm, Cơ Duyên)
@@ -64,7 +55,8 @@ const nlItemName = (id) => {
 };
 const nlEnemies = () => {
   const out = [];
-  for (const e of C().enemies.values()) if (e && e.ngu_linh) out.push(e);
+  for (const e of C().enemies.values())
+    if (e && e.ngu_linh) out.push(e);
   if (out.length >= 20) return out;
   return NL_ENEMY.map((s) => ({
     id: s.id,
@@ -80,7 +72,9 @@ const nlEnemies = () => {
 };
 const nlEnemyById = (id) =>
   C().enemies.get(id) ||
-  NL_ENEMY.map((s) => ({ id: s.id, ten: s.ten })).find((x) => x.id === id);
+  NL_ENEMY.map((s) => ({ id: s.id, ten: s.ten })).find(
+    (x) => x.id === id,
+  );
 const nlIsItem = (it) =>
   !!(
     NL_META[it.id] ||
@@ -158,7 +152,8 @@ function tabNLW() {
         : 0;
     const dp =
       k === "khoi_loi"
-        ? items.filter((it) => it.khuon && it.loai !== "trung_thu").length
+        ? items.filter((it) => it.khuon && it.loai !== "trung_thu")
+            .length
         : 0;
     const nuoi = items.filter(
       (it) => it.cho_an && (it.cho_an.loai || []).includes(k),
@@ -234,7 +229,9 @@ function tabNLM() {
       return esc(
         d
           ? d.ten
-          : String(r.ritual).replace("nghi_thuc.", "").replace(/_/g, " "),
+          : String(r.ritual)
+              .replace("nghi_thuc.", "")
+              .replace(/_/g, " "),
       );
     })
     .join(", ");
@@ -274,7 +271,8 @@ function tabNLS() {
       .filter((e) => {
         const ln = e.ngu_linh.loai || [];
         if (S.nl.sch !== "all" && !ln.includes(S.nl.sch)) return false;
-        if (S.nl.realm && (e.canh_gioi ?? 0) > (nv.canhGioi || 0)) return false;
+        if (S.nl.realm && (e.canh_gioi ?? 0) > (nv.canhGioi || 0))
+          return false;
         if (!q) return true;
         const hay = fold(
           [
@@ -308,7 +306,9 @@ function tabNLS() {
                 return `→ tiến hóa <b>${esc(tcWord(en ? en.ten : t.id))}</b>${t.he && t.he.length ? " (đổi hệ " + esc([].concat(t.he).map(heTen).join("/")) + ")" : ""}${li ? " (cần " + li + ")" : ""}`;
               })
               .join("<br>");
-          const prv = (prevMap.get(e.id) || []).map((x) => esc(tcWord(x.ten)));
+          const prv = (prevMap.get(e.id) || []).map((x) =>
+            esc(tcWord(x.ten)),
+          );
           const src = (kMap.get(e.id) || []).map((it) =>
             esc(nlItemName(it.id)),
           );
@@ -397,7 +397,8 @@ function tabNLC() {
     S.nl.qc = body.querySelector("#nc-q").value;
     S.nl.realm = body.querySelector("#nc-realm").checked;
     const list = NL_ENC.filter((r) => {
-      if (S.nl.realm && r[5] && (cg < r[5][0] || cg > r[5][1])) return false;
+      if (S.nl.realm && r[5] && (cg < r[5][0] || cg > r[5][1]))
+        return false;
       if (!q) return true;
       return fold(
         [
@@ -420,7 +421,8 @@ function tabNLC() {
 <span class="vk-mu" style="font-size:12.5px">${r[3].length ? "Nơi: " + esc(r[3].map((x) => NLW_NOI[x] || x).join(", ")) : ""}${r[4].length ? " · Địa hình: " + esc(r[4].map((x) => NLW_DH[x] || x).join(", ")) : ""}${r[5] ? " · Cảnh giới: " + esc(realmName(r[5][0])) + (r[5][1] !== r[5][0] ? " – " + esc(realmName(r[5][1])) : "") : ""}</span>
 ${r[6].length ? `<br><span style="font-size:13px">Có thể nhận: ${r[6].map((id) => esc(nlItemName(id))).join(", ")}</span>` : r[7] === "cua_hang" ? '<br><span class="vk-mu" style="font-size:12.5px">Bán trứng thú và nguyên liệu Ngự Linh (kệ hàng ngẫu nhiên mỗi lần).</span>' : '<br><span class="vk-mu" style="font-size:12.5px">Gặp thú / linh vật hoặc sự kiện liên quan Ngự Linh.</span>'}</div>`,
         )
-        .join("") || '<div class="vk-card vk-mu">Không thấy sự kiện nào.</div>';
+        .join("") ||
+      '<div class="vk-card vk-mu">Không thấy sự kiện nào.</div>';
   };
   let tmr;
   body.querySelector("#nc-q").oninput = () => {

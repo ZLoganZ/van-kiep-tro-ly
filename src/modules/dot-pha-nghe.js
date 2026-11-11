@@ -1,30 +1,5 @@
-import {
-  gWin,
-  sleep0,
-  pct,
-  num,
-  esc,
-  yrs,
-  fold,
-  heTen,
-  STAGE,
-} from "../core/utils.js";
-import {
-  S,
-  body,
-  C,
-  clone,
-  ctx,
-  nvNow,
-  realmName,
-  realmLabel,
-  has,
-  needMsg,
-  dangerTag,
-  fight,
-  enemyAt,
-  scanRetreat,
-} from "../core/bridge.js";
+import { gWin, sleep0, pct, num, esc, yrs, cleanTxt, fold, heTen, STAGE } from "../core/utils.js";
+import { S, body, C, clone, ctx, nvNow, realmName, realmLabel, has, needMsg, withPlace, danger, dangerTag, nearSlots, fight, enemyAt, simFoe, foesOf, scanRetreat } from "../core/bridge.js";
 import { anneal } from "./kinh-mach-engine.js";
 import { errBox, progressHtml, bindProgress } from "./navigation.js";
 import { placeName } from "./di-bao.js";
@@ -34,7 +9,12 @@ import { lnTag, sellTotal } from "./kinh-mach-tab.js";
  */
 // ── Chợ ngập hàng: hằng số lấy từ code game (ngưỡng 2,5 / 4 / 5; nửa đời 2 năm)
 const GLUT = { cut: [2.5, 4, 5], hold: 3, half: 2 };
-const GLUT_TIER = ["Bình thường", "Hơi ế", "Ế", "Ngập — tiệm không thu"];
+const GLUT_TIER = [
+  "Bình thường",
+  "Hơi ế",
+  "Ế",
+  "Ngập — tiệm không thu",
+];
 const GLUT_BAN = [1, 0.8, 0.5, 0.5],
   GLUT_MUA = [1, 0.85, 0.7, 0.6];
 const GLUT_CUM = {
@@ -80,7 +60,8 @@ function glutRows(c) {
     for (const [loai, cums] of Object.entries(cats || {}))
       for (const [cum, e] of Object.entries(cums || {})) {
         if (!e || typeof e.value !== "number") continue;
-        const v = e.value * Math.pow(0.5, (run.nam - e.year) / GLUT.half),
+        const v =
+            e.value * Math.pow(0.5, (run.nam - e.year) / GLUT.half),
           tier = glutTier(v, e.tier || 0);
         if (tier < 1) continue;
         let ten = nuoc;
@@ -100,7 +81,9 @@ function glutRows(c) {
           years: Math.log2(v / GLUT.cut[0]) * GLUT.half,
         });
       }
-  return rows.sort((a, b) => b.here - a.here || b.tier - a.tier || b.v - a.v);
+  return rows.sort(
+    (a, b) => b.here - a.here || b.tier - a.tier || b.v - a.v,
+  );
 }
 function glutCard(c) {
   if (!c.run.marketGlut) return "";
@@ -146,7 +129,8 @@ function sellAdvice(nv, best) {
     .filter(([id, n]) => n > 0 && !used.has(id))
     .map(([id, n]) => ({ it: Cc.items.get(id), n, id }))
     .filter(
-      (x) => x.it && (x.it.loai === "cong_phap" || x.it.loai === "phap_khi"),
+      (x) =>
+        x.it && (x.it.loai === "cong_phap" || x.it.loai === "phap_khi"),
     );
   if (!rows.length) return "";
   const price = (id, it) => {
@@ -242,7 +226,8 @@ function tabDotPha() {
   const sets = [[]];
   pills.forEach((p) => sets.push([p]));
   for (let i = 0; i < pills.length; i++)
-    for (let j = i + 1; j < pills.length; j++) sets.push([pills[i], pills[j]]);
+    for (let j = i + 1; j < pills.length; j++)
+      sets.push([pills[i], pills[j]]);
   for (const dan of sets)
     for (const td of tdOpts) {
       try {
@@ -260,7 +245,8 @@ function tabDotPha() {
       } catch {}
     }
   combos.sort(
-    (a, b) => b.tiLe - a.tiLe || a.dan.length - b.dan.length || a.td - b.td,
+    (a, b) =>
+      b.tiLe - a.tiLe || a.dan.length - b.dan.length || a.td - b.td,
   );
   const hasGradeCol = combos.some((x) => x.grade);
   const itemTen = (id) => (C().items.get(id) || {}).ten || id;
@@ -338,7 +324,8 @@ function tabTran() {
   if (tm) {
     const next = tm.capBac + 1,
       reasons = K.thieuDeThangCap(c);
-    if (!K.CAP_BAC[next]) kh = '<div class="vk-mu">Đã ở bậc cao nhất.</div>';
+    if (!K.CAP_BAC[next])
+      kh = '<div class="vk-mu">Đã ở bậc cao nhất.</div>';
     else {
       kh = `<div class="vk-row"><span>Lên ${esc(K.CAP_BAC[next])}</span>${reasons.length ? `<span class="vk-bad">${esc(reasons.join("; "))}</span>` : '<span class="vk-ok">Đủ điều kiện xin khảo hạch</span>'}</div>`;
       if (next === 2 || next === 3) {
@@ -382,7 +369,12 @@ function tabTran() {
   }
   const boards = [];
   for (const [slot, v] of Object.entries(run.noiChon || {}))
-    if (v && v.treoThuong && v.treoThuong.viec && v.treoThuong.viec.length)
+    if (
+      v &&
+      v.treoThuong &&
+      v.treoThuong.viec &&
+      v.treoThuong.viec.length
+    )
       boards.push([slot, v.treoThuong]);
   const nhan = (run.viecNhan || []).map((v) => [null, v]);
   const viecRows = [];
@@ -400,7 +392,8 @@ function tabTran() {
       );
   };
   for (const [, v] of nhan) addViec(v, "Đã nhận: ");
-  for (const [slot, tt] of boards) for (const v of tt.viec) addViec(v, "");
+  for (const [slot, tt] of boards)
+    for (const v of tt.viec) addViec(v, "");
   const enemyOpts = [...Cc.enemies.values()]
     .sort((a, b) => String(a.ten).localeCompare(String(b.ten), "vi"))
     .map((e) => `<option value="${esc(e.id)}">${esc(e.ten)}</option>`)
@@ -421,7 +414,9 @@ function tabTran() {
   body.querySelector("#vk-eq").oninput = (ev) => {
     const q = fold(ev.target.value).trim();
     const list = q
-      ? allEn.filter((e) => fold(e.ten).includes(q) || fold(e.id).includes(q))
+      ? allEn.filter(
+          (e) => fold(e.ten).includes(q) || fold(e.id).includes(q),
+        )
       : allEn;
     sel.innerHTML =
       list
@@ -478,7 +473,10 @@ function tabTKC() {
     Cc = C();
   let list = [];
   try {
-    list = [...K.hangTong(c, "cong_phap"), ...K.hangTong(c, "phap_khi")];
+    list = [
+      ...K.hangTong(c, "cong_phap"),
+      ...K.hangTong(c, "phap_khi"),
+    ];
   } catch (e) {
     body.innerHTML = errBox(e);
     return;
@@ -557,7 +555,8 @@ function tabTKC() {
       }
       res.sort(
         (a, b) =>
-          b.gain / Math.max(10, b.e.gia) - a.gain / Math.max(10, a.e.gia),
+          b.gain / Math.max(10, b.e.gia) -
+          a.gain / Math.max(10, a.e.gia),
       );
       body.querySelector("#vk-pr3").style.display = "none";
       body.querySelector("#vk-rank").innerHTML =
@@ -660,7 +659,9 @@ async function scanShops(maxY, prog) {
           if (!it) continue;
           const pf = e.priceFactor ?? 1;
           const gia =
-            pf === 1 ? undefined : Math.max(1, Math.round((it.gia || 0) * pf));
+            pf === 1
+              ? undefined
+              : Math.max(1, Math.round((it.gia || 0) * pf));
           let price;
           try {
             price = K.giaMua(cc, e.itemId, gia, 0);
@@ -735,7 +736,8 @@ function tabCho() {
         )
         .sort(
           (a, b) =>
-            (b.it.pham_cap || 0) - (a.it.pham_cap || 0) || a.price - b.price,
+            (b.it.pham_cap || 0) - (a.it.pham_cap || 0) ||
+            a.price - b.price,
         )
         .slice(0, 12);
       const measured = [];
@@ -749,7 +751,10 @@ function tabCho() {
           iters: 1000,
           init: nv.kinhMach.manh,
           onProg: (f) =>
-            prog(0.25 + (0.75 * f) / (usable.length + 1), "Mốc hiện tại…"),
+            prog(
+              0.25 + (0.75 * f) / (usable.length + 1),
+              "Mốc hiện tại…",
+            ),
         });
         for (let k = 0; k < usable.length && !S.abort; k++) {
           const r = usable[k];
@@ -796,8 +801,16 @@ function tabCho() {
   };
 }
 function renderCho() {
-  const { rows, nPlaces, cheapest, usable, measured, base, money, canhGioi } =
-    S.cho;
+  const {
+    rows,
+    nPlaces,
+    cheapest,
+    usable,
+    measured,
+    base,
+    money,
+    canhGioi,
+  } = S.cho;
   const where = (r) =>
     `${esc(r.noi)} <span class="vk-mu">· ${r.years < 0.05 ? "ngay đây" : num(r.years) + " năm"}${r.doi ? " · hàng năm mới" : ""}</span>`;
   const all = [...cheapest.values()];
@@ -918,7 +931,9 @@ const GRADE = [
 function rewardHint(def) {
   const s = JSON.stringify(def.choices || def.scenes || {}),
     out = [];
-  const lt = [...s.matchAll(/"linh_thach":\s*(\d+)/g)].map((m) => +m[1]);
+  const lt = [...s.matchAll(/"linh_thach":\s*(\d+)/g)].map(
+    (m) => +m[1],
+  );
   if (lt.length) out.push(`linh thạch tới ${Math.max(...lt)}`);
   const ids = [
     ...new Set(
@@ -969,7 +984,12 @@ function planData() {
   if (p.here && !p.here.chan && p.here.tuViNam > 0) {
     p.hereYears = p.need / p.here.tuViNam;
     try {
-      const got = K.retreatGain(c, p.here, { dan: [], danSo: {} }, p.hereYears);
+      const got = K.retreatGain(
+        c,
+        p.here,
+        { dan: [], danSo: {} },
+        p.hereYears,
+      );
       p.stagn = got < p.need * 0.97;
     } catch {}
   }
@@ -998,7 +1018,8 @@ function bestRateWith(nv, extraPills, td, asDvm) {
   for (const id of extraPills)
     c.run.nhanVat.tuiDo[id] = Math.max(1, c.run.nhanVat.tuiDo[id] || 0);
   try {
-    return S.core.chuanBiDotPha(c, { dan: extraPills, thieuDot: td }).tiLe;
+    return S.core.chuanBiDotPha(c, { dan: extraPills, thieuDot: td })
+      .tiLe;
   } catch {
     return null;
   }
@@ -1006,7 +1027,8 @@ function bestRateWith(nv, extraPills, td, asDvm) {
 function whereToGet(id) {
   const out = [];
   const nv = nvNow();
-  if ((nv.tuiDo[id] || 0) > 0) out.push('<span class="vk-ok">trong túi</span>');
+  if ((nv.tuiDo[id] || 0) > 0)
+    out.push('<span class="vk-ok">trong túi</span>');
   try {
     const c = ctx();
     const e = [
@@ -1018,7 +1040,9 @@ function whereToGet(id) {
   if (S.cho) {
     const r = S.cho.cheapest.get(id);
     if (r)
-      out.push(`${esc(r.noi)} · ${yrs(r.years)} · ${Math.round(r.price)} lt`);
+      out.push(
+        `${esc(r.noi)} · ${yrs(r.years)} · ${Math.round(r.price)} lt`,
+      );
   }
   return out.join("; ");
 }
@@ -1084,7 +1108,11 @@ function tabDotPha2() {
   const rowP = (it, eff) => {
     let capHint = "";
     const K = S.core;
-    if (K && typeof K.drugCapped === "function" && K.drugCapped(nv, it.id)) {
+    if (
+      K &&
+      typeof K.drugCapped === "function" &&
+      K.drugCapped(nv, it.id)
+    ) {
       capHint = ` <b class="vk-bad" style="font-size:11px">[Đã đạt trần cảnh giới]</b>`;
     } else if (
       K &&
@@ -1109,7 +1137,10 @@ function tabDotPha2() {
     ph += rowP(it, `+${m ? m[1] : "?"} năm thọ`);
   }
   for (const it of bcPills)
-    ph += rowP(it, "phá bình cảnh của tầng hiện tại (đỡ phần tu vi tích thêm)");
+    ph += rowP(
+      it,
+      "phá bình cảnh của tầng hiện tại (đỡ phần tu vi tích thêm)",
+    );
   ph +=
     '</table><div class="vk-mu" style="font-size:12px">Dùng nhiều lần cùng một loại đan sẽ bị dược kháng, hiệu quả giảm dần.</div>';
   body.querySelector("#vk-pill").innerHTML =
@@ -1238,7 +1269,9 @@ const danThem = (nv) => {
 const dpNghe = (dp) => dp.nghe || "luyen_dan";
 const dpRaItem = (dp, Cc) => {
   const raId = dp && (dp.ra || dp.san_pham || dp.ket_qua);
-  return raId ? Cc.items.get(typeof raId === "object" ? raId.id : raId) : null;
+  return raId
+    ? Cc.items.get(typeof raId === "object" ? raId.id : raId)
+    : null;
 };
 // ng: lọc theo nghề (luyen_dan | che_phu | luyen_bao | tran_phap); bỏ trống = mọi nghề. Công thức game không cho mô phỏng nằm ở mảng .bad.
 function recipeRows(c, nv, ng) {
@@ -1335,7 +1368,8 @@ function recipeRows(c, nv, ng) {
           first: a1.first,
           left: (a1.left || 0) + (a2.left || 0),
         };
-      } else stl = sellTotal(c, ra.id, Cc.items.get(ra.id) || ra, best.qty);
+      } else
+        stl = sellTotal(c, ra.id, Cc.items.get(ra.id) || ra, best.qty);
       const sell = stl.first;
       const cost =
         (dp.chu || []).reduce(
@@ -1392,7 +1426,8 @@ function tabNghe(ng) {
       if (!best || j.qua > best.j.qua) best = { hoa, j };
     }
     const flatExam =
-      js.length > 1 && js.every((x) => Math.abs(x.j.qua - js[0].j.qua) < 1e-9);
+      js.length > 1 &&
+      js.every((x) => Math.abs(x.j.qua - js[0].j.qua) < 1e-9);
     const rows = (flatExam ? js.slice(0, 1) : js)
       .map(
         (x) =>
@@ -1438,7 +1473,8 @@ function tabNghe(ng) {
   else {
     const rr = recipeRows(c, nv, ng).sort(
       (a, b) =>
-        (a.L.chan ? 1 : 0) - (b.L.chan ? 1 : 0) || b.perYear - a.perYear,
+        (a.L.chan ? 1 : 0) - (b.L.chan ? 1 : 0) ||
+        b.perYear - a.perYear,
     );
     const bad = rr.bad.length
       ? `<div class="vk-mu" style="font-size:12px;margin-top:6px">Chưa tính được lãi (game không cho mô phỏng): ${esc(rr.bad.map((b) => (dpRaItem(b.dp, Cc) || {}).ten || b.dp.ten || b.dpId).join(", "))}.</div>`
@@ -1453,7 +1489,9 @@ function tabNghe(ng) {
             .map((r) => {
               const miss = (r.dp.chu || [])
                 .filter((x) => (nv.tuiDo[x.id] || 0) < x.so)
-                .map((x) => `${Cc.items.get(x.id)?.ten || x.id} ×${x.so}`);
+                .map(
+                  (x) => `${Cc.items.get(x.id)?.ten || x.id} ×${x.so}`,
+                );
               return `<tr><td><b>${esc(r.ra.ten)}</b> <span class="vk-mu" style="font-size:12px">phẩm ${r.L.pham}</span><br><span style="font-size:12px">${gradeBar(r.L.phanBo)}</span>${r.L.chan ? `<br><span class="vk-bad" style="font-size:12px">${esc(r.L.chan)}</span>` : ""}${miss.length ? `<br><span class="vk-mu" style="font-size:12px">thiếu: ${esc(miss.join(", "))}</span>` : ""}</td><td>${r.flat ? "Không đổi theo lửa" : hoaTen(ng, r.hoa)}<br><span class="vk-mu" style="font-size:12px">~${num(r.qty, 1)} ${dv}/mẻ · ${num(r.nam, 2)} năm/mẻ</span></td><td class="${r.profit > 0 ? "vk-ok" : "vk-bad"}">${Math.round(r.profit)} lt/mẻ<br><span class="vk-mu" style="font-size:12px">bán ~${r.sell}/${dv}</span></td></tr>`;
             })
             .join("") +
@@ -1552,11 +1590,13 @@ const BM_NHOM = {
 };
 const BM_NHOM_TOIDA = { effect: 2, form: 1, element: 1 };
 const BM_PN = 0.85; // uy chiêu nhân thêm cho mỗi văn hiệu ứng
-const bmD = () => Object.assign({}, BM_DEF, (S.core && S.core.bm) || {});
+const bmD = () =>
+  Object.assign({}, BM_DEF, (S.core && S.core.bm) || {});
 const bmV = () =>
   Object.assign({}, BM_RUNE_VAL, (S.core && S.core.bmRune) || {});
 const bmP = (x) => `${Math.round(x * 1000) / 10}%`.replace(".", ",");
-const bmX = (x) => `×${String(Math.round(x * 100) / 100).replace(".", ",")}`;
+const bmX = (x) =>
+  `×${String(Math.round(x * 100) / 100).replace(".", ",")}`;
 const bmLv = (a, lv) => a[Math.max(0, Math.min(a.length - 1, lv))];
 function bmRunes() {
   const K = S.core,
@@ -1641,7 +1681,8 @@ function bmRunes() {
           "van.phagiap",
           l,
           m,
-          () => `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`,
+          () =>
+            `Đánh trúng có thể phá giáp địch ${bmP(v("phagiap", l))}`,
         ),
     },
     {
@@ -1688,7 +1729,8 @@ function bmRunes() {
           "van.hut_huyet",
           l,
           m,
-          () => `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`,
+          () =>
+            `Hút ${bmP(v("hutmau", l))} sát thương chiêu hóa khí huyết`,
         ),
     },
     {
@@ -1768,7 +1810,8 @@ function bmRunes() {
           "van.quy_nhat",
           l,
           m,
-          () => `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`,
+          () =>
+            `Chiêu lan / toàn trận thu về đơn, uy ${bmX(v("quy", l))}`,
         ),
     },
     ...he.map(([id, name, h]) => ({
@@ -1796,7 +1839,8 @@ const bmRuneName = (id) => {
         .replace("van.", "")
         .replace(/_/g, " ");
 };
-const bmGrade = (it) => Math.max(1, Math.min(8, (it && it.pham_cap) ?? 2));
+const bmGrade = (it) =>
+  Math.max(1, Math.min(8, (it && it.pham_cap) ?? 2));
 const bmPham = (g) => (PHAM_TEN[g - 1] || "Phẩm " + g) + " Phẩm";
 const bmTier = (D, exp) => {
   let t = 0;
@@ -1833,7 +1877,8 @@ function bmEligible(it) {
   }
   const D = bmD(),
     g = bmGrade(it);
-  if (it.loai !== "phap_khi") return "Chỉ pháp khí mới làm bản mệnh được.";
+  if (it.loai !== "phap_khi")
+    return "Chỉ pháp khí mới làm bản mệnh được.";
   if (g === D.pickMax + 1)
     return "Phẩm Thần đã là trần, không nuôi lớn thêm được. Để món này trên lưới, bản mệnh nên chọn món thấp hơn rồi Dưỡng giai.";
   if (g < D.gradeMin || g > D.pickMax)
@@ -1886,7 +1931,8 @@ function bmWhyTe(nv, it) {
   const D = bmD(),
     g = bmGrade(it);
   if (nv.natal) return "Đã có bản mệnh. Hóa bản mệnh cũ trước.";
-  if (nv.canhGioi < D.realmMin) return "Trúc Cơ mới tế luyện được bản mệnh.";
+  if (nv.canhGioi < D.realmMin)
+    return "Trúc Cơ mới tế luyện được bản mệnh.";
   const e = bmEligible(it);
   if (e) return e;
   if (nv.canhGioi < BM_PHAM_CG[g - 1])
@@ -1968,7 +2014,9 @@ function tabBanMenh() {
     n = nv.natal;
   const itemName = (id) => {
     const it = Cc.items.get(id);
-    return it ? it.ten : String(id).replace("item.", "").replace(/_/g, " ");
+    return it
+      ? it.ten
+      : String(id).replace("item.", "").replace(/_/g, " ");
   };
   const row = (a, b) =>
     `<div class="vk-row"><span>${a}</span><b style="text-align:right">${b}</b></div>`;
@@ -1995,7 +2043,9 @@ function tabBanMenh() {
     const damaged = n.damagedUntil && n.damagedUntil > nv.tuoi;
     const inn = n.innate,
       innNext = D.runeLv[inn.level];
-    const isInnMax = K.isRuneMaxed ? K.isRuneMaxed(inn.level) : inn.level >= 4;
+    const isInnMax = K.isRuneMaxed
+      ? K.isRuneMaxed(inn.level)
+      : inn.level >= 4;
     const isInnHigh = K.isRuneHighTier
       ? K.isRuneHighTier(inn.level)
       : inn.level >= 2 && !isInnMax;
@@ -2022,7 +2072,9 @@ function tabBanMenh() {
       .map(([id, r]) => {
         const nx = D.runeLv[r.level];
         const isMut = r.mutant || false;
-        const isMax = K.isRuneMaxed ? K.isRuneMaxed(r.level) : r.level >= 4;
+        const isMax = K.isRuneMaxed
+          ? K.isRuneMaxed(r.level)
+          : r.level >= 4;
         const isHigh = K.isRuneHighTier
           ? K.isRuneHighTier(r.level)
           : r.level >= 2 && !isMax;
@@ -2030,7 +2082,9 @@ function tabBanMenh() {
         if (isMax) {
           progress = " (tối đa)";
         } else if (isHigh) {
-          const ch = K.runeUpgradeChance ? K.runeUpgradeChance(r) : null;
+          const ch = K.runeUpgradeChance
+            ? K.runeUpgradeChance(r)
+            : null;
           progress = ch ? ` (tỉ lệ ${pct(ch, 1)})` : " (bậc tỉ lệ)";
         } else if (nx) {
           progress = ` (${r.points || 0}/${nx})`;
@@ -2044,7 +2098,9 @@ function tabBanMenh() {
         ? nv.natalYear.devoured
         : 0;
     const dTen =
-      it && it.chieu ? "Chiêu bản mệnh (món có chiêu)" : "Pháp khí bị động";
+      it && it.chieu
+        ? "Chiêu bản mệnh (món có chiêu)"
+        : "Pháp khí bị động";
     html += `<div class="vk-card"><h3>Bản Mệnh Của ${esc(nv.ten)}</h3>
 ${row("Pháp bảo", esc(it ? it.ten : n.item))}
 ${row("Phẩm", `${esc(bmPham(n.grade))}${n.grade > n.base ? ` <span class="vk-mu">(gốc ${esc(bmPham(n.base))}, đã nâng ${n.grade - n.base})</span>` : ""}`)}

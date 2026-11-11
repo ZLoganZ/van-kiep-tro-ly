@@ -1,31 +1,6 @@
-import {
-  gWin,
-  TOOL_VER,
-  TabLifecycle,
-  sleep0,
-  pct,
-  num,
-  esc,
-  fold,
-  heTen,
-  STAGE,
-} from "../core/utils.js";
+import { gWin, TOOL_VER, TabLifecycle, sleep0, pct, num, esc, fold, heTen, STAGE } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import {
-  S,
-  body,
-  tabsEl,
-  groupsEl,
-  loadCore,
-  G,
-  C,
-  ctx,
-  nvNow,
-  realmName,
-  realmLabel,
-  fight,
-  enemyAt,
-} from "../core/bridge.js";
+import { S, body, tabsEl, groupsEl, loadCore, G, C, ctx, nvNow, realmName, realmLabel, fight, enemyAt } from "../core/bridge.js";
 /**
  * Module: Điều Hướng Tab (TABS, GROUPS, Router) & Tab Tổng Quan
  */
@@ -103,7 +78,8 @@ function keepVisible(strip) {
     s = strip.getBoundingClientRect();
   if (!r.width || !s.width) return;
   if (r.left < s.left) strip.scrollLeft -= (s.left - r.left + 8) / k;
-  else if (r.right > s.right) strip.scrollLeft += (r.right - s.right + 8) / k;
+  else if (r.right > s.right)
+    strip.scrollLeft += (r.right - s.right + 8) / k;
 }
 function drawTabs() {
   const g = grpOf(S.tab),
@@ -327,10 +303,7 @@ function syncCharHudBar() {
     const realmStr = realmLabel(nv.canhGioi, nv.tieuCanhGioi);
     let curPlace = run.viTri || "—";
     try {
-      curPlace =
-        (typeof gWin.placeName === "function"
-          ? gWin.placeName(c, run.viTri)
-          : run.viTri) || run.viTri;
+      curPlace = (typeof gWin.placeName === 'function' ? gWin.placeName(c, run.viTri) : run.viTri) || run.viTri;
     } catch (e) {}
     const pillRealm = `<span class="vkx-hud-pill realm" title="Đạo hiệu & Cảnh giới hiện tại">☯ ${esc(nv.ten)} · ${esc(realmStr)}</span>`;
     const pillAge = `<span class="vkx-hud-pill ${rem < 15 ? "warn" : ""}" title="Tuổi / Thọ nguyên tối đa">⏳ ${Math.floor(nv.tuoi)}/${tho} (${rem}n)</span>`;
@@ -339,20 +312,14 @@ function syncCharHudBar() {
     const pillInj = nv.thuongThe
       ? `<span class="vkx-hud-pill warn" title="Thương thế">🩸 Thương ${nv.thuongThe}</span>`
       : "";
-    UI.updateCharHud(
-      pillRealm + pillAge + pillStone + pillLoc + pillInj,
-      () => {
-        const res =
-          typeof gWin.saveQuickSave === "function"
-            ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác")
-            : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
-        if (res && res.ok) {
-          UI.notify("⚡ " + res.msg);
-        } else if (res) {
-          UI.notify("⚠️ " + res.msg);
-        }
-      },
-    );
+    UI.updateCharHud(pillRealm + pillAge + pillStone + pillLoc + pillInj, () => {
+      const res = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác") : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
+      if (res && res.ok) {
+        UI.notify("⚡ " + res.msg);
+      } else if (res) {
+        UI.notify("⚠️ " + res.msg);
+      }
+    });
   } catch (e) {}
 }
 
@@ -472,7 +439,7 @@ async function render() {
     ({
       tq: () => {
         tabTongQuan();
-        if (typeof gWin.tongQuanExtra === "function") gWin.tongQuanExtra();
+        if (typeof gWin.tongQuanExtra === 'function') gWin.tongQuanExtra();
       },
       sv: tabLuuNapSave,
       dp: tabDotPha2,
@@ -519,7 +486,8 @@ async function render() {
   } catch (e) {
     console.error(e);
     body.innerHTML =
-      errBox(e) + '<button class="vk-btn sec" id="vk-retry">↻ Thử Lại</button>';
+      errBox(e) +
+      '<button class="vk-btn sec" id="vk-retry">↻ Thử Lại</button>';
     const rb = body.querySelector("#vk-retry");
     if (rb)
       rb.onclick = () => {
@@ -579,7 +547,8 @@ function tabTongQuan() {
       .join("<br>") || "—";
   // cơ duyên sắp hết hạn
   const seen = new Map();
-  for (const l of run.log || []) if (l.expiresAt && l.key) seen.set(l.key, l);
+  for (const l of run.log || [])
+    if (l.expiresAt && l.key) seen.set(l.key, l);
   const dip =
     [...seen.values()]
       .filter((l) => l.expiresAt - run.nam >= 0.05)
@@ -593,10 +562,7 @@ function tabTongQuan() {
           )}</span><b>${num(l.expiresAt - run.nam)} năm</b></div>`,
       )
       .join("") || '<div class="vk-mu">Không có.</div>';
-  const thoPct = Math.min(
-    100,
-    Math.max(0, Math.round((nv.tuoi / Math.max(1, tho)) * 100)),
-  );
+  const thoPct = Math.min(100, Math.max(0, Math.round((nv.tuoi / Math.max(1, tho)) * 100)));
   const remTho = Math.max(0, Math.floor(tho - nv.tuoi));
   body.innerHTML = `
     <div class="vkx-quick-bar">

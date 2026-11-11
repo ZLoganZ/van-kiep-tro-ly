@@ -1,6 +1,6 @@
 import { gWin, TT } from "../core/utils.js";
 import { NL_ENEMY } from "../data/static-data.js";
-import { AU_T4, AU_ZAN, S, G, C, danger } from "../core/bridge.js";
+import { AU_T4, AU_ZAN, S, G, C, ctxLite, has, danger } from "../core/bridge.js";
 import { DIBAO } from "../modules/di-bao.js";
 /**
  * Module: Hạ Tầng Tự Động (Auto Core Engine, Cấu Hình, Sự Kiện Tu Vi & Bảng Xác Nhận)
@@ -161,7 +161,12 @@ const AU_DEF = {
 // AU_T4, AU_ZAN đã được quản lý tập trung tại src/core/bridge.js
 const AU_KT = 0.8; // Kiểm Tra Sức: cần thắng chắc từ 80% yêu thú mẫu cùng cảnh giới
 const AU_TT_MAX = 3; // Thương Thế cao nhất, game giới hạn bằng Math.min(3, …)
-const AU_TT_TEN = ["Lành lặn", "Thương nhẹ", "Thương nặng", "Trọng thương"]; // đúng bảng Lh của game
+const AU_TT_TEN = [
+  "Lành lặn",
+  "Thương nhẹ",
+  "Thương nặng",
+  "Trọng thương",
+]; // đúng bảng Lh của game
 const AU_HIEM = { an_toan: 0, ngang_suc: 1, hiem: 2, tu_dia: 3 };
 // Màu mức nguy hiểm đúng như game: Xanh (an toàn) · Vàng (ngang sức) · Đỏ (nguy hiểm) · Tím (tử địa; “thần thức không dò ra” game cũng tô tím).
 const AU_MAU = {
@@ -254,10 +259,16 @@ function auEncounterHac(a, v, fightChoice) {
           return auEnemyName(val);
       }
     }
-    if (fightChoice && fightChoice.risk && auIsHacText(fightChoice.risk.enemy))
+    if (
+      fightChoice &&
+      fightChoice.risk &&
+      auIsHacText(fightChoice.risk.enemy)
+    )
       return fightChoice.risk.enemy;
     if (fightChoice && auIsHacText(fightChoice.text))
-      return (fightChoice.risk && fightChoice.risk.enemy) || "Yêu thú Hạc";
+      return (
+        (fightChoice.risk && fightChoice.risk.enemy) || "Yêu thú Hạc"
+      );
     if (
       v &&
       (v.id === "ev.san_yeu" ||
@@ -289,14 +300,16 @@ function calcTotalTuVi(nv) {
   let total = 0;
   try {
     const K = S.core;
-    const step = K && K.MINOR_REALM_STEP != null ? K.MINOR_REALM_STEP : 0.35;
+    const step =
+      K && K.MINOR_REALM_STEP != null ? K.MINOR_REALM_STEP : 0.35;
     const yuFallback = [20, 40, 130, 800, 2000, 4000];
     const cgIndex = Number(nv.canhGioi || 0);
     const tcIndex = Number(nv.tieuCanhGioi || 0);
 
     for (let r = 0; r < cgIndex; r++) {
       const cg = K && K.canhGioi ? K.canhGioi(r) : null;
-      const base = cg && cg.tuViMoiTieu ? cg.tuViMoiTieu : yuFallback[r] || 20;
+      const base =
+        cg && cg.tuViMoiTieu ? cg.tuViMoiTieu : yuFallback[r] || 20;
       for (let t = 0; t <= 3; t++) {
         total += Math.round(base * (1 + step * t));
       }
@@ -346,7 +359,8 @@ function isLoTuViEnc(encId, encDef) {
   )
     return true;
   try {
-    const def = encDef || (C() && C().encounters && C().encounters.get(encId));
+    const def =
+      encDef || (C() && C().encounters && C().encounters.get(encId));
     if (def) {
       if (
         def.tien_ich ||
@@ -414,7 +428,9 @@ function encGivesTuVi(encId) {
     for (const eff of effs) {
       if (!eff || typeof eff !== "object") continue;
       if (eff.tu_vi !== undefined || eff.tuVi !== undefined) {
-        const v = Number(eff.tu_vi !== undefined ? eff.tu_vi : eff.tuVi);
+        const v = Number(
+          eff.tu_vi !== undefined ? eff.tu_vi : eff.tuVi,
+        );
         if (Number.isFinite(v) && v > 0) tv += v;
       }
       if (eff.song_tu) tv += 5.0; // Song Tu tăng ~5% tiểu cảnh giới (rất lớn)
@@ -462,7 +478,9 @@ function encGivesTuVi(encId) {
     const base = evalEffs(ch.effects);
     if (base.lt < 0 || base.bad) return 0; // Nhánh mất linh thạch hoặc hại thân
 
-    const hasCheck = Boolean(ch.check || ch.chance || ch.success || ch.partial);
+    const hasCheck = Boolean(
+      ch.check || ch.chance || ch.success || ch.partial,
+    );
     if (!hasCheck) {
       return base.tv;
     }
@@ -507,8 +525,14 @@ function encGivesTuVi(encId) {
   return maxTv;
 }
 
-function findBestTuViChoice(encDef, availableChoices, activeScene, opt) {
-  if (!encDef || !availableChoices || !availableChoices.length) return null;
+function findBestTuViChoice(
+  encDef,
+  availableChoices,
+  activeScene,
+  opt,
+) {
+  if (!encDef || !availableChoices || !availableChoices.length)
+    return null;
 
   const nonThoat = availableChoices.filter((c) => !c.thoat);
   if (!nonThoat.length) return null;
@@ -521,7 +545,8 @@ function findBestTuViChoice(encDef, availableChoices, activeScene, opt) {
     const cYear = nonThoat.find((c) =>
       /song tu một năm|song tu.*1 năm/i.test(c.text),
     );
-    if (cYear && cYear.available !== false) return { choice: cYear, tv: 50 };
+    if (cYear && cYear.available !== false)
+      return { choice: cYear, tv: 50 };
 
     // Ở chế độ Đánh Quái: Tuyệt đối KHÔNG chọn "Song tu, cùng nhập định" (tránh bị kẹt vào màn hình bế quan)
     if (isHuntingMode) {
@@ -651,7 +676,9 @@ function findBestTuViChoice(encDef, availableChoices, activeScene, opt) {
   const leaveChoice = availableChoices.find(
     (c) =>
       c.thoat ||
-      /rời|thôi|bỏ|hẹn|quay về|trở về|không làm phiền/i.test(c.text || ""),
+      /rời|thôi|bỏ|hẹn|quay về|trở về|không làm phiền/i.test(
+        c.text || "",
+      ),
   );
   if (leaveChoice) {
     return { choice: leaveChoice, tv: 0 };
@@ -692,10 +719,7 @@ function findBestDiBaoChoice(v, cs) {
   try {
     const Cc = C();
     encDef = Cc && Cc.encounters && Cc.encounters.get(v.id);
-    evMeta =
-      typeof DIBAO !== "undefined" && DIBAO.evMap
-        ? DIBAO.evMap.get(v.id)
-        : null;
+    evMeta = typeof DIBAO !== "undefined" && DIBAO.evMap ? DIBAO.evMap.get(v.id) : null;
     activeScene =
       (G().state &&
         G().state.run &&
@@ -713,11 +737,7 @@ function findBestDiBaoChoice(v, cs) {
 
   function evalRelicEffs(effs) {
     if (!effs) return 0;
-    const arr = Array.isArray(effs)
-      ? effs
-      : effs.effects
-        ? effs.effects
-        : [effs];
+    const arr = Array.isArray(effs) ? effs : effs.effects ? effs.effects : [effs];
     let score = 0;
     for (const ef of arr) {
       if (!ef || typeof ef !== "object") continue;
@@ -725,8 +745,7 @@ function findBestDiBaoChoice(v, cs) {
         ef.item || ef.add_item || ef.id || ef.relic || ef.vat_pham || "",
       );
       if (targetRelicId && itemStr === targetRelicId) score += 2000;
-      else if (itemStr.startsWith("item.") || ef.add_item || ef.item)
-        score += 800;
+      else if (itemStr.startsWith("item.") || ef.add_item || ef.item) score += 800;
       if (ef.di_bao_xong || ef.roll_di_bao || ef.relic_roll) score += 1200;
       if (ef.combat || ef.enemy || ef.boss || ef.tran) score += 700;
       if (ef.scene && typeof ef.scene === "string") score += 350;
@@ -805,7 +824,8 @@ function isAtBottleneck(nv) {
   } catch (e) {}
   if (typeof nv.binhCanh === "number" && nv.binhCanh > 0) return true;
   try {
-    const cg = S.core && S.core.canhGioi && S.core.canhGioi(nv.canhGioi);
+    const cg =
+      S.core && S.core.canhGioi && S.core.canhGioi(nv.canhGioi);
     if (cg && cg.tieu && cg.tieu[nv.tieuCanhGioi]) {
       const cap = cg.tieu[nv.tieuCanhGioi].tuVi;
       if (cap && nv.tuVi >= cap && nv.tieuCanhGioi < 3) return true;
@@ -880,7 +900,8 @@ function auLoad() {
     sdb: { ...AU_DEF.sdb, ...(o.sdb || {}) },
   };
   for (const k of ["pham", "he", "tc"])
-    if (!Array.isArray(AU.cfg.rr[k])) AU.cfg.rr[k] = AU_DEF.rr[k].slice();
+    if (!Array.isArray(AU.cfg.rr[k]))
+      AU.cfg.rr[k] = AU_DEF.rr[k].slice();
   if (!["easy", "normal", "hardcore"].includes(AU.cfg.rr.dl))
     AU.cfg.rr.dl = "normal";
   AU.cfg.rr.lp = !!AU.cfg.rr.lp;
@@ -892,7 +913,8 @@ function auLoad() {
   }
   if (AU.cfg.km.v715 !== 1) {
     AU.cfg.km.v715 = 1;
-    if (!AU.cfg.km.ratio || AU.cfg.km.ratio === "55") AU.cfg.km.ratio = "64";
+    if (!AU.cfg.km.ratio || AU.cfg.km.ratio === "55")
+      AU.cfg.km.ratio = "64";
     if (AU.cfg.km.maxSkills == null) AU.cfg.km.maxSkills = "3";
   }
   AU.cfg.rr.lh = !!AU.cfg.rr.lh;
@@ -903,10 +925,7 @@ function auLoad() {
   if (typeof AU.cfg.san.neHac !== "boolean") AU.cfg.san.neHac = true;
   if (typeof AU.cfg.san.danhAi !== "boolean") AU.cfg.san.danhAi = true;
   const validDibaoRelics = DIBAO.ev
-    .filter(
-      (e) =>
-        e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "",
-    )
+    .filter((e) => e && e.relic && typeof e.relic === "string" && e.relic.trim() !== "")
     .map((e) => e.relic);
   if (!Array.isArray(AU.cfg.sdb.targetRelics)) {
     AU.cfg.sdb.targetRelics = validDibaoRelics;
@@ -939,13 +958,17 @@ function auLoad() {
   if (typeof AU.cfg.tc.cleansePillMode !== "boolean")
     AU.cfg.tc.cleansePillMode = true;
   if (AU.cfg.tc.maxPillGradeNormal == null) {
-    AU.cfg.tc.maxPillGradeNormal = Math.min(4, AU.cfg.tc.maxPillGrade || 5);
+    AU.cfg.tc.maxPillGradeNormal = Math.min(
+      4,
+      AU.cfg.tc.maxPillGrade || 5,
+    );
   }
   if (!AU.cfg.tc.shieldTalismanMode) {
     AU.cfg.tc.shieldTalismanMode =
       AU.cfg.tc.smartShield === false ? "off" : "predictive";
   }
-  if (AU.cfg.tc.shieldHpThreshold == null) AU.cfg.tc.shieldHpThreshold = 55;
+  if (AU.cfg.tc.shieldHpThreshold == null)
+    AU.cfg.tc.shieldHpThreshold = 55;
   if (!AU.cfg.tc.ccTalismanMode) {
     AU.cfg.tc.ccTalismanMode =
       AU.cfg.tc.smartCc === false ? "off" : "interrupt";
@@ -955,16 +978,22 @@ function auLoad() {
       AU.cfg.tc.useAttackTalismans === false ? "off" : "smart_weave";
   }
   if (AU.cfg.tc.talismanGradeNormal == null) {
-    AU.cfg.tc.talismanGradeNormal = Math.min(4, AU.cfg.tc.talismanGrade || 5);
+    AU.cfg.tc.talismanGradeNormal = Math.min(
+      4,
+      AU.cfg.tc.talismanGrade || 5,
+    );
   }
-  if (!AU.cfg.tc.formationMode) AU.cfg.tc.formationMode = "boss_or_danger";
+  if (!AU.cfg.tc.formationMode)
+    AU.cfg.tc.formationMode = "boss_or_danger";
   if (AU.cfg.tc.recallPetHp == null) AU.cfg.tc.recallPetHp = 25;
-  if (AU.cfg.tc.healSkillThreshold == null) AU.cfg.tc.healSkillThreshold = 75;
+  if (AU.cfg.tc.healSkillThreshold == null)
+    AU.cfg.tc.healSkillThreshold = 75;
   if (AU.cfg.tc.shieldSkillThreshold == null)
     AU.cfg.tc.shieldSkillThreshold = 40;
   if (typeof AU.cfg.tc.preventOverkill !== "boolean")
     AU.cfg.tc.preventOverkill = true;
-  if (typeof AU.cfg.tc.aoePriority !== "boolean") AU.cfg.tc.aoePriority = true;
+  if (typeof AU.cfg.tc.aoePriority !== "boolean")
+    AU.cfg.tc.aoePriority = true;
   if (typeof AU.cfg.tc.prioritizeNatal !== "boolean")
     AU.cfg.tc.prioritizeNatal = true;
   if (AU.cfg.tc.thieuDotHp == null) AU.cfg.tc.thieuDotHp = 20;
@@ -1018,7 +1047,9 @@ function auLoad() {
     AU.cfg.tl.uuTienCapNen = true;
   if (AU.cfg.san) {
     AU.cfg.san.sanMucTieu =
-      AU.cfg.san.sanMucTieu || AU.cfg.tl.sanMucTieu || "uu_tien_dau_dan";
+      AU.cfg.san.sanMucTieu ||
+      AU.cfg.tl.sanMucTieu ||
+      "uu_tien_dau_dan";
     if (typeof AU.cfg.san.autoDuongThuong !== "boolean")
       AU.cfg.san.autoDuongThuong = true;
     if (typeof AU.cfg.san.uuTienCapNen !== "boolean")
@@ -1073,7 +1104,8 @@ function auCall(fn) {
   }
   const s = g.state,
     e1 = s.error;
-  if (e1 && (e1 !== e0 || s.run === r0)) return { ok: false, err: String(e1) };
+  if (e1 && (e1 !== e0 || s.run === r0))
+    return { ok: false, err: String(e1) };
   return { ok: true };
 }
 function auSig() {
@@ -1143,7 +1175,8 @@ function auSettleLoai() {
   if (!map || typeof map.values !== "function") return null;
   if (auSettle && auSettle.map === map) return auSettle.set;
   const set = new Set();
-  for (const d of map.values()) for (const l of (d && d.loai) || []) set.add(l);
+  for (const d of map.values())
+    for (const l of (d && d.loai) || []) set.add(l);
   auSettle = { map, set };
   return set;
 }
@@ -1202,9 +1235,9 @@ async function auDismissConfirm() {
   };
   const tries = [
     () => {
-      const b = [...p.querySelectorAll(".hud-xac-nhan-nut button")].find(
-        (x) => !x.classList.contains("nut-chinh"),
-      );
+      const b = [
+        ...p.querySelectorAll(".hud-xac-nhan-nut button"),
+      ].find((x) => !x.classList.contains("nut-chinh"));
       if (b) b.click();
     }, // nút Hủy / Thôi
     () =>
@@ -1255,7 +1288,8 @@ async function auBypassConfirm() {
 // Mức rủi ro của trận đang mở, tính y như game tô màu lựa chọn giao chiến (thắng → Xanh/Vàng; thua → Đỏ, cách ≥ 4 bậc → Tím).
 function auBattleLevel(run, p) {
   if (!p) return "unknown";
-  if (p.thang) return p.ketQua && p.ketQua.thuongThe ? "ngang_suc" : "an_toan";
+  if (p.thang)
+    return p.ketQua && p.ketQua.thuongThe ? "ngang_suc" : "an_toan";
   try {
     const t = run.tran,
       d = Math.max(...t.dich.map((x) => x.bac)) - t.ta.bac;

@@ -1,5 +1,5 @@
 import { gWin, TT, esc } from "../core/utils.js";
-import { S, G, C } from "../core/bridge.js";
+import { S, body, G, C, HUD, has } from "../core/bridge.js";
 import { KHAC_HE, gocHe, heTacDong } from "../modules/kinh-mach-engine.js";
 import { refreshMiniStatus } from "../modules/navigation.js";
 import { AU, auSave, auCall } from "./auto-core.js";
@@ -33,7 +33,8 @@ function setAiDecision(txt) {
   gWin._lastAiActionCount = _lastAiActionCount;
   try {
     const el =
-      combatOverlayEl && combatOverlayEl.querySelector("#vkx-combat-last-act");
+      combatOverlayEl &&
+      combatOverlayEl.querySelector("#vkx-combat-last-act");
     if (el) el.textContent = "🤖 " + _lastAiDecisionText;
   } catch (e) {}
 }
@@ -49,7 +50,9 @@ function estimateSkillDamage(ta, target, c, core) {
     (core && core["combat/actions"] && core["combat/actions"].heSoHe) ||
     (core && core.heSoHe);
   const heTacDongFn =
-    (core && core["combat/elements"] && core["combat/elements"].heTacDong) ||
+    (core &&
+      core["combat/elements"] &&
+      core["combat/elements"].heTacDong) ||
     (core && core.heTacDong) ||
     heTacDong;
 
@@ -69,8 +72,10 @@ function estimateSkillDamage(ta, target, c, core) {
         const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
         const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
         const rel = heTacDongFn(sHe, fHe);
-        if (rel === -1 || KHAC_HE[gocHe(sHe)] === gocHe(fHe)) dmg *= 1.35;
-        else if (rel === 1 || KHAC_HE[gocHe(fHe)] === gocHe(sHe)) dmg *= 0.75;
+        if (rel === -1 || KHAC_HE[gocHe(sHe)] === gocHe(fHe))
+          dmg *= 1.35;
+        else if (rel === 1 || KHAC_HE[gocHe(fHe)] === gocHe(sHe))
+          dmg *= 0.75;
       } catch (e) {}
     }
   }
@@ -93,7 +98,8 @@ function estimateSkillDamage(ta, target, c, core) {
 // Nhận diện kỹ năng diện rộng (AoE)
 function isAoESkill(c) {
   if (!c) return false;
-  if (c.scope === "all" || c.scope === "spread" || c.daMucTieu) return true;
+  if (c.scope === "all" || c.scope === "spread" || c.daMucTieu)
+    return true;
   return /vạn kiếm|quần|trận|mưa|bão|tất cả|toàn bộ|lan|liên hoàn/i.test(
     (c.ten || "") + " " + (c.mo_ta || ""),
   );
@@ -108,9 +114,14 @@ function isSunderOrMarkSkill(c) {
     ) ||
     (Array.isArray(c.effects) &&
       c.effects.some((e) =>
-        ["sunder", "mark", "decay", "chill", "bleed", "poison"].includes(
-          e.kind,
-        ),
+        [
+          "sunder",
+          "mark",
+          "decay",
+          "chill",
+          "bleed",
+          "poison",
+        ].includes(e.kind),
       )) ||
     !!(c.phaGiap || c.sunder || c.mark)
   );
@@ -125,7 +136,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   const dich = (tran && tran.dich) || [];
   if (!dich.length) return null;
 
-  const core = (S && S.core) || (typeof TT !== "undefined" && TT && TT.core);
+  const core =
+    (S && S.core) || (typeof TT !== "undefined" && TT && TT.core);
   const aiMode = cfg.aiEngineMode || "smart_v3";
   const itemPolicy = cfg.itemPolicy || "auto"; // "auto" | "boss_only" | "save_all"
   const curRound = tran.hiep || 1;
@@ -148,7 +160,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
           useInnate: true,
           skillPriority: [],
           recallFamiliarBelow:
-            cfg.saveFamiliars !== false ? (cfg.recallPetHp || 25) / 100 : 0,
+            cfg.saveFamiliars !== false
+              ? (cfg.recallPetHp || 25) / 100
+              : 0,
           healBelow: (cfg.healHpThreshold || 35) / 100,
           spiritBelow: (cfg.spiritThreshold || 20) / 100,
           maxGrade: cfg.maxPillGrade || 6,
@@ -175,13 +189,17 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       (d.bac || 0) > (ta.bac || 0) ||
       (d.khiHuyetToiDa || 0) >= (ta.khiHuyetToiDa || 0) * 1.35 ||
       (d.apBac || 0) > (ta.apBac || 0) ||
-      /tâm ma|hộ vệ|thủ lĩnh|trưởng lão|yêu vương|ma tôn/i.test(d.ten || ""),
+      /tâm ma|hộ vệ|thủ lĩnh|trưởng lão|yêu vương|ma tôn/i.test(
+        d.ten || "",
+      ),
   );
 
   let target = liveFoes.find((d) => d.ma === tran.mucTieu);
   const prio = cfg.targetPrio || "smart";
   const heTacDongFn =
-    (core && core["combat/elements"] && core["combat/elements"].heTacDong) ||
+    (core &&
+      core["combat/elements"] &&
+      core["combat/elements"].heTacDong) ||
     (core && core.heTacDong) ||
     heTacDong;
 
@@ -199,9 +217,10 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
           intent,
         ) ||
         (d.anTuc === 0 && d.linhLuc && d.linhLuc > 28);
-      const isHealerOrSummoner = /hồi|trị|triệu hồi|hộ pháp|tế tự|dược/i.test(
-        (d.ten || "") + " " + intent,
-      );
+      const isHealerOrSummoner =
+        /hồi|trị|triệu hồi|hộ pháp|tế tự|dược/i.test(
+          (d.ten || "") + " " + intent,
+        );
 
       if (prio === "boss") {
         if (d.muc === "boss") score += 1200;
@@ -260,7 +279,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       return score;
     };
 
-    const sortedFoes = [...liveFoes].sort((a, b) => scoreFoe(b) - scoreFoe(a));
+    const sortedFoes = [...liveFoes].sort(
+      (a, b) => scoreFoe(b) - scoreFoe(a),
+    );
     const bestFoe = sortedFoes[0];
 
     if (!target) {
@@ -283,14 +304,17 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   if (!target) {
     const nextTarget = liveFoes[0];
     if (nextTarget && !failedActions.has("muc_tieu:" + nextTarget.ma)) {
-      setAiDecision("Nhắm mục tiêu: " + (nextTarget.ten || nextTarget.ma));
+      setAiDecision(
+        "Nhắm mục tiêu: " + (nextTarget.ten || nextTarget.ma),
+      );
       return { loai: "muc_tieu", ma: nextTarget.ma };
     }
     target = nextTarget;
   }
 
   // Thông số tình huống trận đấu hiện tại
-  const hpRatio = (ta.khiHuyet || 0) / Math.max(1, ta.khiHuyetToiDa || 1);
+  const hpRatio =
+    (ta.khiHuyet || 0) / Math.max(1, ta.khiHuyetToiDa || 1);
   const mpRatio = (ta.linhLuc || 0) / Math.max(1, ta.linhLucToiDa || 1);
   const curShield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
   const shieldRatio = curShield / Math.max(1, ta.khiHuyetToiDa || 1);
@@ -300,7 +324,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   const isHeavyAttackIncoming = liveFoes.some((d) => {
     const itn = d.yDinh || "";
     return (
-      /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich|tuyệt|phá thiên/i.test(itn) ||
+      /sat_chieu|dai_chieu|nộ|tram|nuke|no_kich|tuyệt|phá thiên/i.test(
+        itn,
+      ) ||
       (d.anTuc === 0 && (d.linhLuc || 0) > 28)
     );
   });
@@ -329,7 +355,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       );
 
   const chanDungDoFn =
-    (core && core["combat/actions"] && core["combat/actions"].chanDungDo) ||
+    (core &&
+      core["combat/actions"] &&
+      core["combat/actions"].chanDungDo) ||
     (core && core.chanDungDo);
   const canUseBagItem = (it) => {
     if (!it || !ta.tui || !(ta.tui[it.id] > 0)) return false;
@@ -363,7 +391,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
           !failedActions.has("thu_hoi:" + fam.id)
         ) {
           setAiDecision(
-            "Thu hồi Ngự Linh (" + Math.round(petHpRatio * 100) + "% HP)",
+            "Thu hồi Ngự Linh (" +
+              Math.round(petHpRatio * 100) +
+              "% HP)",
           );
           return { loai: "thu_hoi", id: fam.id };
         }
@@ -372,14 +402,17 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   }
 
   // 1B. Độn Thổ Thoát Thân Khẩn Cấp (bo_chay)
-  const escapeHpRatio = (cfg.escapeHp != null ? cfg.escapeHp : 16) / 100;
+  const escapeHpRatio =
+    (cfg.escapeHp != null ? cfg.escapeHp : 16) / 100;
   if (
     cfg.emergencyEscape &&
     hpRatio < escapeHpRatio &&
     !failedActions.has("bo_chay")
   ) {
     const escapeBlockFn =
-      (core && core["combat/actions"] && core["combat/actions"].escapeBlock) ||
+      (core &&
+        core["combat/actions"] &&
+        core["combat/actions"].escapeBlock) ||
       (core && core.escapeBlock);
     const escapeRealmBlockFn =
       (core &&
@@ -413,7 +446,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   }
 
   // 1C. Thiêu Đốt Thọ Nguyên Cứu Mạng (thieu_dot)
-  const thieuDotHpRatio = (cfg.thieuDotHp != null ? cfg.thieuDotHp : 20) / 100;
+  const thieuDotHpRatio =
+    (cfg.thieuDotHp != null ? cfg.thieuDotHp : 20) / 100;
   if (
     cfg.emergencyThieuDot !== false &&
     hpRatio < thieuDotHpRatio &&
@@ -421,7 +455,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
     !failedActions.has("thieu_dot")
   ) {
     const chanThieuDotFn =
-      (core && core["combat/actions"] && core["combat/actions"].chanThieuDot) ||
+      (core &&
+        core["combat/actions"] &&
+        core["combat/actions"].chanThieuDot) ||
       (core && core.chanThieuDot);
     if (typeof chanThieuDotFn === "function") {
       try {
@@ -455,7 +491,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   const curResistPct = Math.round(
     (1 - Math.pow(retention, curResistExp)) * 100,
   );
-  const maxResist = cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70;
+  const maxResist =
+    cfg.maxDrugResistance != null ? cfg.maxDrugResistance : 70;
   const allowByMode =
     healPillMode === "off"
       ? false
@@ -473,13 +510,16 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   ) {
     const missingHp = Math.max(1, ta.khiHuyetToiDa - ta.khiHuyet);
     // Nếu nguy kịch (< 20% HP), cho phép mở khóa lên tới maxPillGrade của Boss để giữ mạng!
-    const pillCap = hpRatio < 0.2 ? cfg.maxPillGrade || 6 : effMaxPillGrade;
+    const pillCap =
+      hpRatio < 0.2 ? cfg.maxPillGrade || 6 : effMaxPillGrade;
     let bestPill = null;
     let bestScore = Infinity;
     let bestCount = 1;
 
     const pillWastedFn =
-      (core && core["combat/actions"] && core["combat/actions"].pillWasted) ||
+      (core &&
+        core["combat/actions"] &&
+        core["combat/actions"].pillWasted) ||
       (core && core.pillWasted);
     const estPillFn =
       (core &&
@@ -545,13 +585,19 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   if (canUseItem && !ta.danLuotNay && cfg.cleansePillMode !== false) {
     const badStatuses = Array.isArray(ta.statuses)
       ? ta.statuses.filter((s) =>
-          ["bleed", "poison", "burn", "decay", "chill", "sunder"].includes(
-            s.kind,
-          ),
+          [
+            "bleed",
+            "poison",
+            "burn",
+            "decay",
+            "chill",
+            "sunder",
+          ].includes(s.kind),
         )
       : [];
     const needCleanse =
-      badStatuses.length >= 2 || (badStatuses.length >= 1 && hpRatio < 0.5);
+      badStatuses.length >= 2 ||
+      (badStatuses.length >= 1 && hpRatio < 0.5);
     const needPillShield =
       isHeavyAttackIncoming && shieldRatio < 0.2 && hpRatio < 0.65;
 
@@ -566,7 +612,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
           (needCleanse && (it.tran.giai_doc || it.tran.thanh_tam)) ||
           (needPillShield && it.tran.thuan && it.tran.thuan > 0)
         ) {
-          setAiDecision(`💊 Dùng ${it.ten || it.id} (Hộ thân/Giải độc)`);
+          setAiDecision(
+            `💊 Dùng ${it.ten || it.id} (Hộ thân/Giải độc)`,
+          );
           return { loai: "dan", item: it.id, so: 1 };
         }
       }
@@ -576,7 +624,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   // Chuẩn bị danh sách Kỹ Năng Khả Dụng (Usable Skills)
   const skills = ta.chieu || [];
   const chanChieuFn =
-    (core && core["combat/actions"] && core["combat/actions"].chanChieu) ||
+    (core &&
+      core["combat/actions"] &&
+      core["combat/actions"].chanChieu) ||
     (core && core.chanChieu);
 
   const teHuyetMode = cfg.teHuyetMode || "off";
@@ -602,8 +652,12 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
     } else {
       if (ta.hoi && (ta.hoi[c.id] ?? 0) > curRound) return false;
       if ((c.phi || 0) > (ta.linhLuc || 0)) return false;
-      if (c.natal && (ta.natalBrokenUntil || 0) >= curRound) return false;
-      if (c.lenh && (!tran.familiars || !tran.familiars.some((f) => f.trenSan)))
+      if (c.natal && (ta.natalBrokenUntil || 0) >= curRound)
+        return false;
+      if (
+        c.lenh &&
+        (!tran.familiars || !tran.familiars.some((f) => f.trenSan))
+      )
         return false;
     }
     return true;
@@ -611,7 +665,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
 
   // 1F. Hồi Phục Khẩn Cấp Bằng Kỹ Năng (khi HP < 55% hoặc chế độ Thủ)
   const healSkillRatio =
-    (cfg.healSkillThreshold != null ? cfg.healSkillThreshold : 75) / 100;
+    (cfg.healSkillThreshold != null ? cfg.healSkillThreshold : 75) /
+    100;
   const urgentHealRatio =
     aiMode === "defensive"
       ? Math.max(0.65, healSkillRatio)
@@ -620,17 +675,22 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
     const healSkill = usableSkills.find(
       (c) =>
         c.dang === "hoi_phuc" ||
-        /hồi xuân|trị thương|sinh cơ|trường sinh|hồi huyết/i.test(c.ten || ""),
+        /hồi xuân|trị thương|sinh cơ|trường sinh|hồi huyết/i.test(
+          c.ten || "",
+        ),
     );
     if (healSkill) {
-      setAiDecision(`💚 Chiêu hồi phục: ${healSkill.ten || healSkill.id}`);
+      setAiDecision(
+        `💚 Chiêu hồi phục: ${healSkill.ten || healSkill.id}`,
+      );
       return { loai: "chieu", id: healSkill.id };
     }
   }
 
   // 1G. Dựng Khiên Kỹ Năng / Phù Hộ Thuẫn Dự Báo Đỡ Đòn
   const shieldSkillRatio =
-    (cfg.shieldSkillThreshold != null ? cfg.shieldSkillThreshold : 40) / 100;
+    (cfg.shieldSkillThreshold != null ? cfg.shieldSkillThreshold : 40) /
+    100;
   const needUrgentShield =
     isHeavyAttackIncoming || hpRatio < 0.5 || aiMode === "defensive";
   if (
@@ -641,10 +701,14 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
     const shieldSkill = usableSkills.find(
       (c) =>
         c.dang === "thu" ||
-        /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp|kim chung/i.test(c.ten || ""),
+        /khiên|thuẫn|hộ thể|bảo mệnh|quy giáp|kim chung/i.test(
+          c.ten || "",
+        ),
     );
     if (shieldSkill) {
-      setAiDecision(`🛡️ Dựng khiên: ${shieldSkill.ten || shieldSkill.id}`);
+      setAiDecision(
+        `🛡️ Dựng khiên: ${shieldSkill.ten || shieldSkill.id}`,
+      );
       return { loai: "chieu", id: shieldSkill.id };
     }
   }
@@ -744,7 +808,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
 
     // Ưu tiên 2: Phù Khống Chế theo ccTalismanMode
     const ccTalMode =
-      cfg.ccTalismanMode || (cfg.smartCc === false ? "off" : "interrupt");
+      cfg.ccTalismanMode ||
+      (cfg.smartCc === false ? "off" : "interrupt");
     const shouldUseCcTal =
       ccTalMode === "off"
         ? false
@@ -771,7 +836,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
         break;
       }
       if (bestCcTal) {
-        setAiDecision(`⛓️ Ném phù khống chế: ${bestCcTal.ten || bestCcTal.id}`);
+        setAiDecision(
+          `⛓️ Ném phù khống chế: ${bestCcTal.ten || bestCcTal.id}`,
+        );
         return { loai: "dan", item: bestCcTal.id, so: 1 };
       }
     }
@@ -801,7 +868,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
         core["combat/actions"].formationBlock) ||
       (core && core.formationBlock);
     for (const [id, count] of Object.entries(ta.tui)) {
-      if (!count || count <= 0 || failedActions.has("bay_tran:" + id)) continue;
+      if (!count || count <= 0 || failedActions.has("bay_tran:" + id))
+        continue;
       const it = Cc.items && Cc.items.get(id);
       if (!it || it.loai !== "tran_ban" || !it.tran_phap) continue;
       if (typeof formationBlockFn === "function") {
@@ -831,8 +899,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
   const needManaForSkill =
     spiritMode === "on_demand" &&
     readyButOutOfManaSkills.length > 0 &&
-    (usableSkills.filter((c) => c.dang === "cong" || (c.uy || 0) > 0).length ===
-      0 ||
+    (usableSkills.filter((c) => c.dang === "cong" || (c.uy || 0) > 0)
+      .length === 0 ||
       isBossOrElite);
 
   const shouldUseSpiritPill =
@@ -878,21 +946,28 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
         } catch (e) {}
       }
       if (!estMp || estMp <= 0) {
-        estMp = Math.round((ta.linhLucToiDa || 50) * it.tran.linh_luc * mpEff);
+        estMp = Math.round(
+          (ta.linhLucToiDa || 50) * it.tran.linh_luc * mpEff,
+        );
       }
       if (estMp <= 0) estMp = 5;
 
       const diff = Math.abs(missingMp - estMp);
-      const canCoverSkill = (ta.linhLuc || 0) + estMp >= maxNeededPhi ? 0 : 120;
+      const canCoverSkill =
+        (ta.linhLuc || 0) + estMp >= maxNeededPhi ? 0 : 120;
       const score =
-        diff + canCoverSkill + (it.pham_cap || 1) * (isBossOrElite ? 12 : 35);
+        diff +
+        canCoverSkill +
+        (it.pham_cap || 1) * (isBossOrElite ? 12 : 35);
       if (score < bestMpScore) {
         bestMpScore = score;
         bestMpPill = it;
       }
     }
     if (bestMpPill) {
-      setAiDecision(`💧 Cắn ${bestMpPill.ten || bestMpPill.id} (Bù Linh Lực)`);
+      setAiDecision(
+        `💧 Cắn ${bestMpPill.ten || bestMpPill.id} (Bù Linh Lực)`,
+      );
       return { loai: "dan", item: bestMpPill.id, so: 1 };
     }
   }
@@ -908,12 +983,18 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
         c.dang === "buff" ||
         c.dang === "ho_tro" ||
         (Array.isArray(c.effects) &&
-          c.effects.some((e) => ["empower", "haste"].includes(e.kind)) &&
+          c.effects.some((e) =>
+            ["empower", "haste"].includes(e.kind),
+          ) &&
           !(c.uy > 20)) ||
-        /bộc phát|tăng công|cuồng nộ|hóa thần|tụ khí|kiếm ý/i.test(c.ten || ""),
+        /bộc phát|tăng công|cuồng nộ|hóa thần|tụ khí|kiếm ý/i.test(
+          c.ten || "",
+        ),
     );
     if (buffSkill && targetEffHp > estBasicDmg * 1.3) {
-      setAiDecision(`✨ Kích hoạt Buff: ${buffSkill.ten || buffSkill.id}`);
+      setAiDecision(
+        `✨ Kích hoạt Buff: ${buffSkill.ten || buffSkill.id}`,
+      );
       return { loai: "chieu", id: buffSkill.id };
     }
   }
@@ -926,7 +1007,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
     (c) => (c.uy || 0) >= 18 || c.natal || (c.phi || 0) >= 12,
   );
   const burstMode =
-    cfg.burstPillMode || (cfg.useBurstPill === false ? "off" : "boss_combo");
+    cfg.burstPillMode ||
+    (cfg.useBurstPill === false ? "off" : "boss_combo");
   const targetHpPct =
     (target.khiHuyet || 0) / Math.max(1, target.khiHuyetToiDa || 1);
   const shouldUseBurstPill =
@@ -983,9 +1065,13 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       if (lethalSkills.length >= 2) {
         lethalSkills.sort((a, b) => {
           const costA =
-            (a.c.phi || 0) * 2 + (a.c.hoi || 0) * 18 + (a.c.uy || 0) * 0.5;
+            (a.c.phi || 0) * 2 +
+            (a.c.hoi || 0) * 18 +
+            (a.c.uy || 0) * 0.5;
           const costB =
-            (b.c.phi || 0) * 2 + (b.c.hoi || 0) * 18 + (b.c.uy || 0) * 0.5;
+            (b.c.phi || 0) * 2 +
+            (b.c.hoi || 0) * 18 +
+            (b.c.uy || 0) * 0.5;
           return costA - costB;
         });
         const chosenExec = lethalSkills[0].c;
@@ -1002,9 +1088,13 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       !tran.natalUsed &&
       targetEffHp > estBasicDmg * 1.4
     ) {
-      const natalSkill = attackSkills.find((c) => c.natal && !c.bloodYears);
+      const natalSkill = attackSkills.find(
+        (c) => c.natal && !c.bloodYears,
+      );
       if (natalSkill) {
-        setAiDecision(`🗡️ Xuất Bản Mệnh: ${natalSkill.ten || natalSkill.id}`);
+        setAiDecision(
+          `🗡️ Xuất Bản Mệnh: ${natalSkill.ten || natalSkill.id}`,
+        );
         return { loai: "chieu", id: natalSkill.id };
       }
     }
@@ -1035,7 +1125,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       // Thưởng khắc hệ Ngũ Hành
       if (c.he && target.he && typeof heTacDongFn === "function") {
         try {
-          const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
+          const fHe = Array.isArray(target.he)
+            ? target.he[0]
+            : target.he;
           const sHe = Array.isArray(c.he) ? c.he[0] : c.he;
           if (
             heTacDongFn(sHe, fHe) === -1 ||
@@ -1048,7 +1140,11 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       }
 
       // Thưởng kỹ năng diện rộng (AoE) khi có nhiều kẻ địch
-      if (cfg.aoePriority !== false && liveFoes.length >= 2 && isAoESkill(c)) {
+      if (
+        cfg.aoePriority !== false &&
+        liveFoes.length >= 2 &&
+        isAoESkill(c)
+      ) {
         score *= 1 + 0.55 * Math.min(4, liveFoes.length - 1);
         reason = `Quần công ${liveFoes.length} mục tiêu`;
       }
@@ -1073,7 +1169,8 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       if (
         targetHasDebuff &&
         (c.devour ||
-          (Array.isArray(c.markTriggers) && c.markTriggers.length > 0) ||
+          (Array.isArray(c.markTriggers) &&
+            c.markTriggers.length > 0) ||
           /kích nổ|trảm|tuyệt sát|phệ hồn|đoạt mệnh|thiên phạt/i.test(
             c.ten || "",
           ) ||
@@ -1120,7 +1217,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
           ? isBossOrElite
           : atkTalMode === "zero_mana"
             ? (ta.linhLuc || 0) < 12 || usableSkills.length === 0
-            : isBossOrElite || (ta.linhLuc || 0) < 15 || targetEffHp <= 160;
+            : isBossOrElite ||
+              (ta.linhLuc || 0) < 15 ||
+              targetEffHp <= 160;
 
   if (canUseItem && shouldUseAtkTalisman) {
     let bestAtkTal = null;
@@ -1134,9 +1233,15 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       if (!canUseBagItem(it)) continue;
 
       let tScore = it.tran.chieu.uy || 10;
-      if (it.tran.chieu.he && target.he && typeof heTacDongFn === "function") {
+      if (
+        it.tran.chieu.he &&
+        target.he &&
+        typeof heTacDongFn === "function"
+      ) {
         try {
-          const fHe = Array.isArray(target.he) ? target.he[0] : target.he;
+          const fHe = Array.isArray(target.he)
+            ? target.he[0]
+            : target.he;
           const sHe = Array.isArray(it.tran.chieu.he)
             ? it.tran.chieu.he[0]
             : it.tran.chieu.he;
@@ -1154,7 +1259,9 @@ function smartCombatAction(tran, Cc, cfg, failedActions) {
       }
     }
     if (bestAtkTal) {
-      setAiDecision(`🧧 Phù công kích: ${bestAtkTal.ten || bestAtkTal.id}`);
+      setAiDecision(
+        `🧧 Phù công kích: ${bestAtkTal.ten || bestAtkTal.id}`,
+      );
       return { loai: "dan", item: bestAtkTal.id, so: 1 };
     }
   }
@@ -1289,10 +1396,14 @@ function auFightStep(singleAction) {
 
     if (act.loai === "chieu") failedActions.add("chieu:" + act.id);
     else if (act.loai === "dan") failedActions.add("dan:" + act.item);
-    else if (act.loai === "bay_tran") failedActions.add("bay_tran:" + act.item);
-    else if (act.loai === "danh_thuong") failedActions.add("danh_thuong");
-    else if (act.loai === "muc_tieu") failedActions.add("muc_tieu:" + act.ma);
-    else if (act.loai === "thu_hoi") failedActions.add("thu_hoi:" + act.id);
+    else if (act.loai === "bay_tran")
+      failedActions.add("bay_tran:" + act.item);
+    else if (act.loai === "danh_thuong")
+      failedActions.add("danh_thuong");
+    else if (act.loai === "muc_tieu")
+      failedActions.add("muc_tieu:" + act.ma);
+    else if (act.loai === "thu_hoi")
+      failedActions.add("thu_hoi:" + act.id);
     else if (act.loai === "thieu_dot") failedActions.add("thieu_dot");
     else if (act.loai === "bo_chay") failedActions.add("bo_chay");
 
@@ -1362,9 +1473,11 @@ function auFightInstant() {
     if (!r.ok) {
       if (act.loai === "chieu") failed.add("chieu:" + act.id);
       else if (act.loai === "dan") failed.add("dan:" + act.item);
-      else if (act.loai === "bay_tran") failed.add("bay_tran:" + act.item);
+      else if (act.loai === "bay_tran")
+        failed.add("bay_tran:" + act.item);
       else if (act.loai === "danh_thuong") failed.add("danh_thuong");
-      else if (act.loai === "muc_tieu") failed.add("muc_tieu:" + act.ma);
+      else if (act.loai === "muc_tieu")
+        failed.add("muc_tieu:" + act.ma);
       else if (act.loai === "thu_hoi") failed.add("thu_hoi:" + act.id);
       else if (act.loai === "thieu_dot") failed.add("thieu_dot");
       else if (act.loai === "bo_chay") failed.add("bo_chay");
@@ -1458,17 +1571,22 @@ function updateCombatOverlay() {
       ? Math.round(((ta.linhLuc || 0) / ta.linhLucToiDa) * 100)
       : 0;
     const shield = (ta.hoThuan || 0) + (ta.thuanPhu || 0);
-    const retention = ta.drugRetention != null ? ta.drugRetention : 0.85;
+    const retention =
+      ta.drugRetention != null ? ta.drugRetention : 0.85;
     const curResistExp =
       (ta.drugResistTran && ta.drugResistTran["khi_huyet"]) || 0;
-    const resistPct = Math.round((1 - Math.pow(retention, curResistExp)) * 100);
+    const resistPct = Math.round(
+      (1 - Math.pow(retention, curResistExp)) * 100,
+    );
     hpStr = `<span style="font-size:11px;color:#a3e635;font-weight:600">❤️ ${hpPct}%</span> <span style="font-size:11px;color:#38bdf8;font-weight:600">💧 ${mpPct}%</span>${shield > 0 ? ` <span style="font-size:11px;color:#fbbf24">🛡️ +${shield}</span>` : ""}${resistPct > 0 ? ` <span style="font-size:10.5px;color:#cbd5e1" title="Dược kháng tích lũy trong trận">💊Kháng ${resistPct}%</span>` : ""}`;
   }
 
   let foeStr = "";
   if (curTarget) {
     const fHpPct = curTarget.khiHuyetToiDa
-      ? Math.round(((curTarget.khiHuyet || 0) / curTarget.khiHuyetToiDa) * 100)
+      ? Math.round(
+          ((curTarget.khiHuyet || 0) / curTarget.khiHuyetToiDa) * 100,
+        )
       : 0;
     const fName = curTarget.ten || "Mục tiêu";
     foeStr = `<span style="font-size:11px;color:#fca5a5;font-weight:600" title="${esc(fName)}">🎯 ${esc(fName)} (${fHpPct}%)${dich.length > 1 ? ` +${dich.length - 1}` : ""}</span>`;
@@ -1509,7 +1627,8 @@ function updateCombatOverlay() {
       color: "#94a3b8",
       bg: "rgba(255,255,255,0.06)",
       border: "rgba(255,255,255,0.18)",
-      title: "Tế Huyết Bản Mệnh: Đang TẮT (Bảo toàn thọ nguyên). Click để đổi",
+      title:
+        "Tế Huyết Bản Mệnh: Đang TẮT (Bảo toàn thọ nguyên). Click để đổi",
     };
   }
 
@@ -1541,13 +1660,19 @@ function updateCombatOverlay() {
   function getTargetUi(tp) {
     const map = {
       smart: ["🎯 M.Tiêu: T.Minh", "Nhắm mục tiêu tối ưu chiến thuật"],
-      boss: ["🎯 M.Tiêu: Boss", "Ưu tiên dồn sát thương Trùm / Tinh Anh"],
+      boss: [
+        "🎯 M.Tiêu: Boss",
+        "Ưu tiên dồn sát thương Trùm / Tinh Anh",
+      ],
       threat: [
         "🎯 M.Tiêu: N.Hiểm",
         "Ưu tiên kẻ chuẩn bị tung đại chiêu / hồi máu",
       ],
       weakest: ["🎯 M.Tiêu: Yếu", "Ưu tiên dứt điểm kẻ thấp máu trước"],
-      counter: ["🎯 M.Tiêu: Khắc", "Ưu tiên mục tiêu bị khắc hệ Ngũ Hành"],
+      counter: [
+        "🎯 M.Tiêu: Khắc",
+        "Ưu tiên mục tiêu bị khắc hệ Ngũ Hành",
+      ],
     };
     const m = map[tp] || map.smart;
     return { label: m[0], title: m[1] + " (Click để đổi)" };
@@ -1569,7 +1694,9 @@ function updateCombatOverlay() {
       );
     } catch (e) {}
     const topCss =
-      savedPos && Number.isFinite(savedPos.top) ? savedPos.top + "px" : "64px";
+      savedPos && Number.isFinite(savedPos.top)
+        ? savedPos.top + "px"
+        : "64px";
     const rightCss =
       savedPos && Number.isFinite(savedPos.left) ? "auto" : "16px";
     const leftCss =
@@ -1644,11 +1771,17 @@ function updateCombatOverlay() {
         if (!dragging) return;
         const nx = Math.max(
           4,
-          Math.min(window.innerWidth - 120, origLeft + (ev.clientX - startX)),
+          Math.min(
+            window.innerWidth - 120,
+            origLeft + (ev.clientX - startX),
+          ),
         );
         const ny = Math.max(
           4,
-          Math.min(window.innerHeight - 48, origTop + (ev.clientY - startY)),
+          Math.min(
+            window.innerHeight - 48,
+            origTop + (ev.clientY - startY),
+          ),
         );
         combatOverlayEl.style.left = nx + "px";
         combatOverlayEl.style.top = ny + "px";
@@ -1681,12 +1814,15 @@ function updateCombatOverlay() {
         e.stopPropagation();
         combatHudCollapsed = !combatHudCollapsed;
         const sub = combatOverlayEl.querySelector("#vkx-combat-subbar");
-        if (sub) sub.style.display = combatHudCollapsed ? "none" : "flex";
+        if (sub)
+          sub.style.display = combatHudCollapsed ? "none" : "flex";
         btnCollapse.textContent = combatHudCollapsed ? "+" : "–";
       };
     }
 
-    const btnTarget = combatOverlayEl.querySelector("#vkx-btn-combat-target");
+    const btnTarget = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-target",
+    );
     if (btnTarget) {
       btnTarget.onclick = (e) => {
         e.stopPropagation();
@@ -1704,7 +1840,9 @@ function updateCombatOverlay() {
       };
     }
 
-    const btnPolicy = combatOverlayEl.querySelector("#vkx-btn-combat-policy");
+    const btnPolicy = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-policy",
+    );
     if (btnPolicy) {
       btnPolicy.onclick = (e) => {
         e.stopPropagation();
@@ -1723,7 +1861,9 @@ function updateCombatOverlay() {
       };
     }
 
-    const btnTeHuyet = combatOverlayEl.querySelector("#vkx-btn-combat-tehuyet");
+    const btnTeHuyet = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-tehuyet",
+    );
     if (btnTeHuyet) {
       btnTeHuyet.onclick = (e) => {
         e.stopPropagation();
@@ -1746,7 +1886,9 @@ function updateCombatOverlay() {
       };
     }
 
-    const btnSpeed = combatOverlayEl.querySelector("#vkx-btn-combat-speed");
+    const btnSpeed = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-speed",
+    );
     if (btnSpeed) {
       btnSpeed.onclick = (e) => {
         e.stopPropagation();
@@ -1762,7 +1904,9 @@ function updateCombatOverlay() {
       };
     }
 
-    const btnStep = combatOverlayEl.querySelector("#vkx-btn-combat-step");
+    const btnStep = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-step",
+    );
     if (btnStep) {
       btnStep.onclick = (e) => {
         e.stopPropagation();
@@ -1770,7 +1914,9 @@ function updateCombatOverlay() {
       };
     }
 
-    const btnToggle = combatOverlayEl.querySelector("#vkx-btn-combat-toggle");
+    const btnToggle = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-toggle",
+    );
     if (btnToggle) {
       btnToggle.onclick = (e) => {
         e.stopPropagation();
@@ -1787,7 +1933,9 @@ function updateCombatOverlay() {
     combatOverlayEl._lastHudSig = hudSig;
     const roundEl = combatOverlayEl.querySelector("#vkx-combat-round");
     if (roundEl) roundEl.textContent = `H.${curHiep}`;
-    const statsEl = combatOverlayEl.querySelector("#vkx-combat-live-stats");
+    const statsEl = combatOverlayEl.querySelector(
+      "#vkx-combat-live-stats",
+    );
     if (statsEl) {
       const nextStatsHtml = `${hpStr} ${foeStr}`;
       if (statsEl._lastHtml !== nextStatsHtml) {
@@ -1799,24 +1947,32 @@ function updateCombatOverlay() {
     if (actEl) {
       actEl.textContent = "🤖 " + _lastAiDecisionText;
     }
-    const speedEl = combatOverlayEl.querySelector("#vkx-btn-combat-speed");
+    const speedEl = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-speed",
+    );
     if (speedEl) {
       speedEl.textContent = getSpeedLabel(curSpeed);
     }
-    const btnTarget = combatOverlayEl.querySelector("#vkx-btn-combat-target");
+    const btnTarget = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-target",
+    );
     if (btnTarget) {
       const ui = getTargetUi(cfg.targetPrio || "smart");
       btnTarget.textContent = ui.label;
       btnTarget.title = ui.title;
     }
-    const btnPolicy = combatOverlayEl.querySelector("#vkx-btn-combat-policy");
+    const btnPolicy = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-policy",
+    );
     if (btnPolicy) {
       const ui = getPolicyUi(cfg.itemPolicy || "auto");
       btnPolicy.textContent = ui.label;
       btnPolicy.style.color = ui.color;
       btnPolicy.title = ui.title;
     }
-    const btnTeHuyet = combatOverlayEl.querySelector("#vkx-btn-combat-tehuyet");
+    const btnTeHuyet = combatOverlayEl.querySelector(
+      "#vkx-btn-combat-tehuyet",
+    );
     if (btnTeHuyet) {
       const ui = getTeHuyetUi(cfg.teHuyetMode || "off");
       btnTeHuyet.textContent = ui.label;
@@ -1828,10 +1984,16 @@ function updateCombatOverlay() {
 
     if (combatOverlayEl._lastAutoActive !== combatAutoActive) {
       combatOverlayEl._lastAutoActive = combatAutoActive;
-      const btnToggle = combatOverlayEl.querySelector("#vkx-btn-combat-toggle");
+      const btnToggle = combatOverlayEl.querySelector(
+        "#vkx-btn-combat-toggle",
+      );
       if (btnToggle) {
-        btnToggle.textContent = combatAutoActive ? "⏹ Dừng" : "▶ Tự Đánh";
-        btnToggle.style.background = combatAutoActive ? "#f87171" : "#3ddc97";
+        btnToggle.textContent = combatAutoActive
+          ? "⏹ Dừng"
+          : "▶ Tự Đánh";
+        btnToggle.style.background = combatAutoActive
+          ? "#f87171"
+          : "#3ddc97";
       }
     }
   }

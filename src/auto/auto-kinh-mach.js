@@ -1,33 +1,11 @@
 import { gWin, num, esc } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, clone, nvNow } from "../core/bridge.js";
+import { S, body, loadCore, G, C, clone, nvNow, has } from "../core/bridge.js";
 import { evalCurrent, drawGrid } from "../modules/kinh-mach-engine.js";
 import { drawTabs, errBox } from "../modules/navigation.js";
-import {
-  isKmItem,
-  kmAborted,
-  kmApplyDiff,
-  kmApplyLoadouts,
-  kmSolve,
-  kmOpenSearch,
-  HE_VI,
-  findOptimalRecolors,
-  statRows,
-} from "../modules/kinh-mach-tab.js";
-import {
-  BUILDS,
-  HB_RATIO,
-  HB_RATIO_W,
-  hbScanBuilds,
-} from "../modules/huong-build.js";
-import {
-  AU,
-  auSleep,
-  auLog,
-  auPaintSoon,
-  clearAuPaintTimer,
-  auCall,
-} from "./auto-core.js";
+import { isKmItem, kmAborted, kmApplyDiff, kmApplyLoadouts, kmSolve, kmOpenSearch, HE_VI, findOptimalRecolors, statRows } from "../modules/kinh-mach-tab.js";
+import { BUILDS, HB_RATIO, HB_RATIO_W, hbScanBuilds } from "../modules/huong-build.js";
+import { AU, auSleep, auLog, auPaintSoon, clearAuPaintTimer, auCall } from "./auto-core.js";
 /**
  * Module: Auto Kinh Mạch (Tự Động Mở Ô, Tẩy Tủy & Xếp Mạch)
  */
@@ -79,7 +57,11 @@ function auKmPin(c) {
   const rt = HB_RATIO[c.ratio];
   S.hbRatio = rt && rt[1] != null ? { t: rt[1], w: HB_RATIO_W } : null;
   S.hbMaxSkills =
-    c.maxSkills != null ? Number(c.maxSkills) : rt && rt[1] >= 0.6 ? 3 : 4;
+    c.maxSkills != null
+      ? Number(c.maxSkills)
+      : rt && rt[1] >= 0.6
+        ? 3
+        : 4;
   S.hbLite = false;
   return () => {
     Object.assign(S, old);
@@ -104,7 +86,8 @@ const auKmSig = (nv) =>
 async function auKmApplySolution(sols, cfg, st = null, force = false) {
   const K = S.core;
   let nv = nvNow();
-  if (!nv || !nv.kinhMach) return { ok: false, msg: "Chưa có kinh mạch." };
+  if (!nv || !nv.kinhMach)
+    return { ok: false, msg: "Chưa có kinh mạch." };
   if (!sols || !sols.length)
     return { ok: false, msg: "Chưa có cách xếp để áp dụng." };
 
@@ -134,7 +117,8 @@ async function auKmApplySolution(sols, cfg, st = null, force = false) {
         ];
         for (const pill of pillOrder) {
           const countInBag = (nv.tuiDo && nv.tuiDo[pill.id]) || 0;
-          const canUse = K && K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
+          const canUse =
+            K && K.tayConLai ? K.tayConLai(nv, pill.bac) : 1;
           if (countInBag > 0 && canUse > 0) {
             const useRes = auCall((gg) => gg.useItem(pill.id));
             if (useRes.ok) {
@@ -143,7 +127,8 @@ async function auKmApplySolution(sols, cfg, st = null, force = false) {
                 "vk-ok",
               );
               nv = nvNow();
-              curDoiMau = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
+              curDoiMau =
+                (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
               break;
             }
           }
@@ -203,7 +188,8 @@ async function auKmApplySolution(sols, cfg, st = null, force = false) {
   if (!r.ok) return r;
   if (st) st.applied++;
   if (r.same) {
-    const txtSame = "Kinh mạch đã chuẩn xác như cách xếp, không cần đổi.";
+    const txtSame =
+      "Kinh mạch đã chuẩn xác như cách xếp, không cần đổi.";
     auLog(txtSame, "vk-ok");
     return { ok: true, msg: txtSame };
   }
@@ -294,7 +280,11 @@ async function auKmPass(st) {
         n++;
         st.opened++;
         auLog(
-          "Đã mở ô " + where + " (lợi ≈ +" + Math.round(top.gain) + " điểm).",
+          "Đã mở ô " +
+            where +
+            " (lợi ≈ +" +
+            Math.round(top.gain) +
+            " điểm).",
           "vk-ok",
         );
         nv = nvNow();
@@ -324,7 +314,11 @@ async function auKmPass(st) {
 
       // Lập kế hoạch tẩy ô nếu bật cfg.tayO
       if (cfg.tayO) {
-        const recolors = findOptimalRecolors(nv, sol.best.manh, cfg.tayMax);
+        const recolors = findOptimalRecolors(
+          nv,
+          sol.best.manh,
+          cfg.tayMax,
+        );
         if (recolors.length > 0) {
           sol.recolorPlan = recolors;
           sol.best.recolorPlan = recolors;
@@ -519,7 +513,10 @@ function auKmStatus(st) {
   if (st.running)
     rows.push([
       "Tiến Độ",
-      esc(st.label || "") + " " + Math.round((st.prog || 0) * 100) + "%",
+      esc(st.label || "") +
+        " " +
+        Math.round((st.prog || 0) * 100) +
+        "%",
     ]);
   else rows.push(["Lý Do Dừng", esc(st.msg || "—")]);
   rows.push(
@@ -530,10 +527,15 @@ function auKmStatus(st) {
   if (st.last && st.last.length)
     rows.push([
       "Điểm Trước → Sau",
-      st.last.map((x) => num(x.cur, 0) + " → " + num(x.best, 0)).join(" · "),
+      st.last
+        .map((x) => num(x.cur, 0) + " → " + num(x.best, 0))
+        .join(" · "),
     ]);
   return rows
-    .map((r) => `<div class="vk-row"><span>${r[0]}</span><b>${r[1]}</b></div>`)
+    .map(
+      (r) =>
+        `<div class="vk-row"><span>${r[0]}</span><b>${r[1]}</b></div>`,
+    )
     .join("");
 }
 function auKmPreview() {

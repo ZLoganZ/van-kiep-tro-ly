@@ -1,43 +1,9 @@
 import { gWin, TT, pct, num } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import {
-  S,
-  G,
-  C,
-  ctx,
-  ctxLite,
-  realmName,
-  has,
-  danger,
-  nearSlots,
-  simFoe,
-  scanRetreat,
-} from "../core/bridge.js";
+import { S, G, C, ctx, ctxLite, realmName, has, danger, nearSlots, simFoe, scanRetreat } from "../core/bridge.js";
 import { placeName } from "../modules/di-bao.js";
 import { planData } from "../modules/dot-pha-nghe.js";
-import {
-  AU_KT,
-  AU_TT_MAX,
-  AU_TT_TEN,
-  AU_HIEM,
-  auMauOf,
-  auColorOK,
-  auMauLabel,
-  auRedPurple,
-  auIsHacEnemy,
-  AU,
-  isLoTuViEnc,
-  encGivesTuVi,
-  isAtBottleneck,
-  findPhaBinhCanhPills,
-  auLog,
-  auCall,
-  auLifeLeft,
-  auItemName,
-  auIsWild,
-  auHuntLeft,
-  auBypassConfirm,
-} from "./auto-core.js";
+import { AU_KT, AU_TT_MAX, AU_TT_TEN, AU_HIEM, auMauOf, auColorOK, auMauLabel, auRedPurple, auIsHacEnemy, AU, isLoTuViEnc, encGivesTuVi, isAtBottleneck, findPhaBinhCanhPills, auLog, auCall, auLifeLeft, auItemName, auIsWild, auHuntLeft, auBypassConfirm } from "./auto-core.js";
 /**
  * Module: Auto Săn Yêu & Auto Tu Luyện / Đột Phá Toàn Năng
  */
@@ -154,7 +120,9 @@ function isBienCoEnc(encId) {
       encDef &&
       (encDef.bien_co ||
         encDef.loai === "bien_co" ||
-        (encDef.tags && encDef.tags.noi && encDef.tags.noi.includes("bien_co")))
+        (encDef.tags &&
+          encDef.tags.noi &&
+          encDef.tags.noi.includes("bien_co")))
     )
       return true;
   } catch (e) {}
@@ -243,7 +211,11 @@ function auFindTuViSpots(c, cfg, st) {
               (st.skipEnc.has(a.id) || st.skipEnc.has(encKey))
             )
               continue;
-            if (st && st.encAttempts && (st.encAttempts[encKey] || 0) >= 3)
+            if (
+              st &&
+              st.encAttempts &&
+              (st.encAttempts[encKey] || 0) >= 3
+            )
               continue;
 
             const tv = encGivesTuVi(a.id);
@@ -269,16 +241,25 @@ function auFindTuViSpots(c, cfg, st) {
   if (run.nodes) {
     for (const [slotStr, n] of Object.entries(run.nodes)) {
       if (!n || !n.encounter) continue;
-      if (n.hetHanNam !== undefined && nam != null && n.hetHanNam <= nam)
+      if (
+        n.hetHanNam !== undefined &&
+        nam != null &&
+        n.hetHanNam <= nam
+      )
         continue;
 
       const encId = n.encounter;
       if (isLoTuViEnc(encId) || isBienCoEnc(encId)) continue;
       const encKey = encId + "@" + slotStr;
       if (seenEncs.has(encKey)) continue;
-      if (st && st.skipEnc && (st.skipEnc.has(encId) || st.skipEnc.has(encKey)))
+      if (
+        st &&
+        st.skipEnc &&
+        (st.skipEnc.has(encId) || st.skipEnc.has(encKey))
+      )
         continue;
-      if (st && st.encAttempts && (st.encAttempts[encKey] || 0) >= 3) continue;
+      if (st && st.encAttempts && (st.encAttempts[encKey] || 0) >= 3)
+        continue;
 
       const tv = encGivesTuVi(encId);
       if (tv < 1.0) continue;
@@ -298,7 +279,10 @@ function auFindTuViSpots(c, cfg, st) {
         if (encDef && encDef.limits) {
           const h = run.history && run.history[encId];
           if (h) {
-            if (encDef.limits.moi_run && (h.lan || 0) >= encDef.limits.moi_run)
+            if (
+              encDef.limits.moi_run &&
+              (h.lan || 0) >= encDef.limits.moi_run
+            )
               continue;
             if (
               encDef.limits.hoi_chieu_nam &&
@@ -348,7 +332,8 @@ function auFindTuViSpots(c, cfg, st) {
       ];
 
       for (const encId of allPlaceEncs) {
-        if (!encId || isLoTuViEnc(encId) || isBienCoEnc(encId)) continue;
+        if (!encId || isLoTuViEnc(encId) || isBienCoEnc(encId))
+          continue;
         const encKey = encId + "@" + slotStr;
         if (seenEncs.has(encKey)) continue;
         if (
@@ -366,7 +351,8 @@ function auFindTuViSpots(c, cfg, st) {
         // Kiểm tra giới hạn run
         try {
           const Cc = C();
-          const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+          const encDef =
+            Cc && Cc.encounters && Cc.encounters.get(encId);
           if (encDef && encDef.limits) {
             const h = run.history && run.history[encId];
             if (h) {
@@ -389,7 +375,8 @@ function auFindTuViSpots(c, cfg, st) {
         let ten = encId;
         try {
           const Cc = C();
-          const encDef = Cc && Cc.encounters && Cc.encounters.get(encId);
+          const encDef =
+            Cc && Cc.encounters && Cc.encounters.get(encId);
           if (encDef && encDef.ten) ten = encDef.ten;
         } catch (e) {}
 
@@ -475,7 +462,8 @@ async function auSanStep(st) {
     if (p.danger) {
       const r = await auBypassConfirm();
       if (r)
-        p.stop += " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)";
+        p.stop +=
+          " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)";
     }
     return p;
   }
@@ -494,7 +482,8 @@ async function auSanStep(st) {
         if (typeof g.useItem === "function") g.useItem(healPill.id);
       });
       if (rHeal.ok) {
-        const nvAfter = G().state && G().state.run && G().state.run.nhanVat;
+        const nvAfter =
+          G().state && G().state.run && G().state.run.nhanVat;
         auLog(
           `🎉 Đã dùng «${healPill.ten}», thương thế hiện tại: ${AU_TT_TEN[nvAfter?.thuongThe || 0]}.`,
           "vk-ok",
@@ -526,7 +515,8 @@ async function auSanStep(st) {
           }
         });
         if (rBq.ok) {
-          const nvHealed = G().state && G().state.run && G().state.run.nhanVat;
+          const nvHealed =
+            G().state && G().state.run && G().state.run.nhanVat;
           auLog(
             `🌿 Đã hoàn tất 1 năm tĩnh dưỡng! Thương thế hiện tại: ${AU_TT_TEN[nvHealed?.thuongThe || 0]}. Tiếp tục săn yêu!`,
             "vk-ok",
@@ -545,7 +535,9 @@ async function auSanStep(st) {
   if (auLifeLeft() < cfg.tho)
     return {
       stop:
-        "Thọ Nguyên còn dưới " + cfg.tho + " năm, dừng để bảo vệ Thọ Nguyên",
+        "Thọ Nguyên còn dưới " +
+        cfg.tho +
+        " năm, dừng để bảo vệ Thọ Nguyên",
     };
   const c = ctxLite();
   const dNow = danger(c, run.viTri); // nơi đang đứng tô Đỏ hoặc Tím mà không được tích: phát hiện và dừng
@@ -562,7 +554,9 @@ async function auSanStep(st) {
         auMauLabel(cfg.mau) +
         "). Dừng để bạn tự quyết định" +
         (r
-          ? " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)"
+          ? " (đã đóng bảng xác nhận “" +
+            (r.title || "không tên") +
+            "”)"
           : ""),
       danger: dNow.id,
     };
@@ -591,7 +585,10 @@ async function auSanStep(st) {
     auSanSpotOK(c, run.viTri, cfg) &&
     g.canDo("ev.san_yeu")
   ) {
-    if (cfg.sanMucTieu === "chi_dau_dan" && auHuntLeft(run, run.viTri) < 1.5) {
+    if (
+      cfg.sanMucTieu === "chi_dau_dan" &&
+      auHuntLeft(run, run.viTri) < 1.5
+    ) {
       st.bad.add(run.viTri);
       auLog(
         "Nơi này không đủ 2 lượt săn cho Đầu Đàn, tìm nơi khác...",
@@ -608,7 +605,10 @@ async function auSanStep(st) {
           tgs.every((t) => auIsHacEnemy(t.id, t.ten))
         ) {
           st.bad.add(run.viTri);
-          auLog("Nơi này chỉ có yêu thú Hạc, bỏ qua để giữ Khí Vận.", "vk-mu");
+          auLog(
+            "Nơi này chỉ có yêu thú Hạc, bỏ qua để giữ Khí Vận.",
+            "vk-mu",
+          );
           return null;
         }
       } catch (e) {
@@ -623,9 +623,12 @@ async function auSanStep(st) {
     }
     return null;
   }
-  if (auIsWild(c, run.viTri) && !g.canDo("ev.san_yeu")) st.bad.add(run.viTri);
+  if (auIsWild(c, run.viTri) && !g.canDo("ev.san_yeu"))
+    st.bad.add(run.viTri);
   // Hết lượt ở đây: sang nơi hoang dã khác gần nhất
-  const spots = auHuntSpots(c, cfg, st).filter((x) => x.slot !== run.viTri);
+  const spots = auHuntSpots(c, cfg, st).filter(
+    (x) => x.slot !== run.viTri,
+  );
   if (!spots.length) {
     const sk = auSkipColor(c, cfg, st);
     return {
@@ -642,7 +645,10 @@ async function auSanStep(st) {
   const t = spots[0];
   const r = auCall(() => g.travelTo(t.slot));
   const r2 = G().state.run;
-  if (!r.ok || (r2.viTri !== t.slot && !r2.active && !r2.tran && !r2.bienCo)) {
+  if (
+    !r.ok ||
+    (r2.viTri !== t.slot && !r2.active && !r2.tran && !r2.bienCo)
+  ) {
     st.bad.add(t.slot);
     if (++st.tried >= 4)
       return {
@@ -719,7 +725,9 @@ async function auTlStep(st) {
     mau: isDanhQuai ? cfg.mau : undefined,
     neHac: isDanhQuai ? cfg.neHac !== false : false,
     danhAi: isDanhQuai ? cfg.danhAi !== false : true,
-    sanMucTieu: isDanhQuai ? cfg.sanMucTieu || "uu_tien_dau_dan" : undefined,
+    sanMucTieu: isDanhQuai
+      ? cfg.sanMucTieu || "uu_tien_dau_dan"
+      : undefined,
     tl: true,
   });
   if (p !== "idle") {
@@ -727,14 +735,17 @@ async function auTlStep(st) {
     if (p.danger) {
       const r = await auBypassConfirm();
       if (r)
-        p.stop += " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)";
+        p.stop +=
+          " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)";
     }
     return p;
   }
 
   const run = g.state.run,
     nv = run.nhanVat;
-  const targetRealm = Number(cfg.targetRealm != null ? cfg.targetRealm : 5);
+  const targetRealm = Number(
+    cfg.targetRealm != null ? cfg.targetRealm : 5,
+  );
   const targetSubRealm = Number(
     cfg.targetSubRealm != null ? cfg.targetSubRealm : 3,
   );
@@ -771,7 +782,9 @@ async function auTlStep(st) {
       ];
       const goalName =
         targetSubRealm >= 0 && targetSubRealm <= 4
-          ? realmName(targetRealm) + " · " + subRealmNames[targetSubRealm]
+          ? realmName(targetRealm) +
+            " · " +
+            subRealmNames[targetSubRealm]
           : realmName(targetRealm);
       return {
         stop: "Chúc mừng! Đã đạt mục tiêu tu luyện: " + goalName + "!",
@@ -821,7 +834,10 @@ async function auTlStep(st) {
               g.dongThongBao();
             } catch (e) {}
           }
-          if (curRun.longNotice && typeof g.closeLongNotice === "function") {
+          if (
+            curRun.longNotice &&
+            typeof g.closeLongNotice === "function"
+          ) {
             try {
               g.closeLongNotice();
             } catch (e) {}
@@ -837,7 +853,10 @@ async function auTlStep(st) {
         if (rPill.ok) {
           st.bottlenecksBroken = (st.bottlenecksBroken || 0) + 1;
           st.breakPillAttempts = 0;
-          auLog(`🎉 Đã uống «${pill.ten}» phá bình cảnh thành công!`, "vk-ok");
+          auLog(
+            `🎉 Đã uống «${pill.ten}» phá bình cảnh thành công!`,
+            "vk-ok",
+          );
           return null;
         } else {
           auLog(
@@ -889,9 +908,12 @@ async function auTlStep(st) {
         } catch (e) {}
       }
     }
-    combos.sort((a, b) => b.tiLe - a.tiLe || a.dan.length - b.dan.length);
+    combos.sort(
+      (a, b) => b.tiLe - a.tiLe || a.dan.length - b.dan.length,
+    );
     const best = combos[0] || { dan: [], td: 0, tiLe: h0.tiLe };
-    const minSafeRate = (cfg.minSafeRate != null ? cfg.minSafeRate : 65) / 100;
+    const minSafeRate =
+      (cfg.minSafeRate != null ? cfg.minSafeRate : 65) / 100;
 
     if (best.tiLe < minSafeRate) {
       return {
@@ -941,10 +963,16 @@ async function auTlStep(st) {
 
     const outcome = rDotPha.res;
     if (outcome && outcome.result === "tam_ma") {
-      auLog("⚡ Xuất hiện Trận Tâm Ma! Đang nghênh chiến tâm ma...", "vk-warn");
+      auLog(
+        "⚡ Xuất hiện Trận Tâm Ma! Đang nghênh chiến tâm ma...",
+        "vk-warn",
+      );
     }
     if (outcome && outcome.disturbed) {
-      auLog("⚠️ Bị quấy nhiễu giữa lúc xung kích (trừ tỉ lệ)!", "vk-warn");
+      auLog(
+        "⚠️ Bị quấy nhiễu giữa lúc xung kích (trừ tỉ lệ)!",
+        "vk-warn",
+      );
     }
 
     const runAfter = G().state.run;
@@ -973,7 +1001,10 @@ async function auTlStep(st) {
       } catch (e) {}
     } else {
       st.breakoutFails = (st.breakoutFails || 0) + 1;
-      auLog("Đột phá chưa thành công, tiếp tục tích lũy tu vi...", "vk-mu");
+      auLog(
+        "Đột phá chưa thành công, tiếp tục tích lũy tu vi...",
+        "vk-mu",
+      );
     }
     return null;
   }
@@ -995,7 +1026,8 @@ async function auTlStep(st) {
           if (typeof g.useItem === "function") g.useItem(healPill.id);
         });
         if (rHeal.ok) {
-          const nvAfter = G().state && G().state.run && G().state.run.nhanVat;
+          const nvAfter =
+            G().state && G().state.run && G().state.run.nhanVat;
           auLog(
             `🎉 Đã dùng «${healPill.ten}», thương thế hiện tại: ${AU_TT_TEN[nvAfter?.thuongThe || 0]}.`,
             "vk-ok",
@@ -1012,7 +1044,11 @@ async function auTlStep(st) {
             `🩺 Đang bị thương ${AU_TT_TEN[nv.thuongThe]} (${nv.thuongThe}/${AU_TT_MAX}) và không có đan trị thương. Tự động tạm bế quan tĩnh dưỡng 1 năm để phục hồi thể trạng...`,
             "vk-warn",
           );
-          if (!plan.here || plan.here.chan || !(plan.here.tuViNam > 0)) {
+          if (
+            !plan.here ||
+            plan.here.chan ||
+            !(plan.here.tuViNam > 0)
+          ) {
             const spots = await scanRetreat(cLite, 3, null);
             if (spots && spots.length > 0) {
               const bestSpot = spots[0];
@@ -1024,7 +1060,8 @@ async function auTlStep(st) {
               if (!rTravel.ok) {
                 return {
                   stop:
-                    "Không di chuyển tới chỗ dưỡng thương được: " + rTravel.err,
+                    "Không di chuyển tới chỗ dưỡng thương được: " +
+                    rTravel.err,
                 };
               }
               return null;
@@ -1093,7 +1130,9 @@ async function auTlStep(st) {
           auMauLabel(cfg.mau) +
           "). Dừng để bạn tự quyết định" +
           (r
-            ? " (đã đóng bảng xác nhận “" + (r.title || "không tên") + "”)"
+            ? " (đã đóng bảng xác nhận “" +
+              (r.title || "không tên") +
+              "”)"
             : ""),
         danger: dNow.id,
       };
@@ -1149,7 +1188,10 @@ async function auTlStep(st) {
             let rAct = { ok: false };
             if (targetTv.source === "song_tu") {
               rAct = auCall(() => {
-                if (TT.core && typeof TT.core.openVisit === "function") {
+                if (
+                  TT.core &&
+                  typeof TT.core.openVisit === "function"
+                ) {
                   g.act((ctx) =>
                     TT.core.openVisit(ctx, targetTv.npcId, "dual"),
                   );
@@ -1202,13 +1244,19 @@ async function auTlStep(st) {
             }
 
             const rAfter = G().state && G().state.run;
-            if (rAfter && (rAfter.active || rAfter.tran || rAfter.bienCo)) {
+            if (
+              rAfter &&
+              (rAfter.active || rAfter.tran || rAfter.bienCo)
+            ) {
               st.tried = 0;
               return null;
             }
 
             // Fallback doAction nếu chưa mở
-            if (!rAct.ok || (rAfter && !rAfter.active && !rAfter.tran)) {
+            if (
+              !rAct.ok ||
+              (rAfter && !rAfter.active && !rAfter.tran)
+            ) {
               auCall(() => {
                 if (typeof g.doAction === "function")
                   g.doAction(targetTv.encId);
@@ -1216,7 +1264,10 @@ async function auTlStep(st) {
             }
 
             const rFinal = G().state && G().state.run;
-            if (rFinal && (rFinal.active || rFinal.tran || rFinal.bienCo)) {
+            if (
+              rFinal &&
+              (rFinal.active || rFinal.tran || rFinal.bienCo)
+            ) {
               st.tried = 0;
               return null;
             }
@@ -1440,7 +1491,10 @@ async function auTlStep(st) {
     }
   }
 
-  const maxSafeYears = Math.min(100, Math.max(1, Math.floor(life - minTho)));
+  const maxSafeYears = Math.min(
+    100,
+    Math.max(1, Math.floor(life - minTho)),
+  );
   let neededYears =
     plan.hereYears && Number.isFinite(plan.hereYears)
       ? Math.ceil(plan.hereYears)
@@ -1488,7 +1542,11 @@ async function auTlStep(st) {
         g.dongThongBao();
       } catch (e) {}
     }
-    if (rRun && rRun.longNotice && typeof g.closeLongNotice === "function") {
+    if (
+      rRun &&
+      rRun.longNotice &&
+      typeof g.closeLongNotice === "function"
+    ) {
       try {
         g.closeLongNotice();
       } catch (e) {}
@@ -1532,7 +1590,11 @@ async function auTlStep(st) {
         g.closeEncounter();
       } catch (e) {}
     }
-    if (rAfter && rAfter.thongBao && typeof g.dongThongBao === "function") {
+    if (
+      rAfter &&
+      rAfter.thongBao &&
+      typeof g.dongThongBao === "function"
+    ) {
       try {
         g.dongThongBao();
       } catch (e) {}

@@ -1,18 +1,8 @@
 import { gWin, pct, num, esc, heTen } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, clone } from "../core/bridge.js";
+import { S, body, loadCore, G, C, clone, has } from "../core/bridge.js";
 import { drawTabs } from "../modules/navigation.js";
-import {
-  AU,
-  AU_TOC,
-  auYield,
-  auSave,
-  auSleep,
-  auClamp,
-  auLog,
-  auPaintSoon,
-  clearAuPaintTimer,
-} from "./auto-core.js";
+import { AU, AU_TOC, auYield, auSave, auSleep, auClamp, auLog, auPaintSoon, clearAuPaintTimer } from "./auto-core.js";
 /**
  * Module: Auto Reroll Tư Chất (Linh Căn & Thể Chất Khởi Đầu)
  */
@@ -60,7 +50,8 @@ const RR_DAOLO_HINT = {
     "1 mạng duy nhất; trần đan 2 viên/cảnh giới; không điểm luân hồi; địch AI bậc 3",
 };
 const rrDlOk = (v) => (RR_DAOLO.some((x) => x[0] === v) ? v : "normal");
-const rrDlTen = (v) => (RR_DAOLO.find((x) => x[0] === v) || RR_DAOLO[0])[1];
+const rrDlTen = (v) =>
+  (RR_DAOLO.find((x) => x[0] === v) || RR_DAOLO[0])[1];
 // Lộ Phí Qua Sông = các món nhóm lo_phi ở bến Vong Xuyên, mua bằng điểm luân hồi, chỉ dùng một kiếp (vào meta.nextLifeGoods).
 function rrLoPhiList() {
   try {
@@ -115,7 +106,8 @@ function rrBuyLoPhi(g) {
   res.spent = p0 - (Number(g.state.meta.diemLuanHoi) || 0);
   return res;
 }
-const rrPhamTen = (p) => (RR_PHAM.find((x) => x[0] === p) || [p, String(p)])[1];
+const rrPhamTen = (p) =>
+  (RR_PHAM.find((x) => x[0] === p) || [p, String(p)])[1];
 const rrHeStr = (he) =>
   he && he.length ? he.map(heTen).join(" · ") : "không hệ";
 const rrTcTen = (id) => {
@@ -153,7 +145,8 @@ function rrTheChat() {
     return [];
   }
 }
-const rrPhamAll = (c) => c.pham.length === 0 || c.pham.length >= RR_PHAM.length;
+const rrPhamAll = (c) =>
+  c.pham.length === 0 || c.pham.length >= RR_PHAM.length;
 const rrActive = (c) => ({
   lc: !rrPhamAll(c) || c.he.length > 0,
   tc: c.tc.length > 0,
@@ -181,7 +174,9 @@ function rrCriteria(c) {
   const act = rrActive(c),
     parts = [];
   if (act.lc) {
-    const ph = rrPhamAll(c) ? "mọi phẩm" : c.pham.map(rrPhamTen).join("/");
+    const ph = rrPhamAll(c)
+      ? "mọi phẩm"
+      : c.pham.map(rrPhamTen).join("/");
     const he = c.he.length
       ? " · hệ " +
         (c.heMode === "all"
@@ -193,9 +188,12 @@ function rrCriteria(c) {
       : "";
     parts.push("Linh Căn " + ph + he);
   }
-  if (act.tc) parts.push("Thể Chất " + c.tc.map(rrTcTen).join(" hoặc "));
+  if (act.tc)
+    parts.push("Thể Chất " + c.tc.map(rrTcTen).join(" hoặc "));
   if (!parts.length) return "chưa đặt điều kiện nào.";
-  return parts.join(c.join === "or" && parts.length === 2 ? " HOẶC " : " VÀ ");
+  return parts.join(
+    c.join === "or" && parts.length === 2 ? " HOẶC " : " VÀ ",
+  );
 }
 // Lúc này Auto được phép làm gì: chưa vào kiếp (màn Luân Hồi) thì đổi thoải mái; kiếp vừa vào chưa trải gì thì đổi được nếu người dùng cho phép; còn lại không đụng.
 function rrMode() {
@@ -262,8 +260,12 @@ function rrReadCfg() {
   if (!q("rr-max")) return; // tab chưa vẽ
   const c = AU.cfg.rr,
     picked = (cls) =>
-      [...body.querySelectorAll("." + cls + ":checked")].map((x) => x.value);
-  c.pham = picked("rr-pham").filter((x) => RR_PHAM.some((p) => p[0] === x));
+      [...body.querySelectorAll("." + cls + ":checked")].map(
+        (x) => x.value,
+      );
+  c.pham = picked("rr-pham").filter((x) =>
+    RR_PHAM.some((p) => p[0] === x),
+  );
   c.he = picked("rr-he").filter((x) => RR_HE.includes(x));
   c.tc = picked("rr-tc");
   const hm = q("rr-hemode").value;
@@ -335,7 +337,9 @@ function rrStart(sample) {
       : "Bắt đầu Auto Reroll Tư Chất") +
       " · Đạo Lộ " +
       rrDlTen(c.dl) +
-      (!sample && c.lp ? " · mua hết Lộ Phí Qua Sông khi tìm được" : "") +
+      (!sample && c.lp
+        ? " · mua hết Lộ Phí Qua Sông khi tìm được"
+        : "") +
       " · điều kiện: " +
       rrCriteria(c),
     "vk-ok",
@@ -370,7 +374,9 @@ async function rrLoop(st) {
           "Auto Luân Hồi: đã mua " +
             bl.bought.length +
             " bậc" +
-            (bl.bought.length ? " (" + bl.bought.join(", ") + ")" : "") +
+            (bl.bought.length
+              ? " (" + bl.bought.join(", ") + ")"
+              : "") +
             ", tốn " +
             num(bl.spent, 0) +
             " điểm luân hồi" +
@@ -425,7 +431,9 @@ async function rrLoop(st) {
       if (g.state.meta !== metaRef) {
         metaRef = g.state.meta;
         meta0 = clone(metaRef);
-        auLog("Dữ liệu Luân Hồi vừa đổi, Auto lấy lại bản mới để dò cho khớp.");
+        auLog(
+          "Dữ liệu Luân Hồi vừa đổi, Auto lấy lại bản mới để dò cho khớp.",
+        );
       }
       const r = rrRollOnce(env, meta0, rrSeed(st.tries), cfg.dl);
       st.tries++;
@@ -455,7 +463,9 @@ async function rrLoop(st) {
                 "Lộ Phí Qua Sông: đã mua " +
                   bp.bought.length +
                   " món" +
-                  (bp.bought.length ? " (" + bp.bought.join(", ") + ")" : "") +
+                  (bp.bought.length
+                    ? " (" + bp.bought.join(", ") + ")"
+                    : "") +
                   ", tốn " +
                   num(bp.spent, 0) +
                   " điểm luân hồi" +
@@ -495,7 +505,9 @@ async function rrLoop(st) {
               " · " +
               rrDesc(r) +
               (st.lp && st.lp.bought.length
-                ? " · đã mua " + st.lp.bought.length + " món Lộ Phí Qua Sông"
+                ? " · đã mua " +
+                  st.lp.bought.length +
+                  " món Lộ Phí Qua Sông"
                 : "") +
               ".";
             auLog("Đã vào kiếp mới đúng tư chất đã dò.", "vk-ok");
@@ -546,7 +558,10 @@ function rrStatusHtml(st) {
   if (!st || st.kind !== "rr")
     return '<div class="vk-mu" style="font-size:13px">Chưa chạy.</div>';
   const cfg = AU.cfg.rr,
-    sec = Math.max(0.001, ((st.tEnd || performance.now()) - st.t0) / 1000);
+    sec = Math.max(
+      0.001,
+      ((st.tEnd || performance.now()) - st.t0) / 1000,
+    );
   const tally = (o, f) =>
     Object.entries(o)
       .sort((a, b) => b[1] - a[1])
@@ -560,7 +575,10 @@ function rrStatusHtml(st) {
     ["Lý Do Dừng", st.running ? "—" : esc(st.msg || "—")],
     ["Chế Độ", st.sample ? "Dò tỉ lệ (không đổi kiếp)" : "Reroll thật"],
     ["Đạo Lộ", esc(rrDlTen(cfg.dl))],
-    ["Số Lần Thử", num(st.tries, 0) + " / " + num(st.sample || cfg.max, 0)],
+    [
+      "Số Lần Thử",
+      num(st.tries, 0) + " / " + num(st.sample || cfg.max, 0),
+    ],
     [
       "Số Lần Khớp",
       num(st.hits, 0) +
@@ -584,7 +602,9 @@ function rrStatusHtml(st) {
           " món · tốn " +
           num(st.lp.spent, 0) +
           " điểm" +
-          (st.lp.skipped.length ? " · bỏ qua " + st.lp.skipped.length : ""),
+          (st.lp.skipped.length
+            ? " · bỏ qua " + st.lp.skipped.length
+            : ""),
     ]);
   if (st.lh)
     rows.push([
@@ -596,7 +616,9 @@ function rrStatusHtml(st) {
           " bậc · tốn " +
           num(st.lh.spent, 0) +
           " điểm" +
-          (st.lh.skipped.length ? " · chưa mua " + st.lh.skipped.length : ""),
+          (st.lh.skipped.length
+            ? " · chưa mua " + st.lh.skipped.length
+            : ""),
     ]);
   rows.push(["Linh Căn Đã Gặp", tally(st.cnt.p, rrPhamTen)]);
   rows.push(["Thể Chất Đã Gặp", tally(st.cnt.t, rrTcTen)]);
@@ -674,13 +696,13 @@ function tabAutoReroll() {
       <div>${tcs.map((t) => chk("rr-tc", t.id, esc(t.ten), c.tc.includes(t.id), "~" + pct(t.tl / sum, 1))).join("") || '<span class="vk-mu">Không đọc được danh sách Thể Chất.</span>'}</div>
       <details style="margin-top:4px"><summary class="vk-mu" style="font-size:12px">Xem Mô Tả Các Thể Chất</summary>${tcs.map((t) => `<div style="font-size:12px;margin:4px 0"><b>${esc(t.ten)}</b>: <span class="vk-mu">${esc(t.mo)}</span></div>`).join("")}</details>
       ${sel(
-        "rr-join",
-        "Nối Hai Điều Kiện",
-        [
-          ["and", "Cả Hai (Linh Căn Và Thể Chất)"],
-          ["or", "Một Trong Hai"],
-        ],
-        c.join,
+"rr-join",
+"Nối Hai Điều Kiện",
+[
+  ["and", "Cả Hai (Linh Căn Và Thể Chất)"],
+  ["or", "Một Trong Hai"],
+],
+c.join,
       )}
       <div style="margin:10px 0 2px"><b style="font-size:13px">Chạy</b></div>
       ${auFld("rr-max", "Số Lần Thử Tối Đa", c.max, "(1 – 200.000)")}

@@ -3,7 +3,7 @@
  */
 
 export const gWin = typeof window !== "undefined" ? window : globalThis;
-export const TOOL_VER = "8.0.0";
+export const TOOL_VER = "7.23.2";
 export let TT = gWin.tuTien || null;
 export let MOD = null;
 

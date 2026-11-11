@@ -1,5 +1,19 @@
-import { gWin } from "../core/utils.js";
+import { gWin, TOOL_VER, MOD, TabLifecycle, debounce, fold } from "../core/utils.js";
+import { UI_CSS } from "../styles/ui-css.js";
 import { UI } from "../ui/shell.js";
+import { S, body, CORE_REQUIRED, G, C, HUD, gamePanel, clone, ctx, has, danger, nearSlots, benchEnemies } from "../core/bridge.js";
+import { genSlack, biasCtx, biasInfo, kmItemPower, kmScalablePower, simulateQiCycle, makeEval, buildCandidates, greedy, anneal, smartFillRemainingGaps, polish, coverNote, stripDead, drawGrid } from "./kinh-mach-engine.js";
+import { render } from "./navigation.js";
+import { DIBAO, scanDiBao, findSlotByDiaDanh, checkOwnedRelic, scanMapActiveDiBao, checkCanTeleport, smartTeleportTo, simDiBaoGuard, checkDiBaoAlert } from "./di-bao.js";
+import { kmOpenSearch, findOptimalRecolors, statRows } from "./kinh-mach-tab.js";
+import { ddBuild, ddTeleOpts } from "./ban-do-dia-danh.js";
+import { buildFit, hbCatalog, hbVal, hbPlan, hbRatioPenalty } from "./huong-build.js";
+import { auIsHacText, AU, encGivesTuVi, findBestDiBaoChoice } from "../auto/auto-core.js";
+import { estimateSkillDamage, auFightStep, auFightInstant, syncGameCombatAutomation, combatWatcherTick } from "../auto/combat-ai.js";
+import { auFindTuViSpots } from "../auto/auto-tu-luyen.js";
+import { auSdbStep } from "../auto/auto-di-bao.js";
+import { auPending, auPick, auPaint } from "../auto/auto-runner.js";
+import { makeBisEval, bisGreedy } from "./biet-doi-late-game.js";
 /**
  * Module: Nhật Ký Cập Nhật (Changelog)
  */
@@ -39,7 +53,7 @@ var NhatKy = (function (UI) {
       d: "10/11/2026",
       now: false,
       pts: [
-        "<b>Chuyển Đổi Hoàn Toàn Sang Native Multi-File ES Modules (Chuẩn <code>su_do.zip</code>, Không Nối Gộp File):</b> Loại bỏ hoàn toàn cơ chế nối chuỗi sinh ra file <code>main.js</code> 40.700 dòng trước đây; giữ <code>main.js</code> ở thư mục gốc chỉ 122 dòng (~3.9 KB) và dùng <code>import</code> nguyên bản của ES Module để nạp trực tiếp 26 module con từ <code>./src/...</code>. Quy hoạch lại toàn bộ các hàm từng bị cắt nhầm module về đúng nơi (<code>src/core/utils.js</code>, <code>src/core/bridge.js</code>, <code>src/auto/auto-runner.js</code>).",
+        "<b>Chuyển Đổi Hoàn Toàn Sang Native Multi-File ES Modules (Chuẩn <code>su_do.zip</code>, Không Nối Gộp File):</b> Loại bỏ hoàn toàn cơ chế nối chuỗi sinh ra file <code>main.js</code> 40.700 dòng trước đây; giữ <code>main.js</code> ở thư mục gốc chỉ 122 dòng (~3.9 KB) và dùng <code>import</code> nguyên bản của ES Module để nạp trực tiếp 26 module con từ <code>./src/...</code>. Quy hoạch lại toàn bộ các hàm từng bị cắt nhầm module về đúng nơi (<code>src/core/utils.js</code>, <code>src/core/bridge.js</code>, <code>src/auto/auto-runner.js</code>)." ,
         "<b>Khắc Phục Triệt Để Lỗi Nhân Bản Sâu <code>ctx()</code> Gây Đơ Luồng Chính (Critical Fix):</b> Sửa lỗi trong <code>bridge.js</code> khi gọi <code>G().readCtx()</code> (nhân bản sâu <code>structuredClone</code> toàn bộ save game) trước bước kiểm tra bộ nhớ đệm <code>_cachedCtx</code>. Cơ chế mới lưu đệm bản gốc trong 300ms và bọc lớp vỏ cô lập nhẹ (shallow isolation wrapper), giúp giảm 95% chi phí CPU &amp; Garbage Collection khi chuyển tab hoặc chạy Auto.",
         "<b>Tối Ưu Hóa Quét Dị Bảo Bản Đồ (<code>scanMapActiveDiBao</code>) &amp; Giả Lập Hộ Vệ (<code>simDiBaoGuard</code>):</b> Loại bỏ việc gọi <code>director.placeActivities()</code> tràn lan trên hàng trăm thành trấn/thôn xóm trong <code>run.noiChon</code> mỗi khi thời gian trôi (chỉ kiểm tra ô có sự kiện Dị Bảo); bổ sung bộ nhớ đệm kết quả mô phỏng 52 trận Hộ Vệ Dị Bảo và trạng thái Truyền Tống (<code>checkCanTeleport</code>), kèm debounce 350ms cho watcher sự kiện thế giới.",
         "<b>Tối Ưu Vòng Lặp Chiến Đấu (<code>combatWatcherTick</code>), Quét Kỳ Ngộ Tu Vi &amp; Sửa Rò Rỉ Sự Kiện (Memory Leak):</b> Bổ sung đường tắt thoát sớm O(1) cho <code>combatWatcherTick</code> khi ngoài trận và đối sánh chữ ký DOM HUD chống vẽ lại thừa mỗi 400ms; lưu đệm <code>nearSlots</code>, <code>danger</code>, <code>auFindTuViSpots</code>, <code>hbCatalog</code>; sửa lỗi rò rỉ bộ nhớ <code>body.addEventListener('click')</code> trong tab Hướng Build; và chuyển <code>NhatKy.init()</code> sang khởi tạo lười (Lazy Init) khi mở tab.",
@@ -1372,7 +1386,9 @@ var NhatKy = (function (UI) {
       t: "Bản 2.3",
       d: "",
       now: false,
-      pts: ["Thêm <b>Đồ Nên Săn</b> và <b>Đồ Trong Game</b> (tab Tra Cứu)."],
+      pts: [
+        "Thêm <b>Đồ Nên Săn</b> và <b>Đồ Trong Game</b> (tab Tra Cứu).",
+      ],
     },
     {
       t: "Bản 2.1",
@@ -1415,12 +1431,17 @@ var NhatKy = (function (UI) {
     if (!root) return;
     inited = true;
     root.innerHTML =
-      '<div class="vm-hint">' + HINT + "</div>" + LOG.map(verCard).join("");
+      '<div class="vm-hint">' +
+      HINT +
+      "</div>" +
+      LOG.map(verCard).join("");
   }
   return { init: init };
 })(UI);
 
-export { NhatKy };
+export {
+  NhatKy,
+};
 
 Object.assign(gWin, {
   NhatKy,

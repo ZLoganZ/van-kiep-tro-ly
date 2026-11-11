@@ -2763,6 +2763,32 @@ table.au-tb tr:last-child td {
   display: inline;
 }
 
+
+/* Bảo toàn ẩn phần tử khi JS gán display: none */
+#vkx-win [style*="display: none"],
+#vkx-win [style*="display:none"] {
+  display: none !important;
+}
+
+/* Sửa đổi vị trí Subbar xuống Đáy trong chế độ Widescreen Grid */
+#vkx-win.vkx-wide.vkx-sub-bottom .vkx-subbar {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  border-bottom: none !important;
+  border-top: 1px solid var(--line) !important;
+}
+#vkx-win.vkx-wide.vkx-sub-bottom #vkx-sec-tl > .vkx-scroll {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+}
+
+/* Chống lật ngược chữ Làm Mới khi hover nút #vk-rf ở chế độ rộng */
+#vkx-win.vkx-wide #vk-rf:hover {
+  transform: translateY(-1px) !important;
+  border-color: var(--acc2) !important;
+  box-shadow: 0 4px 12px var(--glow) !important;
+}
+
 /* 5. Thanh Sub-Dock Tab Con (.vkx-subbar / #vkx-tabs) với Icon riêng */
 .vkx-subbar {
   padding: 7px 12px !important;
@@ -2900,7 +2926,7 @@ table.au-tb tr:last-child td {
   transform: translateX(16px);
   background: #ffffff;
 }
-#vkx-win .vk-card label:has(input[type="checkbox"]):not(.au-sdb-relic-card):not(.tc-sw) {
+#vkx-win .vk-card label:has(input[type="checkbox"]):not(.au-sdb-relic-card):not(.tc-sw):not([style*="inline-flex"]) {
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
@@ -2912,7 +2938,7 @@ table.au-tb tr:last-child td {
   cursor: pointer !important;
   transition: all 0.16s ease !important;
 }
-#vkx-win .vk-card label:has(input[type="checkbox"]):not(.au-sdb-relic-card):not(.tc-sw):hover {
+#vkx-win .vk-card label:has(input[type="checkbox"]):not(.au-sdb-relic-card):not(.tc-sw):not([style*="inline-flex"]):hover {
   border-color: var(--line) !important;
   background: rgba(255, 255, 255, 0.04) !important;
 }
@@ -3196,7 +3222,6 @@ table.au-tb tr:last-child td {
   font-size: 22px;
   line-height: 1;
   background: linear-gradient(135deg, #ffffff 0%, var(--acc) 55%, var(--acc2) 100%);
-  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;

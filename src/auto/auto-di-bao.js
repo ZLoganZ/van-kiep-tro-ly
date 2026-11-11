@@ -1,32 +1,7 @@
 import { gWin, num, safeYrs } from "../core/utils.js";
-import { S, G, C, ctxLite, scanRetreat } from "../core/bridge.js";
-import {
-  DIBAO,
-  scanDiBao,
-  placeName,
-  findSlotByDiaDanh,
-  findCandidateSlotsForRelicEv,
-  checkOwnedRelic,
-  scanMapActiveDiBao,
-  enterDiBaoEvent,
-  checkStat,
-  checkCanTeleport,
-  smartTeleportTo,
-  simDiBaoGuard,
-  findStatBoosters,
-  calcDiBaoPity,
-  removeDiBaoAlert,
-  showDiBaoMini,
-} from "../modules/di-bao.js";
-import {
-  AU_TT_MAX,
-  AU_TT_TEN,
-  AU,
-  auLog,
-  auCall,
-  auLifeLeft,
-  auBypassConfirm,
-} from "./auto-core.js";
+import { S, G, C, ctxLite, has, scanRetreat } from "../core/bridge.js";
+import { DIBAO, scanDiBao, placeName, findSlotByDiaDanh, findCandidateSlotsForRelicEv, checkOwnedRelic, scanMapActiveDiBao, enterDiBaoEvent, checkStat, checkCanTeleport, smartTeleportTo, simDiBaoGuard, findStatBoosters, calcDiBaoPity, removeDiBaoAlert, showDiBaoMini } from "../modules/di-bao.js";
+import { AU_TT_MAX, AU_TT_TEN, AU, auLog, auCall, auLifeLeft, auBypassConfirm } from "./auto-core.js";
 /**
  * Module: Auto Săn Dị Bảo (Nghịch Thiên P8) & Cắm Trại Đón Đầu Pity
  */
@@ -141,7 +116,11 @@ async function auSdbStep(st) {
     const slot = item.slot;
 
     // Kiểm tra hạn năm nếu có
-    if (item.hetHanNam !== undefined && nam != null && item.hetHanNam <= nam)
+    if (
+      item.hetHanNam !== undefined &&
+      nam != null &&
+      item.hetHanNam <= nam
+    )
       continue;
 
     const owned = isOwned(ev.relic);
@@ -355,19 +334,33 @@ async function auSdbStep(st) {
           let curNv =
             (G().state && G().state.run && G().state.run.nhanVat) || nv;
           let curChk = checkStat(target.e.chk, curNv);
-          if (curChk && !curChk.ok && curChk.key && curChk.req > curChk.cur) {
+          if (
+            curChk &&
+            !curChk.ok &&
+            curChk.key &&
+            curChk.req > curChk.cur
+          ) {
             const gap = curChk.req - curChk.cur;
             const boosters = findStatBoosters(curChk.key, gap);
-            const pills = ((boosters && boosters.bagItems) || []).filter(
+            const pills = (
+              (boosters && boosters.bagItems) ||
+              []
+            ).filter(
               (b) => b.loai === "dan_duoc" && b.val > 0 && b.count > 0,
             );
             let gained = 0;
             for (const pItem of pills) {
-              while (gained < gap && curNv.tuiDo && curNv.tuiDo[pItem.id] > 0) {
+              while (
+                gained < gap &&
+                curNv.tuiDo &&
+                curNv.tuiDo[pItem.id] > 0
+              ) {
                 const prevVal = checkStat(target.e.chk, curNv).cur;
                 const rUse = auCall((gg) => gg.useItem(pItem.id));
                 curNv =
-                  (G().state && G().state.run && G().state.run.nhanVat) ||
+                  (G().state &&
+                    G().state.run &&
+                    G().state.run.nhanVat) ||
                   curNv;
                 const nextVal = checkStat(target.e.chk, curNv).cur;
                 if (!rUse.ok || nextVal <= prevVal) break;
@@ -388,7 +381,9 @@ async function auSdbStep(st) {
       if (cfg.autoQuickSave && st.savedEnc !== target.encId) {
         st.savedEnc = target.encId;
         try {
-          saveQuickSave(`Trước trận Dị Bảo: ${target.title} (${target.pName})`);
+          saveQuickSave(
+            `Trước trận Dị Bảo: ${target.title} (${target.pName})`,
+          );
           auLog(
             `💾 [Quick Save] Đã tự động chụp bản lưu trước trận «${target.title}» tại ${target.pName}. (Nếu xịt 7%, bạn có thể vào tab [Lưu & Nạp Save] bật 'Tẩy Thiên Cơ' để gieo quẻ mới!).`,
             "vk-ok",
@@ -443,7 +438,10 @@ async function auSdbStep(st) {
           g.dongThongBao();
         } catch (e) {}
       }
-      if (curRun.longNotice && typeof g.closeLongNotice === "function") {
+      if (
+        curRun.longNotice &&
+        typeof g.closeLongNotice === "function"
+      ) {
         try {
           g.closeLongNotice();
         } catch (e) {}
@@ -458,7 +456,10 @@ async function auSdbStep(st) {
       );
       const resTele = smartTeleportTo(target.slot);
       if (resTele.ok) {
-        auLog(`⚡ Truyền tống thành công tới ${target.pName}!`, "vk-ok");
+        auLog(
+          `⚡ Truyền tống thành công tới ${target.pName}!`,
+          "vk-ok",
+        );
         return null;
       }
       auLog(
@@ -502,7 +503,9 @@ async function auSdbStep(st) {
 
   // 8. NẾU CHƯA CÓ DỊ BẢO NÀO NỞ TRÊN BẢN ĐỒ:
   const targetEvs = validEvs.filter((e) => targetRelicSet.has(e.relic));
-  const unownedCount = targetEvs.filter((e) => !isOwned(e.relic)).length;
+  const unownedCount = targetEvs.filter(
+    (e) => !isOwned(e.relic),
+  ).length;
   if (unownedCount === 0) {
     const allUnowned = validEvs.filter((e) => !isOwned(e.relic)).length;
     if (allUnowned === 0 || !allowAllSpawns) {
@@ -562,10 +565,7 @@ async function auSdbStep(st) {
       if (availSlot != null) {
         targetCampSlot = String(availSlot);
         targetCampName =
-          placeName(c, targetCampSlot) ||
-          cp.e.dia ||
-          cp.e.noi ||
-          "Slot " + targetCampSlot;
+          placeName(c, targetCampSlot) || cp.e.dia || cp.e.noi || "Slot " + targetCampSlot;
         targetCampRelic = cp.e;
         break;
       }
@@ -587,7 +587,10 @@ async function auSdbStep(st) {
     }
 
     // Ưu tiên truyền tống nếu được bật
-    if (cfg.dungTruyenTong !== false && checkCanTeleport(targetCampSlot)) {
+    if (
+      cfg.dungTruyenTong !== false &&
+      checkCanTeleport(targetCampSlot)
+    ) {
       auLog(
         `⚡ Phát hiện truyền tống! Truyền tống tức thì tới ${targetCampName} (Slot ${targetCampSlot}) để cắm trại / kiểm tra Dị Bảo...`,
         "vk-ok",
@@ -595,7 +598,10 @@ async function auSdbStep(st) {
       const resTele = smartTeleportTo(targetCampSlot);
       if (resTele.ok) {
         st.campEnteredSlots.delete(targetCampSlot);
-        auLog(`⚡ Truyền tống thành công tới ${targetCampName}!`, "vk-ok");
+        auLog(
+          `⚡ Truyền tống thành công tới ${targetCampName}!`,
+          "vk-ok",
+        );
         return null;
       }
     }
@@ -640,20 +646,21 @@ async function auSdbStep(st) {
   ) {
     st.campEnteredSlots.add(targetCampSlot);
     auCall(() => {
-      if (typeof g.enterNode === "function") g.enterNode(targetCampSlot);
-      else if (typeof g.enterPlace === "function") g.enterPlace(targetCampSlot);
+      if (typeof g.enterNode === "function")
+        g.enterNode(targetCampSlot);
+      else if (typeof g.enterPlace === "function")
+        g.enterPlace(targetCampSlot);
     });
     const rAfterCampEnter = G().state && G().state.run;
-    if (rAfterCampEnter && (rAfterCampEnter.active || rAfterCampEnter.tran)) {
+    if (
+      rAfterCampEnter &&
+      (rAfterCampEnter.active || rAfterCampEnter.tran)
+    ) {
       st.tried = 0;
       return null;
     }
     // Quét lại ngay lập tức sau khi enterNode/enterPlace vì refreshPlaceEncounters vừa chạy tại slot này!
-    const freshMap = scanMapActiveDiBao(
-      rAfterCampEnter || run,
-      ctxLite(),
-      true,
-    );
+    const freshMap = scanMapActiveDiBao(rAfterCampEnter || run, ctxLite(), true);
     if (freshMap && freshMap.size > 0) {
       st.tried = 0;
       return null;
@@ -720,11 +727,16 @@ async function auSdbStep(st) {
   }
 
   let sitYears = pity.waitYears >= 450 ? 1 : Math.min(3, maxCanSit);
-  if (hereInfo && Array.isArray(hereInfo.moc) && hereInfo.moc.length > 0) {
+  if (
+    hereInfo &&
+    Array.isArray(hereInfo.moc) &&
+    hereInfo.moc.length > 0
+  ) {
     const validMocs = hereInfo.moc.filter(
       (m) => m <= (pity.waitYears >= 450 ? 1 : Math.min(5, maxCanSit)),
     );
-    if (validMocs.length > 0) sitYears = validMocs[validMocs.length - 1];
+    if (validMocs.length > 0)
+      sitYears = validMocs[validMocs.length - 1];
     else sitYears = Math.min(hereInfo.moc[0], maxCanSit);
   }
   if (sitYears <= 0) sitYears = 1;
@@ -762,7 +774,11 @@ async function auSdbStep(st) {
         g.dongThongBao();
       } catch (e) {}
     }
-    if (rRun && rRun.longNotice && typeof g.closeLongNotice === "function") {
+    if (
+      rRun &&
+      rRun.longNotice &&
+      typeof g.closeLongNotice === "function"
+    ) {
       try {
         g.closeLongNotice();
       } catch (e) {}
@@ -814,7 +830,11 @@ async function auSdbStep(st) {
         g.closeEncounter();
       } catch (e) {}
     }
-    if (rAfter && rAfter.thongBao && typeof g.dongThongBao === "function") {
+    if (
+      rAfter &&
+      rAfter.thongBao &&
+      typeof g.dongThongBao === "function"
+    ) {
       try {
         g.dongThongBao();
       } catch (e) {}
@@ -834,12 +854,14 @@ async function auSdbStep(st) {
       return null;
     }
     return {
-      stop: "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
+      stop:
+        "Không nhập định được: " + (rSit.err || "chỗ này bị cản trở"),
     };
   }
   st.tried = 0;
 
-  const namSau = G().state && G().state.run ? G().state.run.nam : namTruoc;
+  const namSau =
+    G().state && G().state.run ? G().state.run.nam : namTruoc;
   const deltaY = Math.max(0, namSau - namTruoc);
   st.retreatYearsDone = (st.retreatYearsDone || 0) + deltaY;
   st.patrolRetreatCount = (st.patrolRetreatCount || 0) + 1;
@@ -858,7 +880,9 @@ async function auSdbStep(st) {
   return null;
 }
 
-export { auSdbStep };
+export {
+  auSdbStep,
+};
 
 Object.assign(gWin, {
   auSdbStep,

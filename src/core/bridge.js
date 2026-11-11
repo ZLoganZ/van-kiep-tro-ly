@@ -65,27 +65,62 @@ const CORE_OPTIONAL = [
     "DRUG_TARGETS",
     "danh sách mục tiêu có dược kháng",
   ],
-  ["atBottleneck", "character/character", "atBottleneck", "kiểm tra bình cảnh"],
+  [
+    "atBottleneck",
+    "character/character",
+    "atBottleneck",
+    "kiểm tra bình cảnh",
+  ],
   [
     "binhCanhThreshold",
     "character/character",
     "binhCanhThreshold",
     "ngưỡng bình cảnh",
   ],
-  ["facilitiesAt", "encounter/director", "facilitiesAt", "tiện ích ở một nơi"],
+  [
+    "facilitiesAt",
+    "encounter/director",
+    "facilitiesAt",
+    "tiện ích ở một nơi",
+  ],
   ["giaBan", "world/phong_tho", "giaBan", "giá bán"],
-  ["tinhDiemKiep", "progress/luan_hoi", "tinhDiemKiep", "điểm luân hồi"],
+  [
+    "tinhDiemKiep",
+    "progress/luan_hoi",
+    "tinhDiemKiep",
+    "điểm luân hồi",
+  ],
   ["xepBang", "character/nhan_vat", "xepBang", "bảng Thiên Kiêu"],
-  ["chuanBiBeQuan", "progress/be_quan", "chuanBiBeQuan", "thông tin bế quan"],
+  [
+    "chuanBiBeQuan",
+    "progress/be_quan",
+    "chuanBiBeQuan",
+    "thông tin bế quan",
+  ],
   [
     "retreatTargetGain",
     "progress/be_quan",
     "retreatTargetGain",
     "tu vi còn thiếu",
   ],
-  ["retreatGain", "progress/be_quan", "retreatGain", "tu vi theo số năm"],
-  ["tocDoTuLuyen", "character/character", "tocDoTuLuyen", "tốc độ tu luyện"],
-  ["phanBoKhaoHach", "progress/luyen_che", "phanBoKhaoHach", "thi nghề"],
+  [
+    "retreatGain",
+    "progress/be_quan",
+    "retreatGain",
+    "tu vi theo số năm",
+  ],
+  [
+    "tocDoTuLuyen",
+    "character/character",
+    "tocDoTuLuyen",
+    "tốc độ tu luyện",
+  ],
+  [
+    "phanBoKhaoHach",
+    "progress/luyen_che",
+    "phanBoKhaoHach",
+    "thi nghề",
+  ],
   [
     "thieuDeKhaoHach",
     "progress/luyen_che",
@@ -93,8 +128,18 @@ const CORE_OPTIONAL = [
     "điều kiện thi nghề",
   ],
   ["chuanBiLuyen", "progress/luyen_che", "chuanBiLuyen", "luyện chế"],
-  ["nguonDiemGoc", "progress/luyen_che", "nguonDiemGoc", "điểm luyện chế"],
-  ["bangTreoThuong", "world/bounty", "bangTreoThuong", "bảng treo thưởng"],
+  [
+    "nguonDiemGoc",
+    "progress/luyen_che",
+    "nguonDiemGoc",
+    "điểm luyện chế",
+  ],
+  [
+    "bangTreoThuong",
+    "world/bounty",
+    "bangTreoThuong",
+    "bảng treo thưởng",
+  ],
   ["bongLoc", "progress/tong_mon", "bongLoc", "bổng lộc"],
   ["tienCuDuoc", "progress/tong_mon", "tienCuDuoc", "tiến cử"],
   [
@@ -103,16 +148,41 @@ const CORE_OPTIONAL = [
     "revealedCombatRisk",
     "ước lượng trận của game",
   ],
-  ["createRun", "kernel/run", "createRun", "tạo kiếp mới (Auto Reroll)"],
+  [
+    "createRun",
+    "kernel/run",
+    "createRun",
+    "tạo kiếp mới (Auto Reroll)",
+  ],
   ["glutRoom", "world/market_glut", "glutRoom", "chợ ngập hàng"],
-  ["doChenh", "encounter/do_hiem", "doChenh", "độ nguy hiểm (chênh cấp)"],
+  [
+    "doChenh",
+    "encounter/do_hiem",
+    "doChenh",
+    "độ nguy hiểm (chênh cấp)",
+  ],
   ["mucHiem", "encounter/do_hiem", "mucHiem", "độ nguy hiểm (mức)"],
   ["namLinhNgo", "character/kinh_mach", "namLinhNgo", "năm lĩnh ngộ"],
-  ["masteryMult", "character/kinh_mach", "masteryMult", "hệ số lĩnh ngộ"],
-  ["effectiveStat", "character/stats", "effectiveStat", "chỉ số nhân vật"],
+  [
+    "masteryMult",
+    "character/kinh_mach",
+    "masteryMult",
+    "hệ số lĩnh ngộ",
+  ],
+  [
+    "effectiveStat",
+    "character/stats",
+    "effectiveStat",
+    "chỉ số nhân vật",
+  ],
   ["gradeMult", "character/pham", "gradeMult", "hệ số phẩm"],
   ["skillCap", "character/pham", "skillCap", "trần pháp lực của món"],
-  ["spellPower", "balance/combat", "spellPower", "pháp lực theo cảnh giới"],
+  [
+    "spellPower",
+    "balance/combat",
+    "spellPower",
+    "pháp lực theo cảnh giới",
+  ],
   [
     "refineQuote",
     "character/natal",
@@ -125,10 +195,30 @@ const CORE_OPTIONAL = [
     "ascendQuote",
     "chi phí nâng giai bản mệnh",
   ],
-  ["refineBlock", "character/natal", "refineBlock", "kiểm tra tế luyện"],
-  ["natalItemError", "character/natal", "natalItemError", "món làm bản mệnh"],
-  ["ascendBlock", "character/natal", "ascendBlock", "kiểm tra nâng giai"],
-  ["temperBlock", "character/natal", "temperBlock", "kiểm tra huyết luyện"],
+  [
+    "refineBlock",
+    "character/natal",
+    "refineBlock",
+    "kiểm tra tế luyện",
+  ],
+  [
+    "natalItemError",
+    "character/natal",
+    "natalItemError",
+    "món làm bản mệnh",
+  ],
+  [
+    "ascendBlock",
+    "character/natal",
+    "ascendBlock",
+    "kiểm tra nâng giai",
+  ],
+  [
+    "temperBlock",
+    "character/natal",
+    "temperBlock",
+    "kiểm tra huyết luyện",
+  ],
   [
     "devourCandidates",
     "progress/natal_act",
@@ -153,15 +243,30 @@ const CORE_OPTIONAL = [
     "nextAutomatedAction",
     "AI tự đánh trong trận",
   ],
-  ["chanChieu", "combat/actions", "chanChieu", "kiểm tra chiêu dùng được"],
-  ["chanDungDo", "combat/actions", "chanDungDo", "kiểm tra dùng đồ trong trận"],
+  [
+    "chanChieu",
+    "combat/actions",
+    "chanChieu",
+    "kiểm tra chiêu dùng được",
+  ],
+  [
+    "chanDungDo",
+    "combat/actions",
+    "chanDungDo",
+    "kiểm tra dùng đồ trong trận",
+  ],
   [
     "estimatePillRestore",
     "combat/actions",
     "estimatePillRestore",
     "ước tính lượng hồi đan dược",
   ],
-  ["pillWasted", "combat/actions", "pillWasted", "kiểm tra lãng phí đan"],
+  [
+    "pillWasted",
+    "combat/actions",
+    "pillWasted",
+    "kiểm tra lãng phí đan",
+  ],
   [
     "breakthroughGrade",
     "progress/dot_pha",
@@ -174,15 +279,30 @@ const CORE_OPTIONAL = [
     "resolveBreakthrough",
     "kết quả sau trận tâm ma",
   ],
-  ["pillFitsRealm", "progress/dot_pha", "pillFitsRealm", "đan hợp cảnh giới"],
+  [
+    "pillFitsRealm",
+    "progress/dot_pha",
+    "pillFitsRealm",
+    "đan hợp cảnh giới",
+  ],
   [
     "pillMaxRealm",
     "progress/dot_pha",
     "pillMaxRealm",
     "cảnh giới tối đa của đan",
   ],
-  ["isRuneMaxed", "character/natal", "isRuneMaxed", "kiểm tra văn đầy cấp"],
-  ["isRuneHighTier", "character/natal", "isRuneHighTier", "văn bậc tỉ lệ"],
+  [
+    "isRuneMaxed",
+    "character/natal",
+    "isRuneMaxed",
+    "kiểm tra văn đầy cấp",
+  ],
+  [
+    "isRuneHighTier",
+    "character/natal",
+    "isRuneHighTier",
+    "văn bậc tỉ lệ",
+  ],
   [
     "runeUpgradeChance",
     "character/natal",
@@ -214,7 +334,12 @@ const CORE_OPTIONAL = [
     "THONG_MACH_VUNG",
     "vùng thông mạch theo bậc",
   ],
-  ["luotMo", "character/kinh_mach", "luotMo", "tổng lượt mở ô kinh mạch"],
+  [
+    "luotMo",
+    "character/kinh_mach",
+    "luotMo",
+    "tổng lượt mở ô kinh mạch",
+  ],
   [
     "vungCuaBac",
     "character/kinh_mach",
@@ -222,7 +347,12 @@ const CORE_OPTIONAL = [
     "vùng với tới theo bậc đan",
   ],
   ["oTrongTam", "character/kinh_mach", "oTrongTam", "ô trong tầm đan"],
-  ["bountyRealm", "world/bounty", "bountyRealm", "cảnh giới việc treo thưởng"],
+  [
+    "bountyRealm",
+    "world/bounty",
+    "bountyRealm",
+    "cảnh giới việc treo thưởng",
+  ],
   [
     "reforgeSources",
     "progress/grade",
@@ -306,7 +436,8 @@ const BM_RUNE_KEYS = [
 
 function buildCore(tt) {
   const R = tt.core;
-  if (!R) throw new Error("Game chưa mở tuTien.core. Hãy cập nhật game.");
+  if (!R)
+    throw new Error("Game chưa mở tuTien.core. Hãy cập nhật game.");
   const K = {
     gameVersion: tt.gameVersion,
     bundle: "v" + tt.gameVersion,
@@ -399,11 +530,23 @@ function buildCore(tt) {
         }
       },
     });
-  live("AMBUSH_MIN_DISTANCE", "balance/encounter", "AMBUSH_MIN_DISTANCE");
-  live("AUCTION_HAND_LOT_SHARE", "balance/economy", "AUCTION_HAND_LOT_SHARE");
+  live(
+    "AMBUSH_MIN_DISTANCE",
+    "balance/encounter",
+    "AMBUSH_MIN_DISTANCE",
+  );
+  live(
+    "AUCTION_HAND_LOT_SHARE",
+    "balance/economy",
+    "AUCTION_HAND_LOT_SHARE",
+  );
   live("DIFFICULTY", "balance/difficulty", "DIFFICULTY");
   live("DIFFICULTY_MODES", "balance/difficulty", "DIFFICULTY_MODES");
-  live("DIFFICULTY_KNOB_INFO", "balance/difficulty", "DIFFICULTY_KNOB_INFO");
+  live(
+    "DIFFICULTY_KNOB_INFO",
+    "balance/difficulty",
+    "DIFFICULTY_KNOB_INFO",
+  );
   live("SIEGE_MAX_ROUNDS", "balance/combat", "SIEGE_MAX_ROUNDS");
   live("SECT_GROUND_BONUS", "balance/sect", "SECT_GROUND_BONUS");
   live("CAP_BAC", "balance/sect", "CAP_BAC"); // tên cấp bậc tông môn: Tạp dịch … Trưởng lão
@@ -439,7 +582,9 @@ function buildCore(tt) {
           numArr(o.slotT, 4) &&
           numArr(o.runeLv, 2) &&
           Object.entries(o).every(([k, v]) =>
-            Array.isArray(v) ? v.every(Number.isFinite) : Number.isFinite(v),
+            Array.isArray(v)
+              ? v.every(Number.isFinite)
+              : Number.isFinite(v),
           );
         return ok ? o : undefined;
       } catch (e) {
@@ -468,7 +613,11 @@ function buildCore(tt) {
         const C = R["balance/combat"],
           dH = C.RARE_DROP_CHANCE,
           rank = C.RARE_DROP_RANK_FACTOR;
-        if (!numArr(dH) || !rank || !Object.values(rank).every(Number.isFinite))
+        if (
+          !numArr(dH) ||
+          !rank ||
+          !Object.values(rank).every(Number.isFinite)
+        )
           return undefined;
         return { dH, rank, nhanHo: TC_RARE.nhanHo };
       } catch (e) {
@@ -506,7 +655,9 @@ function buildCore(tt) {
 async function loadCore(progress) {
   const g = G();
   if (!g || !g.env || !g.env.content)
-    throw new Error("Chưa thấy game. Hãy đợi game tải xong rồi bấm Thử Lại.");
+    throw new Error(
+      "Chưa thấy game. Hãy đợi game tải xong rồi bấm Thử Lại.",
+    );
   progress("Đang nối lõi game…");
   const core = await buildCore(TT);
   try {
@@ -574,7 +725,8 @@ function syncDynamicGameData() {
         if (!en || !en.id || knownEnemyIds.has(en.id)) continue;
         if (
           en.ngu_linh ||
-          (en.loai && (en.loai.includes("thu") || en.loai.includes("yeu_thu")))
+          (en.loai &&
+            (en.loai.includes("thu") || en.loai.includes("yeu_thu")))
         ) {
           NL_ENEMY.push({
             id: en.id,
@@ -642,7 +794,9 @@ function syncDynamicGameData() {
               null;
             if (dynDia && !ex.dia) ex.dia = dynDia;
             const dynMarker =
-              enc.marker || (enc.tags && enc.tags.marker) || null;
+              enc.marker ||
+              (enc.tags && enc.tags.marker) ||
+              null;
             if (dynMarker && !ex.marker) ex.marker = dynMarker;
             if (enc.gate && !ex.gate) ex.gate = enc.gate;
             else if (
@@ -747,7 +901,10 @@ function _wrapCtxSnapshot(base, K) {
         const l = Object.hasOwn(runCopy.rngKeys, r)
           ? runCopy.rngKeys[r]
           : undefined;
-        u = l === undefined ? F.fromSeed(`${runCopy.seed}|rng|${r}`) : new F(l);
+        u =
+          l === undefined
+            ? F.fromSeed(`${runCopy.seed}|rng|${r}`)
+            : new F(l);
         o.set(r, u);
       }
       return u;
@@ -794,8 +951,13 @@ function ctx(opts) {
       rngFor(r) {
         let u = o.get(r);
         if (!u) {
-          const l = Object.hasOwn(run.rngKeys, r) ? run.rngKeys[r] : undefined;
-          u = l === undefined ? F.fromSeed(`${run.seed}|rng|${r}`) : new F(l);
+          const l = Object.hasOwn(run.rngKeys, r)
+            ? run.rngKeys[r]
+            : undefined;
+          u =
+            l === undefined
+              ? F.fromSeed(`${run.seed}|rng|${r}`)
+              : new F(l);
           o.set(r, u);
         }
         return u;
@@ -836,8 +998,13 @@ function ctxLite() {
     rngFor(r) {
       let u = o.get(r);
       if (!u && F) {
-        const l = Object.hasOwn(run.rngKeys, r) ? run.rngKeys[r] : undefined;
-        u = l === undefined ? F.fromSeed(`${run.seed}|rng|${r}`) : new F(l);
+        const l = Object.hasOwn(run.rngKeys, r)
+          ? run.rngKeys[r]
+          : undefined;
+        u =
+          l === undefined
+            ? F.fromSeed(`${run.seed}|rng|${r}`)
+            : new F(l);
         o.set(r, u);
       }
       return u;
@@ -861,8 +1028,7 @@ const realmLabel = (cg, tc) => {
     return realmName(cg);
   }
 };
-const has = (...ks) =>
-  ks.every((k) => S.core && typeof S.core[k] === "function");
+const has = (...ks) => ks.every((k) => S.core && typeof S.core[k] === "function");
 const needMsg = (what) =>
   `<div class="vk-mu">Phần "${what}" chưa dùng được với bản game này. Bấm "Tự kiểm tra" ở tab Tổng quan rồi chụp màn hình gửi Claude.</div>`;
 
@@ -1017,7 +1183,8 @@ function enemyAt(def, cg, tc, muc) {
 function simFoe(P, def, tcs) {
   tcs =
     tcs ||
-    (String(def.id || "").startsWith("npc.") && def.tieu_canh_gioi !== undefined
+    (String(def.id || "").startsWith("npc.") &&
+    def.tieu_canh_gioi !== undefined
       ? [def.tieu_canh_gioi]
       : [0, 2]);
   const res = tcs.map((tc) => {
@@ -1078,7 +1245,8 @@ async function scanRetreat(c, maxY, prog) {
   const dr = (d) =>
     ({ an_toan: 0, ngang_suc: 1, hiem: 2, tu_dia: 3 })[d && d.id] ?? 1;
   return out.sort(
-    (a, b) => b.info.tuViNam - a.info.tuViNam || dr(a.d) - dr(b.d) || a.y - b.y,
+    (a, b) =>
+      b.info.tuViNam - a.info.tuViNam || dr(a.d) - dr(b.d) || a.y - b.y,
   );
 }
 

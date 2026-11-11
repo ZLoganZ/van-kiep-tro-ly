@@ -1,35 +1,7 @@
 import { gWin, sleep0, pct, num, esc, heTen } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import {
-  S,
-  body,
-  G,
-  C,
-  clone,
-  nvNow,
-  realmLabel,
-  benchEnemies,
-} from "../core/bridge.js";
-import {
-  gocHe,
-  heTacDong,
-  oHop,
-  oKhac,
-  hySet,
-  biasSummary,
-  capCtxOf,
-  capUp,
-  capTierMatch,
-  kmScalablePower,
-  makeEval,
-  greedy,
-  anneal,
-  polish,
-  coverNote,
-  stripDead,
-  evalCurrent,
-  drawGrid,
-} from "./kinh-mach-engine.js";
+import { S, body, G, C, clone, nvNow, realmLabel, has, benchEnemies } from "../core/bridge.js";
+import { gocHe, heTacDong, oHop, oKhac, hySet, biasSummary, capCtxOf, capUp, capTierMatch, kmScalablePower, makeEval, greedy, anneal, polish, coverNote, stripDead, evalCurrent, drawGrid } from "./kinh-mach-engine.js";
 import { errBox, render, progressHtml, bindProgress } from "./navigation.js";
 /**
  * Module: Tab Kinh Mạch, Lĩnh Ngộ, Phép Tính Giả Định & Tẩy Ô
@@ -88,7 +60,9 @@ function fitNote() {
   const K = S.core,
     f = (cg, ph) => {
       try {
-        return K && K.gradeMult ? K.gradeMult({ pham_cap: ph }, cg) : null;
+        return K && K.gradeMult
+          ? K.gradeMult({ pham_cap: ph }, cg)
+          : null;
       } catch (e) {
         return null;
       }
@@ -141,7 +115,10 @@ async function kmApplyDiff(manh) {
       };
   const nv0 = clone(g.state.run.nhanVat);
   const same = (a, b) =>
-    a.item === b.item && a.x === b.x && a.y === b.y && a.xoay === b.xoay;
+    a.item === b.item &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.xoay === b.xoay;
   const cur = nv0.kinhMach.manh;
   const keep = cur.filter((m) => manh.some((t) => same(m, t)));
   const rem = cur
@@ -266,8 +243,10 @@ async function kmApplyLoadouts(sets, opt) {
   for (const fn of ["switchLoadout", "unlockLoadoutSlot"])
     if (typeof g[fn] !== "function")
       return { ok: false, msg: "Game không có hàm " + fn + "." };
-  const nSlots = () => (G().state.run.nhanVat.kinhMach.loadouts || [1]).length;
-  const active = () => G().state.run.nhanVat.kinhMach.activeLoadout || 0;
+  const nSlots = () =>
+    (G().state.run.nhanVat.kinhMach.loadouts || [1]).length;
+  const active = () =>
+    G().state.run.nhanVat.kinhMach.activeLoadout || 0;
   const notes = [];
   for (let k = 0; k < sets.length; k++) {
     while (nSlots() <= k) {
@@ -296,7 +275,8 @@ async function kmApplyLoadouts(sets, opt) {
         };
     }
     const rr = await kmApplyDiff(sets[k]);
-    if (!rr.ok) return { ok: false, msg: "Bộ " + (k + 1) + ": " + rr.msg };
+    if (!rr.ok)
+      return { ok: false, msg: "Bộ " + (k + 1) + ": " + rr.msg };
     notes.push(
       "bộ " +
         (k + 1) +
@@ -311,7 +291,11 @@ async function kmApplyLoadouts(sets, opt) {
     if (!r.ok)
       return {
         ok: false,
-        msg: "Đã xếp xong nhưng không đổi về bộ " + (want + 1) + ": " + r.err,
+        msg:
+          "Đã xếp xong nhưng không đổi về bộ " +
+          (want + 1) +
+          ": " +
+          r.err,
       };
   }
   return {
@@ -398,7 +382,10 @@ async function kmSolve(nv, mode, iters, prog) {
     init: topSeeds[1].manh,
     seed: 987654321,
     onProg: (f) =>
-      prog(0.32 + f * 0.24, "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…"),
+      prog(
+        0.32 + f * 0.24,
+        "Luyện kim nhánh 2 (Kinh Lộ & Tương Sinh)…",
+      ),
   });
   if (kmAborted()) return null;
 
@@ -421,7 +408,8 @@ async function kmSolve(nv, mode, iters, prog) {
     iters: Math.round(iters * 0.45),
     init: top.manh,
     seed: 424243,
-    onProg: (f) => prog(0.74 + f * 0.18, "Hội tụ đỉnh cao (LNS & Tương Sinh)…"),
+    onProg: (f) =>
+      prog(0.74 + f * 0.18, "Hội tụ đỉnh cao (LNS & Tương Sinh)…"),
   });
   if (kmAborted()) return null;
 
@@ -454,7 +442,11 @@ async function kmSolve(nv, mode, iters, prog) {
     };
   }
   if (AU.cfg && AU.cfg.km && AU.cfg.km.tayO) {
-    const recolors = findOptimalRecolors(nv, best.manh, AU.cfg.km.tayMax || 3);
+    const recolors = findOptimalRecolors(
+      nv,
+      best.manh,
+      AU.cfg.km.tayMax || 3,
+    );
     if (recolors.length > 0) {
       best.recolorPlan = recolors;
       try {
@@ -543,7 +535,8 @@ async function kmOpenSearch(nv, mode, prog) {
     .sort((a, b) => b.pot - a.pot);
 
   // Nếu có nhiều hơn 5 ô mở được, lọc top 5 ô tiềm năng nhất để tôi luyện sâu
-  const candidatesToTest = scored.length > 5 ? scored.slice(0, 5) : scored;
+  const candidatesToTest =
+    scored.length > 5 ? scored.slice(0, 5) : scored;
 
   const nv0 = clone(nv);
   nv0.kinhMach.manh = [];
@@ -552,7 +545,8 @@ async function kmOpenSearch(nv, mode, prog) {
     mode,
     iters: 800,
     init: nv.kinhMach.manh,
-    onProg: (f) => prog(f / (candidatesToTest.length + 1), "Mốc hiện tại…"),
+    onProg: (f) =>
+      prog(f / (candidatesToTest.length + 1), "Mốc hiện tại…"),
   });
   const res = [];
   for (let k = 0; k < candidatesToTest.length && !kmAborted(); k++) {
@@ -600,7 +594,9 @@ function wiEval(nvX, enemies, mode) {
 function kmWhatIfRealm(nv, mode) {
   const tc = nv.tieuCanhGioi || 0,
     nx =
-      tc < 3 ? { cg: nv.canhGioi, tc: tc + 1 } : { cg: nv.canhGioi + 1, tc: 0 };
+      tc < 3
+        ? { cg: nv.canhGioi, tc: tc + 1 }
+        : { cg: nv.canhGioi + 1, tc: 0 };
   const nv2 = clone(nv);
   nv2.canhGioi = nx.cg;
   nv2.tieuCanhGioi = nx.tc;
@@ -638,7 +634,8 @@ function kmWhatIfRealm(nv, mode) {
     }))
     .filter((x) => x.up2 >= 0.999)
     .sort(
-      (x, y) => y.tier - x.tier || (y.it.pham_cap || 0) - (x.it.pham_cap || 0),
+      (x, y) =>
+        y.tier - x.tier || (y.it.pham_cap || 0) - (x.it.pham_cap || 0),
     )
     .slice(0, 6);
   return { nx, a, b, rows, bag };
@@ -652,7 +649,9 @@ async function kmWhatIfRemove(nv, mode, prog) {
     out = [];
   for (let k = 0; k < list.length && !S.abort; k++) {
     const nv2 = clone(nv);
-    nv2.kinhMach.manh = list.filter((_, j) => j !== k).map((m) => ({ ...m }));
+    nv2.kinhMach.manh = list
+      .filter((_, j) => j !== k)
+      .map((m) => ({ ...m }));
     const e = wiEval(nv2, enemies, mode),
       it = c.items.get(list[k].item);
     out.push({
@@ -661,7 +660,10 @@ async function kmWhatIfRemove(nv, mode, prog) {
       dw: e.wins - base.wins,
       thong: !!(base.R.manh[k] && base.R.manh[k].thong),
     });
-    prog((k + 1) / list.length, "Gỡ thử " + (k + 1) + "/" + list.length + "…");
+    prog(
+      (k + 1) / list.length,
+      "Gỡ thử " + (k + 1) + "/" + list.length + "…",
+    );
     await sleep0();
   }
   out.sort((x, y) => y.loss - x.loss);
@@ -778,13 +780,18 @@ function findOptimalRecolors(nv, bestPieces, maxCount) {
         continue;
       }
       if (!cells) continue;
-      const hs = ((it && it.he) || []).filter((h) => h && h !== "vo_sac");
+      const hs = ((it && it.he) || []).filter(
+        (h) => h && h !== "vo_sac",
+      );
 
       for (let idx = 0; idx < cells.length; idx++) {
         const cell = cells[idx];
         if (seenCandCells.has(cell)) continue;
         if (cell === g.danDien) continue;
-        if (nv.kinhMach.trangThai && nv.kinhMach.trangThai[cell] === "an")
+        if (
+          nv.kinhMach.trangThai &&
+          nv.kinhMach.trangThai[cell] === "an"
+        )
           continue;
 
         const wantedHe =
@@ -792,7 +799,8 @@ function findOptimalRecolors(nv, bestPieces, maxCount) {
             ? cellElements[idx]
             : hs[0] || "vo_sac";
         const curMau = mauK[cell] || "vo_sac";
-        if (!wantedHe || wantedHe === "vo_sac" || curMau === wantedHe) continue;
+        if (!wantedHe || wantedHe === "vo_sac" || curMau === wantedHe)
+          continue;
 
         let availHe = [];
         try {
@@ -824,7 +832,9 @@ function findOptimalRecolors(nv, bestPieces, maxCount) {
             null,
           );
           const hySetNow = hySet(g, nv.kinhMach);
-          const hyCnt = cells.filter((cIdx) => hySetNow.has(cIdx)).length;
+          const hyCnt = cells.filter((cIdx) =>
+            hySetNow.has(cIdx),
+          ).length;
           const hyAmp = hyCnt > 0 ? 2.0 + 0.25 * (hyCnt - 1) : 1.0;
           const wasKhac = oKhac(curMau, wantedHe);
           const totalKhacBefore = cells.filter((cIdx, kIdx) => {
@@ -891,7 +901,9 @@ function statRows(a, b) {
     hy = hySet(g, nv.kinhMach),
     maxHoThe =
       0.6 +
-      ((nv.theChat && nv.theChat.dac_tinh && nv.theChat.dac_tinh.ho_the_tran) ||
+      ((nv.theChat &&
+        nv.theChat.dac_tinh &&
+        nv.theChat.dac_tinh.ho_the_tran) ||
         0);
   const curHy = (a.R.manh || [])
     .filter((m) => m && m.thong && m.acupoints > 0)
@@ -907,7 +919,8 @@ function statRows(a, b) {
   // ── Tính toán các chỉ số chiến đấu chuyên sâu
   const ctrlRatio =
     K && K.CONTROL_DAMAGE_RATIO != null ? K.CONTROL_DAMAGE_RATIO : 0.6;
-  const shieldMult = K && K.SHIELD_UY_MULT != null ? K.SHIELD_UY_MULT : 1.0;
+  const shieldMult =
+    K && K.SHIELD_UY_MULT != null ? K.SHIELD_UY_MULT : 1.0;
   const shieldCapRatio =
     K && K.SHIELD_CAP_RATIO != null ? K.SHIELD_CAP_RATIO : 0.6;
   const burstMult =
@@ -917,7 +930,8 @@ function statRows(a, b) {
     if (!s || !s.uy) return 0;
     if (s.dang === "cong") return s.uy;
     if (s.dang === "khong_che") return s.uy * ctrlRatio;
-    if (s.dang !== "thu" && s.dang !== "hoi_phuc" && s.uy > 0) return s.uy;
+    if (s.dang !== "thu" && s.dang !== "hoi_phuc" && s.uy > 0)
+      return s.uy;
     return 0;
   };
 
@@ -937,7 +951,9 @@ function statRows(a, b) {
       if (
         s.dang === "thu" ||
         (s.effects &&
-          s.effects.some((e) => e.kind === "ho_thuan" || e.loai === "ho_thuan"))
+          s.effects.some(
+            (e) => e.kind === "ho_thuan" || e.loai === "ho_thuan",
+          ))
       ) {
         shieldSum += (s.uy || 0) * shieldMult;
       }
@@ -948,7 +964,8 @@ function statRows(a, b) {
       spellPower: Math.round(
         (r && r.P && (r.P.spellPower ?? r.P.phapLuc)) || 0,
       ),
-      bodyPower: r && r.P && r.P.bodyPower ? Math.round(r.P.bodyPower) : null,
+      bodyPower:
+        r && r.P && r.P.bodyPower ? Math.round(r.P.bodyPower) : null,
       strongest: strongest
         ? `${esc(strongest.ten)} (${num(Math.round(maxD))})`
         : "—",
@@ -1030,7 +1047,11 @@ function statRows(a, b) {
     ["Tổng sát thương chiêu", num(skA.totalDmg), num(skB.totalDmg)],
     ["Tạo hộ thuẫn", skA.shieldText, skB.shieldText],
     ["Bột phát sát thương", skA.burstText, skB.burstText],
-    ["Tận dụng huyệt đạo", `${curHy}/${hy.size} ô`, `${newHy}/${hy.size} ô`],
+    [
+      "Tận dụng huyệt đạo",
+      `${curHy}/${hy.size} ô`,
+      `${newHy}/${hy.size} ô`,
+    ],
     [
       "Hộ thể (giảm sát thương)",
       `+${pct(curHt)}${curHt >= maxHoThe ? " (trần)" : ""}`,
@@ -1078,7 +1099,8 @@ function statRows(a, b) {
   ];
 
   let recolorHtml = "";
-  const plan = (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
+  const plan =
+    (b && (b.recolorPlan || (b.best && b.best.recolorPlan))) || null;
   if (Array.isArray(plan) && plan.length > 0) {
     const doiMauLeft = (nv.kinhMach.cho && nv.kinhMach.cho.doiMau) || 0;
     const pillsInBag =
@@ -1121,7 +1143,9 @@ async function optimizeMode(nv, mode, iters, prog, f0, f1, label) {
   return sol ? sol.best : null;
 }
 function kmManualHtml(nv) {
-  const tacAll = nv.kinhMach.trangThai.filter((s) => s === "tac").length,
+  const tacAll = nv.kinhMach.trangThai.filter(
+      (s) => s === "tac",
+    ).length,
     tac = kmOpenable(nv);
   const mo = (nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0;
   return `
@@ -1159,7 +1183,10 @@ function kmManualBind(nv) {
   const tac = kmOpenable(nv),
     mo = (nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0;
   try {
-    body.querySelector("#vk-cur").innerHTML = drawGrid(nv, nv.kinhMach.manh);
+    body.querySelector("#vk-cur").innerHTML = drawGrid(
+      nv,
+      nv.kinhMach.manh,
+    );
   } catch (e) {
     body.querySelector("#vk-cur").innerHTML = errBox(e);
   }
@@ -1263,10 +1290,10 @@ function kmManualBind(nv) {
               if (!mo) return;
             }
             e2.target.disabled = true;
-            const r2 = await kmApplyLoadouts([res.tu.manh, res.danh.manh], {
-              mo,
-              keep: 0,
-            });
+            const r2 = await kmApplyLoadouts(
+              [res.tu.manh, res.danh.manh],
+              { mo, keep: 0 },
+            );
             UI.notify((r2.ok ? "✅ " : "❌ ") + r2.msg);
             e2.target.disabled = false;
             if (r2.ok) await render();
@@ -1530,7 +1557,8 @@ function sellTotal(c, id, it, qty) {
   const n = Math.min(whole, cap);
   let total = 0;
   for (let k = 0; k < n; k++) total += unit(k);
-  if (n === whole && q > whole && n < cap) total += (q - whole) * unit(n);
+  if (n === whole && q > whole && n < cap)
+    total += (q - whole) * unit(n);
   return { total, first, left: Math.max(0, whole - n) };
 }
 

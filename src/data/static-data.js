@@ -396,7 +396,11 @@ var NL_ENC = [
     ["hoang_da"],
     ["son_mach", "rung_ram"],
     [0, 2],
-    ["item.do_pho_moc_khoi", "item.huyen_ti_quyet", "item.moc_khoi_quyet"],
+    [
+      "item.do_pho_moc_khoi",
+      "item.huyen_ti_quyet",
+      "item.moc_khoi_quyet",
+    ],
     "su_kien",
   ],
   [
@@ -842,7 +846,11 @@ var NL_ENC = [
     ["hoang_da"],
     ["di_tich", "hoang_mac", "yeu_vuc"],
     [3, 5],
-    ["item.bat_hu_thi_kinh", "item.cuu_u_thi_kinh", "item.huyet_sat_chau"],
+    [
+      "item.bat_hu_thi_kinh",
+      "item.cuu_u_thi_kinh",
+      "item.huyet_sat_chau",
+    ],
     "su_kien",
   ],
   [
@@ -878,7 +886,11 @@ var NL_ENC = [
     ["hoang_da"],
     ["yeu_vuc", "di_tich", "son_mach"],
     [3, 5],
-    ["item.bach_quy_chan_kinh", "item.u_minh_hon_tinh", "item.u_minh_quy_dien"],
+    [
+      "item.bach_quy_chan_kinh",
+      "item.u_minh_hon_tinh",
+      "item.u_minh_quy_dien",
+    ],
     "su_kien",
   ],
   [
@@ -975,7 +987,11 @@ var NL_ENC = [
     ["hoang_da"],
     ["ho_nuoc", "rung_ram", "yeu_vuc"],
     [3, 4],
-    ["item.co_huyet_phan_bo", "item.co_mau_tam_kinh", "item.van_co_phien"],
+    [
+      "item.co_huyet_phan_bo",
+      "item.co_mau_tam_kinh",
+      "item.van_co_phien",
+    ],
     "su_kien",
   ],
   [
@@ -1994,7 +2010,9 @@ var NL_ENEMY = [
     he: ["kim"],
     loai: ["trung"],
     dk: 0.3,
-    th: [{ id: "enemy.phe_kim_trung", lieu: { "item.trung_giap_phien": 3 } }],
+    th: [
+      { id: "enemy.phe_kim_trung", lieu: { "item.trung_giap_phien": 3 } },
+    ],
     hach: null,
     dh: ["son_mach", "di_tich", "rung_ram"],
     mt: "Bọ cánh cứng to bằng đốt ngón tay, vỏ ánh đồng, sống trong khe quặng. Đàn bò qua thì đinh sắt trên cửa mỏ chỉ còn lỗ.",
@@ -2023,7 +2041,9 @@ var NL_ENEMY = [
     he: ["kim"],
     loai: ["trung"],
     dk: 0.5,
-    th: [{ id: "enemy.thiet_si_kim_trung", lieu: { "item.phe_kim_nha": 3 } }],
+    th: [
+      { id: "enemy.thiet_si_kim_trung", lieu: { "item.phe_kim_nha": 3 } },
+    ],
     hach: null,
     dh: ["son_mach", "di_tich", "yeu_vuc"],
     mt: "Kim trùng dài bằng cẳng tay, đầu nhọn như dùi. Nó lao thẳng vào ngực, hộ thể mỏng thì thủng một lỗ tròn.",
@@ -2115,7 +2135,9 @@ var NL_ENEMY = [
     he: ["moc", "thuy"],
     loai: ["trung"],
     dk: 0.5,
-    th: [{ id: "enemy.that_thai_doc_co", lieu: { "item.ngu_doc_dich": 3 } }],
+    th: [
+      { id: "enemy.that_thai_doc_co", lieu: { "item.ngu_doc_dich": 3 } },
+    ],
     hach: null,
     dh: ["ho_nuoc", "rung_ram", "yeu_vuc"],
     mt: "Con sống sót trong hũ năm độc, mình rết, càng bọ cạp, lưng có vằn nhện. Hũ cổ sư bỏ hoang, nó tự bò ra đầm kiếm ăn.",
@@ -3702,7 +3724,13 @@ var THE_CHAT_DB = {
   },
 };
 
-export { NL_META, NL_RITUAL, NL_ENC, NL_ENEMY, THE_CHAT_DB };
+export {
+  NL_META,
+  NL_RITUAL,
+  NL_ENC,
+  NL_ENEMY,
+  THE_CHAT_DB,
+};
 
 Object.assign(gWin, {
   NL_META,
