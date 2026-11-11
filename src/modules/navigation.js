@@ -1,6 +1,31 @@
-import { gWin, TOOL_VER, TabLifecycle, sleep0, pct, num, esc, fold, heTen, STAGE } from "../core/utils.js";
+import {
+  gWin,
+  TOOL_VER,
+  TabLifecycle,
+  sleep0,
+  pct,
+  num,
+  esc,
+  fold,
+  heTen,
+  STAGE,
+} from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, tabsEl, groupsEl, loadCore, G, C, ctx, nvNow, realmName, realmLabel, fight, enemyAt } from "../core/bridge.js";
+import {
+  S,
+  body,
+  tabsEl,
+  groupsEl,
+  loadCore,
+  G,
+  C,
+  ctx,
+  nvNow,
+  realmName,
+  realmLabel,
+  fight,
+  enemyAt,
+} from "../core/bridge.js";
 /**
  * Module: Điều Hướng Tab (TABS, GROUPS, Router) & Tab Tổng Quan
  */
@@ -78,8 +103,7 @@ function keepVisible(strip) {
     s = strip.getBoundingClientRect();
   if (!r.width || !s.width) return;
   if (r.left < s.left) strip.scrollLeft -= (s.left - r.left + 8) / k;
-  else if (r.right > s.right)
-    strip.scrollLeft += (r.right - s.right + 8) / k;
+  else if (r.right > s.right) strip.scrollLeft += (r.right - s.right + 8) / k;
 }
 function drawTabs() {
   const g = grpOf(S.tab),
@@ -94,11 +118,61 @@ function drawTabs() {
     groupsEl.prepend(groupGlider);
   }
 
+  const GRP_ICONS = {
+    nv: "🧘",
+    cd: "⚡",
+    kl: "💰",
+    tc: "🧭",
+    nl: "🐉",
+    lh: "☸️",
+    nm: "🤝",
+    au: "🤖",
+  };
+  const TAB_ICONS = {
+    tq: "☯",
+    tkc: "📚",
+    bm: "🗡️",
+    dp: "⚡",
+    tr: "🛡️",
+    tien: "💎",
+    cho: "🏪",
+    ld: "⚗️",
+    cph: "📜",
+    lbo: "🔨",
+    tph: "🕸️",
+    tt: "🎯",
+    db: "👑",
+    san: "🏹",
+    tcv: "🎒",
+    tcq: "👹",
+    tcd: "🗺️",
+    bd: "🧭",
+    nlw: "🐾",
+    nlm: "🦊",
+    nls: "🦅",
+    nlv: "🌿",
+    nlc: "✨",
+    lhs: "🔓",
+    lht: "🏅",
+    lhd: "🧮",
+    sv: "💾",
+    tkb: "🌟",
+    nmn: "💞",
+    atl: "🧘",
+    atc: "⚔️",
+    asdb: "🔥",
+    asy: "🏹",
+    abb: "⚖️",
+    akm: "🧬",
+    bis: "🏆",
+    arr: "🎲",
+  };
+
   let groupBtns = groupsEl.querySelectorAll("button");
   if (groupBtns.length !== GROUPS.length) {
     const gh = GROUPS.map(
       (x) =>
-        `<button data-g="${x[0]}" class="${x === g ? "on" : ""}">${x[1]}</button>`,
+        `<button data-g="${x[0]}" class="${x === g ? "on" : ""}"><span class="vkx-g-ic">${GRP_ICONS[x[0]] || "❖"}</span><span class="vkx-g-tx">${x[1]}</span><em class="vkx-g-cnt">${x[2].length}</em></button>`,
     ).join("");
     groupsEl.innerHTML = '<div class="vkx-tab-glider"></div>' + gh;
     groupGlider = groupsEl.querySelector(".vkx-tab-glider");
@@ -122,17 +196,15 @@ function drawTabs() {
   let tabBtns = tabsEl.querySelectorAll("button");
 
   if (isSameGroup && tabBtns.length === g[2].length) {
-    // Chuyển tab trong cùng một nhóm: KHÔNG đụng vào innerHTML!
     for (let i = 0; i < tabBtns.length; i++) {
       const b = tabBtns[i];
       b.classList.toggle("on", b.dataset.k === S.tab);
     }
   } else {
-    // Chuyển sang nhóm khác hoặc lần đầu khởi tạo: tạo mới các nút của nhóm mới
     const th = g[2]
       .map(
         (k) =>
-          `<button data-k="${k}" class="${k === S.tab ? "on" : ""}">${TNAME[k] || k}</button>`,
+          `<button data-k="${k}" class="${k === S.tab ? "on" : ""}"><span class="vkx-t-ic">${TAB_ICONS[k] || "•"}</span><span class="vkx-t-tx">${TNAME[k] || k}</span></button>`,
       )
       .join("");
     tabsEl.innerHTML = '<div class="vkx-tab-glider"></div>' + th;
@@ -255,7 +327,10 @@ function syncCharHudBar() {
     const realmStr = realmLabel(nv.canhGioi, nv.tieuCanhGioi);
     let curPlace = run.viTri || "—";
     try {
-      curPlace = (typeof gWin.placeName === 'function' ? gWin.placeName(c, run.viTri) : run.viTri) || run.viTri;
+      curPlace =
+        (typeof gWin.placeName === "function"
+          ? gWin.placeName(c, run.viTri)
+          : run.viTri) || run.viTri;
     } catch (e) {}
     const pillRealm = `<span class="vkx-hud-pill realm" title="Đạo hiệu & Cảnh giới hiện tại">☯ ${esc(nv.ten)} · ${esc(realmStr)}</span>`;
     const pillAge = `<span class="vkx-hud-pill ${rem < 15 ? "warn" : ""}" title="Tuổi / Thọ nguyên tối đa">⏳ ${Math.floor(nv.tuoi)}/${tho} (${rem}n)</span>`;
@@ -264,14 +339,20 @@ function syncCharHudBar() {
     const pillInj = nv.thuongThe
       ? `<span class="vkx-hud-pill warn" title="Thương thế">🩸 Thương ${nv.thuongThe}</span>`
       : "";
-    UI.updateCharHud(pillRealm + pillAge + pillStone + pillLoc + pillInj, () => {
-      const res = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác") : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
-      if (res && res.ok) {
-        UI.notify("⚡ " + res.msg);
-      } else if (res) {
-        UI.notify("⚠️ " + res.msg);
-      }
-    });
+    UI.updateCharHud(
+      pillRealm + pillAge + pillStone + pillLoc + pillInj,
+      () => {
+        const res =
+          typeof gWin.saveQuickSave === "function"
+            ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác")
+            : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
+        if (res && res.ok) {
+          UI.notify("⚡ " + res.msg);
+        } else if (res) {
+          UI.notify("⚠️ " + res.msg);
+        }
+      },
+    );
   } catch (e) {}
 }
 
@@ -391,7 +472,7 @@ async function render() {
     ({
       tq: () => {
         tabTongQuan();
-        if (typeof gWin.tongQuanExtra === 'function') gWin.tongQuanExtra();
+        if (typeof gWin.tongQuanExtra === "function") gWin.tongQuanExtra();
       },
       sv: tabLuuNapSave,
       dp: tabDotPha2,
@@ -438,8 +519,7 @@ async function render() {
   } catch (e) {
     console.error(e);
     body.innerHTML =
-      errBox(e) +
-      '<button class="vk-btn sec" id="vk-retry">↻ Thử Lại</button>';
+      errBox(e) + '<button class="vk-btn sec" id="vk-retry">↻ Thử Lại</button>';
     const rb = body.querySelector("#vk-retry");
     if (rb)
       rb.onclick = () => {
@@ -499,8 +579,7 @@ function tabTongQuan() {
       .join("<br>") || "—";
   // cơ duyên sắp hết hạn
   const seen = new Map();
-  for (const l of run.log || [])
-    if (l.expiresAt && l.key) seen.set(l.key, l);
+  for (const l of run.log || []) if (l.expiresAt && l.key) seen.set(l.key, l);
   const dip =
     [...seen.values()]
       .filter((l) => l.expiresAt - run.nam >= 0.05)
@@ -514,60 +593,105 @@ function tabTongQuan() {
           )}</span><b>${num(l.expiresAt - run.nam)} năm</b></div>`,
       )
       .join("") || '<div class="vk-mu">Không có.</div>';
-  const thoPct = Math.min(100, Math.max(0, Math.round((nv.tuoi / Math.max(1, tho)) * 100)));
+  const thoPct = Math.min(
+    100,
+    Math.max(0, Math.round((nv.tuoi / Math.max(1, tho)) * 100)),
+  );
   const remTho = Math.max(0, Math.floor(tho - nv.tuoi));
   body.innerHTML = `
-    <div class="vk-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <h3 style="margin:0">${esc(nv.ten)}</h3>
-        <span class="pl pl-pick" style="margin:0;font-size:12px">☯ ${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</span>
-      </div>
-      <div style="margin:6px 0 10px">
-        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
-          <span class="vk-mu">Thọ nguyên đạo lộ (${Math.floor(nv.tuoi)} / ${tho} năm)</span>
-          <b class="${remTho < 20 ? "vk-bad" : "vk-ok"}">Còn ${remTho} năm (${100 - thoPct}%)</b>
-        </div>
-        <div class="vk-bar"><i style="width:${thoPct}%"></i></div>
-      </div>
-      <div class="vk-bento-grid" style="margin-bottom:10px">
-        <div class="vk-bento-tile">
-          <span class="vk-bento-lbl">🧬 Linh Căn</span>
-          <span class="vk-bento-val" style="font-size:12px;color:var(--gold2)">${esc(lc)}</span>
-        </div>
-        <div class="vk-bento-tile">
-          <span class="vk-bento-lbl">💎 Linh Thạch · Cống Hiến</span>
-          <span class="vk-bento-val" style="color:var(--jade)">${num(Math.floor(nv.linhThach || 0))} <span class="vk-mu" style="font-weight:500">· ${num(Math.floor(nv.congHien || 0))}</span></span>
-        </div>
-        <div class="vk-bento-tile">
-          <span class="vk-bento-lbl">⚔️ Lịch Luyện · Thương Thế</span>
-          <span class="vk-bento-val">${num(nv.lichLuyen || 0)} · ${nv.thuongThe ? `<span class="vk-bad">Thương ${nv.thuongThe}</span>` : '<span class="vk-ok">Lành lặn</span>'}</span>
-        </div>
-        <div class="vk-bento-tile">
-          <span class="vk-bento-lbl">🌀 Lượt Mở Kinh Mạch</span>
-          <span class="vk-bento-val" style="color:var(--gold)">${(nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0} lượt</span>
-        </div>
-      </div>
-      <div class="vk-row"><span>Nghề tu chân</span><b style="text-align:right">${nghe}</b></div>
-      ${(nv.lichLuyen || 0) < 2 ? '<div class="vk-note" style="border-left-color:var(--rose);color:#fda4af">⚠️ Lịch luyện sắp cạn — hãy đi đánh quái hoặc du lịch xa để hồi phục.</div>' : ""}
+    <div class="vkx-quick-bar">
+      <button type="button" class="vkx-qact" data-qtab="atl"><span>🧘</span><div><b>Auto Tu Luyện</b><small>Bế quan & Đột phá</small></div></button>
+      <button type="button" class="vkx-qact" data-qtab="db"><span>👑</span><div><b>Radar Dị Bảo</b><small>Dò & Săn Bảo Lục</small></div></button>
+      <button type="button" class="vkx-qact" data-qtab="akm"><span>🧬</span><div><b>Hướng Build</b><small>Tối ưu Kinh Mạch</small></div></button>
+      <button type="button" class="vkx-qact" data-qtab="dp"><span>⚡</span><div><b>Đột Phá & Thọ</b><small>Chuẩn bị Độ Kiếp</small></div></button>
+      <button type="button" class="vkx-qact" data-qtab="atc"><span>⚔️</span><div><b>Siêu AI 3.0</b><small>Chiến thuật 5 pha</small></div></button>
     </div>
-    <div class="vk-card"><h3>Sư môn</h3>${sect}</div>
-    <div class="vk-card"><h3>Cơ duyên sắp hết hạn</h3>${dip}</div>
-    <div class="vk-card" style="border-left:3px solid #8b5cf6">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-<h3 style="margin:0;color:#a78bfa">💾 Lưu & Nạp Save (Tránh Thiên Đạo)</h3>
-<button class="vk-btn sec" id="tq-btn-to-sv" style="padding:3px 10px;font-size:12px;margin:0">Mở Tab Save ➜</button>
+
+    <div class="vkx-dash-2col">
+      <div class="vkx-dash-col">
+        <div class="vk-card vkx-hero-card">
+          <div class="vkx-hero-top">
+            <div>
+              <div class="vk-mu" style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px">Đạo Hiệu Tu Chân Giả</div>
+              <h3 style="margin:2px 0 0;font-size:17px">${esc(nv.ten)}</h3>
+            </div>
+            <span class="pl pl-pick" style="margin:0;font-size:12.5px;padding:5px 12px">☯ ${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi))}</span>
+          </div>
+
+          <div class="vkx-life-meter">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span>⏳ <b>Thọ Nguyên:</b> ${Math.floor(nv.tuoi)} / ${tho} năm</span>
+              <b class="${remTho < 20 ? "vk-bad" : "vk-ok"}">Còn ${remTho} năm (${100 - thoPct}%)</b>
+            </div>
+            <div class="vk-bar" style="height:10px"><i style="width:${thoPct}%"></i></div>
+          </div>
+
+          <div class="vk-bento-grid">
+            <div class="vk-bento-tile">
+              <span class="vk-bento-lbl">🧬 Tư Chất Linh Căn</span>
+              <span class="vk-bento-val" style="font-size:12.5px;color:var(--acc2)">${esc(lc)}</span>
+            </div>
+            <div class="vk-bento-tile">
+              <span class="vk-bento-lbl">💎 Linh Thạch · Cống Hiến</span>
+              <span class="vk-bento-val" style="color:var(--ok)">${num(Math.floor(nv.linhThach || 0))} <small class="vk-mu">/ ${num(Math.floor(nv.congHien || 0))}</small></span>
+            </div>
+            <div class="vk-bento-tile">
+              <span class="vk-bento-lbl">⚔️ Lịch Luyện · Thương Thế</span>
+              <span class="vk-bento-val">${num(nv.lichLuyen || 0)} · ${nv.thuongThe ? `<span class="vk-bad">Thương ${nv.thuongThe}</span>` : '<span class="vk-ok">Lành lặn</span>'}</span>
+            </div>
+            <div class="vk-bento-tile">
+              <span class="vk-bento-lbl">🌀 Khai Thông Kinh Mạch</span>
+              <span class="vk-bento-val" style="color:var(--acc)">${(nv.kinhMach.cho && nv.kinhMach.cho.mo) || 0} lượt chờ</span>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)">
+            <div class="vk-bento-lbl" style="margin-bottom:4px">🛠️ Bậc Nghề Tu Chân</div>
+            <div style="font-size:12.5px;line-height:1.5">${nghe}</div>
+          </div>
+          ${(nv.lichLuyen || 0) < 2 ? '<div class="vk-note" style="border-left-color:var(--bad);color:#fda4af">⚠️ Lịch luyện sắp cạn — hãy đi đánh quái hoặc du lịch xa để hồi phục.</div>' : ""}
+        </div>
+
+        <div class="vk-card" style="border-left:3px solid var(--acc)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <h3 style="margin:0">💾 Hộ Pháp Lưu & Nạp Save (Tránh Thiên Đạo)</h3>
+            <button class="vk-btn sec" id="tq-btn-to-sv" style="padding:4px 10px;font-size:11.5px;margin:0">Mở Tab Save ➜</button>
+          </div>
+          <div style="font-size:12px;color:var(--mut);margin-bottom:8px">
+            Lưu điểm dự phòng tức thì trước khi Xung Kích Cảnh Giới / Đoạt Bảo, hoặc tẩy dấu vết Thiên Đạo.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px">
+            <button class="vk-btn" id="tq-btn-quicksave" style="margin:0;padding:7px 10px;font-size:12px">⚡ Quick Save</button>
+            <button class="vk-btn sec" id="tq-btn-export" style="margin:0;padding:7px 10px;font-size:12px">💾 Tải Save (.txt)</button>
+            <button class="vk-btn sec" id="tq-btn-cleantd" style="margin:0;padding:7px 10px;font-size:12px" title="Xóa toàn bộ bộ nhớ theo dõi của Thiên Đạo">🧹 Tẩy Thiên Đạo</button>
+          </div>
+        </div>
       </div>
-      <div style="font-size:12px;color:var(--mut);margin-bottom:8px">
-Lưu điểm dự phòng nhanh trước khi Đột Phá / Giao Chiến, hoặc nạp file save mà không lo Thiên Đạo phạt.
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-<button class="vk-btn" id="tq-btn-quicksave" style="padding:5px 12px;font-size:12px;background:#3ddc97;color:#05140d">⚡ Quick Save Ngay</button>
-<button class="vk-btn sec" id="tq-btn-export" style="padding:5px 12px;font-size:12px">💾 Tải File Save (.txt)</button>
-<button class="vk-btn sec" id="tq-btn-cleantd" style="padding:5px 12px;font-size:12px" title="Xóa toàn bộ bộ nhớ theo dõi của Thiên Đạo">🧹 Tẩy Thiên Đạo</button>
+
+      <div class="vkx-dash-col">
+        <div class="vk-card"><h3>🏛️ Sư Môn & Khảo Hạch</h3><div class="vkx-kv-list">${sect}</div></div>
+        <div class="vk-card"><h3>⏳ Cơ Duyên Sắp Hết Hạn</h3><div class="vkx-kv-list">${dip}</div></div>
+        <div class="vk-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+            <h3 style="margin:0">⚔️ Đài Thử Sức Chiến Lực</h3>
+            <button class="vk-btn" id="vk-dmb" style="margin:0;padding:5px 12px;font-size:12px">⚡ Đánh Thử Ngay</button>
+          </div>
+          <div id="vk-dm" class="vk-mu" style="font-size:12.5px">Mô phỏng thực chiến với toàn bộ quái cùng cảnh giới và vượt cấp dựa trên Kinh Mạch hiện tại.</div>
+        </div>
       </div>
     </div>
-    <div class="vk-card"><h3>Độ mạnh chung</h3><div id="vk-dm" class="vk-mu">Bấm để đánh thử với mọi loại quái cùng cảnh giới.</div><button class="vk-btn" id="vk-dmb">Đánh thử</button></div>
-    <div class="vk-mu" style="font-size:12px;text-align:center">Tool ${TOOL_VER} · game ${esc(K.bundle)}</div>`;
+    <div class="vk-mu" style="font-size:11.5px;text-align:center;margin-top:4px">Huyền Thiên Đạo Đài OS v${TOOL_VER} · Lõi Game ${esc(K.bundle)}</div>`;
+
+  body.querySelectorAll(".vkx-qact").forEach((btn) => {
+    btn.onclick = () => {
+      const qt = btn.getAttribute("data-qtab");
+      if (qt) {
+        S.abort = true;
+        S.tab = qt;
+        render();
+      }
+    };
+  });
   const tqToSv = body.querySelector("#tq-btn-to-sv");
   if (tqToSv) {
     tqToSv.onclick = () => {

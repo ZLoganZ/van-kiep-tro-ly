@@ -1192,11 +1192,11 @@ function auReadCfg(kind) {
   auSave();
 }
 const auFld = (id, lab, v, hint) =>
-  `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>${lab}${hint ? ` <span class="vk-mu" style="font-size:11px">${hint}</span>` : ""}</span><input class="vk-sel" id="${id}" type="number" step="any" value="${v}" style="width:92px;text-align:right"></label>`;
+  `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">${lab}</span>${hint ? `<em class="vkx-fld-hint">${hint}</em>` : ""}</div><input class="vk-sel vkx-fld-ctl" id="${id}" type="number" step="any" value="${v}"></label>`;
 const auHiemSel = (v) =>
-  `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>Nơi Nguy Hiểm Tối Đa Được Đi</span><select class="vk-sel" id="au-hiem" style="width:150px"><option value="an_toan" ${v === "an_toan" ? "selected" : ""}>An Toàn</option><option value="ngang_suc" ${v === "ngang_suc" ? "selected" : ""}>Vừa Sức</option></select></label>`;
+  `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">🛡️ Độ Nguy Hiểm Tối Đa</span></div><select class="vk-sel vkx-fld-ctl" id="au-hiem"><option value="an_toan" ${v === "an_toan" ? "selected" : ""}>🟢 An Toàn</option><option value="ngang_suc" ${v === "ngang_suc" ? "selected" : ""}>🟡 Vừa Sức</option></select></label>`;
 const auTocSel = (v) =>
-  `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>Tốc Độ Chạy <span class="vk-mu" style="font-size:11px">(Máy Yếu Chọn Vừa Hoặc Chậm)</span></span><select class="vk-sel" id="au-toc" style="width:150px">${Object.entries(
+  `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">⚡ Tốc Độ Nhịp Auto</span><em class="vkx-fld-hint">Máy yếu chọn Vừa</em></div><select class="vk-sel vkx-fld-ctl" id="au-toc">${Object.entries(
     AU_TOC,
   )
     .map(
@@ -1205,7 +1205,7 @@ const auTocSel = (v) =>
     )
     .join("")}</select></label>`;
 const auTTSel = (v, id = "au-thuong") =>
-  `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span>Dừng Khi Thương Thế Từ</span><select class="vk-sel" id="${id}" style="width:150px">${[
+  `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">🩸 Ngưỡng Dừng Thương Thế</span></div><select class="vk-sel vkx-fld-ctl" id="${id}">${[
     1, 2, 3,
   ]
     .filter((i) => i <= AU_TT_MAX)
@@ -1364,9 +1364,16 @@ function auStatusHtml(kind) {
     ]);
     rows.push(["Thọ Nguyên Còn", Math.floor(auLifeLeft()) + " năm"]);
   }
-  return rows
-    .map((r) => `<div class="vk-row"><span>${r[0]}</span><b>${r[1]}</b></div>`)
-    .join("");
+  return (
+    `<div class="vkx-tele-grid">` +
+    rows
+      .map(
+        (r) =>
+          `<div class="vkx-tele-box"><span class="vkx-tele-lbl">${r[0]}</span><b class="vkx-tele-val">${r[1]}</b></div>`,
+      )
+      .join("") +
+    `</div>`
+  );
 }
 function auLogHtml() {
   return AU.log.length
@@ -1465,7 +1472,7 @@ function auPaint() {
   if (sp) sp.disabled = !run;
 }
 function auControls() {
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button class="vk-btn au-go" id="au-run">Chạy Tự Động</button><button class="vk-btn sec au-go" id="au-one">Chạy 1 Bước</button><button class="vk-btn sec" id="au-stop">Dừng</button></div>`;
+  return `<div class="vkx-cmd-dock"><button class="vk-btn au-go vkx-cmd-run" id="au-run">▶ Khởi Động Auto</button><button class="vk-btn sec au-go vkx-cmd-step" id="au-one">⏭ Chạy 1 Bước</button><button class="vk-btn sec vkx-cmd-stop" id="au-stop">⏹ Dừng Khẩn Cấp</button></div>`;
 }
 function auBind(kind) {
   body.querySelectorAll("input,select").forEach((el) => {

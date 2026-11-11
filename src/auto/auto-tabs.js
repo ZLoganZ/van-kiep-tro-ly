@@ -49,16 +49,17 @@ function tabAutoTuLuyen() {
 Tự động hóa hoàn toàn chu trình tu tiên: <b>Tích Lũy Tu Vi (Bế Quan hoặc Đánh Quái) → Đột Phá Xung Kích → Trấn Áp Tâm Ma → Lên Cảnh Giới Tiếp Theo</b>.
 Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự tính số năm tối ưu, nuốt đan tu luyện và đan phá bình cảnh) hoặc <b>Đánh Quái Săn Yêu</b> (tự động tới các bãi hoang dã quanh đây để săn yêu quái cày tu vi). Khi tu vi chạm trần hoặc Đại Viên Mãn, Tool tự động chọn combo đan có <b>tỉ lệ đột phá cao nhất</b>, kiểm tra ngưỡng an toàn, xung kích và dùng <b>Siêu AI Tác Chiến VIP</b> hạ gục Tâm Ma!
       </div>
-      <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;font-size:13.5px">
-<span><b>Phương Thức Tu Luyện (Tích Tu Vi)</b></span>
-<select class="vk-sel" id="au-tl-mode" style="width:190px;font-weight:700">
+      <div class="vkx-fld-grid">
+      <label class="vkx-fld-tile">
+<div class="vkx-fld-top"><span class="vkx-fld-lbl">🧘 Phương Thức Tu Luyện</span></div>
+<select class="vk-sel vkx-fld-ctl" id="au-tl-mode" style="font-weight:700">
   <option value="be_quan" ${!isDanhQuai ? "selected" : ""}>🧘 Bế Quan (Nhập Định)</option>
   <option value="danh_quai" ${isDanhQuai ? "selected" : ""}>⚔️ Đánh Quái (Săn Yêu)</option>
 </select>
       </label>
-      <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px">
-<span><b>Mục Tiêu Đại Cảnh Giới</b></span>
-<select class="vk-sel" id="au-tl-realm" style="width:190px;font-weight:600">
+      <label class="vkx-fld-tile">
+<div class="vkx-fld-top"><span class="vkx-fld-lbl">🏔️ Mục Tiêu Đại Cảnh Giới</span></div>
+<select class="vk-sel vkx-fld-ctl" id="au-tl-realm" style="font-weight:600">
   <option value="0" ${c.targetRealm === 0 ? "selected" : ""}>♾️ Không Giới Hạn (Farm Liên Tục)</option>
   <option value="1" ${c.targetRealm === 1 ? "selected" : ""}>Luyện Khí</option>
   <option value="2" ${c.targetRealm === 2 ? "selected" : ""}>Trúc Cơ</option>
@@ -67,9 +68,9 @@ Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự t
   <option value="5" ${c.targetRealm === 5 || c.targetRealm == null ? "selected" : ""}>Hóa Thần (Đỉnh Nhân Giới)</option>
 </select>
       </label>
-      <label id="au-tl-sub-realm-wrap" style="display:${c.targetRealm === 0 ? "none" : "flex"};justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px">
-<span><b>Mục Tiêu Tiểu Cảnh Giới</b></span>
-<select class="vk-sel" id="au-tl-sub-realm" style="width:190px">
+      <label class="vkx-fld-tile" id="au-tl-sub-realm-wrap" style="display:${c.targetRealm === 0 ? "none" : "flex"}">
+<div class="vkx-fld-top"><span class="vkx-fld-lbl">✨ Mục Tiêu Tiểu Cảnh Giới</span></div>
+<select class="vk-sel vkx-fld-ctl" id="au-tl-sub-realm">
   <option value="-1" ${c.targetSubRealm === -1 ? "selected" : ""}>Bất kỳ (Chạm cảnh giới là đạt)</option>
   <option value="0" ${c.targetSubRealm === 0 ? "selected" : ""}>Sơ kỳ</option>
   <option value="1" ${c.targetSubRealm === 1 ? "selected" : ""}>Trung kỳ</option>
@@ -78,6 +79,7 @@ Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự t
   <option value="4" ${c.targetSubRealm === 4 ? "selected" : ""}>Đại viên mãn (Tu vi đầy 100%)</option>
 </select>
       </label>
+      </div>
       ${auFld("au-tl-rate", "Tỉ Lệ Đột Phá An Toàn Tối Thiểu", c.minSafeRate, "(%)")}
       ${auFld("au-tl-tho", "Dừng Khi Thọ Nguyên Còn Dưới", c.minTho, "(năm)")}
       ${auTocSel(c.toc)}
@@ -185,11 +187,11 @@ ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
 function tabAutoTacChien() {
   const c = AU.cfg.tc;
   const row = (lab, ctl) =>
-    `<label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;font-size:13px"><span>${lab}</span>${ctl}</label>`;
+    `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">${lab}</span></div>${ctl}</label>`;
   const sel = (id, lab, opts, v) =>
     row(
       lab,
-      `<select class="vk-sel" id="${id}" style="width:245px">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
+      `<select class="vk-sel vkx-fld-ctl" id="${id}">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
     );
 
   const lastBattle = gWin.__vkLastCombat;
