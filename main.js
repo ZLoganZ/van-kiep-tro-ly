@@ -35,8 +35,7 @@ import "./src/auto/auto-reroll.js";
 import "./src/auto/auto-runner.js";
 import "./src/auto/auto-tabs.js";
 
-// 5. Biệt Đội Late Game, Luân Hồi / Save & Nhật Ký Cập Nhật
-import "./src/modules/biet-doi-late-game.js";
+// 5. Luân Hồi / Save & Nhật Ký Cập Nhật
 import "./src/modules/luan-hoi-save.js";
 import { NhatKy } from "./src/modules/nhat-ky.js";
 

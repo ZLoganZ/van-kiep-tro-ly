@@ -125,10 +125,7 @@ var UI = (function () {
         }
       } catch (e) {}
     }
-    flushTitleCase = function () {
-      fixNode(win);
-      fixNode(toastEl);
-    };
+    flushTitleCase = function () {};
     flushTitleCase();
   })();
 

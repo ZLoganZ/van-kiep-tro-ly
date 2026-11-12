@@ -2819,35 +2819,41 @@ table.au-tb tr:last-child td {
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35), 0 0 12px var(--hi) !important;
 }
 
-/* 6. TÁI CẤU TRÚC CÁCH XẾP FIELD: LƯỚI Ô ĐIỀU KHIỂN 2 CỘT (.vkx-fld-tile & Smart Label Grid) */
-.vkx-fld-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 8px;
-  margin: 6px 0;
+/* 6. TÁI CẤU TRÚC CÁCH XẾP FIELD: BENTO GRID (.vkx-fld-grid) & THANH ĐIỀU KHIỂN NGANG 100% (.vkx-ctl-row) */
+
+/* Bảo toàn ẩn phần tử khi JS gán display: none */
+#vkx-win [style*="display: none"],
+#vkx-win [style*="display:none"] {
+  display: none !important;
 }
-.vkx-fld-tile,
-#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]) {
-  display: inline-flex !important;
+
+/* 6.1. Lưới Ô Điều Khiển Bento (.vkx-fld-grid): Tự động chia 2–3 cột cân đối 100% chiều ngang, KHÔNG BAO GIỜ bị lẻ cột 50% */
+#vkx-win .vkx-fld-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 7px 0 !important;
+  box-sizing: border-box !important;
+}
+#vkx-win .vkx-fld-grid > .vkx-fld-tile {
+  display: flex !important;
   flex-direction: column !important;
   justify-content: space-between !important;
   align-items: stretch !important;
   gap: 6px !important;
-  width: calc(50% - 6px) !important;
-  margin: 4px 2px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
   padding: 9px 11px !important;
   background: rgba(0, 0, 0, 0.32) !important;
   border: 1px solid rgba(255, 255, 255, 0.09) !important;
   border-radius: 11px !important;
-  vertical-align: top !important;
-  transition: border-color 0.16s ease, background 0.16s ease, transform 0.15s ease;
+  box-sizing: border-box !important;
+  transition: border-color 0.16s ease, background 0.16s ease;
 }
-.vkx-fld-grid > .vkx-fld-tile {
-  width: 100% !important;
-  margin: 0 !important;
-}
-.vkx-fld-tile:hover,
-#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]):hover {
+#vkx-win .vkx-fld-grid > .vkx-fld-tile:hover {
   border-color: var(--acc) !important;
   background: rgba(255, 255, 255, 0.035) !important;
 }
@@ -2858,8 +2864,7 @@ table.au-tb tr:last-child td {
   gap: 6px;
   flex-wrap: wrap;
 }
-.vkx-fld-lbl,
-#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]) > span {
+.vkx-fld-lbl {
   font-size: 12px !important;
   font-weight: 700 !important;
   color: var(--txt) !important;
@@ -2870,12 +2875,60 @@ table.au-tb tr:last-child td {
   font-size: 10.5px;
   color: var(--mut);
 }
-.vkx-fld-ctl,
-#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]) > select,
-#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]) > input {
+#vkx-win .vkx-fld-grid .vkx-fld-ctl {
   width: 100% !important;
   max-width: 100% !important;
-  text-align: left !important;
+  padding: 6.5px 10px !important;
+  border-radius: 8px !important;
+  background: rgba(5, 9, 20, 0.78) !important;
+  border: 1px solid var(--glass-border) !important;
+  font-weight: 700 !important;
+  color: var(--acc2) !important;
+  box-sizing: border-box !important;
+}
+
+/* 6.2. Mọi ô .vkx-fld-tile đứng LẺ ngoài .vkx-fld-grid HOẶC .vkx-ctl-row HOẶC label có select/input ở các tab khác:
+   Luôn trải rộng 100% chiều ngang (Label bên trái — Ô chọn/nhập bên phải), KHÔNG BAO GIỜ bị co 50% bên trái! */
+#vkx-win .vk-card > .vkx-fld-tile,
+#vkx-win .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile,
+#vkx-win .vkx-ctl-row,
+#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]):not(.vkx-fld-tile) {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 6px 0 !important;
+  padding: 8px 12px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.085) !important;
+  border-radius: 10px !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+#vkx-win .vk-card > .vkx-fld-tile:hover,
+#vkx-win .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile:hover,
+#vkx-win .vkx-ctl-row:hover,
+#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]):not(.vkx-fld-tile):hover {
+  border-color: var(--acc) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+}
+.vkx-ctl-lbl,
+#vkx-win .vk-card label:has(> select, > input[type="number"], > input[type="text"]):not(.vkx-fld-tile) > span {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: var(--txt) !important;
+  flex: 1 1 auto !important;
+  min-width: 120px !important;
+}
+.vkx-ctl-sel,
+#vkx-win .vk-card label:has(> select):not(.vkx-fld-tile) > select {
+  flex: 0 1 340px !important;
+  width: auto !important;
+  min-width: 180px !important;
+  max-width: 60% !important;
   padding: 6.5px 10px !important;
   border-radius: 8px !important;
   background: rgba(5, 9, 20, 0.78) !important;
@@ -2883,10 +2936,40 @@ table.au-tb tr:last-child td {
   font-weight: 600 !important;
   color: var(--acc2) !important;
 }
-#vkx-win.vkx-m .vkx-fld-tile,
-#vkx-win.vkx-m .vk-card label:has(> select, > input[type="number"], > input[type="text"]) {
+#vkx-win .vk-card > .vkx-fld-tile > .vkx-fld-ctl,
+#vkx-win .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile > .vkx-fld-ctl,
+#vkx-win .vk-card label:has(> input[type="number"]):not(.vkx-fld-tile) > input[type="number"] {
+  flex: 0 0 120px !important;
+  width: 120px !important;
+  text-align: right !important;
+  padding: 6.5px 10px !important;
+  border-radius: 8px !important;
+  background: rgba(5, 9, 20, 0.78) !important;
+  border: 1px solid var(--glass-border) !important;
+  font-weight: 700 !important;
+  color: var(--acc2) !important;
+}
+#vkx-win.vkx-m .vkx-ctl-row,
+#vkx-win.vkx-m .vk-card label:has(> select):not(.vkx-fld-tile) {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 6px !important;
+}
+#vkx-win.vkx-m .vkx-ctl-sel,
+#vkx-win.vkx-m .vk-card label:has(> select):not(.vkx-fld-tile) > select {
+  max-width: 100% !important;
   width: 100% !important;
-  margin: 4px 0 !important;
+  flex: 1 1 auto !important;
+}
+
+/* Lưới 2x2 cho 4 thẻ màu độ nguy hiểm (.vkx-mau-grid) */
+.vkx-mau-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: 7px !important;
+}
+.vkx-mau-grid > label {
+  margin: 0 !important;
 }
 
 /* 7. BIẾN TOÀN BỘ CHECKBOX THÀNH CÔNG TẮC GẠT (SLIDING TOGGLE SWITCH CARDS) */
@@ -2937,12 +3020,14 @@ table.au-tb tr:last-child td {
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
   cursor: pointer !important;
   transition: all 0.16s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 #vkx-win .vk-card label:has(input[type="checkbox"]):not(.au-sdb-relic-card):not(.tc-sw):not([style*="inline-flex"]):hover {
   border-color: var(--line) !important;
   background: rgba(255, 255, 255, 0.04) !important;
 }
-#vkx-win .vk-card label:has(input[type="checkbox"]:checked):not(.au-sdb-relic-card):not(.tc-sw) {
+#vkx-win .vk-card label:has(input[type="checkbox"]:checked):not(.au-sdb-relic-card):not(.tc-sw):not([style*="inline-flex"]) {
   border-color: rgba(16, 185, 129, 0.42) !important;
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(56, 189, 248, 0.05)) !important;
 }
@@ -3116,7 +3201,6 @@ table.au-tb tr:last-child td {
   color: #fff !important;
 }
 
-
 /* 9. THẺ MODULE (.vk-card), TIÊU ĐỀ BANNER (h3) & DÒNG DỮ LIỆU PILL BOX (.vk-row) */
 .vk-card {
   position: relative;
@@ -3222,6 +3306,7 @@ table.au-tb tr:last-child td {
   font-size: 22px;
   line-height: 1;
   background: linear-gradient(135deg, #ffffff 0%, var(--acc) 55%, var(--acc2) 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;
@@ -3239,11 +3324,7 @@ table.au-tb tr:last-child td {
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.75), 0 0 22px rgba(16, 185, 129, 0.65) !important;
 }
 
-/* ═════════════════════════════════════════════════════════════════════════
-   10. KHẮC PHỤC TRIỆT ĐỂ LỖI TRÀN KHUNG NGANG, CẮT TAB & CHỒNG LẤP (v8.0.0 FINAL)
-   ═════════════════════════════════════════════════════════════════════════ */
-
-/* 10.1. Khóa chặt chiều rộng cột phải bằng minmax(0, 1fr) để KHÔNG BAO GIỜ tràn khung phải */
+/* 10. KHÓA CHẶT BỐ CỤC LƯỚI CỘT PHẢI & THANH TAB CON */
 #vkx-win.vkx-wide #vkx-sec-tl.on {
   display: grid !important;
   grid-template-columns: 104px minmax(0, 1fr) !important;
@@ -3302,8 +3383,6 @@ table.au-tb tr:last-child td {
   grid-column: 2 !important;
   grid-row: 1 !important;
 }
-
-/* Đảm bảo mọi phần tử bên trong #vkx-body tuân thủ tuyệt đối chiều rộng khung */
 #vkx-body,
 #vkx-nk-body,
 #vkx-win .vk-card,
@@ -3319,8 +3398,6 @@ table.au-tb tr:last-child td {
   box-sizing: border-box !important;
   text-overflow: ellipsis !important;
 }
-
-/* 10.2. Xóa bỏ hoàn toàn vòng tròn .vkx-tab-glider đè lệch & Cho phép #vkx-tabs tự xuống dòng hiển thị đủ 100% Tab */
 #vkx-win .vkx-tab-glider {
   display: none !important;
   width: 0 !important;
@@ -3370,53 +3447,6 @@ table.au-tb tr:last-child td {
   color: var(--acc2) !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 12px var(--glow) !important;
 }
-
-/* 10.3. Sửa triệt để lỗi co hẹp 50% trong .vkx-fld-grid & Căn chỉnh các ô nhập liệu/dropdown */
-#vkx-win .vk-card .vkx-fld-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)) !important;
-  gap: 8px !important;
-  width: 100% !important;
-  margin: 6px 0 !important;
-}
-#vkx-win .vk-card .vkx-fld-grid > .vkx-fld-tile,
-#vkx-win .vk-card .vkx-fld-grid > label:has(> select, > input[type="number"], > input[type="text"]) {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-/* Các ô .vkx-fld-tile có input số đứng ngoài .vkx-fld-grid xếp 2 cột chuẩn xác */
-#vkx-win .vk-card > .vkx-fld-tile:has(input[type="number"]),
-#vkx-win .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile:has(input[type="number"]) {
-  width: calc(50% - 5px) !important;
-  margin: 4px 2px !important;
-  display: inline-flex !important;
-  vertical-align: top !important;
-}
-/* Các ô .vkx-fld-tile có <select> đứng ngoài .vkx-fld-grid (như Tốc Độ Nhịp Auto, Mục Tiêu Săn Yêu, các chế độ AI 3.0 có chữ dài) cho rộng 100% dạng 2 cột ngang (Label trái - Select phải) để đọc trọn vẹn chữ mà không bị cắt */
-#vkx-win .vk-card > .vkx-fld-tile:has(select),
-#vkx-win .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile:has(select),
-#vkx-win .vk-card label.vk-row:has(> select, > input[type="number"], > input[type="text"]) {
-  width: 100% !important;
-  margin: 5px 0 !important;
-  display: grid !important;
-  grid-template-columns: minmax(140px, 1fr) minmax(180px, 1.25fr) !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-#vkx-win.vkx-m .vk-card > .vkx-fld-tile:has(select),
-#vkx-win.vkx-m .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile:has(select),
-#vkx-win.vkx-m .vk-card > .vkx-fld-tile:has(input[type="number"]),
-#vkx-win.vkx-m .vk-card > div:not(.vkx-fld-grid) > .vkx-fld-tile:has(input[type="number"]) {
-  width: 100% !important;
-  margin: 4px 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* 10.4. Thanh Header & Thanh Linh Giác Nhân Vật tự co giãn mượt không tràn nút */
 #vkx-char-hud {
   flex-wrap: wrap !important;
   row-gap: 5px !important;
@@ -3428,4 +3458,3 @@ table.au-tb tr:last-child td {
 .vkx-hud-actions {
   margin-left: auto !important;
 }
-

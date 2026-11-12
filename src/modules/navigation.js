@@ -45,7 +45,6 @@ TABS.push(
   ["asy", "Auto Săn Yêu"],
   ["abb", "Auto Buôn Bán"],
   ["akm", "Hướng Build"],
-  ["bis", "Biệt Đội Late Game"],
   ["arr", "Auto Reroll Tư Chất"],
 );
 TABS.push(
@@ -65,7 +64,7 @@ const GROUPS = [
   ["nl", "Ngự Linh", ["nlw", "nlm", "nls", "nlv", "nlc"]],
   ["lh", "Luân Hồi", ["lhs", "lht", "lhd", "sv"]],
   ["nm", "Nhân Mạch", ["tkb", "nmn"]],
-  ["au", "Tự Động", ["atl", "atc", "asdb", "abb", "akm", "bis", "arr"]],
+  ["au", "Tự Động", ["atl", "atc", "asdb", "abb", "akm", "arr"]],
 ];
 const grpOf = (k) => GROUPS.find((g) => g[2].includes(k)) || GROUPS[0];
 S.tab = "tq";
@@ -140,7 +139,6 @@ function drawTabs() {
     asy: "🏹",
     abb: "⚖️",
     akm: "🧬",
-    bis: "🏆",
     arr: "🎲",
   };
 
@@ -365,7 +363,7 @@ async function render() {
       });
     }
   };
-  if (S.tab === "km" || S.tab === "bld") S.tab = "akm"; // hai tab cũ đã gộp vào Hướng Build
+  if (S.tab === "km" || S.tab === "bld" || S.tab === "bis") S.tab = "akm"; // hai tab cũ đã gộp vào Hướng Build
   if (S.tab === "do") S.tab = "db"; // tab Dò Đồ Quý cũ đã quy về Dị Bảo
   drawTabs();
   refreshMiniStatus();
@@ -480,7 +478,6 @@ async function render() {
         tabAutoTuLuyen();
       },
       akm: tabAutoKm,
-      bis: tabBis,
       arr: tabAutoReroll,
     })[S.tab]();
   } catch (e) {

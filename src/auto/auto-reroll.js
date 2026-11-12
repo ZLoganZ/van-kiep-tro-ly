@@ -705,8 +705,10 @@ function tabAutoReroll() {
 c.join,
       )}
       <div style="margin:10px 0 2px"><b style="font-size:13px">Chạy</b></div>
-      ${auFld("rr-max", "Số Lần Thử Tối Đa", c.max, "(1 – 200.000)")}
-      ${auTocSel(c.toc)}
+      <div class="vkx-fld-grid">
+        ${auFld("rr-max", "🎲 Số Lần Thử Tối Đa", c.max, "(1 – 200.000)")}
+        ${auTocSel(c.toc)}
+      </div>
       ${sel("rr-dl", "Đạo Lộ", RR_DAOLO, c.dl)}
       <div class="vk-mu" style="font-size:11px;margin:-2px 0 4px">Đạo Lộ chọn lúc vào kiếp, không đổi giữa chừng: Thuận Thiên (${RR_DAOLO_HINT.easy}), Trung Đạo (${RR_DAOLO_HINT.normal}), Nghịch Thiên (${RR_DAOLO_HINT.hardcore}), Tuyệt Mệnh (${RR_DAOLO_HINT.oneLife}). Dò và tạo kiếp thật đều theo Đạo Lộ này.</div>
       <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="rr-lp" ${c.lp ? "checked" : ""} style="margin-top:3px"><span>Mua Hết Lộ Phí Qua Sông <span class="vk-mu" style="font-size:11px">(chỉ mua khi đã tìm được tư chất, ngay trước lúc vào kiếp mới; món chỉ dùng một kiếp, mua rồi không hoàn điểm; Dò Tỉ Lệ không mua)</span></span></label>

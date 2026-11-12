@@ -45,7 +45,6 @@ const SRC_MODULES = [
   "src/auto/auto-reroll.js",
   "src/auto/auto-runner.js",
   "src/auto/auto-tabs.js",
-  "src/modules/biet-doi-late-game.js",
   "src/modules/luan-hoi-save.js",
   "src/modules/nhat-ky.js"
 ];

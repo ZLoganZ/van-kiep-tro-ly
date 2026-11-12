@@ -529,6 +529,18 @@ function auPick(v, opt) {
     (opt && (opt.hunt || opt.isDanhQuai)) ||
     (AU.cfg && AU.cfg.tl && AU.cfg.tl.mode === "danh_quai");
 
+  // Nếu đang chạy Auto Buôn Bán (opt.buon): ưu tiên rút lui/bỏ qua mọi sự kiện dọc đường để bảo toàn vốn & thời gian
+  if (opt && opt.buon) {
+    const leaveRoad = cs.find(
+      (x) =>
+        x.thoat ||
+        /rời|thôi|bỏ qua|tiếp tục|đi tiếp|quay đi|không quan tâm|từ chối|nhường/i.test(
+          x.text || "",
+        ),
+    );
+    if (leaveRoad) return leaveRoad;
+  }
+
   // Ưu tiên số 1: Xử lý sự kiện Dị Bảo (tránh bị encGivesTuVi cướp quyền chọn nhánh phụ)
   const isRelicEv =
     (v && v.id && v.id.startsWith("ev.di_bao")) ||
@@ -796,6 +808,7 @@ async function auLoop() {
         break;
       }
       const sig0 = auSig();
+      const phase0 = st.phase;
       const res = await (st.kind === "buon"
         ? auBuonStep(st)
         : st.kind === "tl"
@@ -808,7 +821,7 @@ async function auLoop() {
         st.msg = res.stop;
         break;
       }
-      if (auSig() === sig0 && st.phase !== "plan") {
+      if (auSig() === sig0 && st.phase === phase0 && st.phase !== "plan") {
         if (++st.stuck >= 4) {
           st.msg =
             "Không tiến triển thêm (trạng thái game đứng yên). Kiểm tra trong game rồi chạy lại.";

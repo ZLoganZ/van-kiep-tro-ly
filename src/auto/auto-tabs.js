@@ -53,9 +53,11 @@ Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự t
 </select>
       </label>
       </div>
-      ${auFld("au-tl-rate", "Tỉ Lệ Đột Phá An Toàn Tối Thiểu", c.minSafeRate, "(%)")}
-      ${auFld("au-tl-tho", "Dừng Khi Thọ Nguyên Còn Dưới", c.minTho, "(năm)")}
-      ${auTocSel(c.toc)}
+      <div class="vkx-fld-grid">
+        ${auFld("au-tl-rate", "🎯 Tỉ Lệ Đột Phá Tối Thiểu", c.minSafeRate, "(%)")}
+        ${auFld("au-tl-tho", "⏳ Dừng Khi Thọ Nguyên Dưới", c.minTho, "(năm)")}
+        ${auTocSel(c.toc)}
+      </div>
 
       <!-- KHỐI TÙY CHỌN BẾ QUAN -->
       <div id="au-tl-be-quan-box" style="display:${!isDanhQuai ? "block" : "none"};border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:6px;padding:8px 10px;margin:8px 0">
@@ -74,10 +76,12 @@ Hỗ trợ 2 phương thức tu luyện: <b>Bế Quan Nhập Định</b> (tự t
     <option value="chi_dau_dan" ${c.sanMucTieu === "chi_dau_dan" ? "selected" : ""}>🔥 Chỉ Săn Đầu Đàn (Bỏ qua thú thường)</option>
   </select>
 </label>
-${auFld("au-tl-maxy", "Mỗi Chặng Đi Tối Đa", c.maxY != null ? c.maxY : 3, "(năm)")}
-<div style="margin:8px 0 4px">${auMauHtml(c.mau || ["an_toan", "ngang_suc", "hiem"], "au-tl-mau")}</div>
-${auFld("au-tl-tran", "Dừng Sau Số Trận (0 = không giới hạn, đánh tới khi viên mãn)", c.tran != null ? c.tran : 20)}
-${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
+<div class="vkx-fld-grid">
+  ${auFld("au-tl-maxy", "🧭 Mỗi Chặng Đi Tối Đa", c.maxY != null ? c.maxY : 3, "(năm)")}
+  ${auFld("au-tl-tran", "⚔️ Dừng Sau Số Trận", c.tran != null ? c.tran : 20, "(0 = vô hạn)")}
+  ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
+</div>
+<div class="vkx-mau-grid" style="margin:8px 0">${auMauHtml(c.mau || ["an_toan", "ngang_suc", "hiem"], "au-tl-mau")}</div>
 <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-auto-duong-thuong" ${c.autoDuongThuong !== false ? "checked" : ""} style="margin-top:3px"><span><b>🩺 Tự Động Trị Thương & Tĩnh Dưỡng (Không dừng Auto)</b> <span class="vk-mu" style="font-size:11px">(Tự nuốt đan dược chữa thương trong túi; nếu hết đan sẽ tự động bế quan ngắn 1 năm để vết thương tự lành lặn và tích thêm tu vi, sau đó tiếp tục đi săn)</span></span></label>
 <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-uu-tien-cap-nen" ${c.uuTienCapNen !== false ? "checked" : ""} style="margin-top:3px"><span><b>🎯 Ưu Tiên Bãi Săn Sát Cảnh Giới Nhân Vật (Tối Ưu Tu Vi)</b> <span class="vk-mu" style="font-size:11px">(Chọn bãi hoang dã có cấp cảnh giới sát nhân vật nhất để nhận được lượng tu vi lớn nhất mỗi trận)</span></span></label>
 <label style="display:flex;gap:6px;align-items:flex-start;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tl-nehac" ${c.neHac !== false ? "checked" : ""} style="margin-top:3px"><span><b>Tránh Đánh Các Loại Hạc (Giữ Khí Vận)</b> <span class="vk-mu" style="font-size:11px">(Bạch Hạc Linh, Thanh Vũ Ấu Hạc... tự chọn Bỏ Đi khi gặp để không bị trừ Khí Vận)</span></span></label>
@@ -160,11 +164,11 @@ ${auTTSel(c.thuong != null ? c.thuong : 2, "au-tl-thuong")}
 function tabAutoTacChien() {
   const c = AU.cfg.tc;
   const row = (lab, ctl) =>
-    `<label class="vkx-fld-tile"><div class="vkx-fld-top"><span class="vkx-fld-lbl">${lab}</span></div>${ctl}</label>`;
+    `<label class="vkx-ctl-row"><span class="vkx-ctl-lbl">${lab}</span>${ctl}</label>`;
   const sel = (id, lab, opts, v) =>
     row(
       lab,
-      `<select class="vk-sel vkx-fld-ctl" id="${id}">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
+      `<select class="vk-sel vkx-ctl-sel" id="${id}">${opts.map(([k, t]) => `<option value="${esc(k)}" ${String(v) === String(k) ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`,
     );
 
   const lastBattle = gWin.__vkLastCombat;
@@ -298,8 +302,10 @@ Tự động tính chính xác lượng hồi sau khi trừ <b>Dược Kháng</b
 ],
 c.healPillMode || "smart",
       )}
-      ${auFld("au-tc-heal-hp", "Ngưỡng Máu Tự Cắn Đan Thường", c.healHpThreshold != null ? c.healHpThreshold : 35, "(% HP)")}
-      ${auFld("au-tc-heal-panic-hp", "Ngưỡng Máu An Toàn Trước Đại Chiêu Boss", c.healBossPanicHp != null ? c.healBossPanicHp : 55, "(% HP — tự cắn đan sớm khi địch tụ nộ)")}
+      <div class="vkx-fld-grid">
+        ${auFld("au-tc-heal-hp", "❤️ Ngưỡng Máu Tự Cắn Đan Thường", c.healHpThreshold != null ? c.healHpThreshold : 35, "(% HP)")}
+        ${auFld("au-tc-heal-panic-hp", "🚨 Ngưỡng Máu Trước Đại Chiêu Boss", c.healBossPanicHp != null ? c.healBossPanicHp : 55, "(% HP — cắn sớm khi địch tụ nộ)")}
+      </div>
       ${sel(
 "au-tc-spirit-mode",
 "💧 Chế Độ Cắn Đan Hồi Linh Lực (Mana)",
@@ -326,9 +332,11 @@ c.spiritPillMode || "on_demand",
 ],
 c.burstPillMode || "boss_combo",
       )}
-      ${auFld("au-tc-max-resist", "Trần Dược Kháng Tối Đa Cho Phép", c.maxDrugResistance != null ? c.maxDrugResistance : 70, "(% Kháng — tự vượt trần nếu máu < 20%)")}
-      ${auFld("au-tc-pill-grade-norm", "Phẩm Đan Tối Đa Khi Đánh Quái Thường", c.maxPillGradeNormal != null ? c.maxPillGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên — giữ đan quý)")}
-      ${auFld("au-tc-pill-grade", "Phẩm Đan Tối Đa Khi Đánh Boss / Tâm Ma", c.maxPillGrade != null ? c.maxPillGrade : 6, "(1: Phàm → 8: Nghịch Thiên)")}
+      <div class="vkx-fld-grid">
+        ${auFld("au-tc-max-resist", "🛡️ Trần Dược Kháng Tối Đa", c.maxDrugResistance != null ? c.maxDrugResistance : 70, "(% Kháng)")}
+        ${auFld("au-tc-pill-grade-norm", "💊 Phẩm Đan Tối Đa (Quái Thường)", c.maxPillGradeNormal != null ? c.maxPillGradeNormal : 4, "(Phẩm 1 → 8)")}
+        ${auFld("au-tc-pill-grade", "👑 Phẩm Đan Tối Đa (Boss / Tâm Ma)", c.maxPillGrade != null ? c.maxPillGrade : 6, "(Phẩm 1 → 8)")}
+      </div>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-cleanse-pill" ${c.cleansePillMode !== false ? "checked" : ""}> <b>Tự Dùng Đan Giải Độc / Thanh Tâm / Hộ Thể:</b> Xóa chồng độc, xuất huyết, thiêu đốt hoặc uống đan khiên khi nguy cấp</label>
     </div>
 
@@ -388,8 +396,10 @@ c.ccTalismanMode || "interrupt",
 ],
 c.atkTalismanMode || "smart_weave",
       )}
-      ${auFld("au-tc-talisman-grade-norm", "Phẩm Phù Tối Đa Khi Đánh Quái Thường", c.talismanGradeNormal != null ? c.talismanGradeNormal : 4, "(1: Phàm → 8: Nghịch Thiên)")}
-      ${auFld("au-tc-talisman-grade", "Phẩm Phù Tối Đa Khi Đánh Boss / Tâm Ma", c.talismanGrade != null ? c.talismanGrade : 6, "(1: Phàm → 8: Nghịch Thiên)")}
+      <div class="vkx-fld-grid">
+        ${auFld("au-tc-talisman-grade-norm", "🧧 Phẩm Phù Tối Đa (Quái Thường)", c.talismanGradeNormal != null ? c.talismanGradeNormal : 4, "(Phẩm 1 → 8)")}
+        ${auFld("au-tc-talisman-grade", "👑 Phẩm Phù Tối Đa (Boss / Tâm Ma)", c.talismanGrade != null ? c.talismanGrade : 6, "(Phẩm 1 → 8)")}
+      </div>
       ${sel(
 "au-tc-formation-mode",
 "阵 Chế Độ Khai Triển Trận Bàn (bay_tran)",
@@ -408,8 +418,10 @@ c.formationMode || "boss_or_danger",
 
     <div class="vk-card">
       <h3>⚡ AI Dùng Chiêu Thông Minh &amp; Phối Hợp Liên Hoàn</h3>
-      ${auFld("au-tc-heal-skill-hp", "Ngưỡng Máu Dùng Kỹ Năng Hồi Phục", c.healSkillThreshold != null ? c.healSkillThreshold : 75, "(% HP — tự hồi máu bằng chiêu)")}
-      ${auFld("au-tc-shield-skill-hp", "Ngưỡng Khiên Duy Trì Kỹ Năng Hộ Thuẫn", c.shieldSkillThreshold != null ? c.shieldSkillThreshold : 40, "(% so với HP tối đa)")}
+      <div class="vkx-fld-grid">
+        ${auFld("au-tc-heal-skill-hp", "💚 Ngưỡng Máu Dùng Chiêu Hồi Phục", c.healSkillThreshold != null ? c.healSkillThreshold : 75, "(% HP)")}
+        ${auFld("au-tc-shield-skill-hp", "🛡️ Ngưỡng Khiên Duy Trì Chiêu Thuẫn", c.shieldSkillThreshold != null ? c.shieldSkillThreshold : 40, "(% HP tối đa)")}
+      </div>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-combo" ${c.comboSequence !== false ? "checked" : ""}> <b>Chuỗi Liên Hoàn 5 Bước:</b> Buff Bộc Phát ➔ Phá Giáp / Ấn Ký ➔ Đại Chiêu Khắc Hệ / Kích Nổ ➔ Quyền Cước</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-prevent-overkill" ${c.preventOverkill !== false ? "checked" : ""}> <b>Chống Tràn Sát Thương (Anti-Overkill):</b> Tự chọn chiêu nhỏ tốn ít mana để kết liễu quái sắp chết, giữ lại Đại Chiêu</label>
       <label style="display:flex;gap:6px;align-items:center;margin:6px 0;font-size:13px"><input type="checkbox" id="au-tc-aoe-prio" ${c.aoePriority !== false ? "checked" : ""}> <b>Ưu Tiên Kỹ Năng Quần Thể (AoE):</b> Tự động ưu tiên chiêu diện rộng khi giao chiến với từ 2 kẻ địch trở lên</label>
@@ -901,19 +913,16 @@ ${radarHtml}
 </div>
 
 <!-- Cụm C: Giới hạn an toàn & Tốc độ -->
-<div style="background:var(--bg2);padding:8px 10px;border-radius:8px;border:1px solid var(--line);margin-top:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-  <div style="display:flex;align-items:center;gap:6px;font-size:12px">
-    <span>Tốc độ:</span>
-    ${auTocSel(c.toc || "nhanh")}
-  </div>
-  <div style="display:flex;align-items:center;gap:6px;font-size:12px">
-    <span>Dừng khi thọ &lt;:</span>
-    <input type="number" id="au-sdb-tho" class="vk-inp" value="${c.minTho || 15}" min="1" max="1000" style="width:60px;padding:3px 6px;font-size:12px;text-align:center"> năm
-  </div>
-  <div style="display:flex;align-items:center;gap:6px;font-size:12px">
-    <span>Dừng sau:</span>
-    <input type="number" id="au-sdb-maxnam" class="vk-inp" value="${c.maxNam || 100}" min="1" max="1000" style="width:60px;padding:3px 6px;font-size:12px;text-align:center"> năm
-  </div>
+<div class="vkx-fld-grid" style="margin-top:8px">
+  ${auTocSel(c.toc || "nhanh")}
+  <label class="vkx-fld-tile">
+    <div class="vkx-fld-top"><span class="vkx-fld-lbl">⏳ Dừng Khi Thọ Nguyên Dưới</span><em class="vkx-fld-hint">(năm)</em></div>
+    <input type="number" id="au-sdb-tho" class="vk-sel vkx-fld-ctl" value="${c.minTho || 15}" min="1" max="1000">
+  </label>
+  <label class="vkx-fld-tile">
+    <div class="vkx-fld-top"><span class="vkx-fld-lbl">🗓️ Dừng Sau Số Năm Tối Đa</span><em class="vkx-fld-hint">(năm)</em></div>
+    <input type="number" id="au-sdb-maxnam" class="vk-sel vkx-fld-ctl" value="${c.maxNam || 100}" min="1" max="1000">
+  </label>
 </div>
       </div>
     </div>
@@ -1139,15 +1148,17 @@ function tabAutoBuon() {
   body.innerHTML = `
     <div class="vk-card"><h3>Auto Buôn Bán</h3>
       <div class="vk-mu" style="font-size:13px">Tool dò các tiệm quanh đây, tìm chuyến <b>mua rẻ ở nơi này, bán đắt ở nơi kia</b> (hàng buôn theo vùng, chênh giá theo quốc gia) rồi tự đi, mua, đi tiếp, bán. <b>Bán xuyên khoảng cách:</b> nơi bán không bị gói trong bán kính mua; mua xong, Auto dò lại mọi tiệm thu món đó trong <b>Phạm Vi Bán</b> (năm đường tính từ nơi mua), chọn tiệm lãi nhất mỗi năm đường, và nếu tiệm đó không thu, giá thật thấp hơn vốn hay chợ chỉ thu được một phần thì tự sang tiệm kế trong phạm vi để bán nốt. Tool tính cả <b>Chợ Ngập Hàng</b>: bán càng nhiều giá càng tụt và tiệm ngừng thu khi chợ đã ngập, nên chỉ mua số món tiệm bán còn thu nổi. Giá thật được kiểm lại ở từng tiệm; giá bán thấp hơn vốn thì dừng và giữ hàng. Mỗi chuyến tốn năm tuổi thọ theo đường đi.</div>
-      ${auFld("au-maxy", "Đi Mua Tối Đa", c.maxY, "(năm đường từ chỗ đứng)")}
-      ${auFld("au-bany", "Phạm Vi Bán Xuyên", c.banY, "(năm đường từ nơi mua)")}
-      ${auHiemSel(c.hiem)}
-      ${auTocSel(c.toc)}
-      ${auFld("au-von", "Vốn Dùng Mỗi Chuyến", c.von, "(% Linh Thạch)")}
-      ${auFld("au-giu", "Luôn Giữ Lại", c.giu, "(Linh Thạch)")}
-      ${auFld("au-lai", "Lãi Tối Thiểu Mỗi Món", c.lai, "(%)")}
-      ${auFld("au-chuyen", "Dừng Sau Số Chuyến", c.chuyen)}
-      ${auFld("au-tho", "Dừng Khi Thọ Nguyên Còn Dưới", c.tho, "(năm)")}
+      <div class="vkx-fld-grid">
+        ${auFld("au-maxy", "🧭 Đi Mua Tối Đa", c.maxY, "(năm từ chỗ đứng)")}
+        ${auFld("au-bany", "🚀 Phạm Vi Bán Xuyên", c.banY, "(năm từ nơi mua)")}
+        ${auHiemSel(c.hiem)}
+        ${auTocSel(c.toc)}
+        ${auFld("au-von", "💰 Vốn Dùng Mỗi Chuyến", c.von, "(% Linh Thạch)")}
+        ${auFld("au-giu", "🏦 Luôn Giữ Lại", c.giu, "(Linh Thạch)")}
+        ${auFld("au-lai", "📈 Lãi Tối Thiểu Mỗi Món", c.lai, "(%)")}
+        ${auFld("au-chuyen", "🔄 Dừng Sau Số Chuyến", c.chuyen, "(chuyến)")}
+        ${auFld("au-tho", "⏳ Dừng Khi Thọ Nguyên Dưới", c.tho, "(năm)")}
+      </div>
       ${auControls()}
       <button class="vk-btn sec" id="au-plan" style="margin-top:6px">Xem Kế Hoạch (Không Đi)</button>${progressHtml("au-pr")}<div id="au-info"></div></div>
     <div class="vk-card"><h3>Tiến Trình</h3><div id="au-st"></div></div>

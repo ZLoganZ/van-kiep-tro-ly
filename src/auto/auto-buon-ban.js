@@ -339,43 +339,88 @@ function auSetSell(st, cand) {
 function auGoStep(st, slot, encId) {
   const g = G(),
     run = g.state.run;
+  const slotStr = String(slot);
   if (run.active) {
-    const v = g.shopView();
+    const v = typeof g.shopView === "function" ? g.shopView() : null;
     if (v && v.encounterId === encId) return "here";
     if (v) {
       const r = auCall(() => g.leaveShop());
       return r.ok ? null : { stop: "Không rời được tiệm: " + r.err };
     }
+    if (run.active.done || (run.active.waiting && (run.active.waiting === "be_quan" || run.active.waiting.kind === "be_quan"))) {
+      auCall(() => {
+        if (typeof g.closeEncounter === "function") g.closeEncounter();
+      });
+    }
     return null;
   }
-  if (run.viTri !== slot || run.oNoi !== slot) {
-    const r = auCall(() => g.enterNode(slot));
+
+  // 1. Nếu chưa đứng tại ô đích (viTri !== slot): di chuyển tới ô đích
+  if (String(run.viTri) !== slotStr) {
+    let r = { ok: false, err: "" };
+    if (typeof g.travelTo === "function") {
+      r = auCall(() => g.travelTo(slotStr));
+      if (!r.ok && slot !== slotStr) {
+        r = auCall(() => g.travelTo(slot));
+      }
+    }
+    if (!r.ok && typeof g.enterNode === "function") {
+      r = auCall(() => g.enterNode(slot));
+    }
     const r2 = G().state.run;
-    if (!r.ok)
+    if (!r.ok && String(r2.viTri) !== slotStr) {
       return {
         stop:
           "Không đi tới được " +
           placeName(ctxLite(), slot) +
           ": " +
-          r.err,
+          (r.err || r2.thongBao || "bị chặn"),
       };
-    if (r2.viTri !== slot && !r2.active && !r2.tran && !r2.bienCo)
+    }
+    if (String(r2.viTri) !== slotStr && !r2.active && !r2.tran && !r2.bienCo) {
       return {
         stop:
           "Không đi tới được " +
           placeName(ctxLite(), slot) +
           (r2.thongBao ? ": " + r2.thongBao : ""),
       };
+    }
     return null;
   }
-  const r = auCall(() => g.chooseActivity(encId));
+
+  // 2. Đã đứng tại ô đích (viTri == slot): nếu chưa tiến vào nơi chốn (oNoi !== slot), gọi enterNode/enterPlace rồi mở tiệm ngay
+  if (String(run.oNoi) !== slotStr) {
+    if (typeof g.enterNode === "function") {
+      let rEn = auCall(() => g.enterNode(slot));
+      if (!rEn.ok && slot !== slotStr) {
+        auCall(() => g.enterNode(slotStr));
+      }
+    } else if (typeof g.enterPlace === "function") {
+      auCall(() => g.enterPlace(slotStr));
+    }
+    const rAfterEnter = G().state.run;
+    if (rAfterEnter.active || rAfterEnter.tran || rAfterEnter.bienCo) {
+      const vNow = typeof g.shopView === "function" ? g.shopView() : null;
+      if (vNow && vNow.encounterId === encId) return "here";
+      return null;
+    }
+  }
+
+  // 3. Mở cửa hàng qua chooseActivity (fallback doAction)
+  let r = auCall(() => g.chooseActivity(encId));
+  if (!r.ok && typeof g.doAction === "function") {
+    r = auCall(() => g.doAction(encId));
+  }
   if (!r.ok) return { stop: "Không mở được tiệm: " + r.err };
   const r3 = G().state.run;
-  if (!r3.active)
+  if (!r3.active) {
     return {
       stop:
         "Tiệm không mở được" + (r3.thongBao ? ": " + r3.thongBao : ""),
     };
+  }
+  const v3 = typeof g.shopView === "function" ? g.shopView() : null;
+  if (v3 && v3.encounterId === encId) return "here";
   return null;
 }
 function auTradeBudget(cfg) {
@@ -389,8 +434,10 @@ async function auBuonStep(st) {
   const g = G(),
     cfg = AU.cfg.buon,
     K = S.core;
-  const p = auPending(st, {
+  const pendingFn = typeof auPending === "function" ? auPending : gWin.auPending;
+  const p = pendingFn(st, {
     danhAi: true,
+    buon: true,
     shopId:
       st.route && st.phase !== "plan"
         ? st.phase === "toSell" || st.phase === "sell"
@@ -420,8 +467,16 @@ async function auBuonStep(st) {
           ", dừng để bạn chữa thương",
       };
     if (g.state.run.active) {
-      const r = auCall(() => g.leaveShop());
-      return r.ok ? null : { stop: r.err };
+      const vShop = typeof g.shopView === "function" ? g.shopView() : null;
+      if (vShop) {
+        const r = auCall(() => g.leaveShop());
+        return r.ok ? null : { stop: r.err };
+      } else {
+        const r = auCall(() => {
+          if (typeof g.closeEncounter === "function") g.closeEncounter();
+        });
+        return r.ok ? null : { stop: r.err || "Đang có sự kiện mở" };
+      }
     }
     const pl = await auPlanTrade(cfg);
     AU.plan = pl;
@@ -466,7 +521,6 @@ async function auBuonStep(st) {
     const go = auGoStep(st, route.buy.slot, route.buy.id);
     if (go !== "here") return go;
     st.phase = "buy";
-    return null;
   }
   if (st.phase === "buy") {
     const v = g.shopView();
@@ -601,7 +655,6 @@ async function auBuonStep(st) {
     const go = auGoStep(st, route.sell.slot, route.sell.id);
     if (go !== "here") return go;
     st.phase = "sell";
-    return null;
   }
   if (st.phase === "sell") {
     const v = g.shopView();
