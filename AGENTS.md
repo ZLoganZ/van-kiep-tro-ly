@@ -13,10 +13,9 @@
    - Khi kiểm tra khả năng truyền tống bằng `ddTeleOpts`, bắt buộc kiểm tra `!o.blocked`.
 4. **Kiểm tra trước khi bàn giao**:
    - Luôn chạy `node build.js` và kiểm tra nạp ES Module (`import("./main.js")`) để đảm bảo không có lỗi cú pháp hay thiếu export ở bất kỳ module nào trong `src/` cũng như `main.js`.
-5. **Đóng gói file cài đặt Mod (`van-kiep-tro-ly-mod.zip`) & Push lên cùng commit (BẮT BUỘC)**:
-   - File `van-kiep-tro-ly-mod.zip` (chứa `mod.yaml`, `main.js` và `src/**/*.js` giữ nguyên đường dẫn tương đối) là gói cài đặt chính thức người chơi dùng để import trực tiếp vào game (Cấu hình ➔ Mods ➔ Cài mod).
-   - Script `node build.js` tự động đóng gói `van-kiep-tro-ly-mod.zip`.
-   - Mỗi khi commit mã nguồn hoặc nâng version, **BẮT BUỘC** phải stage cả file zip (`git add .` hoặc bao gồm `van-kiep-tro-ly-mod.zip`), commit và push lên remote trong **CÙNG MỘT COMMIT**.
+5. **Phát hành gói cài đặt Mod (`van-kiep-tro-ly-mod.zip`) qua GitHub Releases (KHÔNG commit file .zip vào nhánh Git)**:
+   - File `van-kiep-tro-ly-mod.zip` đã được thêm vào `.gitignore` để giữ kho mã nguồn Git sạch sẽ 100%.
+   - Khi nâng `version` trong `package.json` và `git push` lên nhánh `main`, GitHub Actions (`.github/workflows/release-mod.yml`) sẽ tự động chạy `node build.js`, trích xuất Changelog từ `src/modules/nhat-ky.js` và tự động tạo **GitHub Release (`vX.Y.Z`)** đính kèm file `van-kiep-tro-ly-mod.zip` tại mục Assets.
 
 ## 1. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
 

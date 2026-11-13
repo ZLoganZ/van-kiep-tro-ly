@@ -52,6 +52,7 @@ const DEFAULT_CFG = {
   enabled: true,
   repo: DEFAULT_REPO,
   branch: DEFAULT_BRANCH,
+  channel: "release", // "release" (Ưu tiên GitHub Releases chính thức) | "branch" (Theo nhánh code trực tiếp)
   intervalMin: 15, // Kiểm tra định kỳ mỗi 15 phút (0 = tắt kiểm tra định kỳ)
   installMode: "auto_countdown", // "auto_countdown" | "auto_immediate" | "notify"
   checkCommitSha: true, // Phát hiện cả bản cập nhật hotfix qua mã Commit SHA trên nhánh main
@@ -1228,7 +1229,7 @@ export const AutoUpdater = {
     this._emit();
   },
 
-  // Kiểm tra phiên bản và Commit mới nhất trên GitHub
+  // Kiểm tra phiên bản mới từ GitHub Releases (/releases/latest) kèm fallback sang nhánh (branch)
   async checkForUpdate(opts = {}) {
     if (this.checking) return this.remoteInfo;
     this.checking = true;
@@ -1237,17 +1238,50 @@ export const AutoUpdater = {
 
     const repo = (this.cfg.repo || DEFAULT_REPO).trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
     const branch = (this.cfg.branch || DEFAULT_BRANCH).trim() || "main";
+    const channel = this.cfg.channel || "release";
 
     try {
       let remoteVer = "";
-      // 1. Đọc version từ package.json trên GitHub
-      try {
-        const pkgTxt = await fetchTextWithFallback(repo, branch, "package.json");
-        const pkg = JSON.parse(pkgTxt);
-        if (pkg && pkg.version) remoteVer = String(pkg.version).trim();
-      } catch (e) {}
+      let releaseTag = "";
+      let releaseUrl = "";
+      let releaseAssetUrl = `https://github.com/${repo}/releases/latest/download/van-kiep-tro-ly-mod.zip`;
+      let releaseTitle = "";
+      let releasePublishedAt = "";
 
-      // 2. Fallback sang mod.yaml nếu package.json lỗi
+      // 1. Kiểm tra qua GitHub Releases API (/releases/latest)
+      if (channel === "release") {
+        try {
+          const relRes = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+            cache: "no-store",
+            headers: { Accept: "application/vnd.github.v3+json" },
+          });
+          if (relRes.ok) {
+            const relData = await relRes.json();
+            if (relData && relData.tag_name) {
+              releaseTag = String(relData.tag_name).trim();
+              remoteVer = releaseTag.replace(/^[vV]+/, "").trim();
+              releaseTitle = relData.name || releaseTag;
+              releaseUrl = relData.html_url || `https://github.com/${repo}/releases/tag/${releaseTag}`;
+              releasePublishedAt = relData.published_at || "";
+              if (Array.isArray(relData.assets)) {
+                const zipAsset = relData.assets.find((a) => a && a.name && a.name.endsWith(".zip"));
+                if (zipAsset && zipAsset.browser_download_url) {
+                  releaseAssetUrl = zipAsset.browser_download_url;
+                }
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fallback (hoặc khi chọn kênh "branch"): đọc package.json / mod.yaml từ nhánh
+      if (!remoteVer) {
+        try {
+          const pkgTxt = await fetchTextWithFallback(repo, branch, "package.json");
+          const pkgObj = JSON.parse(pkgTxt);
+          if (pkgObj && pkgObj.version) remoteVer = String(pkgObj.version).trim();
+        } catch (e) {}
+      }
       if (!remoteVer) {
         const yamlTxt = await fetchTextWithFallback(repo, branch, "mod.yaml");
         const m = yamlTxt.match(/^version:\s*["']?([^"'\r\n]+)["']?/m);
@@ -1255,17 +1289,18 @@ export const AutoUpdater = {
       }
 
       if (!remoteVer) {
-        throw new Error("Không đọc được thông tin version từ repo " + repo);
+        throw new Error("Không đọc được thông tin phiên bản từ GitHub (" + repo + ")");
       }
 
-      // 3. Lấy thêm thông tin Commit SHA mới nhất từ GitHub API (không bắt buộc nếu bị giới hạn rate-limit)
+      // 3. Lấy thêm thông tin Commit SHA mới nhất từ GitHub API
       let sha = "";
       let shortSha = "";
-      let commitMsg = "";
-      let commitDate = "";
+      let commitMsg = releaseTitle || "";
+      let commitDate = releasePublishedAt || "";
       try {
+        const targetRef = releaseTag || branch;
         const apiRes = await fetch(
-          `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(branch)}`,
+          `https://api.github.com/repos/${repo}/commits/${encodeURIComponent(targetRef)}`,
           {
             cache: "no-store",
             headers: { Accept: "application/vnd.github.v3+json" },
@@ -1276,14 +1311,18 @@ export const AutoUpdater = {
           if (cData && cData.sha) {
             sha = String(cData.sha);
             shortSha = sha.slice(0, 7);
-            commitMsg =
-              (cData.commit && cData.commit.message && cData.commit.message.split("\n")[0]) || "";
-            commitDate = (cData.commit && cData.commit.committer && cData.commit.committer.date) || "";
+            if (!commitMsg) {
+              commitMsg =
+                (cData.commit && cData.commit.message && cData.commit.message.split("\n")[0]) || "";
+            }
+            if (!commitDate) {
+              commitDate = (cData.commit && cData.commit.committer && cData.commit.committer.date) || "";
+            }
           }
         }
       } catch (e) {}
 
-      // Nếu người dùng vừa nâng cấp lên TOOL_VER hiện tại lần đầu, đồng bộ mốc installedVer & installedSha
+      // Đồng bộ mốc installedVer & installedSha ở lần chạy đầu tiên của phiên bản hiện hành
       if (this.state.installedVer !== TOOL_VER) {
         this.state.installedVer = TOOL_VER;
         if (sha && compareSemver(remoteVer, TOOL_VER) === 0) {
@@ -1302,12 +1341,14 @@ export const AutoUpdater = {
         !isNewerSemver &&
         verCmp === 0 &&
         this.cfg.checkCommitSha &&
+        channel === "branch" &&
         Boolean(sha && this.state.installedSha && sha !== this.state.installedSha);
 
       let changelog = null;
       if (isNewerSemver || isNewerCommit || opts.manual) {
         try {
-          const nkTxt = await fetchTextWithFallback(repo, branch, "src/modules/nhat-ky.js");
+          const refToRead = releaseTag || branch;
+          const nkTxt = await fetchTextWithFallback(repo, refToRead, "src/modules/nhat-ky.js");
           changelog = extractLatestChangelog(nkTxt);
         } catch (e) {}
       }
@@ -1316,6 +1357,10 @@ export const AutoUpdater = {
       this.remoteInfo = {
         repo,
         branch,
+        channel,
+        releaseTag: releaseTag || ("v" + remoteVer),
+        releaseUrl: releaseUrl || `https://github.com/${repo}/releases`,
+        releaseAssetUrl,
         version: remoteVer,
         currentVersion: TOOL_VER,
         sha,
@@ -1338,10 +1383,10 @@ export const AutoUpdater = {
 
         if (!isDismissed) {
           const labelVer = isNewerCommit
-            ? `v${remoteVer} (Commit mới #${shortSha})`
-            : `v${remoteVer}`;
+            ? `v${remoteVer} (Commit #${shortSha})`
+            : `Release v${remoteVer}`;
           if (UI && typeof UI.notify === "function") {
-            UI.notify(`🚀 Phát hiện bản cập nhật Mod mới trên GitHub: ${labelVer}!`);
+            UI.notify(`🚀 Phát hiện bản cập nhật mới trên GitHub: ${labelVer}!`);
           }
 
           if (this.cfg.installMode === "auto_immediate") {
@@ -1374,7 +1419,6 @@ export const AutoUpdater = {
 
   startAutoCountdown(seconds = 8) {
     this.cancelCountdown(false);
-    // Nếu đang ở giữa trận đánh tay căng thẳng, chờ ngoài trận hoặc cho phép người dùng bấm
     this._countdownSec = seconds;
     this.renderBanner(true);
     this._countdownId = setInterval(() => {
@@ -1388,7 +1432,7 @@ export const AutoUpdater = {
     }, 1000);
   },
 
-  // Thực thi tải gói cập nhật từ GitHub -> ghi đè vào Game (IndexedDB / File Input) -> lưu Save -> Reload
+  // Thực thi tải bản cập nhật từ GitHub Release Tag (hoặc nhánh main) -> đóng gói chuẩn -> ghi đè vào IndexedDB của Game -> lưu Save -> Reload
   async performUpdate(opts = {}) {
     if (this.updating) return;
     this.cancelCountdown(false);
@@ -1399,6 +1443,18 @@ export const AutoUpdater = {
     const repo = (this.cfg.repo || DEFAULT_REPO).trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
     const branch = (this.cfg.branch || DEFAULT_BRANCH).trim() || "main";
     const targetVer = (this.remoteInfo && this.remoteInfo.version) || TOOL_VER;
+    // Ưu tiên lấy đúng Tag của bản Release (vd: "v8.1.2") nếu đang ở kênh release, hoặc lấy từ branch
+    const targetRef =
+      this.cfg.channel === "release" && this.remoteInfo && this.remoteInfo.releaseTag
+        ? this.remoteInfo.releaseTag
+        : branch;
+
+    // Nếu người dùng bấm "Tải Gói .zip (Release)" và có sẵn link GitHub Release Asset, cho phép tải trực tiếp từ GitHub Releases hoặc xuất gói ZIP chuẩn
+    if (opts.openReleaseDownload && this.remoteInfo && this.remoteInfo.releaseAssetUrl) {
+      try {
+        window.open(this.remoteInfo.releaseAssetUrl, "_blank", "noopener");
+      } catch (e) {}
+    }
 
     const setProg = (ratio, msg) => {
       this._progressRatio = Math.min(1, Math.max(0, ratio || 0));
@@ -1408,58 +1464,41 @@ export const AutoUpdater = {
     };
 
     try {
-      setProg(0.08, `Đang tải gói van-kiep-tro-ly-mod.zip (v${targetVer}) từ GitHub…`);
+      setProg(0.08, `Đang đồng bộ bản phát hành v${targetVer} (ref: ${targetRef}) từ GitHub…`);
 
       let zipBuffer = null;
       let filesMap = null;
       let textMap = null;
-      let needBuildFromSources = false;
 
+      // Vì kho mã nguồn không còn commit trực tiếp file .zip vào nhánh git (file .zip được đính kèm trên GitHub Releases),
+      // trình cập nhật kéo trực tiếp các module ES từ tag Release (hoặc branch) qua raw.githubusercontent / jsDelivr (hỗ trợ 100% CORS)
+      // và đóng gói thành gói ZIP chuẩn ngay trong bộ nhớ trình duyệt.
+      let built;
       try {
-        zipBuffer = await fetchBinaryWithFallback(repo, branch, "van-kiep-tro-ly-mod.zip");
-        setProg(0.35, "Đang giải nén và kiểm tra chữ ký gói Mod…");
-        const extracted = await unzipInBrowser(zipBuffer);
-        filesMap = extracted.filesMap;
-        textMap = extracted.textMap;
-
-        // Kiểm tra xem file mod.yaml bên trong gói zip trên GitHub đã khớp với version mới nhất chưa
-        const yamlTxt = textMap.get("mod.yaml") || "";
-        const mVer = yamlTxt.match(/^version:\s*["']?([^"'\r\n]+)["']?/m);
-        const zipVer = mVer && mVer[1] ? mVer[1].trim() : "";
-        if (targetVer && zipVer && compareSemver(targetVer, zipVer) > 0) {
-          // Gói .zip trên repo cũ hơn mã nguồn -> tự động kéo thẳng mã nguồn ES Modules từ GitHub!
-          needBuildFromSources = true;
-        }
-        if (!filesMap.has("main.js") || !filesMap.has("mod.yaml")) {
-          needBuildFromSources = true;
-        }
-      } catch (zipErr) {
-        needBuildFromSources = true;
+        built = await buildModFromGithubSources(repo, targetRef, targetVer, setProg);
+      } catch (tagErr) {
+        // Nếu tag release chưa tạo trên git, fallback sang nhánh chính (branch)
+        built = await buildModFromGithubSources(repo, branch, targetVer, setProg);
       }
-
-      if (needBuildFromSources || opts.forceFromSource) {
-        const built = await buildModFromGithubSources(repo, branch, targetVer, setProg);
-        zipBuffer = built.zipBuffer;
-        filesMap = built.filesMap;
-        textMap = built.textMap;
-      }
+      zipBuffer = built.zipBuffer;
+      filesMap = built.filesMap;
+      textMap = built.textMap;
 
       if (opts.downloadOnly) {
-        setProg(1, "Đã tải xuống gói van-kiep-tro-ly-mod.zip!");
+        setProg(1, `Đã đóng gói & tải xuống van-kiep-tro-ly-mod.zip (v${targetVer})!`);
         triggerDownloadZip(zipBuffer, targetVer);
         return { ok: true, mode: "download" };
       }
 
-      setProg(0.8, "Đang ghi bản cập nhật trực tiếp vào IndexedDB của game…");
+      setProg(0.82, "Đang ghi bản cập nhật trực tiếp vào IndexedDB của game…");
       const idbRes = await updateModInIndexedDB(targetVer, zipBuffer, filesMap, textMap);
 
       let uiInjected = false;
       if (!idbRes.ok) {
-        setProg(0.88, "Đang đồng bộ qua trình cài đặt Mod của game…");
+        setProg(0.9, "Đang đồng bộ qua trình cài đặt Mod của game…");
         uiInjected = await installViaGameFileInput(zipBuffer);
       }
 
-      // Lưu trạng thái phiên bản & mã Commit SHA vừa cài
       this.state.installedVer = targetVer;
       if (this.remoteInfo && this.remoteInfo.sha) {
         this.state.installedSha = this.remoteInfo.sha;
@@ -1468,7 +1507,6 @@ export const AutoUpdater = {
       this.state.lastUpdateSuccessTs = Date.now();
       saveUpdState(this.state);
 
-      // Bảo toàn tiến trình người chơi trước khi tải lại trang
       if (this.cfg.autoQuickSave) {
         try {
           const g = gWin.TT && gWin.TT.game;
@@ -1494,7 +1532,6 @@ export const AutoUpdater = {
         }, 900);
         return { ok: true, mode: idbRes.ok ? "indexeddb" : "ui_input", idbRes };
       } else {
-        // Fallback an toàn: tải gói .zip về máy và mở màn hình Mods của game
         triggerDownloadZip(zipBuffer, targetVer);
         setProg(
           1,
@@ -1660,8 +1697,9 @@ export const AutoUpdater = {
     `;
   },
 
-  // Dựng HTML thẻ Trung Tâm Auto Update GitHub (dùng chung cho Modal, Tab Nhật Ký & Tab Tổng Quan)
+  // Dựng HTML thẻ Trung Tâm Auto Update GitHub (dùng chung cho Modal & Tab Nhật Ký)
   buildPanelHtml(prefix = "updm") {
+    const isModal = prefix === "updm";
     const cfg = this.cfg;
     const info = this.remoteInfo;
     const lastTimeStr = this.state.lastCheckTs
@@ -1685,28 +1723,29 @@ export const AutoUpdater = {
     if (info && info.changelog) {
       const cl = info.changelog;
       changelogHtml = `
-        <div style="background:rgba(0,0,0,0.28);border:1px solid var(--line);border-left:3px solid var(--acc2);border-radius:10px;padding:9px 12px;margin-top:8px">
-          <div style="font-weight:700;color:var(--acc2);font-size:12.5px;margin-bottom:4px">
-            📜 Điểm Mới Trên GitHub: ${esc(cl.title)} ${cl.date ? `<span class="vk-mu">(${esc(cl.date)})</span>` : ""}
+        <div class="vkx-upd-cl-box">
+          <div class="vkx-upd-cl-title">
+            📜 Điểm mới trên GitHub: ${esc(cl.title)} ${cl.date ? `<span class="vk-mu">(${esc(cl.date)})</span>` : ""}
           </div>
           ${
             cl.points && cl.points.length
-              ? `<ul style="margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--txt);line-height:1.5">${cl.points.map((p) => `<li style="margin-bottom:3px">${p}</li>`).join("")}</ul>`
+              ? `<ul class="vkx-upd-cl-list">${cl.points.map((p) => `<li>${p}</li>`).join("")}</ul>`
               : ""
           }
         </div>
       `;
     }
 
-    return `
-      <div class="vk-card vkx-upd-card" id="${prefix}-root">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-          <h3 style="margin:0">🔄 Trung Tâm Auto Update GitHub (OTA)</h3>
-          <span class="pl pl-pick" style="margin:0;font-size:11.5px;padding:3px 10px">Repo: ${esc(cfg.repo)}@${esc(cfg.branch)}</span>
-        </div>
+    const headerHtml = isModal
+      ? ""
+      : `<h3>🔄 Trung Tâm Auto Update GitHub (OTA) <span class="vkx-upd-repo-tag">${esc(cfg.repo)}@${esc(cfg.branch)}</span></h3>`;
 
-        <div style="font-size:12px;color:var(--mut);margin-bottom:10px;line-height:1.5">
-          Tự động phát hiện khi có bản Mod mới được đẩy lên GitHub, tự động tải và ghi đè trực tiếp vào <b>IndexedDB Mod Store</b> của game (hoặc đóng gói trực tiếp từ mã nguồn ES Modules trên GitHub), tự tạo <b>Quick Save</b> dự phòng rồi tải lại trang mà không cần cài lại thủ công.
+    return `
+      <div class="${isModal ? "vkx-upd-modal-inner" : "vk-card vkx-upd-card"}" id="${prefix}-root">
+        ${headerHtml}
+
+        <div class="vkx-upd-desc">
+          Tự động phát hiện khi có bản Mod mới đẩy lên GitHub, tải và ghi đè trực tiếp vào <b>IndexedDB Mod Store</b> của game (hoặc tự đóng gói từ mã nguồn ES Modules trên GitHub), tự tạo <b>Quick Save</b> dự phòng rồi tải lại trang.
         </div>
 
         <div class="vk-bento-grid" style="margin-bottom:10px">
@@ -1727,45 +1766,51 @@ export const AutoUpdater = {
           </div>
           <div class="vk-bento-tile">
             <span class="vk-bento-lbl">🕒 Kiểm Tra Gần Nhất</span>
-            <span class="vk-bento-val" style="font-size:12px">${esc(lastTimeStr)}${info && info.commitMsg ? ` · <small class="vk-mu">${esc(info.commitMsg.slice(0, 38))}</small>` : ""}</span>
+            <span class="vk-bento-val" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc((info && info.commitMsg) || "")}">${esc(lastTimeStr)}${info && info.commitMsg ? ` · <small class="vk-mu">${esc(info.commitMsg.slice(0, 34))}</small>` : ""}</span>
           </div>
         </div>
 
-        <div id="vkx-upd-modal-prog" style="display:${this.updating ? "block" : "none"};margin-bottom:8px"></div>
+        <div id="vkx-upd-modal-prog" style="display:${this.updating ? "block" : "none"};margin-bottom:10px"></div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <button type="button" class="vk-btn" id="${prefix}-btn-check" ${this.checking || this.updating ? "disabled" : ""} style="margin:0;padding:8px 13px;font-size:12.5px">
+        <div class="vkx-upd-btn-grid">
+          <button type="button" class="vk-btn" id="${prefix}-btn-check" ${this.checking || this.updating ? "disabled" : ""}>
             ${this.checking ? "⏳ Đang Kiểm Tra…" : "🔍 Kiểm Tra Cập Nhật Ngay"}
           </button>
-          <button type="button" class="vk-btn" id="${prefix}-btn-install" ${this.updating ? "disabled" : ""} style="margin:0;padding:8px 14px;font-size:12.5px;background:linear-gradient(135deg,#10b981,#059669);color:#04130d;font-weight:800">
-            ${this.updating ? "⏳ Đang Cập Nhật…" : this.updateAvailable && info ? `⚡ Cập Nhật Tự Động Lên v${esc(info.version)}` : "⚡ Cập Nhật / Cài Đè Trực Tiếp Từ GitHub"}
+          <button type="button" class="vk-btn vkx-upd-btn-primary" id="${prefix}-btn-install" ${this.updating ? "disabled" : ""}>
+            ${this.updating ? "⏳ Đang Cập Nhật…" : this.updateAvailable && info ? `⚡ Cập Nhật Lên v${esc(info.version)}` : "⚡ Cập Nhật / Cài Đè Từ GitHub"}
           </button>
-          <button type="button" class="vk-btn sec" id="${prefix}-btn-force-src" ${this.updating ? "disabled" : ""} style="margin:0;padding:8px 12px;font-size:12px" title="Kéo trực tiếp các file mã nguồn .js/.css từ nhánh main trên GitHub và đóng gói lại ngay trên trình duyệt">
-            🛠️ Kéo Source & Đóng Gói Trực Tiếp
+          <button type="button" class="vk-btn sec" id="${prefix}-btn-open-rel" title="Mở trang GitHub Releases chính thức của dự án trên tab mới">
+            🏷️ Xem Trang GitHub Releases
           </button>
-          <button type="button" class="vk-btn sec" id="${prefix}-btn-dl-zip" ${this.updating ? "disabled" : ""} style="margin:0;padding:8px 12px;font-size:12px">
+          <button type="button" class="vk-btn sec" id="${prefix}-btn-dl-zip" ${this.updating ? "disabled" : ""}>
             📦 Tải Gói .zip Về Máy
           </button>
         </div>
 
         ${changelogHtml}
 
-        <details style="margin-top:10px" open>
-          <summary style="cursor:pointer;font-weight:700;font-size:12.5px;color:var(--acc)">⚙️ Cấu Hình Tự Động Cập Nhật (Auto Update Settings)</summary>
-          <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
+        <details class="vkx-upd-settings" open>
+          <summary>⚙️ Cấu Hình Tự Động Cập Nhật (Auto Update Settings)</summary>
+          <div class="vkx-upd-settings-body">
             <div class="vkx-fld-grid">
               <label class="vkx-fld-tile">
-                <span><b>Chế Độ Khi Có Bản Mới Trên GitHub</b><small class="vk-mu">Cách Mod xử lý khi phát hiện repo có bản mới</small></span>
-                <select class="vk-sel" id="${prefix}-sel-mode">
-                  <option value="auto_countdown" ${cfg.installMode === "auto_countdown" ? "selected" : ""}>🚀 Tự động tải & Cập nhật sau 8s đếm ngược (Khuyên dùng)</option>
-                  <option value="auto_immediate" ${cfg.installMode === "auto_immediate" ? "selected" : ""}>⚡ Tự động cập nhật & tải lại trang ngay lập tức (Zero-Click)</option>
-                  <option value="notify" ${cfg.installMode === "notify" ? "selected" : ""}>🔔 Chỉ hiện thông báo & nút Cập Nhật 1-Chạm trên Header</option>
+                <div class="vkx-fld-top">
+                  <span class="vkx-fld-lbl">🚀 Chế độ khi có bản mới</span>
+                  <em class="vkx-fld-hint">Cách xử lý khi phát hiện bản mới</em>
+                </div>
+                <select class="vk-sel vkx-fld-ctl" id="${prefix}-sel-mode">
+                  <option value="auto_countdown" ${cfg.installMode === "auto_countdown" ? "selected" : ""}>🚀 Tự cập nhật (Đếm ngược 8s)</option>
+                  <option value="auto_immediate" ${cfg.installMode === "auto_immediate" ? "selected" : ""}>⚡ Tự cập nhật ngay lập tức</option>
+                  <option value="notify" ${cfg.installMode === "notify" ? "selected" : ""}>🔔 Chỉ thông báo & nút 1-chạm</option>
                 </select>
               </label>
 
               <label class="vkx-fld-tile">
-                <span><b>Chu Kỳ Tự Động Kiểm Tra Ngầm</b><small class="vk-mu">Quét phiên bản mới trên GitHub khi đang treo máy</small></span>
-                <select class="vk-sel" id="${prefix}-sel-interval">
+                <div class="vkx-fld-top">
+                  <span class="vkx-fld-lbl">⏱️ Chu kỳ kiểm tra ngầm</span>
+                  <em class="vkx-fld-hint">Quét GitHub định kỳ khi treo máy</em>
+                </div>
+                <select class="vk-sel vkx-fld-ctl" id="${prefix}-sel-interval">
                   <option value="5" ${Number(cfg.intervalMin) === 5 ? "selected" : ""}>Mỗi 5 phút (Nhanh)</option>
                   <option value="15" ${Number(cfg.intervalMin) === 15 ? "selected" : ""}>Mỗi 15 phút (Mặc định)</option>
                   <option value="30" ${Number(cfg.intervalMin) === 30 ? "selected" : ""}>Mỗi 30 phút</option>
@@ -1777,30 +1822,41 @@ export const AutoUpdater = {
 
             <div class="vkx-fld-grid">
               <label class="vkx-fld-tile">
-                <span><b>Địa Chỉ GitHub Repository (Owner/Repo)</b><small class="vk-mu">Kho chứa mã nguồn chính thức trên GitHub</small></span>
-                <input type="text" class="vk-inp" id="${prefix}-inp-repo" value="${esc(cfg.repo)}" placeholder="zloganz/van-kiep-tro-ly">
+                <div class="vkx-fld-top">
+                  <span class="vkx-fld-lbl">📦 GitHub Repository</span>
+                  <em class="vkx-fld-hint">Định dạng: owner/repo</em>
+                </div>
+                <input type="text" class="vk-inp vkx-fld-ctl" id="${prefix}-inp-repo" value="${esc(cfg.repo)}" placeholder="zloganz/van-kiep-tro-ly">
               </label>
 
               <label class="vkx-fld-tile">
-                <span><b>Nhánh Theo Dõi (Git Branch)</b><small class="vk-mu">Nhánh phát hành bản cập nhật (mặc định: main)</small></span>
-                <input type="text" class="vk-inp" id="${prefix}-inp-branch" value="${esc(cfg.branch)}" placeholder="main">
+                <div class="vkx-fld-top">
+                  <span class="vkx-fld-lbl">🏷️ Nguồn theo dõi cập nhật</span>
+                  <em class="vkx-fld-hint">Theo bản Release hoặc nhánh code</em>
+                </div>
+                <select class="vk-sel vkx-fld-ctl" id="${prefix}-sel-channel">
+                  <option value="release" ${(cfg.channel || "release") === "release" ? "selected" : ""}>🏷️ GitHub Releases chính thức (Khuyên dùng)</option>
+                  <option value="branch" ${cfg.channel === "branch" ? "selected" : ""}>🌿 Nhánh ${esc(cfg.branch || "main")} trực tiếp (Dev/Hotfix)</option>
+                </select>
               </label>
             </div>
 
-            <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
-              <input type="checkbox" id="${prefix}-chk-enabled" ${cfg.enabled ? "checked" : ""}>
-              <span><b>Tự động kiểm tra bản mới khi khởi động game:</b> Tự động đối chiếu với GitHub ngay khi nạp Mod</span>
-            </label>
+            <div class="vkx-upd-toggles">
+              <label class="vkx-upd-toggle-row">
+                <input type="checkbox" id="${prefix}-chk-enabled" ${cfg.enabled ? "checked" : ""}>
+                <span><b>Tự động kiểm tra bản mới khi khởi động game:</b> Tự động đối chiếu với GitHub ngay khi nạp Mod vào game</span>
+              </label>
 
-            <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
-              <input type="checkbox" id="${prefix}-chk-sha" ${cfg.checkCommitSha ? "checked" : ""}>
-              <span><b>Theo dõi cả mã Commit SHA mới nhất:</b> Nhận diện bản vá (hotfix) đẩy lên GitHub ngay cả khi chưa đổi số Version</span>
-            </label>
+              <label class="vkx-upd-toggle-row">
+                <input type="checkbox" id="${prefix}-chk-sha" ${cfg.checkCommitSha ? "checked" : ""}>
+                <span><b>Theo dõi cả mã Commit SHA mới nhất:</b> Nhận diện bản vá (hotfix) đẩy lên GitHub ngay cả khi chưa nâng số Version</span>
+              </label>
 
-            <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
-              <input type="checkbox" id="${prefix}-chk-qsave" ${cfg.autoQuickSave ? "checked" : ""}>
-              <span><b>Tự động lưu Quick Save trước khi cập nhật:</b> Bảo toàn 100% tiến trình kiếp tu luyện trước khi tải lại trang</span>
-            </label>
+              <label class="vkx-upd-toggle-row">
+                <input type="checkbox" id="${prefix}-chk-qsave" ${cfg.autoQuickSave ? "checked" : ""}>
+                <span><b>Tự động lưu Quick Save trước khi cập nhật:</b> Bảo toàn 100% tiến trình kiếp tu luyện trước khi tải lại trang</span>
+              </label>
+            </div>
           </div>
         </details>
       </div>
@@ -1826,10 +1882,11 @@ export const AutoUpdater = {
       };
     }
 
-    const btnForceSrc = q("btn-force-src");
-    if (btnForceSrc) {
-      btnForceSrc.onclick = () => {
-        this.performUpdate({ autoTriggered: false, forceFromSource: true });
+    const btnOpenRel = q("btn-open-rel");
+    if (btnOpenRel) {
+      btnOpenRel.onclick = () => {
+        const repo = (this.cfg.repo || DEFAULT_REPO).trim();
+        window.open(`https://github.com/${repo}/releases`, "_blank", "noopener");
       };
     }
 
@@ -1844,6 +1901,7 @@ export const AutoUpdater = {
       const selMode = q("sel-mode");
       const selInt = q("sel-interval");
       const inpRepo = q("inp-repo");
+      const selChan = q("sel-channel");
       const inpBranch = q("inp-branch");
       const chkEn = q("chk-enabled");
       const chkSha = q("chk-sha");
@@ -1853,6 +1911,7 @@ export const AutoUpdater = {
         installMode: selMode ? selMode.value : this.cfg.installMode,
         intervalMin: selInt ? parseInt(selInt.value, 10) || 0 : this.cfg.intervalMin,
         repo: inpRepo && inpRepo.value.trim() ? inpRepo.value.trim() : DEFAULT_REPO,
+        channel: selChan ? selChan.value : this.cfg.channel || "release",
         branch: inpBranch && inpBranch.value.trim() ? inpBranch.value.trim() : DEFAULT_BRANCH,
         enabled: chkEn ? !!chkEn.checked : this.cfg.enabled,
         checkCommitSha: chkSha ? !!chkSha.checked : this.cfg.checkCommitSha,
@@ -1863,7 +1922,7 @@ export const AutoUpdater = {
       }
     };
 
-    ["sel-mode", "sel-interval", "inp-repo", "inp-branch", "chk-enabled", "chk-sha", "chk-qsave"].forEach(
+    ["sel-mode", "sel-interval", "inp-repo", "sel-channel", "inp-branch", "chk-enabled", "chk-sha", "chk-qsave"].forEach(
       (id) => {
         const el = q(id);
         if (el) el.onchange = saveFromInputs;
@@ -1894,8 +1953,11 @@ export const AutoUpdater = {
       modal.innerHTML = `
         <div class="vkx-upd-modal-dialog">
           <div class="vkx-upd-modal-hd">
-            <b>🔄 Trung Tâm Cập Nhật Tự Động Qua GitHub</b>
-            <button type="button" class="vkx-ib x" id="vkx-upd-modal-close" title="Đóng">✕</button>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <b>🔄 Trung Tâm Auto Update GitHub (OTA)</b>
+              <span class="vkx-upd-repo-tag" id="vkx-upd-modal-repo-tag"></span>
+            </div>
+            <button type="button" class="vkx-ib x" id="vkx-upd-modal-close" title="Đóng (Esc)">✕</button>
           </div>
           <div class="vkx-upd-modal-body" id="vkx-upd-modal-body"></div>
         </div>
@@ -1910,6 +1972,10 @@ export const AutoUpdater = {
       }
     }
 
+    const repoTag = modal.querySelector("#vkx-upd-modal-repo-tag");
+    if (repoTag) {
+      repoTag.textContent = `${this.cfg.repo}@${this.cfg.branch}`;
+    }
     const bodyEl = modal.querySelector("#vkx-upd-modal-body");
     if (bodyEl) {
       bodyEl.innerHTML = this.buildPanelHtml("updm");

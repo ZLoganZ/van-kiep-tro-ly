@@ -2317,7 +2317,7 @@ table.au-tb tr:last-child td {
 #vkx-win th,
 #vkx-win label,
 #vkx-win .vkx-ttl span {
-  text-transform: capitalize;
+  text-transform: none;
 }
 
 #vkx-win details > summary {
@@ -3535,6 +3535,7 @@ table.au-tb tr:last-child td {
   border: 1.5px solid var(--acc2);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(251, 191, 36, 0.2);
   z-index: 20;
+  flex-shrink: 0;
 }
 .vkx-upd-banner-row {
   display: flex;
@@ -3583,47 +3584,178 @@ table.au-tb tr:last-child td {
   border: none !important;
 }
 
+/* Modal Backdrop: Ghi đè #vkx-win > * { position: relative } bằng position: absolute !important để phủ mượt trên nền tab đang mở */
+#vkx-win > #vkx-upd-modal.vkx-upd-modal-backdrop,
 .vkx-upd-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 120;
-  background: rgba(2, 6, 18, 0.76);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 14px;
+  position: absolute !important;
+  top: 50px !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 250 !important;
+  background: rgba(3, 7, 18, 0.72) !important;
+  backdrop-filter: blur(10px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(140%) !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
 }
+#vkx-win > #vkx-upd-modal.vkx-upd-modal-backdrop.on,
 .vkx-upd-modal-backdrop.on {
-  display: flex;
+  display: flex !important;
 }
 .vkx-upd-modal-dialog {
-  width: min(740px, 100%);
-  max-height: 90%;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  border: 1.5px solid var(--acc);
-  border-radius: 16px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 28px var(--glow);
-  overflow: hidden;
+  width: min(760px, 100%) !important;
+  max-height: calc(100% - 12px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: linear-gradient(165deg, var(--bg2) 0%, var(--bg) 100%) !important;
+  border: 1.5px solid var(--acc) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 28px var(--glow) !important;
+  overflow: hidden !important;
 }
 .vkx-upd-modal-hd {
-  display: flex;
-  justify-content: space-between;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 11px 15px !important;
+  background: linear-gradient(90deg, var(--hi), rgba(255, 255, 255, 0.02)) !important;
+  border-bottom: 1px solid var(--line) !important;
+  font-size: 14px !important;
+  color: var(--acc2) !important;
+  flex-shrink: 0 !important;
+}
+.vkx-upd-repo-tag {
+  display: inline-flex;
   align-items: center;
-  padding: 10px 14px;
-  background: linear-gradient(90deg, var(--hi), transparent);
-  border-bottom: 1px solid var(--line);
-  font-size: 14px;
-  color: var(--acc2);
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid var(--line);
+  color: var(--acc);
+  margin-left: auto;
 }
 .vkx-upd-modal-body {
-  padding: 12px;
-  overflow-y: auto;
-  max-height: calc(85vh - 60px);
+  padding: 14px 15px !important;
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
 }
-.vkx-upd-modal-body .vk-card {
-  margin-bottom: 0 !important;
+.vkx-upd-modal-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vkx-upd-desc {
+  font-size: 12.5px;
+  color: var(--mut);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.vkx-upd-btn-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+@media (max-width: 520px) {
+  .vkx-upd-btn-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+.vkx-upd-btn-grid > .vk-btn {
+  margin: 0 !important;
+  width: 100% !important;
+  padding: 9px 12px !important;
+  font-size: 12.5px !important;
+  border-radius: 10px !important;
+  justify-content: center !important;
+}
+.vkx-upd-btn-primary {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #03150e !important;
+  font-weight: 800 !important;
+}
+.vkx-upd-cl-box {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--acc2);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 10px;
+}
+.vkx-upd-cl-title {
+  font-weight: 700;
+  color: var(--acc2);
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+.vkx-upd-cl-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--txt);
+  line-height: 1.5;
+}
+.vkx-upd-cl-list li {
+  margin-bottom: 3px;
+}
+.vkx-upd-settings {
+  margin-top: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 12px;
+}
+.vkx-upd-settings > summary {
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12.5px;
+  color: var(--acc2);
+  user-select: none;
+}
+.vkx-upd-settings-body {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vkx-upd-settings-body .vkx-fld-top {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+}
+.vkx-upd-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+.vkx-upd-toggle-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 8px 11px !important;
+  border-radius: 10px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  cursor: pointer !important;
+  font-size: 12.5px !important;
+  line-height: 1.4 !important;
+  transition: all 0.16s ease !important;
+}
+.vkx-upd-toggle-row:hover {
+  border-color: var(--line) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+.vkx-upd-toggle-row:has(input[type="checkbox"]:checked) {
+  border-color: rgba(16, 185, 129, 0.42) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.11), rgba(56, 189, 248, 0.05)) !important;
 }

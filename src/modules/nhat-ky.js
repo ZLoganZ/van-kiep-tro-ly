@@ -27,7 +27,7 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 8.1.0 · Hệ Thống Tự Động Cập Nhật OTA Qua GitHub (Auto Update & Live IndexedDB Hot-Patch)",
+      t: "Phiên Bản 8.1.2 · Tự Động Phát Hành GitHub Releases & Cập Nhật OTA Không Cần Commit File ZIP",
       d: "13/11/2026",
       now: true,
       pts: [

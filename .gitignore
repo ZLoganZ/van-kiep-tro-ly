@@ -1,2 +1,5 @@
-scratch
-.agents
+node_modules/
+scratch/
+.DS_Store
+van-kiep-tro-ly-mod.zip
+*.log

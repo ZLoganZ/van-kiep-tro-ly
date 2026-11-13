@@ -1,0 +1,107 @@
+name: Build & Publish GitHub Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "package.json"
+      - "mod.yaml"
+      - "main.js"
+      - "build.js"
+      - "src/**"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Mod Package (van-kiep-tro-ly-mod.zip)
+        run: node build.js
+
+      - name: Extract Version & Changelog from Source
+        id: meta
+        run: |
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const ver = pkg.version.trim();
+            const tag = "v" + ver;
+
+            // Trích xuất nội dung bản cập nhật mới nhất từ src/modules/nhat-ky.js
+            const nk = fs.readFileSync("src/modules/nhat-ky.js", "utf8");
+            const logIdx = nk.indexOf("var LOG = [");
+            let title = "Phiên Bản " + ver;
+            let notes = "### 📦 Gói Cài Đặt Mod Chính Thức (`van-kiep-tro-ly-mod.zip`)\n- Tải file **`van-kiep-tro-ly-mod.zip`** bên dưới mục **Assets** và nạp vào game qua **Cấu hình (⚙️) ➔ Mods ➔ Cài mod** (hoặc bấm **⚡ Cập Nhật Ngay** ngay trong cửa sổ Mod).\n\n";
+
+            if (logIdx >= 0) {
+              const slice = nk.slice(logIdx, logIdx + 6000);
+              const tMatch = slice.match(/t:\s*["\x27]([^"\x27]+)["\x27]/);
+              if (tMatch) title = tMatch[1];
+              const ptsIdx = slice.indexOf("pts:");
+              if (ptsIdx > 0) {
+                const ptsSlice = slice.slice(ptsIdx, ptsIdx + 4500);
+                const endArr = ptsSlice.indexOf("]");
+                const arrBody = endArr > 0 ? ptsSlice.slice(0, endArr) : ptsSlice;
+                const strRe = /["\x27]((?:\\.|[^"\\\x27])*)["\x27]/g;
+                let m;
+                const bullets = [];
+                while ((m = strRe.exec(arrBody)) !== null) {
+                  const raw = m[1]
+                    .replace(/<b>/gi, "**")
+                    .replace(/<\/b>/gi, "**")
+                    .replace(/<i>/gi, "*")
+                    .replace(/<\/i>/gi, "*")
+                    .replace(/<code>/gi, "`")
+                    .replace(/<\/code>/gi, "`")
+                    .replace(/&amp;/g, "&")
+                    .replace(/&rarr;/g, "→")
+                    .replace(/&ge;/g, "≥")
+                    .replace(/<[^>]+>/g, "")
+                    .trim();
+                  if (raw.length > 10) bullets.push("- " + raw);
+                }
+                if (bullets.length) {
+                  notes += "### 📜 Chi Tiết Bản Cập Nhật\n" + bullets.join("\n") + "\n";
+                }
+              }
+            }
+
+            fs.writeFileSync("release_notes.md", notes, "utf8");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${ver}\ntag=${tag}\ntitle=${title}\n`);
+          '
+
+      - name: Create or Update GitHub Release with van-kiep-tro-ly-mod.zip Asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          TITLE: ${{ steps.meta.outputs.title }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG đã tồn tại -> Cập nhật lại file van-kiep-tro-ly-mod.zip và Release Notes..."
+            gh release upload "$TAG" van-kiep-tro-ly-mod.zip --clobber
+            gh release edit "$TAG" --title "$TITLE" --notes-file release_notes.md --latest
+          else
+            echo "Tạo mới GitHub Release $TAG kèm gói van-kiep-tro-ly-mod.zip..."
+            gh release create "$TAG" van-kiep-tro-ly-mod.zip \
+              --target "${{ github.sha }}" \
+              --title "$TITLE" \
+              --notes-file release_notes.md \
+              --latest
+          fi
