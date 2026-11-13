@@ -333,7 +333,27 @@ var UI = (function () {
   if (_hudQsaveBtn) {
     _hudQsaveBtn.onclick = function (e) {
       e.stopPropagation();
-      if (typeof _hudQsaveCb === "function") _hudQsaveCb();
+      if (typeof _hudQsaveCb === "function") {
+        _hudQsaveCb();
+      } else if (typeof gWin.saveQuickSave === "function") {
+        var res = gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác");
+        if (res && res.ok) {
+          notify("⚡ " + res.msg);
+          if (gWin.S && gWin.S.tab === "sv" && typeof gWin.tabLuuNapSave === "function") {
+            try { gWin.tabLuuNapSave(); } catch (err) {}
+          }
+        } else if (res) {
+          notify("⚠️ " + res.msg);
+        }
+      } else {
+        notify("⚠️ Chưa có dữ liệu kiếp chơi để lưu nhanh.");
+      }
+      var origHtml = _hudQsaveBtn.getAttribute("data-orig") || "⚡ Quick Save";
+      if (!_hudQsaveBtn.getAttribute("data-orig")) _hudQsaveBtn.setAttribute("data-orig", origHtml);
+      _hudQsaveBtn.innerHTML = "✔ Đã Lưu!";
+      setTimeout(function () {
+        if (_hudQsaveBtn) _hudQsaveBtn.innerHTML = origHtml;
+      }, 1200);
     };
   }
   win.querySelectorAll(".vkx-hud-jump").forEach(function (jBtn) {

@@ -27,9 +27,20 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 8.1.2 · Tự Động Phát Hành GitHub Releases & Cập Nhật OTA Không Cần Commit File ZIP",
+      t: "Phiên Bản 8.1.3 · Tinh Gọn Cấu Hình Auto Update & Đại Tu Toàn Diện Hệ Thống Quick Save Đa Tầng",
       d: "13/11/2026",
       now: true,
+      pts: [
+        "<b>Tinh Gọn Giao Diện Cấu Hình Auto Update:</b> Lược bỏ 2 mục nhập thủ công (<i>GitHub Repository</i> &amp; <i>Nguồn theo dõi cập nhật</i>), tự động cố định kết nối chuẩn tới kho lưu trữ chính thức <code>zloganz/van-kiep-tro-ly</code> (ưu tiên đối chiếu <b>GitHub Releases</b> và tự động fallback sang nhánh <code>main</code>).",
+        "<b>Đại Tu Toàn Diện Hệ Thống Quick Save Đa Tầng (IndexedDB + LocalStorage):</b> Lưu trữ kép tối đa 20 bản Lưu Nhanh trên cả <b>IndexedDB</b> (<code>vkx_quick_saves_db</code>) và <b>LocalStorage</b> với vòng lặp tự động co giãn dung lượng, khắc phục triệt để lỗi tràn bộ nhớ 5MB của trình duyệt ở giai đoạn Hóa Thần khiến bản lưu bị rớt ngầm.",
+        "<b>Lưu Nhanh 1-Chạm Tức Thì &amp; Đồng Bộ Thanh Linh Giác Toàn Cục:</b> Loại bỏ hộp thoại <code>prompt()</code>/<code>confirm()</code> gây chặn luồng; tích hợp ô nhập ghi chú trực tiếp trong tab <b>Lưu &amp; Nạp Save</b>, nút <b>🎲 Nạp + Tẩy Thiên Cơ</b> 1 chạm trên từng bản lưu, sửa lỗi nút <b>⚡ Quick Save</b> trên Thanh Linh Giác khi chưa nạp xong lõi game và tự động làm mới danh sách ngay khi bấm lưu.",
+        "<b>Nâng Cấp Cơ Chế Khôi Phục Save &amp; Mở Khóa Tuyệt Mệnh:</b> Tự động gọi <code>flushSave()</code> và hủy bộ đếm <code>saveTimer</code> cũ trước khi nạp để chống ghi đè ngược, đồng bộ trực tiếp với <code>importSave</code> &amp; <code>store.setState</code> của game và xóa bộ nhớ đệm ngữ cảnh <code>clearCtxCache()</code> ngay lập tức.",
+      ],
+    },
+    {
+      t: "Phiên Bản 8.1.2 · Tự Động Phát Hành GitHub Releases & Cập Nhật OTA Không Cần Commit File ZIP",
+      d: "13/11/2026",
+      now: false,
       pts: [
         "<b>Tự Động Dò Bản Mới &amp; Mã Commit SHA Từ GitHub (Multi-Source OTA Checker):</b> Tích hợp mô-đun <code>src/core/auto-update.js</code> tự động kiểm tra phiên bản mới (<code>SemVer</code>) và mã Commit SHA trên nhánh <code>main</code> của kho lưu trữ <code>zloganz/van-kiep-tro-ly</code> qua đa kênh (<code>raw.githubusercontent.com</code>, <code>jsDelivr CDN</code> và <code>GitHub REST API</code>) ngay khi mở game và định kỳ mỗi 5–60 phút.",
         "<b>Cập Nhật Trực Tiếp Vào IndexedDB Của Game &amp; Xóa Cache Service Worker (Zero-Click Hot-Update):</b> Khi phát hiện bản cập nhật mới trên GitHub, Mod tự động tải gói <code>van-kiep-tro-ly-mod.zip</code>, giải nén bằng <code>DecompressionStream('deflate-raw')</code> ngay trong bộ nhớ trình duyệt, ghi đè trực tiếp vào <b>IndexedDB Mod Store</b> của game, dọn bộ nhớ đệm <code>CacheStorage</code> của Service Worker (<code>/mods/van_kiep_tro_ly/...</code>), tự tạo bản <b>Quick Save</b> dự phòng rồi tải lại trang để áp dụng ngay.",

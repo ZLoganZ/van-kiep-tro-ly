@@ -61,7 +61,11 @@ const DEFAULT_CFG = {
 
 function loadUpdCfg() {
   const saved = StorageManager.getJson(UPD_CFG_KEY, null);
-  return Object.assign({}, DEFAULT_CFG, saved && typeof saved === "object" ? saved : {});
+  const merged = Object.assign({}, DEFAULT_CFG, saved && typeof saved === "object" ? saved : {});
+  merged.repo = DEFAULT_REPO;
+  merged.branch = DEFAULT_BRANCH;
+  merged.channel = "release";
+  return merged;
 }
 
 function saveUpdCfg(cfg) {
@@ -1341,7 +1345,6 @@ export const AutoUpdater = {
         !isNewerSemver &&
         verCmp === 0 &&
         this.cfg.checkCommitSha &&
-        channel === "branch" &&
         Boolean(sha && this.state.installedSha && sha !== this.state.installedSha);
 
       let changelog = null;
@@ -1820,27 +1823,6 @@ export const AutoUpdater = {
               </label>
             </div>
 
-            <div class="vkx-fld-grid">
-              <label class="vkx-fld-tile">
-                <div class="vkx-fld-top">
-                  <span class="vkx-fld-lbl">📦 GitHub Repository</span>
-                  <em class="vkx-fld-hint">Định dạng: owner/repo</em>
-                </div>
-                <input type="text" class="vk-inp vkx-fld-ctl" id="${prefix}-inp-repo" value="${esc(cfg.repo)}" placeholder="zloganz/van-kiep-tro-ly">
-              </label>
-
-              <label class="vkx-fld-tile">
-                <div class="vkx-fld-top">
-                  <span class="vkx-fld-lbl">🏷️ Nguồn theo dõi cập nhật</span>
-                  <em class="vkx-fld-hint">Theo bản Release hoặc nhánh code</em>
-                </div>
-                <select class="vk-sel vkx-fld-ctl" id="${prefix}-sel-channel">
-                  <option value="release" ${(cfg.channel || "release") === "release" ? "selected" : ""}>🏷️ GitHub Releases chính thức (Khuyên dùng)</option>
-                  <option value="branch" ${cfg.channel === "branch" ? "selected" : ""}>🌿 Nhánh ${esc(cfg.branch || "main")} trực tiếp (Dev/Hotfix)</option>
-                </select>
-              </label>
-            </div>
-
             <div class="vkx-upd-toggles">
               <label class="vkx-upd-toggle-row">
                 <input type="checkbox" id="${prefix}-chk-enabled" ${cfg.enabled ? "checked" : ""}>
@@ -1900,9 +1882,6 @@ export const AutoUpdater = {
     const saveFromInputs = () => {
       const selMode = q("sel-mode");
       const selInt = q("sel-interval");
-      const inpRepo = q("inp-repo");
-      const selChan = q("sel-channel");
-      const inpBranch = q("inp-branch");
       const chkEn = q("chk-enabled");
       const chkSha = q("chk-sha");
       const chkQs = q("chk-qsave");
@@ -1910,9 +1889,9 @@ export const AutoUpdater = {
       this.updateConfig({
         installMode: selMode ? selMode.value : this.cfg.installMode,
         intervalMin: selInt ? parseInt(selInt.value, 10) || 0 : this.cfg.intervalMin,
-        repo: inpRepo && inpRepo.value.trim() ? inpRepo.value.trim() : DEFAULT_REPO,
-        channel: selChan ? selChan.value : this.cfg.channel || "release",
-        branch: inpBranch && inpBranch.value.trim() ? inpBranch.value.trim() : DEFAULT_BRANCH,
+        repo: DEFAULT_REPO,
+        channel: "release",
+        branch: DEFAULT_BRANCH,
         enabled: chkEn ? !!chkEn.checked : this.cfg.enabled,
         checkCommitSha: chkSha ? !!chkSha.checked : this.cfg.checkCommitSha,
         autoQuickSave: chkQs ? !!chkQs.checked : this.cfg.autoQuickSave,
@@ -1922,7 +1901,7 @@ export const AutoUpdater = {
       }
     };
 
-    ["sel-mode", "sel-interval", "inp-repo", "sel-channel", "inp-branch", "chk-enabled", "chk-sha", "chk-qsave"].forEach(
+    ["sel-mode", "sel-interval", "chk-enabled", "chk-sha", "chk-qsave"].forEach(
       (id) => {
         const el = q(id);
         if (el) el.onchange = saveFromInputs;

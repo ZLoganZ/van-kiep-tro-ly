@@ -1013,20 +1013,38 @@ function ctxLite() {
   return _cachedLite;
 }
 
+function clearCtxCache() {
+  _cachedCtxBase = null;
+  _cachedCtxSig = "";
+  _cachedCtxTime = 0;
+  _cachedLite = null;
+  _cachedLiteSig = "";
+  try {
+    if (_dangerCache && typeof _dangerCache.clear === "function") _dangerCache.clear();
+    if (_nearSlotsCache && typeof _nearSlotsCache.clear === "function") _nearSlotsCache.clear();
+  } catch (e) {}
+}
+
 const nvNow = () => clone(G().state.run.nhanVat);
 const realmName = (i) => {
   try {
-    return S.core.canhGioi(i).ten;
-  } catch {
-    return REALM_TEN[i] || "Cảnh Giới " + i;
-  }
+    if (S.core && typeof S.core.canhGioi === "function") return S.core.canhGioi(i).ten;
+    const rMod = TT && TT.core && TT.core["kernel/realms"];
+    if (rMod && typeof rMod.canhGioi === "function") return rMod.canhGioi(i).ten;
+  } catch {}
+  return REALM_TEN[i] || "Cảnh Giới " + i;
 };
 const realmLabel = (cg, tc) => {
   try {
-    return S.core.tenCanhGioi(cg, tc);
-  } catch {
-    return realmName(cg);
+    if (S.core && typeof S.core.tenCanhGioi === "function") return S.core.tenCanhGioi(cg, tc);
+    const rMod = TT && TT.core && TT.core["kernel/realms"];
+    if (rMod && typeof rMod.tenCanhGioi === "function") return rMod.tenCanhGioi(cg, tc);
+  } catch {}
+  const base = realmName(cg);
+  if (cg > 0 && tc != null && gWin.STAGE && gWin.STAGE[tc]) {
+    return base + " " + gWin.STAGE[tc];
   }
+  return base;
 };
 const has = (...ks) => ks.every((k) => S.core && typeof S.core[k] === "function");
 const needMsg = (what) =>
@@ -1279,6 +1297,7 @@ export {
   _cachedLite,
   _cachedLiteSig,
   ctxLite,
+  clearCtxCache,
   nvNow,
   realmName,
   realmLabel,
@@ -1333,6 +1352,7 @@ Object.assign(gWin, {
   _cachedLite,
   _cachedLiteSig,
   ctxLite,
+  clearCtxCache,
   nvNow,
   realmName,
   realmLabel,

@@ -381,10 +381,10 @@ async function auSdbStep(st) {
       if (cfg.autoQuickSave && st.savedEnc !== target.encId) {
         st.savedEnc = target.encId;
         try {
-          saveQuickSave(
+          const qsRes = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave(
             `Trước trận Dị Bảo: ${target.title} (${target.pName})`,
-          );
-          auLog(
+          ) : { ok: false };
+          if (qsRes && qsRes.ok) auLog(
             `💾 [Quick Save] Đã tự động chụp bản lưu trước trận «${target.title}» tại ${target.pName}. (Nếu xịt 7%, bạn có thể vào tab [Lưu & Nạp Save] bật 'Tẩy Thiên Cơ' để gieo quẻ mới!).`,
             "vk-ok",
           );

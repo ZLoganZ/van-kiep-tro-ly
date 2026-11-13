@@ -283,41 +283,54 @@ const errBox = (e) =>
 // Đồng bộ Thanh Linh Giác Nhân Vật (#vkx-char-hud) theo thời gian thực
 function syncCharHudBar() {
   if (!UI || typeof UI.updateCharHud !== "function") return;
+  const triggerHudQuickSave = () => {
+    const res =
+      typeof gWin.saveQuickSave === "function"
+        ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác")
+        : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
+    if (res && res.ok) {
+      UI.notify("⚡ " + res.msg);
+      if (S.tab === "sv" && typeof gWin.tabLuuNapSave === "function") {
+        try {
+          gWin.tabLuuNapSave();
+        } catch (err) {}
+      }
+    } else if (res) {
+      UI.notify("⚠️ " + res.msg);
+    }
+  };
   try {
     const g = G();
-    if (!g || !g.state || !g.state.run || !S.core) {
+    const st = (g && g.state) || (gWin.TT && typeof gWin.TT.state === "function" ? gWin.TT.state() : null);
+    if (!st || !st.run || !st.run.nhanVat) {
       UI.updateCharHud(
         '<span class="vkx-hud-pill realm">☯ Thiên Cơ Tinh Bàn</span><span class="vkx-hud-pill">Chưa vào kiếp tu luyện</span>',
-        null,
+        triggerHudQuickSave,
       );
       return;
     }
-    const c = ctx();
-    const run = c.run;
+    const run = st.run;
     const nv = run.nhanVat;
     const K = S.core;
-    const tho = K.thoNguyenToiDa(nv);
-    const rem = Math.max(0, Math.floor(tho - nv.tuoi));
-    const realmStr = realmLabel(nv.canhGioi, nv.tieuCanhGioi);
+    const thoFn =
+      (K && K.thoNguyenToiDa) ||
+      (gWin.TT && gWin.TT.core && gWin.TT.core["character/character"] && gWin.TT.core["character/character"].thoNguyenToiDa);
+    const tho = typeof thoFn === "function" ? thoFn(nv) : 100;
+    const rem = Math.max(0, Math.floor(tho - (nv.tuoi || 0)));
+    const realmStr = realmLabel(nv.canhGioi ?? run.canhGioi ?? 0, nv.tieuCanhGioi ?? run.tieuCanhGioi ?? 0);
     let curPlace = run.viTri || "—";
     try {
-      curPlace = (typeof gWin.placeName === 'function' ? gWin.placeName(c, run.viTri) : run.viTri) || run.viTri;
+      const cLite = S.core ? ctxLite() : null;
+      curPlace = (typeof gWin.placeName === "function" ? gWin.placeName(cLite, run.viTri) : run.viTri) || run.viTri;
     } catch (e) {}
     const pillRealm = `<span class="vkx-hud-pill realm" title="Đạo hiệu & Cảnh giới hiện tại">☯ ${esc(nv.ten)} · ${esc(realmStr)}</span>`;
-    const pillAge = `<span class="vkx-hud-pill ${rem < 15 ? "warn" : ""}" title="Tuổi / Thọ nguyên tối đa">⏳ ${Math.floor(nv.tuoi)}/${tho} (${rem}n)</span>`;
+    const pillAge = `<span class="vkx-hud-pill ${rem < 15 ? "warn" : ""}" title="Tuổi / Thọ nguyên tối đa">⏳ ${Math.floor(nv.tuoi || 0)}/${num(tho, 1)} (${rem}n)</span>`;
     const pillStone = `<span class="vkx-hud-pill ok" title="Linh thạch hiện có">💎 ${num(Math.floor(nv.linhThach || 0))}</span>`;
     const pillLoc = `<span class="vkx-hud-pill" title="Vị trí hiện tại">📍 ${esc(curPlace)}</span>`;
     const pillInj = nv.thuongThe
       ? `<span class="vkx-hud-pill warn" title="Thương thế">🩸 Thương ${nv.thuongThe}</span>`
       : "";
-    UI.updateCharHud(pillRealm + pillAge + pillStone + pillLoc + pillInj, () => {
-      const res = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave("Lưu nhanh từ Thanh Linh Giác") : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
-      if (res && res.ok) {
-        UI.notify("⚡ " + res.msg);
-      } else if (res) {
-        UI.notify("⚠️ " + res.msg);
-      }
-    });
+    UI.updateCharHud(pillRealm + pillAge + pillStone + pillLoc + pillInj, triggerHudQuickSave);
   } catch (e) {}
 }
 
@@ -680,18 +693,20 @@ function tabTongQuan() {
   const tqQs = body.querySelector("#tq-btn-quicksave");
   if (tqQs) {
     tqQs.onclick = () => {
-      const note = prompt(
-        "Nhập ghi chú cho bản lưu nhanh (hoặc để trống):",
-        "",
-      );
-      if (note === null) return;
-      const res = gWin.saveQuickSave(note);
-      if (res.ok) {
+      const res = gWin.saveQuickSave("Lưu nhanh từ Tổng Quan");
+      if (res && res.ok) {
         try {
-          UI.notify(res.msg);
+          UI.notify("⚡ " + res.msg);
         } catch (e) {}
-      } else {
-        alert("⚠️ " + res.msg);
+        const origTxt = tqQs.textContent;
+        tqQs.textContent = "✔ Đã Lưu Nhanh!";
+        setTimeout(() => {
+          if (tqQs) tqQs.textContent = origTxt;
+        }, 1200);
+      } else if (res) {
+        try {
+          UI.notify("⚠️ " + res.msg);
+        } catch (e) {}
       }
     };
   }
@@ -784,6 +799,7 @@ export {
   keepVisible,
   drawTabs,
   errBox,
+  syncCharHudBar,
   refreshMiniStatus,
   render,
   progressHtml,
@@ -800,6 +816,7 @@ Object.assign(gWin, {
   keepVisible,
   drawTabs,
   errBox,
+  syncCharHudBar,
   refreshMiniStatus,
   render,
   progressHtml,

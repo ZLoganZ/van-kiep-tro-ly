@@ -1,7 +1,7 @@
 import { gWin, TT, num, esc } from "../core/utils.js";
 import { UI } from "../ui/shell.js";
-import { S, body, loadCore, G, C, clone, ctx, ctxLite, realmLabel, has } from "../core/bridge.js";
-import { errBox, render, Assist } from "./navigation.js";
+import { S, body, loadCore, G, C, clone, ctx, ctxLite, clearCtxCache, realmLabel, has } from "../core/bridge.js";
+import { errBox, syncCharHudBar, render, Assist } from "./navigation.js";
 import { placeName } from "./di-bao.js";
 import { AU } from "../auto/auto-core.js";
 import { rrLoPhiInfo } from "../auto/auto-reroll.js";
@@ -679,7 +679,166 @@ function rrLhInfoText() {
   }
 }
 
-// ── Module Quản Lý Save & Tránh Thiên Đạo (v7.9.0) ──
+// ── Module Quản Lý Save, Quick Save Đa Tầng (IndexedDB + LocalStorage) & Tránh Thiên Đạo (v8.1.3) ──
+const QS_LS_KEY = "vkx_quick_saves";
+const QS_IDB_NAME = "vkx_quick_saves_db";
+const QS_IDB_STORE = "quicksaves";
+const MAX_QUICK_SAVES = 20;
+
+let _memQuickSaves = null;
+let _idbHydrated = false;
+let _lastSvFeedback = null; // { text, isError, ts }
+const _fallbackMemStorage = new Map();
+function _getSafeStorage(g) {
+  try {
+    if (g && g.storage) return g.storage;
+    if (typeof localStorage !== "undefined" && localStorage) return localStorage;
+  } catch (e) {}
+  return {
+    getItem: (k) => (_fallbackMemStorage.has(k) ? _fallbackMemStorage.get(k) : null),
+    setItem: (k, v) => _fallbackMemStorage.set(k, String(v)),
+    removeItem: (k) => _fallbackMemStorage.delete(k),
+  };
+}
+
+function _readLsQuickSaves() {
+  try {
+    const raw = _getSafeStorage().getItem(QS_LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((x) => x && x.id && x.data) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function _openQsIdb() {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    let req;
+    try {
+      req = indexedDB.open(QS_IDB_NAME, 1);
+    } catch (e) {
+      return resolve(null);
+    }
+    req.onupgradeneeded = () => {
+      try {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(QS_IDB_STORE)) {
+          db.createObjectStore(QS_IDB_STORE, { keyPath: "id" });
+        }
+      } catch (e) {}
+    };
+    req.onerror = () => resolve(null);
+    req.onsuccess = () => resolve(req.result || null);
+  });
+}
+
+async function _hydrateQuickSavesFromIdb() {
+  if (_idbHydrated) return;
+  _idbHydrated = true;
+  try {
+    const db = await _openQsIdb();
+    if (!db) return;
+    const idbItems = await new Promise((resolve) => {
+      try {
+        const tx = db.transaction(QS_IDB_STORE, "readonly");
+        const st = tx.objectStore(QS_IDB_STORE);
+        const r = st.getAll();
+        r.onsuccess = () => resolve(Array.isArray(r.result) ? r.result : []);
+        r.onerror = () => resolve([]);
+      } catch (e) {
+        resolve([]);
+      }
+    });
+    try {
+      db.close();
+    } catch (e) {}
+    if (!idbItems.length) return;
+    const current = getQuickSaves();
+    const byId = new Map();
+    for (const item of [...current, ...idbItems]) {
+      if (item && item.id && item.data && !byId.has(item.id)) {
+        byId.set(item.id, item);
+      }
+    }
+    const merged = [...byId.values()]
+      .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+      .slice(0, MAX_QUICK_SAVES);
+    if (merged.length !== current.length) {
+      _memQuickSaves = merged;
+      if (S && S.tab === "sv" && body) {
+        try {
+          tabLuuNapSave();
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+}
+
+async function _syncQuickSavesToIdb(list) {
+  try {
+    const db = await _openQsIdb();
+    if (!db) return;
+    await new Promise((resolve) => {
+      try {
+        const tx = db.transaction(QS_IDB_STORE, "readwrite");
+        const st = tx.objectStore(QS_IDB_STORE);
+        st.clear();
+        for (const item of list) {
+          if (item && item.id && item.data) st.put(item);
+        }
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) {
+        resolve(false);
+      }
+    });
+    try {
+      db.close();
+    } catch (e) {}
+  } catch (e) {}
+}
+
+function _persistQuickSaves(list) {
+  const cleanList = (Array.isArray(list) ? list : [])
+    .filter((x) => x && x.id && x.data)
+    .slice(0, MAX_QUICK_SAVES);
+  _memQuickSaves = cleanList;
+
+  // 1. Lưu vào localStorage với vòng lặp co giãn tự động (chống lỗi QuotaExceededError làm mất save ở cuối game)
+  let savedToLs = false;
+  if (cleanList.length === 0) {
+    try {
+      _getSafeStorage().removeItem(QS_LS_KEY);
+      savedToLs = true;
+    } catch (e) {}
+  } else {
+    const lsCopy = [...cleanList];
+    while (lsCopy.length >= 1) {
+      try {
+        _getSafeStorage().setItem(QS_LS_KEY, JSON.stringify(lsCopy));
+        savedToLs = true;
+        break;
+      } catch (e) {
+        lsCopy.pop();
+      }
+    }
+  }
+
+  // 2. Đồng bộ toàn bộ danh sách (tới 20 bản đầy đủ) xuống IndexedDB không giới hạn dung lượng
+  _syncQuickSavesToIdb(cleanList);
+  return { savedToLs, count: cleanList.length };
+}
+
+function getQuickSaves() {
+  if (!_memQuickSaves) {
+    _memQuickSaves = _readLsQuickSaves();
+    _hydrateQuickSavesFromIdb();
+  }
+  return _memQuickSaves;
+}
+
 function cleanseThienDao() {
   try {
     const cleanMemory = {
@@ -689,8 +848,7 @@ function cleanseThienDao() {
       lives: [],
     };
     try {
-      localStorage.setItem(
-        "tu-tien:thien-dao:v1",
+      _getSafeStorage().setItem("tu-tien:thien-dao:v1",
         JSON.stringify(cleanMemory),
       );
     } catch (e) {}
@@ -709,13 +867,21 @@ function cleanseThienDao() {
         g.store.setState({
           thienDao: undefined,
           saveWarning: undefined,
+          saveFailed: false,
           saveLock: undefined,
           error: undefined,
         });
       }
-      if (typeof g.dismissThienDao === "function") g.dismissThienDao();
-      if (typeof g.dismissSaveWarning === "function")
-        g.dismissSaveWarning();
+      if (typeof g.dismissThienDao === "function") {
+        try {
+          g.dismissThienDao();
+        } catch (e) {}
+      }
+      if (typeof g.dismissSaveWarning === "function") {
+        try {
+          g.dismissSaveWarning();
+        } catch (e) {}
+      }
     }
     return true;
   } catch (err) {
@@ -726,22 +892,81 @@ function cleanseThienDao() {
 
 function rerollRunRng(run) {
   if (!run) return;
-  run.rngKeys = {};
-  run.rng = (Math.random() * 0x100000000) >>> 0;
+  const randU32 = () => ((Math.random() * 0xffffffff) >>> 0) || 1;
+  const oldKeys =
+    run.rngKeys && typeof run.rngKeys === "object"
+      ? Object.keys(run.rngKeys)
+      : [];
+  const nextKeys = {};
+  for (const k of oldKeys) {
+    nextKeys[k] = randU32();
+  }
+  for (const k of [
+    "dot_pha",
+    "luyen_che",
+    "breakthrough",
+    "craft",
+    "natal",
+    "encounter",
+  ]) {
+    nextKeys[k] = randU32();
+  }
+  run.rngKeys = nextKeys;
+  run.rng = randU32();
   if (typeof run.seed === "string") {
     const parts = run.seed.split(":");
-    run.seed = parts[0] + ":" + Math.floor(Math.random() * 100000);
+    run.seed = parts[0] + ":" + Math.floor(Math.random() * 900000 + 100000);
+  } else {
+    run.seed = "vkx:" + Math.floor(Math.random() * 900000 + 100000);
   }
 }
 
-function doExportSave() {
+function _resolveGameState() {
   const g = G();
-  if (!g || !g.state)
-    return { ok: false, msg: "Chưa có dữ liệu trò chơi." };
+  // Đẩy mọi hành động đang chờ trong hàng đợi saveTimer của game xuống trước khi đọc
+  if (g && typeof g.flushSave === "function") {
+    try {
+      g.flushSave();
+    } catch (e) {}
+  }
+  const st =
+    (g && g.state) ||
+    (TT && typeof TT.state === "function" ? TT.state() : null);
+  if (st && st.meta) {
+    return { g, meta: st.meta, run: st.run };
+  }
+  // Dự phòng đọc trực tiếp từ localStorage qua kernel/save nếu store chưa sẵn sàng
+  const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
+  const storage = _getSafeStorage(g);
+  let meta = null;
+  let run = undefined;
+  try {
+    if (typeof kernelSave.loadMeta === "function") {
+      meta = kernelSave.loadMeta(storage);
+    } else {
+      const mRaw = storage.getItem("tu-tien:meta");
+      if (mRaw) meta = JSON.parse(mRaw);
+    }
+    if (typeof kernelSave.loadRun === "function") {
+      run = kernelSave.loadRun(storage) || undefined;
+    } else {
+      const rRaw = storage.getItem("tu-tien:run");
+      if (rRaw) run = JSON.parse(rRaw);
+    }
+  } catch (e) {}
+  return { g, meta, run };
+}
+
+function doExportSave() {
+  const { g, meta: rawMeta, run: rawRun } = _resolveGameState();
+  if (!rawMeta) {
+    return { ok: false, msg: "Chưa có dữ liệu trò chơi để sao lưu." };
+  }
 
   const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
-  const meta = clone(g.state.meta);
-  const run = g.state.run ? clone(g.state.run) : undefined;
+  const saveCodec = (TT && TT.core && TT.core["kernel/save_codec"]) || {};
+  const meta = clone(rawMeta);
+  const run = rawRun ? clone(rawRun) : undefined;
 
   let saveStr = "";
   if (kernelSave && typeof kernelSave.packSave === "function") {
@@ -750,9 +975,21 @@ function doExportSave() {
     } catch (e) {}
   }
 
-  if (!saveStr && typeof g.exportSave === "function") {
+  if (!saveStr && g && typeof g.exportSave === "function") {
     try {
       saveStr = g.exportSave();
+    } catch (e) {}
+  }
+
+  if (!saveStr && saveCodec && typeof saveCodec.seal === "function") {
+    try {
+      saveStr = saveCodec.seal({
+        game: "tu-tien",
+        version: 1,
+        luuLuc: new Date().toISOString(),
+        meta,
+        run,
+      });
     } catch (e) {}
   }
 
@@ -771,6 +1008,10 @@ function doExportSave() {
   }
 
   const nv = run && run.nhanVat;
+  const cg = nv ? (nv.canhGioi ?? run.canhGioi ?? 0) : 0;
+  const tcg = nv ? (nv.tieuCanhGioi ?? run.tieuCanhGioi ?? 0) : 0;
+  const fullRealm = nv ? realmLabel(cg, tcg) : "Ngoài Kiếp";
+
   const name =
     nv && nv.ten
       ? nv.ten
@@ -780,12 +1021,12 @@ function doExportSave() {
       : "VoDanh";
   let cgLabel = "ChuaVaoKiep";
   if (nv) {
-    cgLabel = realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0)
+    cgLabel = fullRealm
       .replace(/[^\w\s\u00C0-\u1EF9]/gi, "")
       .trim()
       .replace(/\s+/g, "_");
   }
-  const year = run ? (run.nam || 0) + "Nam" : "Meta";
+  const year = run ? Math.floor(run.nam || 0) + "Nam" : "Meta";
   const now = new Date();
   const dateStr =
     now.getFullYear() +
@@ -793,19 +1034,54 @@ function doExportSave() {
     String(now.getDate()).padStart(2, "0") +
     "_" +
     String(now.getHours()).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0");
+    String(now.getMinutes()).padStart(2, "0") +
+    String(now.getSeconds()).padStart(2, "0");
 
   const fileName = `VanKiep_${name}_${cgLabel}_${year}_${dateStr}.txt`;
+
+  let thoMax = 0;
+  try {
+    const thoFn =
+      (S.core && S.core.thoNguyenToiDa) ||
+      (TT &&
+        TT.core &&
+        TT.core["character/character"] &&
+        TT.core["character/character"].thoNguyenToiDa);
+    if (nv && typeof thoFn === "function") thoMax = Math.floor(thoFn(nv));
+  } catch (e) {}
+
+  let pName = run ? "Linh Giới" : "Bến Vong Xuyên";
+  try {
+    const c = S.core ? ctxLite() : null;
+    if (run && run.viTri != null) {
+      pName = placeName(c, run.viTri) || String(run.viTri);
+    }
+  } catch (e) {}
+
+  const isOneLife = !!(
+    (g && g.oneLifeActive) ||
+    (run &&
+      run.difficulty &&
+      typeof run.difficulty === "string" &&
+      (run.difficulty === "oneLife" ||
+        run.difficulty.includes("tuyet_menh") ||
+        run.difficulty.includes("oneLife")))
+  );
 
   return {
     ok: true,
     data: saveStr,
     fileName,
     name: (nv && nv.ten) || "Vô Danh",
-    realm: nv
-      ? realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0)
-      : "Ngoài Kiếp",
-    year: run ? run.nam : 0,
+    realm: fullRealm,
+    year: run ? Math.floor(run.nam || 0) : 0,
+    age: nv ? Math.floor(nv.tuoi || 0) : 0,
+    maxAge: thoMax,
+    linhThach: nv ? Math.floor(nv.linhThach || 0) : 0,
+    pName,
+    slot: run ? run.viTri : null,
+    isOneLife,
+    sizeKb: Math.max(1, Math.round((saveStr.length || 0) / 1024)),
     meta,
     run,
   };
@@ -814,20 +1090,40 @@ function doExportSave() {
 function doImportSave(saveText, options = {}) {
   const g = G();
   if (!g) return { ok: false, msg: "Không tìm thấy giao diện game." };
+  if (!saveText || typeof saveText !== "string" || !saveText.trim()) {
+    return { ok: false, msg: "Dữ liệu bản lưu trống." };
+  }
 
+  const trimmed = saveText.trim();
   const kernelSave = (TT && TT.core && TT.core["kernel/save"]) || {};
+  const saveCodec = (TT && TT.core && TT.core["kernel/save_codec"]) || {};
   let unpacked = null;
 
+  // 1. Giải mã bằng kernel/save.unpackSave chính thức
   if (typeof kernelSave.unpackSave === "function") {
     try {
-      unpacked = kernelSave.unpackSave(saveText.trim());
+      unpacked = kernelSave.unpackSave(trimmed);
     } catch (e) {}
   }
 
+  // 2. Dự phòng qua kernel/save_codec.open (đối với chuỗi VKTT1. hoặc #tuTien:)
+  if (!unpacked && typeof saveCodec.open === "function") {
+    try {
+      const opened = saveCodec.open(trimmed);
+      if (opened && opened.status === "sealed" && opened.value) {
+        const val = opened.value;
+        if (val && (val.meta || val.game === "tu-tien")) {
+          unpacked = { meta: val.meta || val, run: val.run };
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 3. Dự phòng JSON thuần
   if (!unpacked) {
     try {
-      const raw = JSON.parse(saveText.trim());
-      if (raw && (raw.game === "tu-tien" || raw.meta)) {
+      const raw = JSON.parse(trimmed);
+      if (raw && (raw.game === "tu-tien" || raw.meta || raw.moKhoa)) {
         unpacked = {
           meta: raw.meta || raw,
           run: raw.run,
@@ -843,44 +1139,115 @@ function doImportSave(saveText, options = {}) {
     };
   }
 
-  const meta = unpacked.meta;
-  let run = unpacked.run;
+  // Hủy ngay bộ đếm saveTimer đang chờ của game để trạng thái cũ không ghi đè lại sau vài trăm ms
+  if (typeof g.flushSave === "function") {
+    try {
+      g.flushSave();
+    } catch (e) {}
+  }
+  if (g.saveTimer) {
+    try {
+      clearTimeout(g.saveTimer);
+    } catch (e) {}
+    g.saveTimer = undefined;
+  }
+  g.pendingRun = undefined;
+  g.locked = undefined;
+
+  const meta = clone(unpacked.meta);
+  let run = unpacked.run ? clone(unpacked.run) : undefined;
 
   if (g.state && g.state.meta && g.state.meta.settings) {
-    meta.settings = meta.settings || g.state.meta.settings;
+    meta.settings = meta.settings || clone(g.state.meta.settings);
   }
   if (g.env && g.env.world && g.env.world.id) {
     meta.banDo = g.env.world.id;
+    if (run) run.banDo = g.env.world.id;
   }
 
   if (options.rerollRng && run) {
     rerollRunRng(run);
   }
 
-  if (run && typeof g.prepareRun === "function") {
+  // Chuẩn hóa & vá dữ liệu run bằng các hàm bảo toàn của game
+  if (run) {
     try {
-      run = g.prepareRun(run, true) || run;
+      if (typeof kernelSave.vaSoHong === "function") {
+        run = kernelSave.vaSoHong(run) || run;
+      }
+      if (typeof kernelSave.boManhTrung === "function") {
+        kernelSave.boManhTrung(run);
+      }
+      if (typeof kernelSave.boNodeTrung === "function") {
+        kernelSave.boNodeTrung(run);
+      }
+      if (typeof kernelSave.kepKinhNghiemNghe === "function") {
+        kernelSave.kepKinhNghiemNghe(run);
+      }
     } catch (e) {}
+    if (typeof g.prepareRun === "function") {
+      try {
+        run = g.prepareRun(run, true) || run;
+      } catch (e) {}
+    }
   }
 
+  if (options.cleanThienDao !== false) {
+    cleanseThienDao();
+  }
+
+  const targetStorage = _getSafeStorage(g);
+
+  // Ghi trực tiếp vào Storage chuẩn của game
   try {
     if (typeof kernelSave.saveMeta === "function") {
-      kernelSave.saveMeta(g.storage || localStorage, meta);
+      kernelSave.saveMeta(targetStorage, meta);
     } else {
-      localStorage.setItem("tu-tien:meta", JSON.stringify(meta));
+      targetStorage.setItem("tu-tien:meta", JSON.stringify(meta));
     }
 
     if (run) {
       if (typeof kernelSave.saveRun === "function") {
-        kernelSave.saveRun(g.storage || localStorage, run);
+        kernelSave.saveRun(targetStorage, run);
       } else {
-        localStorage.setItem("tu-tien:run", JSON.stringify(run));
+        targetStorage.setItem("tu-tien:run", JSON.stringify(run));
       }
+    } else {
+      targetStorage.removeItem("tu-tien:run");
     }
   } catch (err) {
-    console.error("Lỗi khi ghi save vào storage:", err);
+    console.error("[VKX] Lỗi khi ghi save vào storage:", err);
   }
 
+  // Gọi đồng bộ qua g.importSave (tạm mở khóa oneLifeActive nếu đang ở kiếp Tuyệt Mệnh) để làm mới hoàn toàn bản đồ Pixi & cửa sổ sự kiện của game
+  if (typeof g.importSave === "function" && typeof kernelSave.packSave === "function") {
+    try {
+      const origDifficulty = run ? run.difficulty : undefined;
+      if (g.store && typeof g.store.setState === "function") {
+        g.store.setState({
+          run: undefined,
+          summary: undefined,
+          error: undefined,
+          saveWarning: undefined,
+          saveLock: undefined,
+          thienDao: undefined,
+        });
+      }
+      const runForImport = run ? { ...run, difficulty: "normal" } : undefined;
+      const repackedForImport = kernelSave.packSave(meta, runForImport);
+      if (repackedForImport) {
+        g.importSave(repackedForImport);
+      }
+      if (run && origDifficulty !== undefined) {
+        run.difficulty = origDifficulty;
+        if (typeof kernelSave.saveRun === "function") {
+          kernelSave.saveRun(targetStorage, run);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Đảm bảo Zustand Store của game nhận đúng đối tượng run & meta đã xử lý và xóa sạch mọi cờ cảnh báo
   if (g.store && typeof g.store.setState === "function") {
     g.store.setState({
       run: run,
@@ -888,6 +1255,7 @@ function doImportSave(saveText, options = {}) {
       summary: undefined,
       error: undefined,
       saveWarning: undefined,
+      saveFailed: false,
       thienDao: undefined,
       saveLock: undefined,
     });
@@ -903,69 +1271,90 @@ function doImportSave(saveText, options = {}) {
     } catch (e) {}
   }
 
+  // Xóa cache ngữ cảnh trong bridge.js và đồng bộ lại toàn bộ giao diện HUD + Tab
+  try {
+    if (typeof clearCtxCache === "function") clearCtxCache();
+  } catch (e) {}
+  try {
+    if (typeof syncCharHudBar === "function") syncCharHudBar();
+  } catch (e) {}
   try {
     if (typeof render === "function") render();
   } catch (e) {}
 
+  const extraMsg = options.rerollRng
+    ? " Đã Tẩy Thiên Cơ (đổi hạt giống RNG mới) & thanh tẩy Thiên Đạo."
+    : options.cleanThienDao !== false
+      ? " Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo."
+      : "";
+
   return {
     ok: true,
-    msg: "Đã nạp file save thành công! Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo.",
+    msg: "Đã khôi phục bản lưu thành công!" + extraMsg,
   };
-}
-
-function getQuickSaves() {
-  try {
-    const s = localStorage.getItem("vkx_quick_saves");
-    return s ? JSON.parse(s) : [];
-  } catch (e) {
-    return [];
-  }
 }
 
 function saveQuickSave(note = "") {
   const exp = doExportSave();
   if (!exp.ok) return exp;
-  const list = getQuickSaves();
-  let pName = "Bến Vong Xuyên";
-  try {
-    const c = ctxLite();
-    if (c && exp.run && exp.run.viTri != null) {
-      pName = placeName(c, exp.run.viTri);
-    }
-  } catch (e) {}
+  const list = [...getQuickSaves()];
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")} ${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`;
 
+  const cleanNote = String(note || "").trim();
   const entry = {
-    id: Date.now(),
+    id: Date.now() * 10 + Math.floor(Math.random() * 10),
     time: timeStr,
     name: exp.name || "Vô Danh",
     realm: exp.realm || "Phàm Nhân",
-    year: exp.run ? exp.run.nam : 0,
-    pName,
+    year: exp.year || 0,
+    age: exp.age || 0,
+    maxAge: exp.maxAge || 0,
+    linhThach: exp.linhThach || 0,
+    pName: exp.pName || "Bến Vong Xuyên",
+    slot: exp.slot,
+    isOneLife: !!exp.isOneLife,
+    sizeKb: exp.sizeKb || 1,
     note:
-      note.trim() ||
-      `Lưu tại ${pName} (Năm ${exp.run ? exp.run.nam : 0})`,
+      cleanNote ||
+      `Lưu tại ${exp.pName || "Bến Vong Xuyên"} (Năm ${exp.year || 0})`,
     data: exp.data,
   };
 
   list.unshift(entry);
-  while (list.length > 15) list.pop();
+  while (list.length > MAX_QUICK_SAVES) list.pop();
+  _persistQuickSaves(list);
+
   try {
-    localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
-  } catch (e) {
-    while (list.length > 5) list.pop();
-    try {
-      localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
-    } catch (e2) {}
-  }
-  return { ok: true, msg: "Đã lưu bản Quick Save thành công!" };
+    if (typeof syncCharHudBar === "function") syncCharHudBar();
+  } catch (e) {}
+
+  return {
+    ok: true,
+    entry,
+    msg: `Đã tạo Quick Save: ${entry.name} (${entry.realm} · Năm ${entry.year})`,
+  };
 }
 
 function deleteQuickSave(id) {
-  const list = getQuickSaves().filter((x) => x.id !== id);
-  localStorage.setItem("vkx_quick_saves", JSON.stringify(list));
+  const numId = Number(id);
+  const list = getQuickSaves().filter((x) => Number(x.id) !== numId);
+  _persistQuickSaves(list);
+}
+
+function renameQuickSave(id, newNote) {
+  const numId = Number(id);
+  const list = getQuickSaves().map((x) =>
+    Number(x.id) === numId
+      ? { ...x, note: String(newNote || "").trim() || x.note }
+      : x,
+  );
+  _persistQuickSaves(list);
+}
+
+function clearAllQuickSaves() {
+  _persistQuickSaves([]);
 }
 
 function downloadSaveFile(data, fileName) {
@@ -977,14 +1366,23 @@ function downloadSaveFile(data, fileName) {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+    try {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {}
+  }, 150);
 }
 
 function copySaveToClipboard(data) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(data);
+    return navigator.clipboard.writeText(data).catch(() => {
+      const ta = document.createElement("textarea");
+      ta.value = data;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    });
   } else {
     const ta = document.createElement("textarea");
     ta.value = data;
@@ -996,17 +1394,18 @@ function copySaveToClipboard(data) {
   }
 }
 
+function _setSvFeedback(text, isError = false) {
+  _lastSvFeedback = { text, isError, ts: Date.now() };
+}
+
 function tabLuuNapSave() {
-  const g = G(),
-    st = g ? g.state : null,
-    run = st ? st.run : null,
-    nv = run ? run.nhanVat : null,
-    meta = st ? st.meta : null;
+  const { g, meta, run } = _resolveGameState();
+  const nv = run ? run.nhanVat : null;
 
   let statusHtml = "";
   if (run && nv) {
     const isOneLife = !!(
-      g.oneLifeActive ||
+      (g && g.oneLifeActive) ||
       (run &&
         run.difficulty &&
         typeof run.difficulty === "string" &&
@@ -1016,7 +1415,7 @@ function tabLuuNapSave() {
     );
     const diffMode = (run && run.difficulty) || "normal";
     const oneLifeBadge = isOneLife
-      ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Tuyệt Mệnh (1 Mạng · Trần Đan 2/Cảnh Giới)</span>`
+      ? `<span style="background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">☠️ Tuyệt Mệnh (1 Mạng · Đã Mở Khóa Bảo Hộ)</span>`
       : diffMode === "hardcore"
         ? `<span style="background:rgba(245,158,11,0.2);color:#fbbf24;border:1px solid rgba(245,158,11,0.45);border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700">🔥 Nghịch Thiên (Trần Đan 3/Cảnh Giới)</span>`
         : diffMode === "easy"
@@ -1025,21 +1424,37 @@ function tabLuuNapSave() {
 
     let pName = "Vị trí không rõ";
     try {
-      const c = ctxLite();
-      if (c && run.viTri != null) pName = placeName(c, run.viTri);
+      const c = S.core ? ctxLite() : null;
+      if (run.viTri != null) pName = placeName(c, run.viTri) || String(run.viTri);
     } catch (e) {}
+
+    const cg = nv.canhGioi ?? run.canhGioi ?? 0;
+    const tcg = nv.tieuCanhGioi ?? run.tieuCanhGioi ?? 0;
 
     statusHtml = `
       <div class="vk-row"><span>Nhân Vật</span><b>${esc(nv.ten)}</b></div>
-      <div class="vk-row"><span>Cảnh Giới</span><b>${esc(realmLabel(nv.canhGioi, nv.tieuCanhGioi || 0))}</b></div>
-      <div class="vk-row"><span>Tuổi / Năm</span><b>Tuổi ${Math.floor(nv.tuoi || 0)} · Năm ${run.nam || 0}</b></div>
-      <div class="vk-row"><span>Nơi Chốn</span><b>${esc(pName)} (Slot ${run.viTri})</b></div>
+      <div class="vk-row"><span>Cảnh Giới</span><b>${esc(realmLabel(cg, tcg))}</b></div>
+      <div class="vk-row"><span>Tuổi / Năm</span><b>Tuổi ${Math.floor(nv.tuoi || 0)} · Năm ${Math.floor(run.nam || 0)} · 💎 ${num(Math.floor(nv.linhThach || 0))}</b></div>
+      <div class="vk-row"><span>Nơi Chốn</span><b>${esc(pName)} (Slot ${esc(run.viTri)})</b></div>
       <div class="vk-row"><span>Chế Độ Chơi</span><b>${oneLifeBadge}</b></div>
     `;
   } else {
     statusHtml = `
       <div style="font-size:13px;color:var(--mut);padding:6px 0">
-        Hiện tại bạn đang ở ngoài màn hình chính hoặc Bến Vong Xuyên (chưa vào kiếp). Bạn có thể <b>Nạp File Save</b> bên dưới để vào lại kiếp chơi ngay lập tức.
+        Hiện tại bạn đang ở ngoài màn hình chính hoặc Bến Vong Xuyên (chưa vào kiếp). Bạn có thể <b>Khôi Phục Bản Lưu Nhanh</b> hoặc <b>Nạp File Save</b> bên dưới để vào lại kiếp chơi ngay lập tức.
+      </div>
+    `;
+  }
+
+  let feedbackBannerHtml = "";
+  if (_lastSvFeedback && Date.now() - _lastSvFeedback.ts < 12000) {
+    const fbColor = _lastSvFeedback.isError ? "var(--bad)" : "var(--ok)";
+    const fbBg = _lastSvFeedback.isError
+      ? "rgba(251,113,133,0.12)"
+      : "rgba(52,211,153,0.12)";
+    feedbackBannerHtml = `
+      <div id="sv-action-feedback" style="margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid ${fbColor};background:${fbBg};color:${fbColor};font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span>${_lastSvFeedback.isError ? "⚠️ " : "✅ "}${esc(_lastSvFeedback.text)}</span>
       </div>
     `;
   }
@@ -1047,24 +1462,37 @@ function tabLuuNapSave() {
   const qSaves = getQuickSaves();
   let qSavesHtml = "";
   if (qSaves.length === 0) {
-    qSavesHtml = `<div class="vk-mu" style="font-size:12.5px;text-align:center;padding:12px 0">Chưa có bản Lưu Nhanh nào. Bấm <b>⚡ Lưu Nhanh (Quick Save)</b> ở trên để tạo một bản dự phòng tức thì.</div>`;
+    qSavesHtml = `<div class="vk-mu" style="font-size:12.5px;text-align:center;padding:14px 0">Chưa có bản Lưu Nhanh nào. Nhập ghi chú (hoặc để trống) rồi bấm <b>⚡ Lưu Nhanh (Quick Save)</b> ở trên để tạo điểm dự phòng tức thì.</div>`;
   } else {
     qSavesHtml = qSaves
       .map(
-        (q) => `
-      <div style="background:var(--bg3);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px">
-          <span style="font-weight:700;color:var(--acc);font-size:13px">🕒 ${esc(q.time)}</span>
-          <span style="font-size:11.5px;color:var(--acc2);font-weight:600">${esc(q.realm)} · Năm ${q.year}</span>
+        (q, idx) => `
+      <div class="sv-qs-card" data-id="${q.id}" style="background:var(--bg3);border:1px solid ${idx === 0 ? "rgba(56,189,248,0.4)" : "var(--line)"};border-radius:12px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:6px">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-weight:700;color:var(--acc);font-size:13px">🕒 ${esc(q.time)}</span>
+            ${idx === 0 ? `<span style="background:rgba(52,211,153,0.18);color:var(--ok);border:1px solid rgba(52,211,153,0.4);border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:700">Mới nhất</span>` : ""}
+            ${q.isOneLife ? `<span style="background:rgba(239,68,68,0.18);color:#f87171;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:700">☠️ Tuyệt Mệnh</span>` : ""}
+          </div>
+          <span style="font-size:11.5px;color:var(--acc2);font-weight:700">
+            ${esc(q.realm)} · Năm ${q.year}${q.age ? ` (Tuổi ${q.age}${q.maxAge ? "/" + q.maxAge : ""})` : ""} · <small class="vk-mu">${q.sizeKb || Math.max(1, Math.round(((q.data && q.data.length) || 0) / 1024))} KB</small>
+          </span>
         </div>
-        <div style="font-size:12px;color:var(--txt);margin-bottom:6px">
-          <b>${esc(q.name)}</b> tại <b>${esc(q.pName)}</b> — <span class="vk-mu">${esc(q.note)}</span>
+        <div style="font-size:12px;color:var(--txt);margin-bottom:8px;line-height:1.45">
+          <b>${esc(q.name)}</b> tại <b>${esc(q.pName || "Linh Giới")}</b>${q.linhThach ? ` (${num(q.linhThach)} 💎)` : ""} — <span class="vk-mu" id="sv-qs-note-txt-${q.id}">${esc(q.note)}</span>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="vk-btn sv-btn-restore-qs" data-id="${q.id}" style="padding:4px 10px;font-size:11.5px;background:#3ddc97;color:#05140d">⚡ Khôi Phục</button>
-          <button class="vk-btn sec sv-btn-dl-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px">💾 Tải Về</button>
-          <button class="vk-btn sec sv-btn-copy-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px">📋 Copy</button>
-          <button class="vk-btn sec sv-btn-del-qs" data-id="${q.id}" style="padding:4px 8px;font-size:11.5px;color:var(--bad)">🗑️ Xóa</button>
+        <div id="sv-qs-edit-wrap-${q.id}" style="display:none;margin-bottom:8px;gap:6px;align-items:center">
+          <input type="text" class="vk-inp sv-qs-edit-inp" data-id="${q.id}" value="${esc(q.note)}" style="flex:1;margin:0;padding:5px 9px;font-size:12px" placeholder="Nhập ghi chú mới...">
+          <button type="button" class="vk-btn sv-btn-save-note-qs" data-id="${q.id}" style="margin:0;padding:5px 10px;font-size:11.5px">💾 Lưu</button>
+          <button type="button" class="vk-btn sec sv-btn-cancel-note-qs" data-id="${q.id}" style="margin:0;padding:5px 8px;font-size:11.5px">Hủy</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="vk-btn sv-btn-restore-qs" data-id="${q.id}" style="margin:0;padding:5px 11px;font-size:11.5px;background:#3ddc97;color:#05140d;font-weight:700" title="Khôi phục tiến trình về bản lưu này (áp dụng tùy chọn Thanh tẩy Thiên Đạo bên dưới)">⚡ Khôi Phục</button>
+          <button type="button" class="vk-btn sec sv-btn-reroll-qs" data-id="${q.id}" style="margin:0;padding:5px 10px;font-size:11.5px;border-color:rgba(245,158,11,0.45);color:var(--acc2)" title="Khôi phục bản lưu này KÈM Tẩy Thiên Cơ (Đổi hạt giống RNG mới để Đột Phá / Luyện Chế / Đoạt Bảo không bị lặp lại kết quả xịt cũ)">🎲 Nạp + Tẩy Thiên Cơ</button>
+          <button type="button" class="vk-btn sec sv-btn-edit-qs" data-id="${q.id}" style="margin:0;padding:5px 8px;font-size:11.5px" title="Đổi ghi chú bản lưu">✏️ Ghi Chú</button>
+          <button type="button" class="vk-btn sec sv-btn-dl-qs" data-id="${q.id}" style="margin:0;padding:5px 8px;font-size:11.5px">💾 Tải Về</button>
+          <button type="button" class="vk-btn sec sv-btn-copy-qs" data-id="${q.id}" style="margin:0;padding:5px 8px;font-size:11.5px">📋 Copy</button>
+          <button type="button" class="vk-btn sec sv-btn-del-qs" data-id="${q.id}" style="margin:0;padding:5px 8px;font-size:11.5px;color:var(--bad)">🗑️ Xóa</button>
         </div>
       </div>
     `,
@@ -1076,32 +1504,47 @@ function tabLuuNapSave() {
     <div class="vk-card">
       <h3>⚡ Nghịch Thiên Cải Mệnh · Lưu & Nạp Save Tránh Thiên Đạo</h3>
       <div style="font-size:12.5px;color:var(--mut);line-height:1.5;margin-bottom:10px">
-        Sao lưu và khôi phục tiến trình an toàn tuyệt đối: Lưu ra file về máy hoặc tạo điểm snapshot nhanh, <b>hoàn toàn miễn nhiễm với Thiên Đạo</b> (xóa sạch bộ nhớ reload, chống “bước đúng dấu chân cũ”, gỡ bỏ cờ cảnh báo sổ mệnh, giải cứu cả kiếp Tuyệt Mệnh).
+        Sao lưu và khôi phục tiến trình an toàn tuyệt đối (lưu trữ kép trên <b>IndexedDB + LocalStorage</b> chống đầy bộ nhớ): <b>hoàn toàn miễn nhiễm với Thiên Đạo</b> (xóa sạch bộ nhớ reload, chống “bước đúng dấu chân cũ”, gỡ bỏ cờ cảnh báo sổ mệnh, giải cứu cả kiếp Tuyệt Mệnh).
       </div>
       ${statusHtml}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <button class="vk-btn" id="sv-btn-quicksave" style="background:#3ddc97;color:#05140d">⚡ Lưu Nhanh (Quick Save)</button>
-        <button class="vk-btn" id="sv-btn-export" style="background:#8b5cf6;color:#fff">💾 Xuất File Save (.txt)</button>
-        <button class="vk-btn sec" id="sv-btn-copy">📋 Copy Mã Save</button>
-        <button class="vk-btn sec" id="sv-btn-clean-td" title="Xóa toàn bộ bộ nhớ Thiên Đạo theo dõi reload">🧹 Thanh Tẩy Thiên Đạo</button>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+        <input type="text" class="vk-inp" id="sv-qs-note-inp" placeholder="✍️ Ghi chú bản lưu nhanh (tùy chọn — nhấn Enter hoặc bấm Lưu Nhanh)..." style="flex:1;min-width:210px;margin:0;padding:7px 11px;font-size:12.5px">
+        <button type="button" class="vk-btn" id="sv-btn-quicksave" style="margin:0;background:#3ddc97;color:#05140d;font-weight:800;padding:7px 14px">⚡ Lưu Nhanh (Quick Save)</button>
+        ${qSaves.length > 0 ? `<button type="button" class="vk-btn sec" id="sv-btn-restore-latest" style="margin:0;border-color:rgba(56,189,248,0.45);color:var(--acc)" title="Khôi phục ngay bản Lưu Nhanh mới nhất (${esc(qSaves[0].time)})">🔄 Khôi Phục Bản Mới Nhất</button>` : ""}
       </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button type="button" class="vk-btn" id="sv-btn-export" style="margin:0;background:#8b5cf6;color:#fff">💾 Xuất File Save (.txt)</button>
+        <button type="button" class="vk-btn sec" id="sv-btn-copy" style="margin:0">📋 Copy Mã Save</button>
+        <button type="button" class="vk-btn sec" id="sv-btn-clean-td" style="margin:0" title="Xóa toàn bộ bộ nhớ Thiên Đạo theo dõi reload">🧹 Thanh Tẩy Thiên Đạo</button>
+      </div>
+      ${feedbackBannerHtml}
     </div>
 
     <div class="vk-card">
-      <h3>📥 Nạp File Save Vào Game (Tránh Thiên Đạo)</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <h3 style="margin:0">🕒 Danh Sách Bản Lưu Nhanh (${qSaves.length}/${MAX_QUICK_SAVES})</h3>
+        ${qSaves.length > 0 ? `<button type="button" class="vk-btn sec" id="sv-btn-clear-all-qs" style="margin:0;padding:3px 10px;font-size:11.5px;color:var(--bad)">🗑️ Xóa Tất Cả</button>` : ""}
+      </div>
+      ${qSavesHtml}
+    </div>
+
+    <div class="vk-card">
+      <h3>📥 Nạp File Save Hoặc Mã Lưu Vào Game (Tránh Thiên Đạo)</h3>
       <div style="font-size:12.5px;color:var(--mut);margin-bottom:8px">
-        Chọn tệp save (.txt / .json) từ máy tính hoặc dán trực tiếp mã lưu vào khung:
+        Chọn tệp save (<code>.txt</code> / <code>.json</code>) từ máy tính hoặc dán trực tiếp mã lưu vào khung:
       </div>
       <div style="margin-bottom:8px">
         <input type="file" id="sv-file-input" accept=".txt,.json" style="font-size:12.5px;color:var(--txt)">
       </div>
-      <textarea id="sv-text-input" placeholder="Dán mã lưu (#tuTien:... hoặc JSON) tại đây..." style="width:100%;height:70px;box-sizing:border-box;font-size:12px;font-family:monospace;margin-bottom:8px"></textarea>
+      <textarea id="sv-text-input" placeholder="Dán mã lưu (VKTT1... / #tuTien:... hoặc JSON) tại đây..." style="width:100%;height:70px;box-sizing:border-box;font-size:12px;font-family:monospace;margin-bottom:8px"></textarea>
 
       <div style="background:var(--bg3);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:10px">
-        <div style="font-weight:700;font-size:12.5px;color:var(--acc2);margin-bottom:6px">🛡️ Cơ Chế Tránh Thiên Đạo Khi Nạp:</div>
+        <div style="font-weight:700;font-size:12.5px;color:var(--acc2);margin-bottom:6px">🛡️ Cơ Chế Bảo Hộ Khi Khôi Phục / Nạp Save:</div>
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;margin-bottom:4px">
           <input type="checkbox" id="sv-opt-cleantd" checked>
-          <span><b>Thanh tẩy bộ nhớ Thiên Đạo:</b> Xóa sạch lịch sử theo dõi reload/lặp lại để không bị Thiên Đạo chế giễu</span>
+          <span><b>Thanh tẩy bộ nhớ Thiên Đạo:</b> Xóa sạch lịch sử theo dõi reload/lặp lại & gỡ cảnh báo sổ mệnh</span>
         </label>
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer">
           <input type="checkbox" id="sv-opt-reroll">
@@ -1109,17 +1552,9 @@ function tabLuuNapSave() {
         </label>
       </div>
 
-      <button class="vk-btn" id="sv-btn-import" style="background:#ff3366;color:#fff;font-weight:bold;width:100%;padding:10px 14px">
+      <button type="button" class="vk-btn" id="sv-btn-import" style="background:#ff3366;color:#fff;font-weight:bold;width:100%;padding:10px 14px;margin:0">
         ⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)
       </button>
-    </div>
-
-    <div class="vk-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <h3 style="margin:0">🕒 Danh Sách Bản Lưu Nhanh (${qSaves.length}/15)</h3>
-        ${qSaves.length > 0 ? `<button class="vk-btn sec" id="sv-btn-clear-all-qs" style="padding:2px 8px;font-size:11px;color:var(--bad)">Xóa Tất Cả</button>` : ""}
-      </div>
-      ${qSavesHtml}
     </div>
 
     <div class="vk-card">
@@ -1131,7 +1566,7 @@ function tabLuuNapSave() {
           <div>• <b>Tool giải quyết thế nào:</b></div>
           <div style="padding-left:10px">
             1. <b>Tẩy sạch bộ nhớ Thiên Đạo:</b> Xóa sạch số lần lặp lại, biến kiếp chơi trở về trạng thái trong sạch tuyệt đối.<br>
-            2. <b>Tẩy Thiên Cơ:</b> Tự động xóa các khóa RNG thất bại cũ và cấp seed may rủi mới, giúp bạn gieo lại quẻ mới khi đột phá.<br>
+            2. <b>Tẩy Thiên Cơ:</b> Tự động xoay hạt giống <code>rngKeys</code> & <code>seed</code> mới, giúp bạn gieo lại quẻ mới khi đột phá hoặc đoạt Dị Bảo.<br>
             3. <b>Bảo toàn Tuyệt Mệnh:</b> Chế độ Tuyệt Mệnh vốn bị game cấm xuất/nạp save; Tool mở khóa hoàn toàn để bạn giữ gìn tiến trình yêu thích.
           </div>
         </div>
@@ -1139,23 +1574,61 @@ function tabLuuNapSave() {
     </div>
   `;
 
+  const noteInp = body.querySelector("#sv-qs-note-inp");
   const btnQs = body.querySelector("#sv-btn-quicksave");
+  const triggerQuickSaveHere = () => {
+    const noteVal = noteInp ? noteInp.value.trim() : "";
+    const res = saveQuickSave(noteVal);
+    if (res.ok) {
+      _setSvFeedback(res.msg, false);
+      try {
+        UI.notify("⚡ " + res.msg);
+      } catch (e) {}
+      tabLuuNapSave();
+    } else {
+      _setSvFeedback(res.msg, true);
+      try {
+        UI.notify("⚠️ " + res.msg);
+      } catch (e) {}
+      tabLuuNapSave();
+    }
+  };
   if (btnQs) {
-    btnQs.onclick = () => {
-      const note = prompt(
-        "Nhập ghi chú cho bản lưu nhanh (hoặc để trống):",
-        "",
-      );
-      if (note === null) return;
-      const res = saveQuickSave(note);
-      if (res.ok) {
-        try {
-          UI.notify(res.msg);
-        } catch (e) {}
-        tabLuuNapSave();
-      } else {
-        alert("⚠️ " + res.msg);
+    btnQs.onclick = triggerQuickSaveHere;
+  }
+  if (noteInp) {
+    noteInp.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        triggerQuickSaveHere();
       }
+    };
+  }
+
+  const getCleanAndRerollOpts = (forceReroll = false) => {
+    const cleanTdEl = body.querySelector("#sv-opt-cleantd");
+    const rerollEl = body.querySelector("#sv-opt-reroll");
+    return {
+      cleanThienDao: cleanTdEl ? !!cleanTdEl.checked : true,
+      rerollRng: forceReroll || (rerollEl ? !!rerollEl.checked : false),
+    };
+  };
+
+  const btnRestoreLatest = body.querySelector("#sv-btn-restore-latest");
+  if (btnRestoreLatest && qSaves.length > 0) {
+    btnRestoreLatest.onclick = () => {
+      const latest = qSaves[0];
+      const res = doImportSave(latest.data, getCleanAndRerollOpts(false));
+      _setSvFeedback(
+        res.ok
+          ? `Đã khôi phục bản lưu mới nhất lúc ${latest.time} (${latest.name} · ${latest.realm})!`
+          : res.msg,
+        !res.ok,
+      );
+      try {
+        UI.notify((res.ok ? "⚡ " : "⚠️ ") + _lastSvFeedback.text);
+      } catch (e) {}
+      tabLuuNapSave();
     };
   }
 
@@ -1165,11 +1638,17 @@ function tabLuuNapSave() {
       const exp = doExportSave();
       if (exp.ok) {
         downloadSaveFile(exp.data, exp.fileName);
+        _setSvFeedback("Đã tải tệp save: " + exp.fileName, false);
         try {
           UI.notify("💾 Đã tải tệp save: " + exp.fileName);
         } catch (e) {}
+        tabLuuNapSave();
       } else {
-        alert("⚠️ " + exp.msg);
+        _setSvFeedback(exp.msg, true);
+        try {
+          UI.notify("⚠️ " + exp.msg);
+        } catch (e) {}
+        tabLuuNapSave();
       }
     };
   }
@@ -1180,12 +1659,18 @@ function tabLuuNapSave() {
       const exp = doExportSave();
       if (exp.ok) {
         copySaveToClipboard(exp.data).then(() => {
+          _setSvFeedback("Đã sao chép mã save hiện tại vào Clipboard!", false);
           try {
             UI.notify("📋 Đã chép mã save vào Clipboard!");
           } catch (e) {}
+          tabLuuNapSave();
         });
       } else {
-        alert("⚠️ " + exp.msg);
+        _setSvFeedback(exp.msg, true);
+        try {
+          UI.notify("⚠️ " + exp.msg);
+        } catch (e) {}
+        tabLuuNapSave();
       }
     };
   }
@@ -1194,12 +1679,11 @@ function tabLuuNapSave() {
   if (btnCleanTd) {
     btnCleanTd.onclick = () => {
       cleanseThienDao();
+      _setSvFeedback("Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo!", false);
       try {
         UI.notify("🧹 Đã thanh tẩy sạch sẽ mọi dấu vết Thiên Đạo!");
       } catch (e) {}
-      alert(
-        "🧹 Đã thanh tẩy thành công toàn bộ dữ liệu theo dõi của Thiên Đạo!",
-      );
+      tabLuuNapSave();
     };
   }
 
@@ -1214,7 +1698,7 @@ function tabLuuNapSave() {
         txtInp.value = evt.target.result;
         try {
           UI.notify(
-            `📥 Đã nạp nội dung từ tệp "${file.name}" (${file.size} bytes)`,
+            `📥 Đã đọc tệp "${file.name}" (${file.size} bytes) — bấm Nạp Save Ngay để áp dụng!`,
           );
         } catch (err) {}
       };
@@ -1227,96 +1711,130 @@ function tabLuuNapSave() {
     btnImport.onclick = () => {
       const val = txtInp.value.trim();
       if (!val) {
-        alert(
-          "⚠️ Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản!",
-        );
+        _setSvFeedback("Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản trước khi nạp!", true);
+        try {
+          UI.notify("⚠️ Vui lòng chọn tệp save hoặc dán mã lưu vào ô văn bản!");
+        } catch (e) {}
+        tabLuuNapSave();
         return;
       }
-      const cleanTd = body.querySelector("#sv-opt-cleantd")
-        ? body.querySelector("#sv-opt-cleantd").checked
-        : true;
-      const reroll = body.querySelector("#sv-opt-reroll")
-        ? body.querySelector("#sv-opt-reroll").checked
-        : false;
-
-      if (
-        !confirm(
-          "Xác nhận nạp file save này vào game? Tiến trình hiện tại sẽ được thay thế bằng bản lưu mới.",
-        )
-      ) {
-        return;
-      }
-
+      const opts = getCleanAndRerollOpts(false);
       btnImport.disabled = true;
       btnImport.textContent = "⏳ Đang nạp và thanh tẩy Thiên Đạo...";
 
       setTimeout(() => {
-        const res = doImportSave(val, {
-          cleanThienDao: cleanTd,
-          rerollRng: reroll,
-        });
+        const res = doImportSave(val, opts);
         btnImport.disabled = false;
-        btnImport.textContent =
-          "⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)";
-        if (res.ok) {
-          try {
-            UI.notify(res.msg);
-          } catch (e) {}
-          alert("🎉 " + res.msg);
-          tabLuuNapSave();
-        } else {
-          alert("⚠️ " + res.msg);
-        }
-      }, 50);
+        btnImport.textContent = "⚡ Nạp Save Ngay Vào Game (Tránh Thiên Đạo)";
+        _setSvFeedback(res.msg, !res.ok);
+        try {
+          UI.notify((res.ok ? "🎉 " : "⚠️ ") + res.msg);
+        } catch (e) {}
+        tabLuuNapSave();
+      }, 30);
     };
   }
 
-  // Quick save action buttons
+  // Các nút thao tác trên từng thẻ Quick Save
   body.querySelectorAll(".sv-btn-restore-qs").forEach((b) => {
     b.onclick = () => {
       const id = Number(b.dataset.id);
-      const q = getQuickSaves().find((x) => x.id === id);
+      const q = getQuickSaves().find((x) => Number(x.id) === id);
       if (!q || !q.data) return;
-      const cleanTd = body.querySelector("#sv-opt-cleantd")
-        ? body.querySelector("#sv-opt-cleantd").checked
-        : true;
-      const reroll = body.querySelector("#sv-opt-reroll")
-        ? body.querySelector("#sv-opt-reroll").checked
-        : false;
+      const res = doImportSave(q.data, getCleanAndRerollOpts(false));
+      _setSvFeedback(
+        res.ok
+          ? `Đã khôi phục bản Lưu Nhanh lúc ${q.time} (${q.name} · ${q.realm})!`
+          : res.msg,
+        !res.ok,
+      );
+      try {
+        UI.notify((res.ok ? "⚡ " : "⚠️ ") + _lastSvFeedback.text);
+      } catch (e) {}
+      tabLuuNapSave();
+    };
+  });
 
-      if (
-        !confirm(
-          `Khôi phục về bản Lưu Nhanh lúc ${q.time} (${q.name} - ${q.realm})?`,
-        )
-      )
-        return;
-      const res = doImportSave(q.data, {
-        cleanThienDao: cleanTd,
-        rerollRng: reroll,
-      });
-      if (res.ok) {
-        try {
-          UI.notify(res.msg);
-        } catch (e) {}
-        alert("🎉 " + res.msg);
-        tabLuuNapSave();
-      } else {
-        alert("⚠️ " + res.msg);
+  body.querySelectorAll(".sv-btn-reroll-qs").forEach((b) => {
+    b.onclick = () => {
+      const id = Number(b.dataset.id);
+      const q = getQuickSaves().find((x) => Number(x.id) === id);
+      if (!q || !q.data) return;
+      const res = doImportSave(q.data, { cleanThienDao: true, rerollRng: true });
+      _setSvFeedback(
+        res.ok
+          ? `Đã khôi phục bản lưu ${q.time} KÈM Tẩy Thiên Cơ (hạt giống RNG mới)!`
+          : res.msg,
+        !res.ok,
+      );
+      try {
+        UI.notify((res.ok ? "🎲 " : "⚠️ ") + _lastSvFeedback.text);
+      } catch (e) {}
+      tabLuuNapSave();
+    };
+  });
+
+  body.querySelectorAll(".sv-btn-edit-qs").forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.id;
+      const wrap = body.querySelector(`#sv-qs-edit-wrap-${id}`);
+      if (wrap) {
+        wrap.style.display = wrap.style.display === "none" ? "flex" : "none";
+        const inp = wrap.querySelector(".sv-qs-edit-inp");
+        if (inp && wrap.style.display === "flex") inp.focus();
       }
+    };
+  });
+
+  body.querySelectorAll(".sv-btn-save-note-qs").forEach((b) => {
+    b.onclick = () => {
+      const id = Number(b.dataset.id);
+      const wrap = body.querySelector(`#sv-qs-edit-wrap-${id}`);
+      const inp = wrap ? wrap.querySelector(".sv-qs-edit-inp") : null;
+      if (inp) {
+        renameQuickSave(id, inp.value);
+        _setSvFeedback("Đã cập nhật ghi chú bản lưu nhanh!", false);
+        try {
+          UI.notify("✏️ Đã cập nhật ghi chú bản lưu nhanh!");
+        } catch (e) {}
+        tabLuuNapSave();
+      }
+    };
+  });
+
+  body.querySelectorAll(".sv-qs-edit-inp").forEach((inp) => {
+    inp.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const id = Number(inp.dataset.id);
+        renameQuickSave(id, inp.value);
+        _setSvFeedback("Đã cập nhật ghi chú bản lưu nhanh!", false);
+        tabLuuNapSave();
+      }
+    };
+  });
+
+  body.querySelectorAll(".sv-btn-cancel-note-qs").forEach((b) => {
+    b.onclick = () => {
+      const id = b.dataset.id;
+      const wrap = body.querySelector(`#sv-qs-edit-wrap-${id}`);
+      if (wrap) wrap.style.display = "none";
     };
   });
 
   body.querySelectorAll(".sv-btn-dl-qs").forEach((b) => {
     b.onclick = () => {
       const id = Number(b.dataset.id);
-      const q = getQuickSaves().find((x) => x.id === id);
+      const q = getQuickSaves().find((x) => Number(x.id) === id);
       if (!q || !q.data) return;
+      const safeName = String(q.name || "VoDanh").replace(/[^\w\s\u00C0-\u1EF9]/gi, "").trim().replace(/\s+/g, "_");
+      const safeRealm = String(q.realm || "PhamNhan").replace(/[^\w\s\u00C0-\u1EF9]/gi, "").trim().replace(/\s+/g, "_");
       downloadSaveFile(
         q.data,
-        `VanKiep_QuickSave_${q.name}_${q.realm}_Nam${q.year}.txt`,
+        `VanKiep_QuickSave_${safeName}_${safeRealm}_Nam${q.year}.txt`,
       );
       try {
-        UI.notify("💾 Đã tải bản lưu nhanh!");
+        UI.notify("💾 Đã tải tệp bản lưu nhanh!");
       } catch (e) {}
     };
   });
@@ -1324,12 +1842,17 @@ function tabLuuNapSave() {
   body.querySelectorAll(".sv-btn-copy-qs").forEach((b) => {
     b.onclick = () => {
       const id = Number(b.dataset.id);
-      const q = getQuickSaves().find((x) => x.id === id);
+      const q = getQuickSaves().find((x) => Number(x.id) === id);
       if (!q || !q.data) return;
       copySaveToClipboard(q.data).then(() => {
         try {
-          UI.notify("📋 Đã chép mã bản lưu nhanh!");
+          UI.notify("📋 Đã chép mã bản lưu nhanh vào Clipboard!");
         } catch (e) {}
+        const orig = b.textContent;
+        b.textContent = "✔ Đã Copy";
+        setTimeout(() => {
+          if (b) b.textContent = orig;
+        }, 1200);
       });
     };
   });
@@ -1337,8 +1860,24 @@ function tabLuuNapSave() {
   body.querySelectorAll(".sv-btn-del-qs").forEach((b) => {
     b.onclick = () => {
       const id = Number(b.dataset.id);
-      if (!confirm("Xóa bản lưu nhanh này?")) return;
+      if (b.dataset.confirming !== "1") {
+        b.dataset.confirming = "1";
+        b.textContent = "❓ Bấm lần nữa để xóa";
+        b.style.borderColor = "var(--bad)";
+        setTimeout(() => {
+          if (b && b.dataset.confirming === "1") {
+            b.dataset.confirming = "0";
+            b.textContent = "🗑️ Xóa";
+            b.style.borderColor = "";
+          }
+        }, 3000);
+        return;
+      }
       deleteQuickSave(id);
+      _setSvFeedback("Đã xóa bản lưu nhanh.", false);
+      try {
+        UI.notify("🗑️ Đã xóa bản lưu nhanh.");
+      } catch (e) {}
       tabLuuNapSave();
     };
   });
@@ -1346,17 +1885,28 @@ function tabLuuNapSave() {
   const btnClearAllQs = body.querySelector("#sv-btn-clear-all-qs");
   if (btnClearAllQs) {
     btnClearAllQs.onclick = () => {
-      if (
-        !confirm("Bạn có chắc muốn xóa TẤT CẢ các bản Lưu Nhanh không?")
-      )
+      if (btnClearAllQs.dataset.confirming !== "1") {
+        btnClearAllQs.dataset.confirming = "1";
+        btnClearAllQs.textContent = "❓ Chắc chắn xóa hết?";
+        btnClearAllQs.style.borderColor = "var(--bad)";
+        setTimeout(() => {
+          if (btnClearAllQs && btnClearAllQs.dataset.confirming === "1") {
+            btnClearAllQs.dataset.confirming = "0";
+            btnClearAllQs.textContent = "🗑️ Xóa Tất Cả";
+            btnClearAllQs.style.borderColor = "";
+          }
+        }, 3500);
         return;
-      localStorage.removeItem("vkx_quick_saves");
+      }
+      clearAllQuickSaves();
+      _setSvFeedback("Đã xóa toàn bộ danh sách Lưu Nhanh.", false);
+      try {
+        UI.notify("🗑️ Đã xóa toàn bộ danh sách Lưu Nhanh.");
+      } catch (e) {}
       tabLuuNapSave();
     };
   }
 }
-
-// Assist đã được chuyển về src/modules/navigation.js
 
 export {
   LH_NHOM,
@@ -1385,6 +1935,8 @@ export {
   getQuickSaves,
   saveQuickSave,
   deleteQuickSave,
+  renameQuickSave,
+  clearAllQuickSaves,
   downloadSaveFile,
   copySaveToClipboard,
   tabLuuNapSave,
@@ -1417,6 +1969,8 @@ Object.assign(gWin, {
   getQuickSaves,
   saveQuickSave,
   deleteQuickSave,
+  renameQuickSave,
+  clearAllQuickSaves,
   downloadSaveFile,
   copySaveToClipboard,
   tabLuuNapSave,

@@ -1067,13 +1067,18 @@ ${radarHtml}
   const btnQs = body.querySelector("#au-sdb-btn-quick-save");
   if (btnQs) {
     btnQs.onclick = () => {
-      const res = saveQuickSave("Thủ công từ Tab Auto Săn Dị Bảo");
-      if (res.ok) {
+      const res = typeof gWin.saveQuickSave === "function" ? gWin.saveQuickSave("Thủ công từ Tab Auto Săn Dị Bảo") : { ok: false, msg: "Mô-đun Save chưa sẵn sàng" };
+      if (res && res.ok) {
         try {
-          UI.notify("💾 Đã lưu Quick Save thành công!");
+          UI.notify("⚡ " + res.msg);
         } catch (e) {}
-      } else {
-        alert("⚠️ " + res.msg);
+        const orig = btnQs.textContent;
+        btnQs.textContent = "✔ Đã Lưu!";
+        setTimeout(() => { if (btnQs) btnQs.textContent = orig; }, 1200);
+      } else if (res) {
+        try {
+          UI.notify("⚠️ " + res.msg);
+        } catch (e) {}
       }
     };
   }
