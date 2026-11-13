@@ -32,8 +32,7 @@ van-kiep-tro-ly/
 ├── build.js                         # Script đồng bộ CSS/version & đóng gói ZIP đa file ES Module
 ├── package.json                     # Thông tin gói ("type": "module", version: "7.23.2")
 ├── README.md                        # Hướng dẫn cài đặt & cấu trúc dự án
-├── DEVELOPMENT_INSTRUCTIONS.md      # Giải thích kiến trúc Native Multi-File ES Modules & quy trình phát triển
-├── AGENTS.md                        # Quy chuẩn dành cho AI Agent & Developer
+├── AGENTS.md                        # Quy chuẩn AI Agent & Kỹ sư + Hướng dẫn phát triển (kiến trúc, quy trình, điều tra update game)
 └── src/
     ├── styles/
     │   ├── ui.css                   # Nguồn CSS Design System & 4 chủ đề tu tiên

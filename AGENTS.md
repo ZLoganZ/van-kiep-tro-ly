@@ -1,5 +1,52 @@
 # 🤖 Quy Chuẩn Dành Cho AI Agent & Kỹ Sư (AGENTS.md)
 
+Tài liệu này hợp nhất Quy Chuẩn AI Agent và Hướng Dẫn Phát Triển (Development Instructions) của dự án.
+
+## 1. Kiến Trúc Native Multi-File ES Modules (Chuẩn Mod `su_do.zip`)
+
+### Cơ chế nạp Mod đa file của Game:
+
+Trình nạp Mod chính thức của game **Vạn Kiếp Tu Tiên** (`mod.yaml` với `api_version: 1` và `script: main.js`) giải nén toàn bộ các file `.js` trong gói `.zip` và hỗ trợ trực tiếp cú pháp **ES Modules (`import` / `export`)** giữa các file theo đường dẫn tương đối (tương tự như cách `su_do.zip` dùng `main.js` import từ `./lib/...`).
+
+Nhờ vậy, dự án **không cần nối (concatenate) toàn bộ code vào một file `main.js` 40.000 dòng nữa**:
+
+1. **File `main.js` ở thư mục gốc chỉ dài 122 dòng (~3.9 KB)**:
+   - Dùng `import` trực tiếp các module con từ `./src/core/...`, `./src/ui/...`, `./src/modules/...`, `./src/auto/...`.
+   - Khởi tạo giao diện khi `ready(tt, mod)` được gọi, gắn `mod.ui.addPanel` và đăng ký vào `window.tuTienMods`.
+2. **Phân tách rõ trách nhiệm từng module trong `src/` (26 modules)**:
+   - `src/core/utils.js`: Biến ngữ cảnh (`TT`, `MOD`, `setGameContext`), tiện ích nền tảng (`StorageManager`, `TabLifecycle`, chuẩn hóa chuỗi tiếng Việt `fold`, định dạng số `pct`/`num`/`yrs`, `debounce`, `yieldToMain`).
+   - `src/core/bridge.js`: Cầu nối `tuTien.core`, quản lý `ctx()` / `ctxLite()` (có bộ nhớ đệm chống nhân bản sâu `structuredClone`), hàm bản đồ (`nearSlots`, `danger`, `withPlace`) và mô phỏng trận (`fight`, `simFoe`, `benchEnemies`).
+   - `src/auto/auto-runner.js`: Bộ điều phối vòng lặp Auto chung (`auStart`, `auStop`, `auLoop`, `auPending`, `auPick`) và đồng bộ cấu hình/UI Auto (`auReadCfg`, `auPaint`, `auStatusHtml`), tách biệt hoàn toàn khỏi logic AI đánh trận (`combat-ai.js`) và logic buôn bán (`auto-buon-ban.js`).
+   - Mỗi module trong `src/` vừa `export` tường minh các hàm/hằng số của mình, vừa đồng bộ qua `gWin` để các module gọi chéo nhau mà không bao giờ bị lỗi phụ thuộc vòng (circular dependency).
+3. **Trình đóng gói `build.js`**:
+   - Đồng bộ `version` từ `package.json` vào `mod.yaml` và `src/core/utils.js`.
+   - Đồng bộ `src/styles/ui.css` sang `src/styles/ui-css.js` (`export const UI_CSS`).
+   - Đóng gói `van-kiep-tro-ly-mod.zip` chứa `mod.yaml`, `main.js` (122 dòng) và toàn bộ `src/**/*.js` với đường dẫn tương đối được giữ nguyên.
+
+---
+
+## 2. Quy Trình Sửa Code & Đóng Gói
+
+1. **Chỉnh sửa mã nguồn trực tiếp trong `main.js` hoặc `src/`**:
+   - Entrypoint khởi tạo Mod: `main.js`
+   - Giao diện & CSS: `src/styles/ui.css`, `src/ui/shell.js`
+   - Tiện ích & Cầu nối lõi game: `src/core/utils.js`, `src/core/bridge.js`, `src/data/static-data.js`
+   - Tính năng Dị Bảo: `src/modules/di-bao.js` và `src/auto/auto-di-bao.js`
+   - Hệ thống Tự Động & AI Chiến Đấu: `src/auto/auto-core.js`, `src/auto/auto-runner.js`, `src/auto/combat-ai.js`, `src/auto/auto-tu-luyen.js`, `src/auto/auto-tabs.js`
+   - Các tab tính năng khác: `src/modules/*.js`
+2. **Cập nhật phiên bản & Nhật Ký**:
+   - Tăng số `version` trong `package.json`.
+   - Thêm mục mới lên đầu mảng `LOG` trong `src/modules/nhat-ky.js` với `now: true` (và đổi mục cũ thành `now: false`).
+3. **Đồng bộ & Đóng gói `.zip`**:
+   ```bash
+   node build.js           # Đồng bộ CSS/version và tạo gói van-kiep-tro-ly-mod.zip đa file
+   node build.js --check   # Chỉ kiểm tra danh sách module và đồng bộ version/CSS
+   ```
+
+---
+
+## 3. Quy Tắc Chung Bắt Buộc
+
 1. **Kiến trúc Native Multi-File ES Modules (`main.js` + `src/**/\*.js`)\*\*:
    - Không gộp/nối (bundle/concatenate) toàn bộ code vào `main.js` nữa.
    - `main.js` ở thư mục gốc chỉ là file entrypoint nhỏ gọn (~122 dòng) dùng `import` để nạp các module con từ `./src/...` (tương tự chuẩn `su_do.zip` của tác giả game).
@@ -17,7 +64,13 @@
    - File `van-kiep-tro-ly-mod.zip` đã được thêm vào `.gitignore` để giữ kho mã nguồn Git sạch sẽ 100%.
    - Khi nâng `version` trong `package.json` và `git push` lên nhánh `main`, GitHub Actions (`.github/workflows/release-mod.yml`) sẽ tự động chạy `node build.js`, trích xuất Changelog từ `src/modules/nhat-ky.js` và tự động tạo **GitHub Release (`vX.Y.Z`)** đính kèm file `van-kiep-tro-ly-mod.zip` tại mục Assets.
 
-## 1. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
+## 4. Hệ Thống Auto Update OTA Qua GitHub (`src/core/auto-update.js`)
+
+- Tự động đối chiếu `TOOL_VER` và mã Commit SHA với nhánh `main` trên GitHub (`zloganz/van-kiep-tro-ly`).
+- Hỗ trợ cả 2 luồng: tải gói `van-kiep-tro-ly-mod.zip` đã đóng gói sẵn hoặc tự kéo toàn bộ file `src/**/*.js` + `src/styles/ui.css` về đóng gói PKZIP ngay trên trình duyệt.
+- Ghi đè trực tiếp vào IndexedDB của trình duyệt nơi game lưu Mod và làm mới CacheStorage của Service Worker.
+
+## 5. QUY TẮC ĐÁNH SỐ PHIÊN BẢN (SEMVER STANDARD)
 
 Mỗi khi có bất kỳ thay đổi nào trong mã nguồn dự án, **BẮT BUỘC** phải nâng số phiên bản theo đúng 3 cấp độ sau:
 
@@ -29,7 +82,7 @@ Mỗi khi có bất kỳ thay đổi nào trong mã nguồn dự án, **BẮT BU
 
 ---
 
-## 2. QUY TRÌNH BẮT BUỘC KHI CẬP NHẬT PHIÊN BẢN
+## 6. QUY TRÌNH BẮT BUỘC KHI CẬP NHẬT PHIÊN BẢN
 
 Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả các vị trí sau**:
 
@@ -56,9 +109,9 @@ Mỗi lần nâng version, phải cập nhật đồng bộ tại **tất cả c
      - Đồng bộ `src/styles/ui.css` sang `src/styles/ui-css.js`.
      - Đóng gói file cài đặt `van-kiep-tro-ly-mod.zip` (gồm `mod.yaml`, `main.js` và `src/**/*.js`).
 4. **Commit Git & Push Lên Remote:**
-   - Stage toàn bộ thay đổi bao gồm cả file zip (`git add .`), commit và push lên GitHub.
+   - Stage toàn bộ thay đổi mã nguồn (`git add .`), commit và push lên GitHub (file `van-kiep-tro-ly-mod.zip` được `.gitignore` loại trừ, GitHub Actions lo phần đóng gói & Release).
 
-## 3. CẨM NANG ĐIỀU TRA & THÍCH ỨNG KHI GAME CÓ BẢN UPDATE MỚI
+## 7. CẨM NANG ĐIỀU TRA & THÍCH ỨNG KHI GAME CÓ BẢN UPDATE MỚI
 
 Khi người dùng báo _"game mới có update, check kỹ lại source xem"_ hoặc khi phát hiện game deploy bản build mới, AI Agent và lập trình viên **BẮT BUỘC** thực hiện quy trình điều tra 6 bước sau để biết chính xác game đã đổi gì và tìm kiếm ở đâu:
 
@@ -132,15 +185,15 @@ Viết script Node.js trong `scratch/` để trích xuất nhanh giữa `latest_
 
 1. Cập nhật các enum, bộ lọc, từ điển loại vật phẩm (`LOAI_VI`, `GLUT_LOAI`, scanner chợ...), hệ thống Bản Mệnh (`bmRunes`), kinh mạch, luyện chế theo dữ liệu mới.
 2. Nâng cấp các module tương ứng (như hỗ trợ hành động mới trong Combat AI, mở rộng cơ chế Auto...).
-3. Nâng phiên bản theo đúng Quy tắc SEMVER (Mục 1 & 2):
+3. Nâng phiên bản theo đúng Quy tắc SEMVER (Mục 5 & 6):
    - Có thêm tính năng / hỗ trợ cơ chế game mới: **Nâng MINOR** (`x.Y.0`).
    - Sửa lỗi tương thích / tối ưu nhẹ: **Nâng PATCH** (`x.y.Z`).
-4. Kiểm tra cú pháp: `node -c .\van_kiep_tro_ly_user.js` $\rightarrow$ commit và push `origin main`.
+4. Kiểm tra cú pháp: `node build.js --check` $\rightarrow$ commit và push `origin main`.
 5. **Dọn dẹp sau cùng (BẮT BUỘC):**
    - Xóa bỏ toàn bộ các script tạm (`*.js`, `*.txt`) và bộ mốc `old_*` sinh ra trong đợt điều tra.
    - Chỉ giữ lại bộ source chuẩn hiện hành (`latest_game_bundle.js`, `latest_template_extracted`, `latest_template.zip`, `latest_content.json`) để làm mốc so sánh cho lần cập nhật sau, giữ thư mục làm việc luôn gọn gàng và tinh gọn.
 
-## 4. Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## 8. Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
