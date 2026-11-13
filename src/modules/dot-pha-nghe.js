@@ -402,7 +402,7 @@ function tabTran() {
     <div class="vk-card"><h3>Khảo hạch thăng cấp tông môn</h3>${kh}</div>
     <div class="vk-card"><h3>Nhiệm vụ</h3><div class="vk-mu">Nhiệm vụ sư môn và việc treo thưởng ở thành trấn giờ nằm ở tab <b>Treo thưởng</b>, có thử sức từng việc bằng chính cách game đánh giá.</div></div>
     <div class="vk-card"><h3>Thử đánh quái bất kỳ</h3>
-      <input class="vk-sel" id="vk-eq" style="width:100%;margin-bottom:6px" placeholder="Gõ tên quái, ví dụ: lang, giao long, ma tu…" autocomplete="off">
+      <input type="text" class="vk-sel" id="vk-eq" style="width:100%;margin-bottom:6px" placeholder="Gõ tên quái, ví dụ: lang, giao long, ma tu…" autocomplete="off">
       <select class="vk-sel" id="vk-en" style="width:100%" size="6">${enemyOpts}</select>
       <div style="margin-top:6px"><select class="vk-sel" id="vk-cg"><option value="-1" selected>Cảnh giới gốc của quái</option>${names.map((n, i) => `<option value="${i}">${esc(n)}</option>`).join("")}</select>
       <select class="vk-sel" id="vk-muc"><option value="thuong">Thường</option><option value="tinh_anh">Tinh anh</option><option value="boss">Đầu lĩnh</option></select>

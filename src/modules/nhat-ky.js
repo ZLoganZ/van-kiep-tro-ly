@@ -27,9 +27,20 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
-      t: "Phiên Bản 8.1.3 · Tinh Gọn Cấu Hình Auto Update & Đại Tu Toàn Diện Hệ Thống Quick Save Đa Tầng",
+      t: "Phiên Bản 8.1.4 · Hoàn Thiện Giao Diện & Khắc Phục Lỗi Hiển Thị",
       d: "13/11/2026",
       now: true,
+      pts: [
+        "<b>Khắc Phục Lỗi Token CSS &amp; Chuẩn Hóa Ô Tìm Nhanh:</b> Sửa các biến màu chưa định nghĩa trong Quick Jump Bar, bổ sung trạng thái focus dễ nhận biết và căn chỉnh lại nhãn kết quả tìm kiếm.",
+        "<b>Tối Ưu Thanh Tiêu Đề Ở Kích Thước Nhỏ:</b> Ngăn logo bị co, cho phép các nút trên header tự xuống dòng ở cửa sổ siêu hẹp và tinh chỉnh kích thước để tránh tràn/cắt nội dung.",
+        "<b>Sửa Hiển Thị Checkbox &amp; Bổ Sung Style Còn Thiếu:</b> Giữ nguyên kích thước/căn lề riêng của checkbox; bổ sung kiểu hiển thị cho nhãn tab, ô nhập, danh sách tổng quan và thanh tiến trình cập nhật.",
+        "<b>Dọn Logic Giao Diện Không Còn Tác Dụng:</b> Loại bỏ phần xử lý Title Case và tính toán glider đã bị CSS hiện hành vô hiệu hóa.",
+      ],
+    },
+    {
+      t: "Phiên Bản 8.1.3 · Tinh Gọn Cấu Hình Auto Update & Đại Tu Toàn Diện Hệ Thống Quick Save Đa Tầng",
+      d: "13/11/2026",
+      now: false,
       pts: [
         "<b>Tinh Gọn Giao Diện Cấu Hình Auto Update:</b> Lược bỏ 2 mục nhập thủ công (<i>GitHub Repository</i> &amp; <i>Nguồn theo dõi cập nhật</i>), tự động cố định kết nối chuẩn tới kho lưu trữ chính thức <code>zloganz/van-kiep-tro-ly</code> (ưu tiên đối chiếu <b>GitHub Releases</b> và tự động fallback sang nhánh <code>main</code>).",
         "<b>Đại Tu Toàn Diện Hệ Thống Quick Save Đa Tầng (IndexedDB + LocalStorage):</b> Lưu trữ kép tối đa 20 bản Lưu Nhanh trên cả <b>IndexedDB</b> (<code>vkx_quick_saves_db</code>) và <b>LocalStorage</b> với vòng lặp tự động co giãn dung lượng, khắc phục triệt để lỗi tràn bộ nhớ 5MB của trình duyệt ở giai đoạn Hóa Thần khiến bản lưu bị rớt ngầm.",

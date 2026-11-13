@@ -638,11 +638,9 @@
   display: none;
 }
 
-#vkx-win.vkx-land .vkx-seg {
-  margin: 0 10px 4px;
-  padding: 2px;
-}
-
+/* #vkx-win.vkx-land .vkx-seg { margin: 0 10px 4px } và bản .vkx-xs tương ứng
+   đã bị vô hiệu hoá ở LAYER 7 (cuối file) vì chúng giả định .vkx-seg là một
+   hàng khối riêng, trong khi header thực tế là flex inline. */
 #vkx-win.vkx-land .vkx-seg button {
   padding: 7px 4px;
 }
@@ -2131,7 +2129,7 @@ table.au-tb tr:last-child td {
   max-height: none !important;
   min-height: 0 !important;
   overflow: hidden !important;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--line2) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--line) !important;
 }
 #vkx-win.vkx-minimized .vkx-seg,
 #vkx-win.vkx-minimized .vkx-sec,
@@ -2162,9 +2160,9 @@ table.au-tb tr:last-child td {
   padding: 5px 10px;
   font-size: 12.5px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line2);
+  border: 1px solid var(--line);
   background: var(--bg);
-  color: var(--fg);
+  color: var(--txt);
   outline: none;
 }
 #vkx-qbar-hits {
@@ -2177,15 +2175,15 @@ table.au-tb tr:last-child td {
   padding: 3px 9px;
   font-size: 11.5px;
   border-radius: 999px;
-  border: 1px solid var(--line2);
-  background: var(--card);
+  border: 1px solid var(--line);
+  background: var(--bg3);
   color: var(--acc);
   cursor: pointer;
   transition: background 0.15s, transform 0.12s;
   white-space: nowrap;
 }
 .vkx-qhit:hover {
-  background: color-mix(in srgb, var(--acc) 18%, var(--card));
+  background: color-mix(in srgb, var(--acc) 18%, var(--bg3));
   transform: translateY(-1px);
 }
 
@@ -2821,12 +2819,6 @@ table.au-tb tr:last-child td {
 
 /* 6. TÁI CẤU TRÚC CÁCH XẾP FIELD: BENTO GRID (.vkx-fld-grid) & THANH ĐIỀU KHIỂN NGANG 100% (.vkx-ctl-row) */
 
-/* Bảo toàn ẩn phần tử khi JS gán display: none */
-#vkx-win [style*="display: none"],
-#vkx-win [style*="display:none"] {
-  display: none !important;
-}
-
 /* 6.1. Lưới Ô Điều Khiển Bento (.vkx-fld-grid): Tự động chia 2–3 cột cân đối 100% chiều ngang, KHÔNG BAO GIỜ bị lẻ cột 50% */
 #vkx-win .vkx-fld-grid {
   display: grid !important;
@@ -2972,8 +2964,16 @@ table.au-tb tr:last-child td {
   margin: 0 !important;
 }
 
-/* 7. BIẾN TOÀN BỘ CHECKBOX THÀNH CÔNG TẮC GẠT (SLIDING TOGGLE SWITCH CARDS) */
-#vkx-win input[type="checkbox"] {
+/* 7. BIẾN TOÀN BỘ CHECKBOX THÀNH CÔNG TẮC GẠT (SLIDING TOGGLE SWITCH CARDS)
+   Lưu ý: :not(...) dưới đây là bắt buộc. Có hai nhóm checkbox KHÔNG được phép
+   thành công tắc:
+     - [style*="width"]  : ô chọn đã chỉ định kích thước riêng (vd .au-sdb-relic-chk
+                           15x15 nằm trong lưới dày đặc) — ép về 36x20 sẽ phá lưới.
+     - [style*="margin-top"] : ô chọn căn hàng đầu tiên của nhãn nhiều dòng —
+                           ép margin về 0 sẽ làm chữ và ô lệch hàng.
+   Bỏ hai :not() này sẽ tái phát lỗi hiển thị ở lưới Di Bảo Săn Bắt và các nhãn
+   checkbox nhiều dòng trong tab Tác Chiến / Auto. */
+#vkx-win input[type="checkbox"]:not([style*="width"]):not([style*="margin-top"]) {
   appearance: none !important;
   -webkit-appearance: none !important;
   width: 36px !important;
@@ -2988,7 +2988,7 @@ table.au-tb tr:last-child td {
   vertical-align: middle !important;
   margin: 0 !important;
 }
-#vkx-win input[type="checkbox"]::after {
+#vkx-win input[type="checkbox"]:not([style*="width"]):not([style*="margin-top"])::after {
   content: "";
   position: absolute;
   top: 2px;
@@ -3000,12 +3000,12 @@ table.au-tb tr:last-child td {
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
-#vkx-win input[type="checkbox"]:checked {
+#vkx-win input[type="checkbox"]:not([style*="width"]):not([style*="margin-top"]):checked {
   background: linear-gradient(135deg, var(--ok), var(--acc)) !important;
   border-color: transparent !important;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4) !important;
 }
-#vkx-win input[type="checkbox"]:checked::after {
+#vkx-win input[type="checkbox"]:not([style*="width"]):not([style*="margin-top"]):checked::after {
   transform: translateX(16px);
   background: #ffffff;
 }
@@ -3758,4 +3758,221 @@ table.au-tb tr:last-child td {
 .vkx-upd-toggle-row:has(input[type="checkbox"]:checked) {
   border-color: rgba(16, 185, 129, 0.42) !important;
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.11), rgba(56, 189, 248, 0.05)) !important;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════
+   LAYER 7: UI POLISH — Vá lỗi hiển thị & Chuẩn hoá UI
+   Tất cả khai báo dưới đây nằm CUỐI file nên thắng cascade ở cùng độ ưu tiên.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. KHỐI CSS CHẾT ──────────────────────────────────────────────────────
+   Khối "khử nháy nền" cũ chỉ khớp khi .vkx-tab-glider có .active — class này
+   không còn được gán, nhưng nếu có thì nó xoá sạch nền của tab đang chọn.
+   Khẳng định lại trạng thái active để luôn an toàn. */
+#vkx-win #vkx-tabs:has(.vkx-tab-glider.active) button.on,
+#vkx-win #vkx-groups:has(.vkx-tab-glider.active) button.on {
+  background: linear-gradient(135deg, var(--hi), rgba(255, 255, 255, 0.06)) !important;
+  border: 1.5px solid var(--acc) !important;
+  color: var(--acc2) !important;
+  box-shadow: 0 2px 10px var(--glow) !important;
+}
+
+/* ── 2. THÀNH PHẦN CHƯA CÓ STYLE ───────────────────────────────────────────
+   .vkx-t-tx (nhãn chữ của tab con) trước đây không có bất kỳ rule nào nên kế
+   thừa font-size của nút cha và có thể tràn/cắt dòng khi tên tab dài. */
+#vkx-tabs button .vkx-t-tx {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+#vkx-win.vkx-xs #vkx-tabs button .vkx-t-tx {
+  font-size: 11px !important;
+}
+
+/* .vk-inp: lớp tiện ích dùng ở nhiều ô nhập nhưng chưa từng được định nghĩa.
+   Chỉ đóng vai trò dự phòng — mọi chỗ dùng hiện tại đã có style inline. */
+#vkx-win .vk-inp {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--txt);
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 11px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#vkx-win .vk-inp:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--glow);
+}
+
+/* Thanh tiến trình Auto Update: khối bọc chưa có rule nào. */
+.vkx-upd-prog-wrap {
+  display: block;
+  margin-top: 6px;
+}
+
+/* Danh sách key-value ở Tổng Quan: khối bọc chưa có rule nào nên các .vk-row
+   dính sát nhau, thiếu nhịp dọc. */
+#vkx-win .vkx-kv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── 3. Ô NHẬP CHUẨN HOÁ ───────────────────────────────────────────────────
+   #vkx-qbar-inp là type="search" nên KHÔNG được rule input[type=text] bao phủ,
+   vì vậy nó dùng thông số riêng nhỏ hơn chuẩn (12.5px/5px) và thiếu focus ring. */
+#vkx-qbar-inp {
+  padding: 8px 12px !important;
+  font-size: 13.5px !important;
+  border-radius: 10px !important;
+  line-height: 1.4 !important;
+}
+#vkx-qbar-inp:focus {
+  border-color: var(--acc) !important;
+  box-shadow: 0 0 0 3px var(--glow) !important;
+  background: color-mix(in srgb, var(--acc) 4%, var(--bg3)) !important;
+}
+
+/* ── 4. KHẢ NĂNG TRUY CẬP BÀN PHÍM ─────────────────────────────────────────
+   Nút chọn chủ đề nhanh trong Quick Jump Bar trước đây không có style focus,
+   khiến người dùng điều hướng bằng Tab không biết mình đang ở đâu. */
+.vkx-theme-chip:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-color: var(--acc2);
+  color: var(--acc2);
+}
+
+/* ── 5. THANH TIÊU ĐỀ (HEADER) ─────────────────────────────────────────────*/
+
+/* 6.1. Logo: ở chế độ mặc định KHÔNG có rule nào đặt flex-basis nên logo bị
+   co lại khi tiêu đề dài. */
+.vkx-hd .vkx-logo {
+  flex: 0 0 34px;
+  min-width: 34px;
+}
+#vkx-win.vkx-minimized .vkx-hd .vkx-logo {
+  flex: 0 0 34px;
+  width: 34px !important;
+  height: 34px !important;
+}
+
+/* 6.2. .vkx-seg trong header chỉ được khai báo trong ngữ cảnh ".vkx-hd .vkx-seg".
+   Nếu nó nằm trong .vkx-ttl-sub (bản sao trùng lặp khi tái dựng thanh tiêu đề)
+   thì các margin/khối của tầng cũ rò rỉ ra ngoài thành một hàng lơ lửng. */
+.vkx-ttl-sub .vkx-seg {
+  display: none !important;
+}
+
+/* 6.3. Nhóm nút công cụ: giữ đúng một hàng, không đẩy tràn header. */
+.vkx-hd-tools {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  flex-wrap: nowrap !important;
+}
+
+/* 6.4. Nút icon dùng ký tự Unicode nên cần canh giữa tường minh. */
+#vkx-win .vkx-ib {
+  line-height: 1 !important;
+  place-items: center !important;
+  text-align: center !important;
+}
+
+/* 6.5. Màn hình hẹp: bỏ đệm ngang dư thừa và ưu tiên chiều rộng cho nút. */
+@media (max-width: 720px) {
+  .vkx-hd .vkx-ib {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 15px !important;
+    border-radius: 9px !important;
+  }
+}
+
+/* 6.6. Chế độ siêu hẹp (vkx-xs): 8 nút công cụ + logo + tiêu đề + nhóm chuyển
+   chế độ không đủ chỗ trên một hàng ở cửa sổ < 370px. Cho phép header xuống
+   dòng (thay vì tràn/cắt nút) và thu gọn mọi thành phần cho vừa. */
+#vkx-win.vkx-xs .vkx-hd {
+  padding: 6px !important;
+  gap: 5px !important;
+  row-gap: 5px !important;
+  flex-wrap: wrap !important;
+}
+#vkx-win.vkx-xs .vkx-hd .vkx-logo {
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
+  font-size: 16px !important;
+}
+#vkx-win.vkx-xs .vkx-hd .vkx-ib {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  border-radius: 7px !important;
+}
+#vkx-win.vkx-xs .vkx-ttl-sub {
+  display: none !important;
+}
+#vkx-win.vkx-xs .vkx-ttl b {
+  font-size: 13px !important;
+}
+#vkx-win.vkx-xs .vkx-hd .vkx-seg button {
+  padding: 3px 7px !important;
+  font-size: 10.5px !important;
+}
+
+/* 6.7. Nút công cụ luôn được đẩy về sát lề phải, kể cả khi header xuống dòng. */
+.vkx-hd-tools {
+  margin-left: auto;
+}
+
+/* 6.8. Chế độ ngang (vkx-land): khối .vkx-seg cũ đặt margin ngoài như một hàng
+   riêng (margin: 0 10px 4px) — vô hiệu vì header vốn là flex, chỉ tổ làm lệch
+   hàng. Đặt lại margin và giảm đệm dọc để header không bị dày. */
+#vkx-win.vkx-land .vkx-hd {
+  padding: 5px 8px !important;
+  gap: 7px !important;
+}
+#vkx-win.vkx-land .vkx-seg,
+#vkx-win.vkx-xs .vkx-seg {
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+#vkx-win.vkx-land .vkx-seg button {
+  padding: 4px 10px !important;
+}
+
+/* 6.9. .vkx-seg button[data-s="nk"] { flex: 1.35 } được thiết kế cho biến thể
+   .vkx-seg dạng hàng ngang toàn chiều rộng, không dành cho header inline-flex. */
+.vkx-hd .vkx-seg button {
+  flex: 0 0 auto !important;
+}
+
+/* ── 6. PANEL MOD CỦA GAME (ngoài #vkx-win) ───────────────────────────────
+   main.js nhúng nút vào bảng do game cung cấp. Chỉ tinh chỉnh phần chữ và
+   con trỏ — TUYỆT ĐỐI không đặt display/width vì lớp .nut-chinh trùng với nút
+   "Đồng ý" của hộp thoại gốc trong game. */
+.hud-phu {
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.92;
+}
+#vkx-modp-open,
+#vkx-modp-upd {
+  cursor: pointer;
+}
+#vkx-modp-open:hover,
+#vkx-modp-upd:hover {
+  filter: brightness(1.12);
 }

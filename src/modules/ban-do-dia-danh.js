@@ -783,7 +783,7 @@ function tabDiaDanh() {
     f = S.dd;
   body.innerHTML = `<div class="vk-card"><h3>Tra Cứu Địa Danh</h3>
       <div id="dd-here" class="vk-mu" style="font-size:13px;margin-bottom:6px"></div>
-      <input class="vk-sel" id="dd-q" style="width:100%" placeholder="Gõ tên nơi (không cần dấu): thanh, tong mon, kinh do…" value="${esc(f.q)}" autocomplete="off">
+      <input type="text" class="vk-sel" id="dd-q" style="width:100%" placeholder="Gõ tên nơi (không cần dấu): thanh, tong mon, kinh do…" value="${esc(f.q)}" autocomplete="off">
       <div class="tc-row" id="dd-sel" style="margin-top:6px"></div>
       <div style="margin-top:6px;font-size:14px"><label><input type="checkbox" id="dd-kham"${f.kham ? " checked" : ""}> Chỉ Nơi Đã Từng Tới</label> · <label><input type="checkbox" id="dd-may"${f.may ? " checked" : ""}> Hiện Cả Nơi Còn Phủ Mây</label></div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px" id="dd-cnt"></div></div>

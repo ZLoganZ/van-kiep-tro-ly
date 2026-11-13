@@ -245,7 +245,7 @@ function tabNLS() {
   const f = S.nl;
   body.innerHTML = `<div class="vk-card"><h3>Sinh Vật Có Thể Ngự</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><select class="vk-sel" id="nl-sch">${nlSel([["all", "Mọi Nhánh"]].concat(NLW_SCH.map((x) => [x[0], x[2] + " " + x[1]])), f.sch)}</select>
-      <input class="vk-sel" id="nl-q" style="flex:1;min-width:130px" placeholder="Gõ tên, hệ hoặc nơi (không cần dấu)" value="${esc(f.qs)}" autocomplete="off"></div>
+      <input type="text" class="vk-sel" id="nl-q" style="flex:1;min-width:130px" placeholder="Gõ tên, hệ hoặc nơi (không cần dấu)" value="${esc(f.qs)}" autocomplete="off"></div>
       <div style="margin-top:6px;font-size:14px"><label><input type="checkbox" id="nl-realm" ${f.realm ? "checked" : ""}> Chỉ sinh vật từ cảnh giới hiện tại trở xuống</label></div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px" id="nl-cnt"></div></div><div id="nl-list"></div>`;
   const nv = nvNow(),
@@ -334,7 +334,7 @@ function tabNLV() {
   const f = S.nl;
   body.innerHTML = `<div class="vk-card"><h3>Vật Phẩm Ngự Linh</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><select class="vk-sel" id="nv-grp">${nlSel(NLW_GRP, f.grp)}</select>
-      <input class="vk-sel" id="nv-q" style="flex:1;min-width:130px" placeholder="Gõ tên hoặc công dụng (không cần dấu)" value="${esc(f.qv)}" autocomplete="off"></div>
+      <input type="text" class="vk-sel" id="nv-q" style="flex:1;min-width:130px" placeholder="Gõ tên hoặc công dụng (không cần dấu)" value="${esc(f.qv)}" autocomplete="off"></div>
       <div style="margin-top:6px;font-size:14px"><label><input type="checkbox" id="nv-own" ${f.own ? "checked" : ""}> Chỉ món đang có</label></div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px" id="nv-cnt"></div></div><div id="nv-list"></div>`;
   const nv = nvNow(),
@@ -387,7 +387,7 @@ function tabNLV() {
 function tabNLC() {
   const f = S.nl;
   body.innerHTML = `<div class="vk-card"><h3>Cơ Duyên Ngự Linh</h3>
-      <input class="vk-sel" id="nc-q" style="width:100%" placeholder="Gõ tên sự kiện, nơi hoặc phần thưởng (không cần dấu)" value="${esc(f.qc)}" autocomplete="off">
+      <input type="text" class="vk-sel" id="nc-q" style="width:100%" placeholder="Gõ tên sự kiện, nơi hoặc phần thưởng (không cần dấu)" value="${esc(f.qc)}" autocomplete="off">
       <div style="margin-top:6px;font-size:14px"><label><input type="checkbox" id="nc-realm" ${f.realm ? "checked" : ""}> Chỉ sự kiện hợp cảnh giới hiện tại</label></div>
       <div class="vk-mu" style="font-size:12px;margin-top:4px" id="nc-cnt"></div></div><div id="nc-list"></div>`;
   const nv = nvNow(),

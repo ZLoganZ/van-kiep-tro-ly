@@ -96,39 +96,11 @@ var UI = (function () {
   toastEl.id = "vkx-toast";
   document.body.appendChild(toastEl);
 
-  /* ---- Title Case cho giao diện (Tối ưu hóa: loại bỏ MutationObserver toàn cục) ---- */
+  /* ---- Title Case cho giao diện ---- */
+  /* Đã vô hiệu hóa: tầng CSS OS quy định toàn bộ chữ hoa/thường, việc viết hoa lại
+     node text gây nhấp nháy chữ và phá vỡ nội dung động. Giữ biến + hàm rỗng để không
+     phá vỡ hợp đồng gọi nội bộ (xem flushTitleCase() bên dưới). */
   var flushTitleCase = null;
-  (function () {
-    var RE = /(^|[\s(\[«“\/])(\p{L})(?!\d)(?![^\s]*(?:_|\.\p{L}))/gu;
-    function tc(t) {
-      return t.replace(RE, function (m, a, b) {
-        return a + b.toUpperCase();
-      });
-    }
-    var SEL =
-      "h3:not([data-tc]),h4:not([data-tc]),summary:not([data-tc]),button:not([data-tc]),th:not([data-tc]),label:not([data-tc]),option:not([data-tc]),small:not([data-tc]),.vkx-ttl span:not([data-tc]),#vkx-toast:not([data-tc])";
-    function fixNode(root) {
-      if (!root || !root.isConnected) return;
-      try {
-        var q = root.querySelectorAll ? root.querySelectorAll(SEL) : [];
-        for (var i = 0; i < q.length; i++) {
-          var el = q[i];
-          var ch = el.childNodes;
-          for (var j = 0; j < ch.length; j++) {
-            if (ch[j].nodeType === 3) {
-              var v = ch[j].nodeValue;
-              if (!v || v.length > 500) continue;
-              var w = tc(v);
-              if (w !== v) ch[j].nodeValue = w;
-            }
-          }
-          el.setAttribute("data-tc", "1");
-        }
-      } catch (e) {}
-    }
-    flushTitleCase = function () {};
-    flushTitleCase();
-  })();
 
   /* ---- Thanh Trạng Thái Auto Nổi (Mini Status Bar + Bộ Đếm Thời Gian Thực) ---- */
   var _miniStartTs = 0,
@@ -259,47 +231,11 @@ var UI = (function () {
   }
 
   /* ---- Active Tab Glider Engine ---- */
+  /* Tầng CSS OS (V8.0.0) đã ẩn hoàn toàn .vkx-tab-glider và chuyển sang tô nền trực tiếp
+     cho button.on, nên phép tính translate/width/height không còn tác dụng. Giữ hàm rỗng
+     để bảo toàn API UI.updateGlider/UI.updateGliders cho navigation.js. */
   function updateGlider(targetBtn, gliderEl, isVertical, immediate) {
-    if (gliderEl) gliderEl.classList.remove('active');
-    return;
-    var w = targetBtn.offsetWidth,
-      h = targetBtn.offsetHeight;
-    if (!w && !h) return;
-
-    var parent = gliderEl.parentElement;
-    var isWideGroups =
-      parent &&
-      parent.id === "vkx-groups" &&
-      win &&
-      win.classList.contains("vkx-wide");
-
-    var vertical =
-      typeof isVertical === "boolean" ? isVertical : !!isWideGroups;
-    var isInitial = !gliderEl.classList.contains("active");
-    var noTransition = !!immediate || isInitial;
-
-    if (noTransition) {
-      gliderEl.style.transition = "none";
-    }
-
-    if (vertical) {
-      gliderEl.style.transform =
-        "translate3d(0, " + targetBtn.offsetTop + "px, 0)";
-      gliderEl.style.height = h + "px";
-      gliderEl.style.width = "";
-    } else {
-      gliderEl.style.transform =
-        "translate3d(" + targetBtn.offsetLeft + "px, 0, 0)";
-      gliderEl.style.width = w + "px";
-      gliderEl.style.height = "";
-    }
-
-    if (noTransition) {
-      void gliderEl.offsetHeight; // Kích hoạt reflow cưỡng bức
-      gliderEl.style.transition = "";
-    }
-
-    gliderEl.classList.add("active");
+    if (gliderEl) gliderEl.classList.remove("active");
   }
 
   function updateGliders(immediate) {

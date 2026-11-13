@@ -2788,7 +2788,7 @@ mapActive.length > 0
   <button class="tc-chip${f.filter === "done" ? " on" : ""}" data-k="done">✨ Đã Có</button>
 </div>
 <div style="display:flex;gap:6px">
-  <input class="vk-inp" id="db-q" style="flex:1" placeholder="Tìm theo tên dị bảo, sự kiện, hộ vệ, hiệu ứng..." value="${esc(f.q)}">
+  <input type="text" class="vk-inp" id="db-q" style="flex:1" placeholder="Tìm theo tên dị bảo, sự kiện, hộ vệ, hiệu ứng..." value="${esc(f.q)}">
   <button class="vk-btn sec" id="db-clr" style="padding:4px 10px">Xóa</button>
 </div>
       </div>

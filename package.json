@@ -1,6 +1,6 @@
 {
   "name": "van-kiep-tro-ly-mod",
-  "version": "8.1.3",
+  "version": "8.1.4",
   "description": "Mod Trợ Lý toàn diện cho game Vạn Kiếp Tu Tiên (Multi-file Modular Architecture & Auto Update OTA)",
   "main": "main.js",
   "scripts": {
