@@ -42,13 +42,14 @@ var UI = (function () {
     '<div class="vkx-hd" id="vkx-hd">' +
     '  <div class="vkx-logo" title="Huyền Thiên Đạo Đài OS v' + TOOL_VER + '">☯</div>' +
     '  <div class="vkx-ttl"><b>Huyền Thiên Đạo Đài</b>' +
-    '    <div class="vkx-ttl-sub"><span id="vkx-theme-lbl">🌌 Thái Hư Tinh Không</span> · <span id="vkx-layout-lbl">Đạo Đài Rộng</span><em class="vkx-ver">v' + TOOL_VER + '</em></div>' +
+    '    <div class="vkx-ttl-sub"><span id="vkx-theme-lbl">🌌 Thái Hư Tinh Không</span> · <span id="vkx-layout-lbl">Đạo Đài Rộng</span><em class="vkx-ver">v' + TOOL_VER + '</em><button type="button" class="vkx-upd-pill ok" id="vkx-upd-pill" title="Kiểm tra & Cập nhật tự động từ GitHub">✔ Bản mới nhất</button></div>' +
     '  </div>' +
     '  <div class="vkx-seg">' +
     '    <button data-s="tl" title="Đài Chỉ Huy Trợ Lý">🔮 Đạo Đài</button>' +
     '    <button data-s="nk" title="Nhật Ký Phiên Bản">📜 Nhật Ký</button>' +
     '  </div>' +
     '  <div class="vkx-hd-tools">' +
+    '    <button class="vkx-ib" id="vkx-upd-btn" title="Trung Tâm Auto Update GitHub (Kiểm tra & Cập nhật tự động)">🔄</button>' +
     '    <button class="vkx-ib" id="vkx-qbtn" title="Tìm nhanh Tab & Đổi Chủ Đề (Ctrl+K)">🔎</button>' +
     '    <button class="vkx-ib" id="vkx-subpos" title="Đổi vị trí thanh Tab Con: Đặt Trên Đầu / Đặt Dưới Đáy (Dock)">⇅</button>' +
     '    <button class="vkx-ib" id="vkx-layout" title="Đổi bố cục: Neo Phải / Neo Trái / Đại Tinh Bàn Toàn Cảnh">◫</button>' +

@@ -27,9 +27,20 @@ var NhatKy = (function (UI) {
 
   var LOG = [
     {
+      t: "Phiên Bản 8.1.0 · Hệ Thống Tự Động Cập Nhật OTA Qua GitHub (Auto Update & Live IndexedDB Hot-Patch)",
+      d: "13/11/2026",
+      now: true,
+      pts: [
+        "<b>Tự Động Dò Bản Mới &amp; Mã Commit SHA Từ GitHub (Multi-Source OTA Checker):</b> Tích hợp mô-đun <code>src/core/auto-update.js</code> tự động kiểm tra phiên bản mới (<code>SemVer</code>) và mã Commit SHA trên nhánh <code>main</code> của kho lưu trữ <code>zloganz/van-kiep-tro-ly</code> qua đa kênh (<code>raw.githubusercontent.com</code>, <code>jsDelivr CDN</code> và <code>GitHub REST API</code>) ngay khi mở game và định kỳ mỗi 5–60 phút.",
+        "<b>Cập Nhật Trực Tiếp Vào IndexedDB Của Game &amp; Xóa Cache Service Worker (Zero-Click Hot-Update):</b> Khi phát hiện bản cập nhật mới trên GitHub, Mod tự động tải gói <code>van-kiep-tro-ly-mod.zip</code>, giải nén bằng <code>DecompressionStream('deflate-raw')</code> ngay trong bộ nhớ trình duyệt, ghi đè trực tiếp vào <b>IndexedDB Mod Store</b> của game, dọn bộ nhớ đệm <code>CacheStorage</code> của Service Worker (<code>/mods/van_kiep_tro_ly/...</code>), tự tạo bản <b>Quick Save</b> dự phòng rồi tải lại trang để áp dụng ngay.",
+        "<b>Cơ Chế Tự Động Kéo Source ES Modules &amp; Đóng Gói ZIP Trên Trình Duyệt (Fallback &amp; GitHub Actions):</b> Trường hợp nhà phát triển sửa trực tiếp file <code>.js</code>/<code>.css</code> trên GitHub mà chưa chạy <code>node build.js</code>, trình cập nhật trong game tự động kéo toàn bộ 27 module từ nhánh <code>main</code>, đồng bộ <code>ui.css</code> &rarr; <code>ui-css.js</code> và đóng gói chuẩn PKZIP ngay trên trình duyệt; đồng thời bổ sung workflow <code>.github/workflows/auto-build-mod.yml</code> tự động đóng gói trên GitHub.",
+        "<b>Giao Diện Trung Tâm Auto Update Trực Quan Trên Header &amp; Nhật Ký:</b> Bổ sung huy hiệu trạng thái <code>✔ Bản mới nhất / 🚀 Có bản mới</code> và nút <code>🔄</code> trên thanh tiêu đề <code>#vkx-hd</code>, thanh thông báo đếm ngược tự động cập nhật <code>#vkx-upd-banner</code> (xem trước Changelog mới trên GitHub) cùng bảng điều khiển cấu hình chi tiết trong tab <b>Nhật Ký</b> và <b>Tổng Quan</b>.",
+      ],
+    },
+    {
       t: "Phiên Bản 8.0.0 · Đại Trùng Tu Giao Diện Thiên Cơ Tinh Bàn (Celestial Command Deck UI/UX Overhaul)",
       d: "11/11/2026",
-      now: true,
+      now: false,
       pts: [
         "<b>Thiết Kế Mới Toàn Diện — Thiên Cơ Tinh Bàn (Celestial Command Deck v8.0):</b> Lột xác 100% ngôn ngữ thị giác sang phong cách <i>Kính Mờ Huyền Huyễn Đa Tầng (Holographic Xianxia Glassmorphism)</i> với viền ánh kim lưỡng cực, lưới trận pháp tinh vân nền, thẻ Ngọc Giản <code>.vk-card</code> khúc xạ ánh sáng và nút Pháp Bảo <b>☯ Tinh Bàn</b> xoay động đa vòng (tự động phát sáng hào quang ngọc bích khi có tác vụ Auto đang chạy).",
         "<b>6 Hệ Chủ Đề Linh Giới Đa Tầng &amp; Bảng Chọn Nhanh Trực Quan:</b> Nâng cấp toàn diện bảng màu với 6 chủ đề tu chân: <b>🌌 Thái Hư Tinh Không</b> (mặc định mới), <b>👑 Thiên Đình Kim Quế</b>, <b>🌿 Thanh Luân Tiên Cảnh</b>, <b>🩸 Cửu U Huyết Nguyệt</b>, <b>⚡ Tử Tiêu Lôi Vực</b> và <b>📜 Thủy Mặc Cổ Quyển</b>. Hỗ trợ chuyển đổi tức thì qua nút <code>🎨</code> trên thanh tiêu đề hoặc chọn trực tiếp từ dải chip chủ đề trong thanh Tìm Nhanh (<code>🔎 / Ctrl+K</code>).",
@@ -1425,15 +1436,22 @@ var NhatKy = (function (UI) {
   }
 
   function init() {
-    if (inited) return;
     var root = UI.nkBody;
     if (!root) return;
-    inited = true;
-    root.innerHTML =
-      '<div class="vm-hint">' +
-      HINT +
-      "</div>" +
-      LOG.map(verCard).join("");
+    if (!inited) {
+      inited = true;
+      root.innerHTML =
+        '<div id="vkx-nk-upd-slot"></div>' +
+        '<div class="vm-hint">' +
+        HINT +
+        "</div>" +
+        LOG.map(verCard).join("");
+    }
+    var updSlot = root.querySelector("#vkx-nk-upd-slot");
+    if (updSlot && gWin.AutoUpdater && typeof gWin.AutoUpdater.buildPanelHtml === "function") {
+      updSlot.innerHTML = gWin.AutoUpdater.buildPanelHtml("updnk");
+      gWin.AutoUpdater.bindPanelEvents(updSlot, "updnk");
+    }
   }
   return { init: init };
 })(UI);

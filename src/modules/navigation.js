@@ -568,6 +568,7 @@ function tabTongQuan() {
       <button type="button" class="vkx-qact" data-qtab="akm"><span>🧬</span><div><b>Hướng Build</b><small>Tối ưu Kinh Mạch</small></div></button>
       <button type="button" class="vkx-qact" data-qtab="dp"><span>⚡</span><div><b>Đột Phá & Thọ</b><small>Chuẩn bị Độ Kiếp</small></div></button>
       <button type="button" class="vkx-qact" data-qtab="atc"><span>⚔️</span><div><b>Siêu AI 3.0</b><small>Chiến thuật 5 pha</small></div></button>
+      <button type="button" class="vkx-qact" id="tq-btn-open-upd"><span>🔄</span><div><b>Auto Update</b><small>Đồng bộ GitHub OTA</small></div></button>
     </div>
 
     <div class="vkx-dash-2col">
@@ -627,6 +628,7 @@ function tabTongQuan() {
             <button class="vk-btn" id="tq-btn-quicksave" style="margin:0;padding:7px 10px;font-size:12px">⚡ Quick Save</button>
             <button class="vk-btn sec" id="tq-btn-export" style="margin:0;padding:7px 10px;font-size:12px">💾 Tải Save (.txt)</button>
             <button class="vk-btn sec" id="tq-btn-cleantd" style="margin:0;padding:7px 10px;font-size:12px" title="Xóa toàn bộ bộ nhớ theo dõi của Thiên Đạo">🧹 Tẩy Thiên Đạo</button>
+            <button class="vk-btn sec" id="tq-btn-checkupd" style="margin:0;padding:7px 10px;font-size:12px" title="Kiểm tra và cập nhật tự động phiên bản mới từ GitHub">🔄 Cập Nhật GitHub</button>
           </div>
         </div>
       </div>
@@ -655,6 +657,19 @@ function tabTongQuan() {
       }
     };
   });
+  const tqOpenUpd = body.querySelector("#tq-btn-open-upd");
+  if (tqOpenUpd) {
+    tqOpenUpd.onclick = () => {
+      if (typeof gWin.openUpdateModal === "function") gWin.openUpdateModal();
+    };
+  }
+  const tqCheckUpd = body.querySelector("#tq-btn-checkupd");
+  if (tqCheckUpd) {
+    tqCheckUpd.onclick = () => {
+      if (typeof gWin.openUpdateModal === "function") gWin.openUpdateModal();
+      if (typeof gWin.checkModUpdateNow === "function") gWin.checkModUpdateNow();
+    };
+  }
   const tqToSv = body.querySelector("#tq-btn-to-sv");
   if (tqToSv) {
     tqToSv.onclick = () => {

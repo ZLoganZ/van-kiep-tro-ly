@@ -1,4 +1,4 @@
-# ☯ Vạn Kiếp Tu Tiên Tool · Trợ Lý (Game Mod Chính Thức v7.23.2)
+# ☯ Vạn Kiếp Tu Tiên Tool · Trợ Lý (Game Mod Chính Thức v8.1.0)
 
 > **Tác giả:** LoganZ · Kỹ Sư  
 > **Game mục tiêu:** [Vạn Kiếp Tu Tiên](https://van-kiep-tu-tien.vuhaiquan2k1.workers.dev/)  
@@ -44,6 +44,7 @@ van-kiep-tro-ly/
     │   └── static-data.js           # Dữ liệu tĩnh & fallback (Ngự Linh, Thể Chất, Hướng Build)
     ├── core/
     │   ├── utils.js                 # Tiện ích nền tảng (Storage, Lifecycle, fold tiếng Việt, format, debounce)
+    │   ├── auto-update.js           # Hệ thống Tự Động Cập Nhật OTA qua GitHub (IndexedDB Hot-Patch & Browser ZIP)
     │   └── bridge.js                # Cầu nối lõi game (tuTien.core), Context Memoization, Bản đồ & Mô phỏng trận
     ├── modules/
     │   ├── kinh-mach-engine.js      # Thuật toán tối ưu Kinh Mạch 4.0 (Multi-Topology, LNS, Qi Cycle)
@@ -85,3 +86,13 @@ van-kiep-tro-ly/
    - **Lưu đệm bản đồ (`nearSlots`, `danger`, `auFindTuViSpots`)**: Triệt tiêu việc tính lại khoảng cách hàng trăm ô bản đồ ở mỗi bước chạy Auto Tu Luyện / Săn Yêu.
    - **Sửa rò rỉ bộ nhớ (Memory Leak) trong `tabAutoKm()` (`src/modules/huong-build.js`)**: Thay `body.addEventListener("click")` bị gắn chồng mỗi lần render bằng `body.onclick`, đồng thời lưu đệm `hbCatalog` và `buildFit`.
    - **Lazy Init cho `NhatKy` & Tối ưu bộ chọn `:not([data-tc])`**: Chỉ dựng 200KB HTML Nhật Ký khi người dùng bấm mở tab Nhật Ký Cập Nhật.
+
+---
+
+## 🔄 4. Cơ Chế Tự Động Cập Nhật Qua GitHub (Auto Update OTA — v8.1.0)
+1. **Tự động kiểm tra phiên bản & mã Commit SHA mới nhất**:
+   - Ngay khi mở game (và định kỳ mỗi 5–60 phút), mô-đun `src/core/auto-update.js` tự động kiểm tra `package.json`, `mod.yaml` và mã Commit SHA trên nhánh `main` của repo `zloganz/van-kiep-tro-ly`.
+2. **Cập nhật trực tiếp vào IndexedDB của Game (Zero-Click Hot-Update)**:
+   - Khi có bản cập nhật mới, Mod tự động tải `van-kiep-tro-ly-mod.zip` (hoặc tự kéo toàn bộ mã nguồn ES Modules từ GitHub và đóng gói ZIP ngay trong trình duyệt nếu file zip trên repo chưa kịp build), giải nén và ghi đè trực tiếp vào **IndexedDB Mod Store** của game, xóa cache Service Worker (`/mods/van_kiep_tro_ly/...`), tự động tạo bản **Quick Save** dự phòng rồi tải lại trang.
+3. **GitHub Actions Tự Động Đóng Gói (`.github/workflows/auto-build-mod.yml`)**:
+   - Mỗi khi push code mới lên nhánh `main`, GitHub Actions sẽ tự động chạy `node build.js` để đồng bộ `version`, `ui-css.js` và đóng gói lại `van-kiep-tro-ly-mod.zip`.

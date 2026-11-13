@@ -1,13 +1,14 @@
 /**
- * main.js - Vạn Kiếp Tu Tiên Tool · Trợ Lý (v7.23.2)
+ * main.js - Vạn Kiếp Tu Tiên Tool · Trợ Lý (v8.1.0)
  * Tác giả: LoganZ · Kỹ Sư
  * Kiến trúc: Multi-module ES Architecture (Chuẩn Mod Chính Thức window.tuTienMods apiVersion: 1)
  */
 
-// 1. Tiện ích nền tảng, CSS & Giao diện khung (UI Shell)
+// 1. Tiện ích nền tảng, Auto-Update OTA, CSS & Giao diện khung (UI Shell)
 import { gWin, TOOL_VER, setGameContext } from "./src/core/utils.js";
 import "./src/styles/ui-css.js";
 import { UI } from "./src/ui/shell.js";
+import { initAutoUpdater, openUpdateModal, checkModUpdateNow } from "./src/core/auto-update.js";
 import "./src/data/static-data.js";
 
 // 2. Cầu nối lõi game (tuTien.core), Context Memoization & Mô phỏng trận
@@ -77,8 +78,9 @@ function runTroLy(tt, mod) {
     }
   }
 
-  // Khởi động bộ theo dõi Dị Bảo & HUD Tác Chiến sau khi đã nhận đối tượng `tt` từ game
+  // Khởi động bộ theo dõi Dị Bảo, HUD Tác Chiến & Hệ thống Auto Update GitHub OTA
   initDiBaoWatchers();
+  initAutoUpdater();
 
   // Gắn khung “Trợ Lý” vào nút nổi Mod của game (MOD.ui.addPanel)
   if (mod && mod.ui && typeof mod.ui.addPanel === "function") {
@@ -88,12 +90,28 @@ function runTroLy(tt, mod) {
         title: "Vạn Kiếp Tu Tiên Tool · Trợ Lý",
         mount(el) {
           el.innerHTML =
-            '<p class="hud-phu">Trợ Lý tính toán theo dữ liệu game: kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo, Ngự Linh, Luân Hồi…</p><button class="nut-chinh" type="button">Mở Trợ Lý</button>';
-          const btn = el.querySelector("button");
-          if (btn) {
-            btn.onclick = function () {
+            '<p class="hud-phu">Trợ Lý tính toán theo dữ liệu game: kinh mạch, đột phá, kiếm lời, tra cứu, Dị Bảo, Ngự Linh, Luân Hồi, Auto Update GitHub…</p>' +
+            '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+            '<button class="nut-chinh" id="vkx-modp-open" type="button">Mở Trợ Lý</button>' +
+            '<button class="nut-phu" id="vkx-modp-upd" type="button">🔄 Kiểm Tra Cập Nhật GitHub</button>' +
+            "</div>";
+          const btnOpen = el.querySelector("#vkx-modp-open");
+          if (btnOpen) {
+            btnOpen.onclick = function () {
               try {
                 UI.open();
+              } catch (e) {
+                console.error(e);
+              }
+            };
+          }
+          const btnUpd = el.querySelector("#vkx-modp-upd");
+          if (btnUpd) {
+            btnUpd.onclick = function () {
+              try {
+                UI.open();
+                openUpdateModal();
+                checkModUpdateNow();
               } catch (e) {
                 console.error(e);
               }

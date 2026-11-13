@@ -3458,3 +3458,172 @@ table.au-tb tr:last-child td {
 .vkx-hud-actions {
   margin-left: auto !important;
 }
+
+
+/* 11. HỆ THỐNG AUTO UPDATE GITHUB OTA (HEADER PILL, BANNER & MODAL) */
+@keyframes vkxPulseUpd {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45), 0 0 12px rgba(251, 191, 36, 0.35); }
+  50% { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12), 0 0 18px rgba(251, 191, 36, 0.65); }
+}
+
+.vkx-upd-pill {
+  appearance: none;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--ok);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1.5px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+.vkx-upd-pill:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: var(--ok);
+  transform: translateY(-1px);
+}
+.vkx-upd-pill.checking {
+  border-color: var(--acc);
+  background: var(--hi);
+  color: var(--acc);
+}
+.vkx-upd-pill.has-upd {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(16, 185, 129, 0.25));
+  border-color: var(--acc2);
+  color: var(--acc2);
+  font-weight: 800;
+  animation: vkxPulseUpd 2s infinite;
+}
+
+#vkx-upd-btn.vkx-ib-upd-ready {
+  border-color: var(--acc2) !important;
+  color: var(--acc2) !important;
+  background: rgba(251, 191, 36, 0.16) !important;
+  animation: vkxPulseUpd 2s infinite;
+}
+#vkx-upd-btn.vkx-ib-spinning {
+  animation: vkxSpinSlow 1.4s linear infinite;
+  border-color: var(--acc) !important;
+  color: var(--acc) !important;
+}
+
+#vkx-fab.vkx-fab-has-upd::after {
+  content: "🚀";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--acc2);
+  color: #050914;
+  font-size: 10px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.vkx-upd-banner {
+  margin: 6px 12px 4px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(16, 185, 129, 0.14) 100%), var(--bg2);
+  border: 1.5px solid var(--acc2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(251, 191, 36, 0.2);
+  z-index: 20;
+}
+.vkx-upd-banner-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vkx-upd-banner-info {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.vkx-upd-badge-new {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--acc2);
+  color: #050914;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+}
+.vkx-upd-countdown {
+  font-size: 11.5px;
+  color: var(--ok);
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 1.5px 8px;
+  border-radius: 999px;
+}
+.vkx-upd-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.vkx-upd-banner-actions .vk-btn {
+  margin: 0 !important;
+  padding: 5px 10px !important;
+  font-size: 11.5px !important;
+}
+.vkx-upd-act-now {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #03120c !important;
+  font-weight: 800 !important;
+  border: none !important;
+}
+
+.vkx-upd-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 120;
+  background: rgba(2, 6, 18, 0.76);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.vkx-upd-modal-backdrop.on {
+  display: flex;
+}
+.vkx-upd-modal-dialog {
+  width: min(740px, 100%);
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1.5px solid var(--acc);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 28px var(--glow);
+  overflow: hidden;
+}
+.vkx-upd-modal-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, var(--hi), transparent);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+  color: var(--acc2);
+}
+.vkx-upd-modal-body {
+  padding: 12px;
+  overflow-y: auto;
+  max-height: calc(85vh - 60px);
+}
+.vkx-upd-modal-body .vk-card {
+  margin-bottom: 0 !important;
+}

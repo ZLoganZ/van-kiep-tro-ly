@@ -1,4 +1,4 @@
-# 📘 Hướng Dẫn Phát Triển (Development Instructions) — v7.23.2
+# 📘 Hướng Dẫn Phát Triển (Development Instructions) — v8.1.0
 
 ## 1. Kiến Trúc Native Multi-File ES Modules (Chuẩn Mod `su_do.zip`)
 
@@ -37,3 +37,8 @@ Nhờ vậy, dự án **không cần nối (concatenate) toàn bộ code vào m�
    node build.js           # Đồng bộ CSS/version và tạo gói van-kiep-tro-ly-mod.zip đa file
    node build.js --check   # Chỉ kiểm tra danh sách module và đồng bộ version/CSS
    ```
+
+## 3. Hệ Thống Auto Update OTA Qua GitHub (`src/core/auto-update.js`)
+- Tự động đối chiếu `TOOL_VER` và mã Commit SHA với nhánh `main` trên GitHub (`zloganz/van-kiep-tro-ly`).
+- Hỗ trợ cả 2 luồng: tải gói `van-kiep-tro-ly-mod.zip` đã đóng gói sẵn hoặc tự kéo toàn bộ file `src/**/*.js` + `src/styles/ui.css` về đóng gói PKZIP ngay trên trình duyệt.
+- Ghi đè trực tiếp vào IndexedDB của trình duyệt nơi game lưu Mod và làm mới CacheStorage của Service Worker.

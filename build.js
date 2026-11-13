@@ -4,7 +4,7 @@
  * Kiến trúc (tương tự chuẩn su_do.zip của game author):
  * - Game Mod Loader hỗ trợ trực tiếp ES Module (`import` / `export`) từ file `main.js`.
  * - Không nối (bundle/concatenate) toàn bộ mã nguồn vào một file `main.js` khổng lồ nữa.
- * - `main.js` ở thư mục gốc chỉ dài ~120 dòng, đóng vai trò Entrypoint và `import` trực tiếp
+ * - `main.js` ở thư mục gốc chỉ dài ~130 dòng, đóng vai trò Entrypoint và `import` trực tiếp
  *   các module con từ `./src/...`.
  * - Gói cài đặt `van-kiep-tro-ly-mod.zip` chứa `mod.yaml`, `main.js` (nhỏ gọn) và toàn bộ
  *   cây thư mục `src/.../*.js` giữ nguyên đường dẫn tương đối.
@@ -23,6 +23,7 @@ const ROOT = path.dirname(__filename);
 
 const SRC_MODULES = [
   "src/core/utils.js",
+  "src/core/auto-update.js",
   "src/styles/ui-css.js",
   "src/ui/shell.js",
   "src/data/static-data.js",
@@ -145,13 +146,13 @@ function syncVersionAndCss() {
     fs.writeFileSync(modYamlPath, modYaml, "utf8");
   }
 
-  // 2. Đồng bộ version vào src/core/utils.js
+  // 2. Đồng bộ version vào src/core/utils.js (hỗ trợ cả var / const / let TOOL_VER)
   const utilsPath = path.join(ROOT, "src/core/utils.js");
   if (fs.existsSync(utilsPath)) {
     let utilsCode = fs.readFileSync(utilsPath, "utf8");
     utilsCode = utilsCode.replace(
-      /export var TOOL_VER\s*=\s*["'][^"']+["'];/,
-      `export var TOOL_VER = "${version}";`
+      /export\s+(?:var|const|let)\s+TOOL_VER\s*=\s*["'][^"']+["'];/,
+      `export const TOOL_VER = "${version}";`
     );
     fs.writeFileSync(utilsPath, utilsCode, "utf8");
   }
